@@ -3,6 +3,7 @@ import logging
 from compy import core, misc, utils
 from compy.units import *
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -20,22 +21,22 @@ class BoundState:
         :param m:
         """
         if any(int(x) != x for x in (n, l, m)):
-            raise IllegalQuantumState('n, l, and m must be integers')
+            raise misc.IllegalQuantumState('n, l, and m must be integers')
 
         if n > 0:
             self._n = n
         else:
-            raise IllegalQuantumState('n must be greater than zero')
+            raise misc.IllegalQuantumState('n must be greater than zero')
 
         if 0 <= l < n:
             self._l = l
         else:
-            raise IllegalQuantumState('l must be less than n and greater than or equal to zero')
+            raise misc.IllegalQuantumState('l must be less than n and greater than or equal to zero')
 
         if -l <= m <= l:
             self._m = m
         else:
-            raise IllegalQuantumState('m must be between -l and l')
+            raise misc.IllegalQuantumState('m must be between -l and l')
 
     @property
     def n(self):
@@ -51,7 +52,7 @@ class BoundState:
 
     @property
     def energy(self):
-        return rydberg / (n ** 2)
+        return rydberg / (self.n ** 2)
 
     @property
     def spherical_harmonic(self):
@@ -108,22 +109,22 @@ class FreeState:
         :param m:
         """
         if any(int(x) != x for x in (l, m)):
-            raise IllegalQuantumState('l and m must be integers')
+            raise misc.IllegalQuantumState('l and m must be integers')
 
         if energy > 0:
             self._energy = energy
         else:
-            raise IllegalQuantumState('energy must be greater than zero')
+            raise misc.IllegalQuantumState('energy must be greater than zero')
 
         if l >= 0:
             self._l = l
         else:
-            raise IllegalQuantumState('l must be greater than or equal to zero')
+            raise misc.IllegalQuantumState('l must be greater than or equal to zero')
 
         if -l <= m <= l:
             self._m = m
         else:
-            raise IllegalQuantumState('m must be between -l and l')
+            raise misc.IllegalQuantumState('m must be between -l and l')
 
     @classmethod
     def from_wavenumber(cls, k, l = 0, m = 0):

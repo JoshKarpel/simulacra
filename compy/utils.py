@@ -9,11 +9,12 @@ import functools
 import multiprocessing as mp
 from copy import deepcopy
 
-LOG_FORMATTER = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
+LOG_FORMATTER = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
 ILLEGAL_FILENAME_CHARACTERS = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']  # these characters should be stripped from file names before use
 

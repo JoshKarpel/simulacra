@@ -2,8 +2,11 @@ import math
 import logging
 
 import numpy as np
+import scipy.special as spc
 
 from compy import utils
+from compy.units import *
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -14,11 +17,15 @@ def sinc(x):
 
 
 def electron_energy_from_wavenumber(k):
-    return (hbar * k) ** 2 / (2 * m_electron)
+    return (hbar * k) ** 2 / (2 * electron_mass)
 
 
 def electron_wavenumber_from_energy(energy):
-    return np.sqrt(2 * m_electron * energy) / hbar
+    return np.sqrt(2 * electron_mass * energy) / hbar
+
+
+class IllegalQuantumState(Exception):
+    pass
 
 
 class SphericalHarmonic:
@@ -59,7 +66,7 @@ class SphericalHarmonic:
         :param phi: azimuthal coordinate
         :return: the value(s) of the spherical harmonic at (theta, phi)
         """
-        raise NotImplementedError
+        return spc.sph_harm(self.m, self.l, phi, theta)
 
 
 def is_prime(n):

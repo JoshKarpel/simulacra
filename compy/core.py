@@ -2,6 +2,7 @@ import logging
 
 from compy import utils
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 

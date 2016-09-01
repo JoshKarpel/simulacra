@@ -4,8 +4,10 @@ import logging
 
 import numpy as np
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 
 # dimensionless constants
 alpha = 7.2973525664e-3
