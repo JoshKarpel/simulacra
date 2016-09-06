@@ -16,6 +16,70 @@ logger.setLevel(logging.DEBUG)
 
 LOG_FORMATTER = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
+
+class Logger:
+    """A context manager to easily set up logging."""
+
+    def __init__(self, logger_name = 'compy',
+                 stdout_logs = True, stdout_level = logging.DEBUG,
+                 file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'w'):
+
+        self.logger_name = logger_name
+
+        self.stdout_logs = stdout_logs
+        self.stdout_level = stdout_level
+
+        self.file_logs = file_logs
+        self.file_level = file_level
+
+        if file_name is None:
+            file_name = 'compy__{}'.format(dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
+        self.file_name = file_name
+
+        if file_dir is None:
+            file_dir = os.getcwd()
+        self.file_dir = file_dir
+
+        self.file_mode = file_mode
+
+        self.logger = None
+
+    def __enter__(self):
+        self.logger = logging.getLogger('compy')
+
+        new_handlers = [logging.NullHandler()]
+
+        if self.stdout_logs:
+            stdout_handler = logging.StreamHandler(sys.stdout)
+            stdout_handler.setLevel(self.stdout_level)
+            stdout_handler.setFormatter(LOG_FORMATTER)
+
+            new_handlers.append(stdout_handler)
+
+        if self.file_logs:
+            log_file_path = os.path.join(self.file_dir, '{}.log'.format(self.file_name))
+
+            ensure_dir_exists(log_file_path)  # the log message emitted here will not be included in the logger being created by this context manager
+
+            file_handler = logging.FileHandler(log_file_path, mode = self.file_mode)
+            file_handler.setLevel(self.file_level)
+            file_handler.setFormatter(LOG_FORMATTER)
+
+            new_handlers.append(file_handler)
+
+        self.old_level = self.logger.level
+        self.old_handlers = self.logger.handlers
+
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.handlers = new_handlers
+
+        return self.logger
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.logger.level = self.old_level
+        self.logger.handlers = self.old_handlers
+
+
 ILLEGAL_FILENAME_CHARACTERS = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']  # these characters should be stripped from file names before use
 
 
@@ -24,38 +88,58 @@ def strip_illegal_characters(string):
 
 
 class Beet:
-    """A superclass for anything that should be pickleable."""
+    """
+    A superclass for anything that should be pickleable.
+
+    Two Beets compare and hash equal if they have the same Beet.uid, a uuid4 generated at initialization.
+    """
 
     def __init__(self, name, file_name = None):
         """
+        Construct a Beet with the given name and file_name.
 
-        :param name:
-        :param file_name:
+        The file_name is automatically derived from the name if None is given.
+
+        :param name: the desired internal name
+        :param file_name: the desired external name, used for saving. Illegal characters are stripped before use.
         """
         self.name = name
         if file_name is None:
-            file_name = strip_illegal_characters(name)
-        self.file_name = file_name
+            file_name = name
+
+        file_name_stripped = strip_illegal_characters(file_name)
+        if file_name_stripped != file_name:
+            logger.warning('Using file name {} instead of {} for {}'.format(file_name_stripped, file_name, self.name))
+        self.file_name = file_name_stripped
 
         self.initialized_at = dt.datetime.now()
         self.uid = uuid.uuid4()
 
+        logger.info('Initialized {}'.format(repr(self)))
+
     def __str__(self):
-        return '{}: {} ({}) [{}]'.format(self.__class__, self.name, self.file_name, self.uid)
+        return '{}: {} ({}) [{}]'.format(self.__class__.__name__, self.name, self.file_name, self.uid)
 
     def __repr__(self):
-        return '{}(name = {}, file_name = {}, uid = {})'.format(self.__class__, self.name, self.file_name, self.uid)
+        return '{}(name = {}, file_name = {}, uid = {})'.format(self.__class__.__name__, self.name, self.file_name, self.uid)
+
+    def __eq__(self, other):
+        return self.uid == other.uid
+
+    def __hash__(self):
+        return hash(self.uid)
 
     def copy(self):
+        """Return a deepcopy of the Beet."""
         return deepcopy(self)
 
     def save(self, target_dir = None, file_extension = '.beet'):
         """
-        Atomically save the Beet to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
+        Atomically pickle the Beet to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
 
-        :param target_dir:
-        :param file_extension:
-        :return:
+        :param target_dir: directory to save the Beet to
+        :param file_extension: file extension to name the Beet with
+        :return: None
         """
         if target_dir is None:
             target_dir = os.getcwd()
@@ -63,27 +147,27 @@ class Beet:
         file_path = os.path.join(target_dir, self.file_name + file_extension)
         file_path_working = file_path + '.working'
 
-        # ensure dir exists
+        ensure_dir_exists(file_path_working)
 
         with gzip.open(file_path_working, mode = 'wb') as file:
             pickle.dump(self, file, protocol = -1)
 
         os.replace(file_path_working, file_path)
 
-        logger.debug('Saved {} to {}'.format(self.file_name, file_path))
+        logger.info('Saved {} {} to {}'.format(self.__class__.__name__, self.name, file_path))
 
     @staticmethod
     def load(file_path):
         """
         Load a Beet from file_path.
 
-        :param file_path:
-        :return:
+        :param file_path: the path to try to load a Beet from
+        :return: the loaded Beet
         """
         with gzip.open(file_path, mode = 'rb') as file:
-            beet = Beet.load(file)
+            beet = pickle.load(file)
 
-        logger.info('Loaded {} from {}'.format(beet.name, file_path))
+        logger.info('Loaded {} {} from {}'.format(beet.__class__.__name__, beet.name, file_path))
 
         return beet
 
@@ -96,18 +180,25 @@ def ensure_dir_exists(path):
         make_path = split_path[0]
     os.makedirs(make_path, exist_ok = True)
 
+    logger.debug('Ensured path exists: {}'.format(make_path))
+
 
 def ask_for_input(question, default = None, cast_to = str):
     input_str = input(question + ' [Default: {}]: '.format(default))
 
     trimmed = input_str.replace(' ', '')
     if trimmed == '':
-        return cast_to(default)
+        out = cast_to(default)
     else:
-        return cast_to(trimmed)
+        out = cast_to(trimmed)
+
+    logger.debug('Got input from cmd line: {} [type: {}]'.format(out, type(out)))
+
+    return out
 
 
 def multi_map(function, targets, processes = None):
+    """Map a function over a list of inputs using multiprocessing."""
     if processes is None:
         processes = mp.cpu_count() - 1
 
@@ -138,6 +229,13 @@ class cached_property:
 
 
 def memoize(copy_output = False):
+    """
+    Returns a decorator that memoizes the result of a function call.
+
+    :param copy_output: if True, the output of the memo will be deepcopied before returning. Defaults to False.
+    :return: a Memoize decorator
+    """
+
     class Memoize:
         def __init__(self, func):
             self.func = func
@@ -146,7 +244,6 @@ def memoize(copy_output = False):
             self.__doc__ = self.func.__doc__
 
         def __call__(self, *args):
-            # memoized call to the wrapped function
             if args in self.memo:
                 out = self.memo[args]
             else:

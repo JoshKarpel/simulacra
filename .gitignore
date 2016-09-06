@@ -90,4 +90,5 @@ ENV/
 
 .idea/
 .pyxbld/
-/out/
+/compy/.pyxbld/
+/testing/out/

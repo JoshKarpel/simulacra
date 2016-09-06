@@ -1,7 +1,11 @@
 import logging
 
+import numpy as np
+
 from compy import core, misc, utils
-from compy.units import *
+from compy.quantum.core import QuantumMesh
+import compy.units as un
+import compy.cy as cy
 
 
 logger = logging.getLogger(__name__)
@@ -15,10 +19,11 @@ class BoundState:
 
     def __init__(self, n = 1, l = 0, m = 0):
         """
+        Construct a BoundState from its three quantum numbers (n, l, m).
 
-        :param n:
-        :param l:
-        :param m:
+        :param n: principal quantum number
+        :param l: orbital angular momentum quantum number
+        :param m: quantum number for angular momentum z-component
         """
         if any(int(x) != x for x in (n, l, m)):
             raise misc.IllegalQuantumState('n, l, and m must be integers')
@@ -26,17 +31,17 @@ class BoundState:
         if n > 0:
             self._n = n
         else:
-            raise misc.IllegalQuantumState('n must be greater than zero')
+            raise misc.IllegalQuantumState('n ({}) must be greater than zero'.format(n))
 
         if 0 <= l < n:
             self._l = l
         else:
-            raise misc.IllegalQuantumState('l must be less than n and greater than or equal to zero')
+            raise misc.IllegalQuantumState('l ({}) must be less than n ({}) and greater than or equal to zero'.format(l, n))
 
         if -l <= m <= l:
             self._m = m
         else:
-            raise misc.IllegalQuantumState('m must be between -l and l')
+            raise misc.IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
 
     @property
     def n(self):
@@ -73,7 +78,7 @@ class BoundState:
         return '<{},{},{}|'.format(self.n, self.l, self.m)
 
     @property
-    def plot_str(self):
+    def tex_str(self):
         """Return a LaTeX-formatted string for the BoundState."""
         return r'\psi_{{{},{},{}}}'.format(self.n, self.l, self.m)
 
@@ -96,17 +101,62 @@ class BoundState:
         raise NotImplementedError
 
 
+class BoundStateSuperposition:
+    """A class that represents a superposition of bound states."""
+
+    __slots__ = ['state']
+
+    def __init__(self, state, normalize = True):
+        """
+        Construct a discrete superposition of states.
+
+        If normalize is True the initial amplitudes are rescaled so that the state is normalized.
+
+        :param state: a dict of BoundState:state amplitude (complex number) pairs.
+        :param normalize: if True, renormalize the state amplitudes.
+        """
+        state = dict(state)  # consume input iterators because we may need to reuse the dict several times
+
+        if normalize:
+            unnormalized_amplitude = np.sqrt(sum([np.abs(amp) ** 2 for amp in state.values()]))
+            state = {state: amp / unnormalized_amplitude for state, amp in state.items()}
+
+        self.state = state
+
+    def __str__(self):
+        pairs = ['{}: {}'.format(str(s), a) for s, a in self.state.items()]
+        out = ', '.join(pairs)
+        return out
+
+    def __repr__(self):
+        return repr(self.state)
+
+    def __getitem__(self, item):
+        return self.state[item]
+
+    def __iter__(self):
+        yield from self.state.items()
+
+    @property
+    def norm(self):
+        return np.sum(np.abs(np.array(self.state.values())) ** 2)
+
+    def __abs__(self):
+        return self.norm
+
+
 class FreeState:
     """A class that represents a hydrogen free state."""
 
     __slots__ = ('_energy', '_l', '_m')
 
-    def __init__(self, energy = 1 * eV, l = 0, m = 0):
+    def __init__(self, energy = 1 * un.eV, l = 0, m = 0):
         """
+        Construct a FreeState from its energy and angular momentum quantum numbers.
 
-        :param n:
-        :param l:
-        :param m:
+        :param energy: energy of the free state
+        :param l: orbital angular momentum quantum number
+        :param m: quantum number for angular momentum z-component
         """
         if any(int(x) != x for x in (l, m)):
             raise misc.IllegalQuantumState('l and m must be integers')
@@ -119,15 +169,16 @@ class FreeState:
         if l >= 0:
             self._l = l
         else:
-            raise misc.IllegalQuantumState('l must be greater than or equal to zero')
+            raise misc.IllegalQuantumState('l ({}) must be greater than or equal to zero'.format(l))
 
         if -l <= m <= l:
             self._m = m
         else:
-            raise misc.IllegalQuantumState('m must be between -l and l')
+            raise misc.IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
 
     @classmethod
     def from_wavenumber(cls, k, l = 0, m = 0):
+        """Construct a FreeState from its wavenumber and angular momentum quantum numbers."""
         energy = misc.electron_energy_from_wavenumber(k)
 
         return cls(energy, l, m)
@@ -156,20 +207,20 @@ class FreeState:
         return self.ket
 
     def __repr__(self):
-        return '{}(T={} eV, k={} 1/nm, l={}, m={})'.format(self.__class__.__name__, np.around(self.energy / eV, 2), np.around(self.k * nm, 2), self.l, self.m)
+        return '{}(T={} eV, k={} 1/nm, l={}, m={})'.format(self.__class__.__name__, np.around(self.energy / un.eV, 2), np.around(self.k * un.nm, 2), self.l, self.m)
 
     @property
     def ket(self):
-        return '|{} eV,{} 1/nm, {}, {}>'.format(np.around(self.energy / eV, 2), np.around(self.k * nm, 2), self.l, self.m)
+        return '|{} eV,{} 1/nm, {}, {}>'.format(np.around(self.energy / un.eV, 2), np.around(self.k * un.nm, 2), self.l, self.m)
 
     @property
     def bra(self):
-        return '<{} eV,{} 1/nm, {}, {}|'.format(np.around(self.energy / eV, 2), np.around(self.k * nm, 2), self.l, self.m)
+        return '<{} eV,{} 1/nm, {}, {}|'.format(np.around(self.energy / un.eV, 2), np.around(self.k * un.nm, 2), self.l, self.m)
 
     @property
     def plot_str(self):
         """Return a LaTeX-formatted string for the BoundState."""
-        return r'\phi_{{{},{},{}}}'.format(np.around(self.energy / eV, 2), self.l, self.m)
+        return r'\phi_{{{},{},{}}}'.format(np.around(self.energy / un.eV, 2), self.l, self.m)
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.energy == other.energy and self.l == other.l and self.m == other.m
@@ -190,6 +241,21 @@ class FreeState:
         raise NotImplementedError
 
 
+class CylindricalFiniteDifferenceMesh(QuantumMesh):
+    def __init__(self, parameters, simulation):
+        super(CylindricalFiniteDifferenceMesh, self).__init__(parameters, simulation)
+
+
+class SphericalFiniteDifferenceMesh(QuantumMesh):
+    def __init__(self):
+        super(SphericalFiniteDifferenceMesh, self).__init__(parameters, simulation)
+
+
+class CoupledSphericalHarmonicMesh(QuantumMesh):
+    def __init__(self):
+        super(CoupledSphericalHarmonicMesh, self).__init__(parameters, simulation)
+
+
 class IonizationParameters(core.Parameters):
     def __init__(self, name, file_name = None):
         super(IonizationParameters, self).__init__(name, file_name = file_name)
@@ -197,9 +263,7 @@ class IonizationParameters(core.Parameters):
 
 class IonizationSimulation(core.Simulation):
     def __init__(self, parameters):
-        self.parameters = parameters
-
-        super(IonizationSimulation, self).__init__(self.parameters.name, self.parameters.file_name)  # inherit name and file_name from parameters
+        super(IonizationSimulation, self).__init__(parameters)
 
     def run_simulation(self):
         raise NotImplementedError
