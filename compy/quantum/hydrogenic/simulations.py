@@ -3,7 +3,8 @@ import logging
 import numpy as np
 
 from compy import core, misc, utils
-from compy.quantum.core import QuantumMesh
+import compy.quantum.core as qm
+from compy.quantum.hydrogenic import animators, potentials
 import compy.units as un
 import compy.cy as cy
 
@@ -13,7 +14,7 @@ logger.setLevel(logging.DEBUG)
 
 
 class BoundState:
-    """A class that represents a hydrogen bound state."""
+    """A class that represents a hydrogenic bound state."""
 
     __slots__ = ('_n', '_l', '_m')
 
@@ -26,22 +27,22 @@ class BoundState:
         :param m: quantum number for angular momentum z-component
         """
         if any(int(x) != x for x in (n, l, m)):
-            raise misc.IllegalQuantumState('n, l, and m must be integers')
+            raise qm.IllegalQuantumState('n, l, and m must be integers')
 
         if n > 0:
             self._n = n
         else:
-            raise misc.IllegalQuantumState('n ({}) must be greater than zero'.format(n))
+            raise qm.IllegalQuantumState('n ({}) must be greater than zero'.format(n))
 
         if 0 <= l < n:
             self._l = l
         else:
-            raise misc.IllegalQuantumState('l ({}) must be less than n ({}) and greater than or equal to zero'.format(l, n))
+            raise qm.IllegalQuantumState('l ({}) must be less than n ({}) and greater than or equal to zero'.format(l, n))
 
         if -l <= m <= l:
             self._m = m
         else:
-            raise misc.IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
+            raise qm.IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
 
     @property
     def n(self):
@@ -54,10 +55,6 @@ class BoundState:
     @property
     def m(self):
         return self._m
-
-    @property
-    def energy(self):
-        return rydberg / (self.n ** 2)
 
     @property
     def spherical_harmonic(self):
@@ -91,7 +88,7 @@ class BoundState:
     @utils.memoize()
     def __call__(self, r, theta, phi):
         """
-        Evaluate the hydrogen bound state wavefunction at a point, or vectorized over an array of points.
+        Evaluate the hydrogenic bound state wavefunction at a point, or vectorized over an array of points.
 
         :param r: radial coordinate
         :param theta: polar coordinate
@@ -138,15 +135,23 @@ class BoundStateSuperposition:
         yield from self.state.items()
 
     @property
+    def states(self):
+        yield from self.state.keys()
+
+    @property
+    def amplitudes(self):
+        return np.array(self.state.values())
+
+    @property
     def norm(self):
-        return np.sum(np.abs(np.array(self.state.values())) ** 2)
+        return np.sum(np.abs(self.amplitudes) ** 2)
 
     def __abs__(self):
         return self.norm
 
 
 class FreeState:
-    """A class that represents a hydrogen free state."""
+    """A class that represents a hydrogenic free state."""
 
     __slots__ = ('_energy', '_l', '_m')
 
@@ -159,27 +164,27 @@ class FreeState:
         :param m: quantum number for angular momentum z-component
         """
         if any(int(x) != x for x in (l, m)):
-            raise misc.IllegalQuantumState('l and m must be integers')
+            raise qm.IllegalQuantumState('l and m must be integers')
 
         if energy > 0:
             self._energy = energy
         else:
-            raise misc.IllegalQuantumState('energy must be greater than zero')
+            raise qm.IllegalQuantumState('energy must be greater than zero')
 
         if l >= 0:
             self._l = l
         else:
-            raise misc.IllegalQuantumState('l ({}) must be greater than or equal to zero'.format(l))
+            raise qm.IllegalQuantumState('l ({}) must be greater than or equal to zero'.format(l))
 
         if -l <= m <= l:
             self._m = m
         else:
-            raise misc.IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
+            raise qm.IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
 
     @classmethod
     def from_wavenumber(cls, k, l = 0, m = 0):
         """Construct a FreeState from its wavenumber and angular momentum quantum numbers."""
-        energy = misc.electron_energy_from_wavenumber(k)
+        energy = qm.electron_energy_from_wavenumber(k)
 
         return cls(energy, l, m)
 
@@ -189,7 +194,7 @@ class FreeState:
 
     @property
     def k(self):
-        return misc.electron_wavenumber_from_energy(self.energy)
+        return qm.electron_wavenumber_from_energy(self.energy)
 
     @property
     def l(self):
@@ -207,20 +212,20 @@ class FreeState:
         return self.ket
 
     def __repr__(self):
-        return '{}(T={} eV, k={} 1/nm, l={}, m={})'.format(self.__class__.__name__, np.around(self.energy / un.eV, 2), np.around(self.k * un.nm, 2), self.l, self.m)
+        return '{}(T={} eV, k={} 1/nm, l={}, m={})'.format(self.__class__.__name__, un.round(self.energy, un.eV, 3), un.round(self.k, 1 / un.nm, 3), self.l, self.m)
 
     @property
     def ket(self):
-        return '|{} eV,{} 1/nm, {}, {}>'.format(np.around(self.energy / un.eV, 2), np.around(self.k * un.nm, 2), self.l, self.m)
+        return '|{} eV,{} 1/nm, {}, {}>'.format(un.round(self.energy, un.eV, 3), un.round(self.k, 1 / un.nm, 3), self.l, self.m)
 
     @property
     def bra(self):
-        return '<{} eV,{} 1/nm, {}, {}|'.format(np.around(self.energy / un.eV, 2), np.around(self.k * un.nm, 2), self.l, self.m)
+        return '<{} eV,{} 1/nm, {}, {}|'.format(un.round(self.energy, un.eV, 3), un.round(self.k, 1 / un.nm, 3), self.l, self.m)
 
     @property
     def plot_str(self):
         """Return a LaTeX-formatted string for the BoundState."""
-        return r'\phi_{{{},{},{}}}'.format(np.around(self.energy / un.eV, 2), self.l, self.m)
+        return r'\phi_{{{},{},{}}}'.format(un.round(self.energy, un.eV, 3), self.l, self.m)
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.energy == other.energy and self.l == other.l and self.m == other.m
@@ -231,7 +236,7 @@ class FreeState:
     @utils.memoize()
     def __call__(self, r, theta, phi):
         """
-        Evaluate the hydrogen bound state wavefunction at a point, or vectorized over an array of points.
+        Evaluate the hydrogenic bound state wavefunction at a point, or vectorized over an array of points.
 
         :param r: radial coordinate
         :param theta: polar coordinate
@@ -241,29 +246,45 @@ class FreeState:
         raise NotImplementedError
 
 
-class CylindricalFiniteDifferenceMesh(QuantumMesh):
+class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def __init__(self, parameters, simulation):
-        super(CylindricalFiniteDifferenceMesh, self).__init__(parameters, simulation)
+        super(CylindricalSliceFiniteDifferenceMesh, self).__init__(parameters, simulation)
 
 
-class SphericalFiniteDifferenceMesh(QuantumMesh):
-    def __init__(self):
-        super(SphericalFiniteDifferenceMesh, self).__init__(parameters, simulation)
+class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
+    def __init__(self, parameters, simulation):
+        super(SphericalSliceFiniteDifferenceMesh, self).__init__(parameters, simulation)
 
 
-class CoupledSphericalHarmonicMesh(QuantumMesh):
-    def __init__(self):
-        super(CoupledSphericalHarmonicMesh, self).__init__(parameters, simulation)
+class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
+    def __init__(self, parameters, simulation):
+        super(SphericalHarmonicFiniteDifferenceMesh, self).__init__(parameters, simulation)
 
 
-class IonizationParameters(core.Parameters):
-    def __init__(self, name, file_name = None):
-        super(IonizationParameters, self).__init__(name, file_name = file_name)
+class HydrogenicSpecification(core.Specification):
+    def __init__(self, name, file_name = None,
+                 test_mass = un.electron_mass_reduced, test_charge = un.electron_charge,
+                 charge_coupled_potential = None,
+                 time_initial = 0 * un.asec, time_final = 200 * un.asec, time_step = 1 * un.asec,
+                 extra_time = 0 * un.asec, extra_time_step = 1 * un.asec):
+        super(HydrogenicSpecification, self).__init__(name, file_name = file_name)
+
+        self.test_mass = test_mass
+        self.test_charge = test_charge
+
+        self.charge_coupled_potential = charge_coupled_potential
+
+        self.time_initial = time_initial
+        self.time_final = time_final
+        self.time_step = time_step
+
+        self.extra_time = extra_time
+        self.extra_time_step = extra_time_step
 
 
-class IonizationSimulation(core.Simulation):
-    def __init__(self, parameters):
-        super(IonizationSimulation, self).__init__(parameters)
+class HydrogenicSimulation(core.Simulation):
+    def __init__(self, spec):
+        super(HydrogenicSimulation, self).__init__(spec)
 
     def run_simulation(self):
         raise NotImplementedError

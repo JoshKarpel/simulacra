@@ -3,7 +3,8 @@ import sys
 import logging
 
 import compy as cp
-import compy.quantum.hydrogen as hyd
+from compy.quantum.core import IllegalQuantumState
+import compy.quantum.hydrogenic as hyd
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -30,5 +31,5 @@ if __name__ == '__main__':
 
     try:
         bs2 = hyd.BoundState(2, 3, 5)
-    except cp.misc.IllegalQuantumState as err:
+    except IllegalQuantumState as err:
         logger.exception('expected excepted')

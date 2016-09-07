@@ -3,7 +3,7 @@ import sys
 import logging
 
 import compy as cp
-import compy.quantum.hydrogen as hyd
+import compy.quantum.hydrogenic as hyd
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -26,13 +26,13 @@ logger.addHandler(file_handler)
 if __name__ == '__main__':
     logger.info('hi from script')
 
-    par = cp.core.Parameters('test', file_name = 'test_file_name')
+    par = cp.core.Specification('test', file_name = 'test_file_name')
     logger.info(par)
     logger.info(repr(par))
 
     par.save(target_dir = OUT_DIR)
 
-    par2 = cp.core.Parameters.load(os.path.join(OUT_DIR, 'test_file_name.par'))
+    par2 = cp.core.Specification.load(os.path.join(OUT_DIR, 'test_file_name.par'))
 
     # cp.utils.ask_for_input('who are you?', cast_to = str)
 
@@ -40,15 +40,15 @@ if __name__ == '__main__':
     logger.critical(sim)
     logger.critical(repr(sim))
 
-    h = hyd.IonizationSimulation(par)
+    h = hyd.HydrogenicSimulation(par)
     h.save(target_dir = OUT_DIR)
-    h2 = hyd.IonizationSimulation.load(os.path.join(OUT_DIR, 'test_file_name.sim'))
+    h2 = hyd.HydrogenicSimulation.load(os.path.join(OUT_DIR, 'test_file_name.sim'))
 
     logger.critical(h2)
 
     try:
-        bs = hyd.BoundState(-1)
-    except cp.misc.IllegalQuantumState as err:
+        raise ValueError
+    except ValueError as err:
         logger.exception('ouch')
 
     print(logger.handlers)

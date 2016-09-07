@@ -8,6 +8,10 @@ import datetime as dt
 import functools
 import multiprocessing as mp
 from copy import deepcopy
+from contextlib import contextmanager
+
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +26,7 @@ class Logger:
 
     def __init__(self, logger_name = 'compy',
                  stdout_logs = True, stdout_level = logging.DEBUG,
-                 file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'w'):
+                 file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'a'):
 
         self.logger_name = logger_name
 
@@ -45,7 +49,7 @@ class Logger:
         self.logger = None
 
     def __enter__(self):
-        self.logger = logging.getLogger('compy')
+        self.logger = logging.getLogger(self.logger_name)
 
         new_handlers = [logging.NullHandler()]
 
@@ -100,8 +104,8 @@ class Beet:
 
         The file_name is automatically derived from the name if None is given.
 
-        :param name: the desired internal name
-        :param file_name: the desired external name, used for saving. Illegal characters are stripped before use.
+        :param name: the internal name of the Beet
+        :param file_name: the desired external name, used for pickling. Illegal characters are stripped before use.
         """
         self.name = name
         if file_name is None:
@@ -183,6 +187,17 @@ def ensure_dir_exists(path):
     logger.debug('Ensured path exists: {}'.format(make_path))
 
 
+def save_current_figure(name, target_dir = None, img_format = 'png', scale_factor = 1):
+    """Save the current matplotlib figure with the given name to the given folder."""
+    if target_dir is None:
+        target_dir = os.getcwd()
+    path = os.path.join(target_dir, '{}.{}'.format(name, img_format))
+
+    ensure_dir_exists(path)
+
+    plt.savefig(path, dpi = scale_factor * plt.gcf().dpi, bbox_inches = 'tight')
+
+
 def ask_for_input(question, default = None, cast_to = str):
     input_str = input(question + ' [Default: {}]: '.format(default))
 
@@ -243,24 +258,54 @@ def memoize(copy_output = False):
 
             self.__doc__ = self.func.__doc__
 
-        def __call__(self, *args):
-            if args in self.memo:
-                out = self.memo[args]
-            else:
-                value = self.func(*args)
-                self.memo[args] = value
-                out = value
+        def __call__(self, *args, **kwargs):
+            key = args
+            for k, v in kwargs.items():
+                try:
+                    key += (k, tuple(v))
+                except TypeError:
+                    key += (k, v)
+
+            try:
+                value = self.memo[key]
+                # logger.debug('Hit on memo for {}, key = {}'.format(repr(self.func), key))
+            except KeyError:
+                value = self.func(*args, **kwargs)
+                self.memo[key] = value
+                # logger.debug('Miss on memo for {}, key = {}'.format(repr(self.func), key))
 
             if copy_output:
                 try:
-                    out = out.copy()
+                    value = value.copy()
                 except AttributeError:
-                    out = deepcopy(out)
+                    value = deepcopy(value)
 
-            return out
+            return value
 
         def __get__(self, obj, objtype):
             # support instance methods
             return functools.partial(self.__call__, obj)
 
     return Memoize
+
+
+class Timer:
+    def __init__(self):
+        self.start_time = None
+        self.end_time = None
+        self.elapsed_time = None
+
+    def __enter__(self):
+        self.start_time = dt.datetime.now()
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end_time = dt.datetime.now()
+        self.elapsed_time = self.end_time - self.start_time
+
+    def __str__(self):
+        if self.end_time is None:
+            return 'Timer started at {}, still running'.format(self.start_time)
+        else:
+            return 'Timer started at {}, ended at {}, elapsed time {}'.format(self.start_time, self.end_time, self.elapsed_time)

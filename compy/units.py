@@ -10,6 +10,11 @@ logger.setLevel(logging.DEBUG)
 unit_names_to_values = {}
 unit_names_to_tex_strings = {}
 
+
+def round(value, units = 1, digits = 3):
+    return np.around(value / units, digits)
+
+
 # dimensionless constants
 alpha = 7.2973525664e-3
 pi = np.pi
@@ -86,22 +91,23 @@ unit_names_to_tex_strings.update({'cm': r'$\mathrm{cm}$',
                                   'bohr_radius': r'$a_0$'})
 
 # time
-ms = 1e-3 * s
-us = 1e-6 * s
-ns = 1e-9 * s
-ps = 1e-12 * s
-fs = 1e-15 * s
+msec = 1e-3 * s
+usec = 1e-6 * s
+nsec = 1e-9 * s
+psec = 1e-12 * s
+fsec = 1e-15 * s
+asec = 1e-18 * s
 minute = 60 * s
 hour = 60 * minute
 day = 24 * hour
 week = 7 * day
 year = 365 * day
 
-unit_names_to_values.update({'ms': ms,
-                             'us': us,
-                             'ns': ns,
-                             'ps': ps,
-                             'fs': fs,
+unit_names_to_values.update({'ms': msec,
+                             'us': usec,
+                             'ns': nsec,
+                             'ps': psec,
+                             'fs': fsec,
                              'minutes': minute,
                              'hours': hour,
                              'days': day,
@@ -462,3 +468,13 @@ unit_names_to_tex_strings.update({'c': r'$c$',
                                   'epsilon_0': r'$\epsilon_0$',
                                   'coulomb_force_constant': r'$k_e$',
                                   'n_vacuum': r'$n_{\mathrm{vac}}$'})
+
+atomic_electric_field = coulomb_force_constant * proton_charge / (bohr_radius ** 2)
+atomic_electric_potential = coulomb_force_constant * proton_charge / bohr_radius
+atomic_velocity = alpha * c
+atomic_momentum = electron_mass * atomic_velocity
+
+unit_names_to_values.update({'atomic_electric_field': atomic_electric_field,
+                             'atomic_electric_potential': atomic_electric_potential,
+                             'atomic_velocity': atomic_velocity,
+                             'atomic_momentum': atomic_momentum})

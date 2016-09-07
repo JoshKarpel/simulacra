@@ -16,18 +16,6 @@ def sinc(x):
     return np.sinc(x / pi)
 
 
-def electron_energy_from_wavenumber(k):
-    return (hbar * k) ** 2 / (2 * electron_mass)
-
-
-def electron_wavenumber_from_energy(energy):
-    return np.sqrt(2 * electron_mass * energy) / hbar
-
-
-class IllegalQuantumState(Exception):
-    pass
-
-
 class SphericalHarmonic:
     """A class that represents a spherical harmonic."""
 
