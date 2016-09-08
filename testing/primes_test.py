@@ -1,6 +1,6 @@
 import datetime as dt
 
-from compy.misc import *
+from compy.math import *
 
 if __name__ == '__main__':
     low_limit = 100

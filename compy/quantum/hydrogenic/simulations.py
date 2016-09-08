@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 
-from compy import core, misc, utils
+from compy import core, math, utils
 import compy.quantum.core as qm
 from compy.quantum.hydrogenic import animators, potentials
 import compy.units as un
@@ -58,7 +58,7 @@ class BoundState:
 
     @property
     def spherical_harmonic(self):
-        return misc.SphericalHarmonic(l = self.l, m = self.m)
+        return math.SphericalHarmonic(l = self.l, m = self.m)
 
     def __str__(self):
         return self.ket
@@ -149,6 +149,9 @@ class BoundStateSuperposition:
     def __abs__(self):
         return self.norm
 
+    def __call__(self, r, theta, phi):
+        return sum(state(r, theta, phi) for state in self.states)
+
 
 class FreeState:
     """A class that represents a hydrogenic free state."""
@@ -206,7 +209,7 @@ class FreeState:
 
     @property
     def spherical_harmonic(self):
-        return misc.SphericalHarmonic(l = self.l, m = self.m)
+        return math.SphericalHarmonic(l = self.l, m = self.m)
 
     def __str__(self):
         return self.ket
@@ -264,7 +267,7 @@ class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
 class HydrogenicSpecification(core.Specification):
     def __init__(self, name, file_name = None,
                  test_mass = un.electron_mass_reduced, test_charge = un.electron_charge,
-                 charge_coupled_potential = None,
+                 internal_potential = None, electric_potential = None,
                  time_initial = 0 * un.asec, time_final = 200 * un.asec, time_step = 1 * un.asec,
                  extra_time = 0 * un.asec, extra_time_step = 1 * un.asec):
         super(HydrogenicSpecification, self).__init__(name, file_name = file_name)
@@ -272,7 +275,8 @@ class HydrogenicSpecification(core.Specification):
         self.test_mass = test_mass
         self.test_charge = test_charge
 
-        self.charge_coupled_potential = charge_coupled_potential
+        self.internal_potential = internal_potential
+        self.electric_potential = electric_potential
 
         self.time_initial = time_initial
         self.time_final = time_final

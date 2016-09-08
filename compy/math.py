@@ -57,6 +57,18 @@ class SphericalHarmonic:
         return spc.sph_harm(self.m, self.l, phi, theta)
 
 
+@utils.memoize()
+def fibonacci(n):
+    """Return the n-th Fibonnaci number, with Fibonnaci(0) = Fibonnaci(1) = 1."""
+    if 0 <= n == int(n):
+        if n == 0 or n == 1:
+            return 1
+        else:
+            return fibonacci(n - 1) + fibonacci(n - 2)
+    else:
+        raise ValueError('{} is not a valid index for the Fibonnaci sequence')
+
+
 def is_prime(n):
     if n <= 1:
         return False

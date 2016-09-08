@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.NullHandler())
 
-from compy import core, misc, units, utils
+from compy import core, math, units, utils
 
 # set up platform-independent runtime cython compilation and imports
 import numpy as np

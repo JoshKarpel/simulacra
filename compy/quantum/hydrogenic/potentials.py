@@ -42,7 +42,7 @@ class PotentialSum(Potential):
         return '{}({})'.format(self.__class__.__name__, ', '.join([repr(p) for p in self.potentials]))
 
     def __call__(self, **kwargs):
-        return sum([p(**kwargs) for p in self.potentials])
+        return sum(p(**kwargs) for p in self.potentials)
 
 
 class NuclearPotential(Potential):
