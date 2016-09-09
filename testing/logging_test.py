@@ -40,9 +40,9 @@ if __name__ == '__main__':
     logger.critical(sim)
     logger.critical(repr(sim))
 
-    h = hyd.HydrogenicSimulation(par)
+    h = hyd.ElectricFieldSimulation(par)
     h.save(target_dir = OUT_DIR)
-    h2 = hyd.HydrogenicSimulation.load(os.path.join(OUT_DIR, 'test_file_name.sim'))
+    h2 = hyd.ElectricFieldSimulation.load(os.path.join(OUT_DIR, 'test_file_name.sim'))
 
     logger.critical(h2)
 

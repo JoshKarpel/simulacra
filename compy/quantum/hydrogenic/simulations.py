@@ -101,7 +101,7 @@ class BoundState:
 class BoundStateSuperposition:
     """A class that represents a superposition of bound states."""
 
-    __slots__ = ['state']
+    __slots__ = ('state', )
 
     def __init__(self, state, normalize = True):
         """
@@ -249,28 +249,18 @@ class FreeState:
         raise NotImplementedError
 
 
-class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
-    def __init__(self, parameters, simulation):
-        super(CylindricalSliceFiniteDifferenceMesh, self).__init__(parameters, simulation)
-
-
-class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
-    def __init__(self, parameters, simulation):
-        super(SphericalSliceFiniteDifferenceMesh, self).__init__(parameters, simulation)
-
-
-class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
-    def __init__(self, parameters, simulation):
-        super(SphericalHarmonicFiniteDifferenceMesh, self).__init__(parameters, simulation)
-
-
-class HydrogenicSpecification(core.Specification):
-    def __init__(self, name, file_name = None,
+class ElectricFieldSpecification(core.Specification):
+    def __init__(self, name, mesh_type = None,
                  test_mass = un.electron_mass_reduced, test_charge = un.electron_charge,
                  internal_potential = None, electric_potential = None,
                  time_initial = 0 * un.asec, time_final = 200 * un.asec, time_step = 1 * un.asec,
-                 extra_time = 0 * un.asec, extra_time_step = 1 * un.asec):
-        super(HydrogenicSpecification, self).__init__(name, file_name = file_name)
+                 extra_time = 0 * un.asec, extra_time_step = 1 * un.asec,
+                 **kwargs):
+        super(ElectricFieldSpecification, self).__init__(name, **kwargs)
+
+        if mesh_type is None:
+            raise ValueError('{} must have a mesh_type'.format(name))
+        self.mesh_type = mesh_type
 
         self.test_mass = test_mass
         self.test_charge = test_charge
@@ -286,9 +276,77 @@ class HydrogenicSpecification(core.Specification):
         self.extra_time_step = extra_time_step
 
 
-class HydrogenicSimulation(core.Simulation):
+class CylindricalSliceSpecification(ElectricFieldSpecification):
+    def __init__(self, name,
+                 z_bound = 20 * un.bohr_radius, rho_bound = 20 * un.bohr_radius,
+                 z_points = 2 ** 10, rho_points = 2 ** 10,
+                 **kwargs):
+        super(CylindricalSliceSpecification, self).__init__(name, mesh_type = CylindricalSliceFiniteDifferenceMesh, **kwargs)
+
+        self.z_bound = z_bound
+        self.rho_bound = rho_bound
+
+        self.z_points = z_points
+        self.rho_points = rho_points
+
+
+class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
+    def __init__(self, parameters, simulation):
+        super(CylindricalSliceFiniteDifferenceMesh, self).__init__(parameters, simulation)
+
+    def norm(self):
+        raise NotImplementedError
+
+
+class SphericalSliceSpecification(ElectricFieldSpecification):
+    def __init__(self, name,
+                 r_bound = 20 * un.bohr_radius,
+                 r_points = 2 ** 10, theta_points = 2 ** 10,
+                 **kwargs):
+        super(SphericalSliceSpecification, self).__init__(name, mesh_type = SphericalSliceFiniteDifferenceMesh, **kwargs)
+
+        self.r_bound = r_bound
+
+        self.r_points = r_points
+        self.theta_points = theta_points
+
+
+class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
+    def __init__(self, parameters, simulation):
+        super(SphericalSliceFiniteDifferenceMesh, self).__init__(parameters, simulation)
+
+    def norm(self):
+        raise NotImplementedError
+
+
+class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
+    def __init__(self, parameters, simulation):
+        super(SphericalHarmonicFiniteDifferenceMesh, self).__init__(parameters, simulation)
+
+    def norm(self):
+        raise NotImplementedError
+    
+
+class SphericalHarmonicSpecification(ElectricFieldSpecification):
+    def __init__(self, name,
+                 r_bound = 20 * un.bohr_radius,
+                 r_points = 2 ** 10, spherical_harmonics = (math.SphericalHarmonic(l) for l in range(5)),
+                 **kwargs):
+        super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = SphericalHarmonicFiniteDifferenceMesh, **kwargs)
+
+        self.r_bound = r_bound
+
+        self.r_points = r_points
+
+        self.spherical_harmonics = spherical_harmonics
+
+
+class ElectricFieldSimulation(core.Simulation):
     def __init__(self, spec):
-        super(HydrogenicSimulation, self).__init__(spec)
+        super(ElectricFieldSimulation, self).__init__(spec)
+
+    def update_data(self, time_index):
+        raise NotImplementedError
 
     def run_simulation(self):
         raise NotImplementedError

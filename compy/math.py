@@ -13,6 +13,7 @@ logger.setLevel(logging.DEBUG)
 
 
 def sinc(x):
+    """A wrapper over np.sinc, which is really sinc(pi * x). This version is sinc(x)."""
     return np.sinc(x / pi)
 
 
@@ -59,14 +60,14 @@ class SphericalHarmonic:
 
 @utils.memoize()
 def fibonacci(n):
-    """Return the n-th Fibonnaci number, with Fibonnaci(0) = Fibonnaci(1) = 1."""
+    """Return the n-th Fibonacci number, with Fibonacci(0) = Fibonacci(1) = 1."""
     if 0 <= n == int(n):
         if n == 0 or n == 1:
             return 1
         else:
             return fibonacci(n - 1) + fibonacci(n - 2)
     else:
-        raise ValueError('{} is not a valid index for the Fibonnaci sequence')
+        raise ValueError('{} is not a valid index for the Fibonacci sequence')
 
 
 def is_prime(n):

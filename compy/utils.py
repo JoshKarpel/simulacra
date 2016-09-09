@@ -8,7 +8,6 @@ import datetime as dt
 import functools
 import multiprocessing as mp
 from copy import deepcopy
-from contextlib import contextmanager
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -252,11 +251,20 @@ def memoize(copy_output = False):
     """
 
     class Memoize:
+
+        __slots__ = ('func', 'memo', '__doc__')
+
         def __init__(self, func):
             self.func = func
             self.memo = {}
 
-            self.__doc__ = self.func.__doc__
+            self.__doc__ = func.__doc__
+
+        def __str__(self):
+            return 'Memoized wrapper over {}'.format(self.func.__name__)
+
+        def __repr__(self):
+            return 'memoize(copy_output = {})({})'.format(copy_output, repr(self.func))
 
         def __call__(self, *args, **kwargs):
             key = args
@@ -268,11 +276,11 @@ def memoize(copy_output = False):
 
             try:
                 value = self.memo[key]
-                # logger.debug('Hit on memo for {}, key = {}'.format(repr(self.func), key))
+                logger.debug('Hit on memo for {}, key = {}'.format(repr(self.func), key))
             except KeyError:
                 value = self.func(*args, **kwargs)
                 self.memo[key] = value
-                # logger.debug('Miss on memo for {}, key = {}'.format(repr(self.func), key))
+                logger.debug('Miss on memo for {}, key = {}'.format(repr(self.func), key))
 
             if copy_output:
                 try:
@@ -290,22 +298,26 @@ def memoize(copy_output = False):
 
 
 class Timer:
+    """A context manager that times the code in the with block. Print the Timer to see the results."""
+
+    __slots__ = ('time_start', 'time_end', 'time_elapsed')
+
     def __init__(self):
-        self.start_time = None
-        self.end_time = None
-        self.elapsed_time = None
+        self.time_start = None
+        self.time_end = None
+        self.time_elapsed = None
 
     def __enter__(self):
-        self.start_time = dt.datetime.now()
+        self.time_start = dt.datetime.now()
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.end_time = dt.datetime.now()
-        self.elapsed_time = self.end_time - self.start_time
+        self.time_end = dt.datetime.now()
+        self.time_elapsed = self.time_end - self.time_start
 
     def __str__(self):
-        if self.end_time is None:
-            return 'Timer started at {}, still running'.format(self.start_time)
+        if self.time_end is None:
+            return 'Timer started at {}, still running'.format(self.time_start)
         else:
-            return 'Timer started at {}, ended at {}, elapsed time {}'.format(self.start_time, self.end_time, self.elapsed_time)
+            return 'Timer started at {}, ended at {}, elapsed time {}'.format(self.time_start, self.time_end, self.time_elapsed)
