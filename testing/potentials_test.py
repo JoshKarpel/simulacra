@@ -33,3 +33,11 @@ if __name__ == '__main__':
 
         coords = {'t': 5, 'r': r, 'distance_along_polarization': distance_along_polarization}
         logger.info(combined(**coords) / eV)
+
+        comb_by_add = coulomb + sine
+        print(comb_by_add)
+        print(repr(comb_by_add))
+
+        comb_again = comb_by_add + sine
+        print(comb_again)
+        print(repr(comb_again))

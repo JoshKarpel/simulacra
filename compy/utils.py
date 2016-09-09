@@ -26,6 +26,7 @@ class Logger:
     def __init__(self, logger_name = 'compy',
                  stdout_logs = True, stdout_level = logging.DEBUG,
                  file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'a'):
+        """Construct a Logger context manager."""
 
         self.logger_name = logger_name
 
@@ -87,6 +88,7 @@ ILLEGAL_FILENAME_CHARACTERS = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']  # 
 
 
 def strip_illegal_characters(string):
+    """Strip characters that cannot be included in filenames from a string."""
     return ''.join([char for char in string if char not in ILLEGAL_FILENAME_CHARACTERS])
 
 
@@ -176,6 +178,7 @@ class Beet:
 
 
 def ensure_dir_exists(path):
+    """Ensure that the directory tree to the path exists."""
     split_path = os.path.splitext(path)
     if split_path[0] != path:  # path is file
         make_path = os.path.dirname(split_path[0])
@@ -198,6 +201,7 @@ def save_current_figure(name, target_dir = None, img_format = 'png', scale_facto
 
 
 def ask_for_input(question, default = None, cast_to = str):
+    """Ask for input from the user, with a default value, and call cast_to on it before returning it."""
     input_str = input(question + ' [Default: {}]: '.format(default))
 
     trimmed = input_str.replace(' ', '')
@@ -242,6 +246,28 @@ class cached_property:
         return value
 
 
+def method_dispatch(func):
+    """Works the same as functools.singledispatch, but uses the second argument instead of the first so that it can be used for instance methods."""
+    dispatcher = functools.singledispatch(func)
+
+    def wrapper(*args, **kw):
+        return dispatcher.dispatch(args[1].__class__)(*args, **kw)
+
+    wrapper.register = dispatcher.register
+    functools.update_wrapper(wrapper, func)
+
+    return wrapper
+
+
+def tupleize(nested_structure):
+    try:
+        out = tuple(tupleize(ns) for ns in nested_structure)
+    except:
+        out = tuple(nested_structure)
+
+    return out
+
+
 def memoize(copy_output = False):
     """
     Returns a decorator that memoizes the result of a function call.
@@ -268,11 +294,15 @@ def memoize(copy_output = False):
 
         def __call__(self, *args, **kwargs):
             key = args
+            print(args)
+            print(kwargs)
             for k, v in kwargs.items():
                 try:
-                    key += (k, tuple(v))
+                    key += (k, tuple(v))  # this needs to recursively tuple-ize so that it can handle n-dimensional numpy arrays
                 except TypeError:
                     key += (k, v)
+
+            # print(key)
 
             try:
                 value = self.memo[key]

@@ -24,8 +24,11 @@ class Potential:
     def __repr__(self):
         return '{}'.format(self.__class__.__name__)
 
+    def __add__(self, other):
+        return PotentialSum(self, other)
 
-class PotentialSum(Potential):
+
+class PotentialSum:
     """
     A class that handles a group of potentials that should be evaluated together to produce a total potential.
 
@@ -44,8 +47,17 @@ class PotentialSum(Potential):
     def __call__(self, **kwargs):
         return sum(p(**kwargs) for p in self.potentials)
 
+    def __add__(self, other):
+        try:
+            result = PotentialSum(*self.potentials, other.potentials)
+        except AttributeError:
+            result = PotentialSum(*self.potentials, other)
+        return result
+
 
 class NuclearPotential(Potential):
+    """A Potential representing the electric potential of the nucleus of a hydrogenic atom."""
+
     def __init__(self, charge = 1 * un.proton_charge):
         super(NuclearPotential, self).__init__()
 
@@ -111,9 +123,21 @@ class UniformLinearlyPolarizedElectricField(Potential):
     def __get_potential(self, distance_along_polarization, test_charge):
         return distance_along_polarization * test_charge
 
+    def get_amplitude(self, t):
+        raise NotImplementedError
+
+
+class Rectangle(UniformLinearlyPolarizedElectricField):
+    def __init__(self, start_time = None, end_time = None, amplitude = 1 * un.atomic_electric_field):
+        super(Rectangle, self).__init__(window_time = None, window_width = None)
+
+        self.start_time = start_time
+        self.end_time = end_time
+        self.amplitude = amplitude
+
 
 class SineWave(UniformLinearlyPolarizedElectricField):
-    def __init__(self, omega, amplitude, phase = 0, window_time = None, window_width = None):
+    def __init__(self, omega, amplitude = 1 * un.atomic_electric_field, phase = 0, window_time = None, window_width = None):
         super(SineWave, self).__init__(window_time = window_time, window_width = window_width)
 
         self.omega = omega
@@ -181,7 +205,7 @@ class SineWave(UniformLinearlyPolarizedElectricField):
         return out
 
     def __get_potential(self, t):
-        return self.amplitude * np.sin((self.omega * t) + self.phase)
+        return self.get_amplitude(t)
 
     def get_field_amplitude(self, t):
-        return self.__get_potential(t)
+        return self.amplitude * np.sin((self.omega * t) + self.phase)

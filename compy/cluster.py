@@ -3,6 +3,8 @@ import logging
 
 import paramiko
 
+from compy import utils
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -27,9 +29,6 @@ class ClusterInterface:
 
         logger.info('Opened connection to {} as {}'.format(self.remote_host, self.username))
 
-        self.local_home_dir = self._get_local_home_dir()
-        self.remote_home_dir = self._get_remote_home_dir()
-
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -45,7 +44,8 @@ class ClusterInterface:
     def __repr__(self):
         return '{}(hostname = {})'.format(self.__class__.__name__, self.remote_host)
 
-    def _get_local_home_dir(self):
+    @utils.cached_property
+    def local_home_dir(self):
         raise NotImplementedError
 
     def cmd(self, cmd_list):
@@ -56,7 +56,8 @@ class ClusterInterface:
 
         return stdin, stdout, stderr
 
-    def _get_remote_home_dir(self):
+    @utils.cached_property
+    def remote_home_dir(self):
         stdin, stdout, stderr = self.cmd(['pwd'])  # print name of home dir to stdout
 
         home_path = str(stdout.readline()).strip('\n')  # extract path of home dir from stdout

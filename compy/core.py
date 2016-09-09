@@ -28,6 +28,13 @@ class Specification(utils.Beet):
         self.extra = kwargs
 
     def save(self, target_dir = None, file_extension = '.spec'):
+        """
+        Atomically pickle the Specification to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
+
+        :param target_dir: directory to save the Specification to
+        :param file_extension: file extension to name the Specification with
+        :return: None
+        """
         super(Specification, self).save(target_dir, file_extension)
 
 
@@ -35,7 +42,8 @@ class Simulation(utils.Beet):
     """
     A class that represents a simulation.
 
-    It should be subclassed and customized for each variety of simulation. Ideally, actual computation should be handed off to another object, while the Simulation simply stores the data produced by that object.
+    It should be subclassed and customized for each variety of simulation.
+    Ideally, actual computation should be handed off to another object, while the Simulation itself stores the data produced by that object.
     """
 
     def __init__(self, spec, initial_status = 'initialized'):
@@ -45,13 +53,19 @@ class Simulation(utils.Beet):
         :param spec: the Specification for the Simulation
         :param initial_status: an initial status for the simulation, defaults to 'initialized'
         """
-
         self.spec = spec
         self.status = initial_status
 
         super(Simulation, self).__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from parameters
 
     def save(self, target_dir = None, file_extension = '.sim'):
+        """
+        Atomically pickle the Simulation to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
+
+        :param target_dir: directory to save the Simulation to
+        :param file_extension: file extension to name the Simulation with
+        :return: None
+        """
         super(Simulation, self).save(target_dir, file_extension)
 
     def __str__(self):
