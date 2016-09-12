@@ -438,7 +438,7 @@ unit_names_to_tex_strings.update({'A': r'$\mathrm{A}$',
 
 # quantum mechanics
 h = 6.626070040e-34 * J * s  # Planck's constant
-hbar = h / (2 * pi)
+hbar = h / twopi
 rydberg = 13.605693009 * eV
 hartree = 27.21138602 * eV
 

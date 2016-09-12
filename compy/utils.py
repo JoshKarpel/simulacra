@@ -161,6 +161,8 @@ class Beet:
 
         logger.info('Saved {} {} to {}'.format(self.__class__.__name__, self.name, file_path))
 
+        return file_path
+
     @staticmethod
     def load(file_path):
         """

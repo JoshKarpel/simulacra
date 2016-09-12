@@ -10,8 +10,12 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 if __name__ == '__main__':
     with cp.utils.Logger() as logger:
         spec = hyd.CylindricalSliceSpecification('cyl_slice',
-                                                 # internal_potential = hyd.NuclearPotential(charge = 0),
-                                                 electric_potential = hyd.Rectangle(start_time = 20 * asec, end_time = 180 * asec, amplitude = (10 ** 9) * atomic_electric_field))
+                                                 # rho_points = 4, z_points = 4,
+                                                 # rho_bound = 1 * bohr_radius, z_bound = 1 * bohr_radius,
+                                                 # time_final = 5 * asec,
+                                                 # internal_potential = hyd.NuclearPotential(charge = proton_charge),
+                                                 # electric_potential = hyd.Rectangle(start_time = 20 * asec, end_time = 180 * asec, amplitude = 1 * atomic_electric_field)
+                                                 )
         sim = hyd.ElectricFieldSimulation(spec)
 
         logger.info(spec)
@@ -27,3 +31,5 @@ if __name__ == '__main__':
         print(sim.norm_vs_time)
         print(sim.state_overlaps_vs_time[sim.spec.initial_state])
         print(sim.electric_field_amplitude_vs_time / atomic_electric_field)
+
+        print(electron_mass_reduced, spec.test_mass, proton_mass / spec.test_mass)

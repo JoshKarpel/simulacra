@@ -7,7 +7,7 @@ import scipy.special as special
 import scipy.sparse as sparse
 
 from compy import core, math, utils
-import compy.quantum.core as qm
+import compy.quantum as qm
 from compy.quantum.hydrogenic import animators, potentials
 import compy.units as un
 import compy.cy as cy
@@ -271,7 +271,7 @@ class ElectricFieldSpecification(core.Specification):
                  test_mass = un.electron_mass_reduced, test_charge = un.electron_charge,
                  initial_state = BoundState(1, 0),
                  test_states = (BoundState(n, l) for n in range(5) for l in range(n)),
-                 internal_potential = potentials.NuclearPotential(charge = 1) + potentials.RadialImaginaryPotential(center = 20 * un.bohr_radius, width = 1 * un.bohr_radius, amplitude = 1 * un.atomic_electric_potential),
+                 internal_potential = potentials.NuclearPotential(charge = un.proton_charge) + potentials.RadialImaginaryPotential(center = 20 * un.bohr_radius, width = 1 * un.bohr_radius, amplitude = 1 * un.atomic_electric_potential),
                  electric_potential = None,
                  time_initial = 0 * un.asec, time_final = 200 * un.asec, time_step = 1 * un.asec,
                  extra_time = 0 * un.asec, extra_time_step = 1 * un.asec,
@@ -399,7 +399,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
-    @utils.memoize()
+    @utils.memoize(copy_output = True)
     def get_kinetic_energy_matrix_operators(self):
         z_prefactor = -(un.hbar ** 2) / (2 * self.spec.test_mass * (self.delta_z ** 2))
         rho_prefactor = -(un.hbar ** 2) / (2 * self.spec.test_mass * (self.delta_rho ** 2))
@@ -420,17 +420,17 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
         return z_kinetic, rho_kinetic
 
-    @utils.memoize()
+    @utils.memoize(copy_output = True)
     def get_internal_hamiltonian_matrix_operators(self):
         z_kinetic, rho_kinetic = self.get_kinetic_energy_matrix_operators()
-        potential_mesh = self.spec.internal_potential(r = self.r_mesh)
+        potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
 
         z_kinetic.data[1] += 0.5 * self.flatten_mesh(potential_mesh, 'z')
         rho_kinetic.data[1] += 0.5 * self.flatten_mesh(potential_mesh, 'rho')
 
         return z_kinetic, rho_kinetic
 
-    @utils.memoize()
+    @utils.memoize(copy_output = True)
     def get_probability_current_matrix_operators(self):
         z_prefactor = un.hbar / (4 * un.pi * self.spec.test_mass * self.delta_rho * self.delta_z)
         rho_prefactor = un.hbar / (4 * un.pi * self.spec.test_mass * (self.delta_rho ** 2))
@@ -470,8 +470,6 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
         # add the external potential to the Hamiltonian matrices and multiply them by i * tau to get them ready for the next steps
         hamiltonian_z, hamiltonian_rho = self.get_internal_hamiltonian_matrix_operators()
-        hamiltonian_z = hamiltonian_z.copy()  # we're going to directly modify the data structure for speed, so we need to make copies
-        hamiltonian_rho = hamiltonian_rho.copy()
 
         hamiltonian_z.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'z')
         hamiltonian_z *= 1j * tau
@@ -526,14 +524,6 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         raise NotImplementedError
 
 
-class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
-    def __init__(self, parameters, simulation):
-        super(SphericalHarmonicFiniteDifferenceMesh, self).__init__(parameters, simulation)
-
-    def norm(self):
-        raise NotImplementedError
-    
-
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
     def __init__(self, name,
                  r_bound = 20 * un.bohr_radius,
@@ -544,6 +534,14 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
         self.r_bound = r_bound
         self.r_points = r_points
         self.spherical_harmonics = spherical_harmonics
+
+
+class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
+    def __init__(self, parameters, simulation):
+        super(SphericalHarmonicFiniteDifferenceMesh, self).__init__(parameters, simulation)
+
+    def norm(self):
+        raise NotImplementedError
 
 
 class ElectricFieldSimulation(core.Simulation):
@@ -663,5 +661,5 @@ class ElectricFieldSimulation(core.Simulation):
             self.run_time += dt.datetime.now() - self.latest_load_time
             self.latest_load_time = dt.datetime.now()
 
-        super(ElectricFieldSimulation, self).save(target_dir = target_dir, file_extension = file_extension)
+        return super(ElectricFieldSimulation, self).save(target_dir = target_dir, file_extension = file_extension)
 

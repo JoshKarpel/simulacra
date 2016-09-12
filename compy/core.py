@@ -66,7 +66,7 @@ class Simulation(utils.Beet):
         :param file_extension: file extension to name the Simulation with
         :return: None
         """
-        super(Simulation, self).save(target_dir, file_extension)
+        return super(Simulation, self).save(target_dir, file_extension)
 
     def __str__(self):
         return '{}: {} ({}) [{}] | {}'.format(self.__class__.__name__, self.name, self.file_name, self.uid, str(self.spec))
