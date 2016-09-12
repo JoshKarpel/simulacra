@@ -275,6 +275,7 @@ class ElectricFieldSpecification(core.Specification):
                  electric_potential = None,
                  time_initial = 0 * un.asec, time_final = 200 * un.asec, time_step = 1 * un.asec,
                  extra_time = 0 * un.asec, extra_time_step = 1 * un.asec,
+                 checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
                  **kwargs):
         super(ElectricFieldSpecification, self).__init__(name, **kwargs)
 
@@ -286,7 +287,7 @@ class ElectricFieldSpecification(core.Specification):
         self.test_mass = test_mass
         self.test_charge = test_charge
         self.initial_state = initial_state
-        self.test_states = test_states
+        self.test_states = tuple(test_states)
 
         self.internal_potential = internal_potential
         self.electric_potential = electric_potential
@@ -298,11 +299,15 @@ class ElectricFieldSpecification(core.Specification):
         self.extra_time = extra_time
         self.extra_time_step = extra_time_step
 
+        self.checkpoints = checkpoints
+        self.checkpoint_at = checkpoint_at
+        self.checkpoint_dir = checkpoint_dir
+
 
 class CylindricalSliceSpecification(ElectricFieldSpecification):
     def __init__(self, name,
                  z_bound = 20 * un.bohr_radius, rho_bound = 20 * un.bohr_radius,
-                 z_points = 2 ** 10, rho_points = 2 ** 10,
+                 z_points = 2 ** 9, rho_points = 2 ** 8,
                  **kwargs):
         super(CylindricalSliceSpecification, self).__init__(name, mesh_type = CylindricalSliceFiniteDifferenceMesh, **kwargs)
 
@@ -379,17 +384,16 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
             mesh_b = self.g_mesh
         else:
             mesh_b = self.g_for_state(state_b)
-        print(mesh_a)
-        print(mesh_b)
-        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * (self.delta_z * self.delta_rho)
 
-    @property
-    def norm(self):
-        return self.inner_product()
+        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * (self.delta_z * self.delta_rho)
 
     def state_overlap(self, state_a = None, state_b = None):
         """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
         return np.abs(self.inner_product(state_a, state_b)) ** 2
+
+    @property
+    def norm(self):
+        return np.real(self.inner_product())
 
     @utils.memoize()
     def g_for_state(self, state):
@@ -459,18 +463,20 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def evolve(self, time_step):
         tau = time_step / (2 * un.hbar)
 
-        # external_potential_mesh = self.get_external_potential_mesh(external_potenial_amplitude = external_potential_amplitude
-        electric_potential_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.r_mesh * np.cos(self.theta_mesh), test_charge = self.spec.test_charge)
+        if self.spec.electric_potential is not None:
+            electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
+        else:
+            electric_potential_energy_mesh = np.zeros(self.mesh_shape)
 
         # add the external potential to the Hamiltonian matrices and multiply them by i * tau to get them ready for the next steps
         hamiltonian_z, hamiltonian_rho = self.get_internal_hamiltonian_matrix_operators()
         hamiltonian_z = hamiltonian_z.copy()  # we're going to directly modify the data structure for speed, so we need to make copies
         hamiltonian_rho = hamiltonian_rho.copy()
 
-        hamiltonian_z.data[1] += 0.5 * self.flatten_mesh(electric_potential_mesh, 'z')
+        hamiltonian_z.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'z')
         hamiltonian_z *= 1j * tau
 
-        hamiltonian_rho.data[1] += 0.5 * self.flatten_mesh(electric_potential_mesh, 'rho')
+        hamiltonian_rho.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'rho')
         hamiltonian_rho *= 1j * tau
 
         # STEP 1
@@ -557,7 +563,7 @@ class ElectricFieldSimulation(core.Simulation):
 
         # simulation data storage
         self.norm_vs_time = np.zeros(self.time_steps) * np.NaN
-        self.inner_products_vs_time = {state: np.zeros(self.time_steps) * np.NaN for state in self.spec.test_states}
+        self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
 
         # diagnostic data
@@ -569,12 +575,12 @@ class ElectricFieldSimulation(core.Simulation):
         self.run_time = dt.timedelta()
 
     @property
-    def current_time(self):
+    def time(self):
         return self.times[self.time_index]
 
     @property
     def state_overlaps_vs_time(self):
-        return {state: np.abs(inner_product) ** 2 for state, inner_product in self.inner_products_vs_time}
+        return {state: np.abs(inner_product) ** 2 for state, inner_product in self.inner_products_vs_time.items()}
 
     @property
     def total_overlap_vs_time(self):
@@ -588,13 +594,11 @@ class ElectricFieldSimulation(core.Simulation):
         """Update the time-indexed data arrays with the current values."""
         self.norm_vs_time[time_index] = self.mesh.norm
 
-        self.total_overlap_vs_time[time_index] = 0
         for state in self.spec.test_states:
-            ip = self.mesh.inner_product(state)
-            self.inner_products_vs_time[state][time_index] = ip
-            self.total_overlap_vs_time[time_index] += self.state_overlaps_vs_time[state][time_index]
+            self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(state)
 
-        self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_amplitude(t = self.times[time_index])
+        if self.spec.electric_potential is not None:
+            self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_amplitude(t = self.times[time_index])
 
         logger.debug('{} {} stored data for time index {}'.format(self.__class__.__name__, self.name, time_index))
 
@@ -611,7 +615,7 @@ class ElectricFieldSimulation(core.Simulation):
             self.evictions += 1
 
         while True:
-            logger.debug('{} {} working on time step {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.time_index + 1, self.time_steps, np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
+            logger.debug('{} {} working on time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.time_index, self.time_steps - 1, np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
 
             if not only_end_data or self.time_index == self.time_steps - 1:  # if last time step or taking all data
                 self.store_data(self.time_index)
@@ -630,7 +634,7 @@ class ElectricFieldSimulation(core.Simulation):
             if self.spec.checkpoints:
                 if (self.time_index + 1) % self.spec.checkpoint_at == 0:
                     self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
-                    logger.info('Checkpointed simulation {} ({}) at time step {} / {}'.format(self.name, self.file_name, self.time_index + 1, self.time_steps))
+                    logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
 
         # if self.animator is not None:
         #     self.animator.cleanup()

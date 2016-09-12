@@ -15,7 +15,7 @@ class Potential:
 
     The result of a call to a Potential should be the potential energy / charge (V = J/C for electric interactions, V = J/kg for gravitational interactions, etc.) at the coordinates given by kwargs.
     
-    Caution: only ever vectorize one of the kwargs. If you vectorize over multiple kwargs, products over functions of different kwargs will likely mix the coordinates incorrectly.
+    Caution: use numpy meshgrids to vectorize over multiple kwargs.
     """
 
     def __str__(self):
@@ -32,7 +32,7 @@ class PotentialSum:
     """
     A class that handles a group of potentials that should be evaluated together to produce a total potential.
 
-    Caution: the potentials are summed together with no check as to the structure of the sum. Ensure that you vectorize over only one of the kwargs.
+    Caution: the potentials are summed together with no check as to the structure of the sum. Use numpy meshgrids to vectorize over multiple kwargs.
     """
 
     def __init__(self, *potentials):
@@ -70,10 +70,6 @@ class NuclearPotential(Potential):
         return '{}(charge = {} e)'.format(self.__class__.__name__, un.round(self.charge, un.proton_charge, 3))
 
     def __call__(self, r = 1 * un.bohr_radius, test_charge = 1 * un.electron_charge, **kwargs):
-        return self.__get_potential(r, test_charge)
-
-    @utils.memoize()
-    def __get_potential(self, r, test_charge):
         return un.coulomb_force_constant * self.charge * test_charge / r
 
 
@@ -95,13 +91,7 @@ class RadialImaginaryPotential(Potential):
         self.prefactor = -1j * self.amplitude * (un.proton_charge ** 2)
 
     def __call__(self, r = 1 * un.bohr_radius, **kwargs):
-        return self.__get_potential(r)
-
-    @utils.memoize()
-    def __get_potential(self, r):
-        r_potential = np.exp(-(((r - self.center) / self.width) ** 2))  # gaussian shape
-
-        return self.prefactor * r_potential
+        return self.prefactor * np.exp(-(((r - self.center) / self.width) ** 2))
 
 
 class UniformLinearlyPolarizedElectricField(Potential):
@@ -117,28 +107,60 @@ class UniformLinearlyPolarizedElectricField(Potential):
         else:
             return 1
 
-    def __call__(self, t = 0 * un.asec, distance_along_polarization = 0 * un.bohr_radius, test_charge = 1 * un.electron_charge, **kwargs):
-        return self.__get_potential(distance_along_polarization, test_charge) * self.get_window(t)
-
-    def __get_potential(self, distance_along_polarization, test_charge):
-        return distance_along_polarization * test_charge
-
     def get_amplitude(self, t):
         raise NotImplementedError
 
+    def __call__(self, t = 0 * un.asec, distance_along_polarization = 0 * un.bohr_radius, test_charge = 1 * un.electron_charge, **kwargs):
+        return distance_along_polarization * test_charge * self.get_amplitude(t)
+
 
 class Rectangle(UniformLinearlyPolarizedElectricField):
-    def __init__(self, start_time = None, end_time = None, amplitude = 1 * un.atomic_electric_field):
-        super(Rectangle, self).__init__(window_time = None, window_width = None)
+    def __init__(self, start_time = 0 * un.asec, end_time = 50 * un.asec, amplitude = 1 * un.atomic_electric_field, **kwargs):
+        super(Rectangle, self).__init__(**kwargs)
 
         self.start_time = start_time
         self.end_time = end_time
         self.amplitude = amplitude
 
+    def __str__(self):
+        out = '{}(start_time = {} as, end_time = {} as, amplitude = {} AEF'.format(self.__class__.__name__,
+                                                                                   un.round(self.start_time, un.asec, 3),
+                                                                                   un.round(self.end_time, un.asec, 3),
+                                                                                   un.round(self.amplitude, un.twopi, 3))
+
+        if self.window_time is not None and self.window_width is not None:
+            out += ', window_time = {} as, window_width = {} as'.format(un.round(self.window_time, un.asec, 3),
+                                                                        un.round(self.window_width, un.asec, 3))
+
+        out += ')'
+
+    def __repr__(self):
+        out = '{}(start_time = {}, end_time = {}, amplitude = {}'.format(self.__class__.__name__,
+                                                                         self.start_time,
+                                                                         self.end_time,
+                                                                         self.amplitude)
+
+        if self.window_time is not None and self.window_width is not None:
+            out += ', window_time = {}, window_width = {}'.format(self.window_time,
+                                                                  self.window_width)
+
+        out += ')'
+
+        return out
+
+    def get_amplitude(self, t):
+        cond = np.greater_equal(t, self.start_time) * np.less_equal(t, self.end_time)
+        on = np.ones(np.shape(t))
+        off = np.zeros(np.shape(t))
+
+        out = np.where(cond, on, off) * self.amplitude * self.get_window(t)
+
+        return out
+
 
 class SineWave(UniformLinearlyPolarizedElectricField):
-    def __init__(self, omega, amplitude = 1 * un.atomic_electric_field, phase = 0, window_time = None, window_width = None):
-        super(SineWave, self).__init__(window_time = window_time, window_width = window_width)
+    def __init__(self, omega, amplitude = 1 * un.atomic_electric_field, phase = 0, **kwargs):
+        super(SineWave, self).__init__(**kwargs)
 
         self.omega = omega
         self.phase = phase % un.twopi
@@ -151,8 +173,8 @@ class SineWave(UniformLinearlyPolarizedElectricField):
                                                                                      un.round(self.phase, un.twopi, 3))
 
         if self.window_time is not None and self.window_width is not None:
-            out += ', window_time = {} asec, window_width = {} asec'.format(un.round(self.window_time, un.asec, 3),
-                                                                            un.round(self.window_width, un.asec, 3))
+            out += ', window_time = {} as, window_width = {} as'.format(un.round(self.window_time, un.asec, 3),
+                                                                        un.round(self.window_width, un.asec, 3))
 
         out += ')'
 
@@ -192,20 +214,11 @@ class SineWave(UniformLinearlyPolarizedElectricField):
     def period(self, period):
         self.frequency = 1 / period
 
+    def get_amplitude(self, t):
+        return self.amplitude * np.sin((self.omega * t) + self.phase) * self.get_window(t)
+
     def get_peak_amplitude(self):
         return self.amplitude
 
     def get_peak_power_density(self):
         return un.c * un.epsilon_0 * (np.abs(self.amplitude) ** 2)
-
-    def __call__(self, t = 0 * un.asec, distance_along_polarization = 0 * un.bohr_radius, test_charge = 1 * un.electron_charge, **kwargs):
-        out = super(SineWave, self).__call__(t = t, distance_along_polarization = distance_along_polarization, test_charge = test_charge, **kwargs)
-        out *= self.__get_potential(t)
-
-        return out
-
-    def __get_potential(self, t):
-        return self.get_amplitude(t)
-
-    def get_field_amplitude(self, t):
-        return self.amplitude * np.sin((self.omega * t) + self.phase)

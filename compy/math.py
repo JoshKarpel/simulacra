@@ -46,7 +46,6 @@ class SphericalHarmonic:
     def __hash__(self):
         return hash((self.l, self.m))
 
-    @utils.memoize()
     def __call__(self, theta, phi):
         """
         Evaluate the spherical harmonic at a point, or vectorized over an array of points.

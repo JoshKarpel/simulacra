@@ -259,15 +259,6 @@ def method_dispatch(func):
     return wrapper
 
 
-def tupleize(nested_structure):
-    try:
-        out = tuple(tupleize(ns) for ns in nested_structure)
-    except:
-        out = tuple(nested_structure)
-
-    return out
-
-
 def memoize(copy_output = False):
     """
     Returns a decorator that memoizes the result of a function call.
@@ -294,23 +285,19 @@ def memoize(copy_output = False):
 
         def __call__(self, *args, **kwargs):
             key = args
-            print(args)
-            print(kwargs)
             for k, v in kwargs.items():
                 try:
-                    key += (k, tuple(v))  # this needs to recursively tuple-ize so that it can handle n-dimensional numpy arrays
+                    key += (k, tuple(v))
                 except TypeError:
                     key += (k, v)
 
-            # print(key)
-
             try:
                 value = self.memo[key]
-                logger.debug('Hit on memo for {}, key = {}'.format(repr(self.func), key))
+                # logger.debug('Hit on memo for {}, key = {}'.format(repr(self.func), key))
             except KeyError:
                 value = self.func(*args, **kwargs)
                 self.memo[key] = value
-                logger.debug('Miss on memo for {}, key = {}'.format(repr(self.func), key))
+                # logger.debug('Miss on memo for {}, key = {}'.format(repr(self.func), key))
 
             if copy_output:
                 try:
