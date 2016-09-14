@@ -267,7 +267,7 @@ class ElectricFieldSpecification(core.Specification):
     def __init__(self, name, mesh_type = None, animator_type = None,
                  test_mass = un.electron_mass_reduced, test_charge = un.electron_charge,
                  initial_state = BoundState(1, 0),
-                 test_states = (BoundState(n, l) for n in range(5) for l in range(n)),
+                 test_states = tuple(BoundState(n, l) for n in range(5) for l in range(n)),
                  internal_potential = potentials.NuclearPotential(charge = un.proton_charge) + potentials.RadialImaginaryPotential(center = 20 * un.bohr_radius, width = 1 * un.bohr_radius, amplitude = 1 * un.atomic_electric_potential),
                  electric_potential = None,
                  time_initial = 0 * un.asec, time_final = 200 * un.asec, time_step = 1 * un.asec,
@@ -374,7 +374,7 @@ class CylindricalSliceSpecification(ElectricFieldSpecification):
                 '   Rho Boundary: {} Bohr radii'.format(un.round(self.rho_bound, un.bohr_radius, 3)),
                 '   Rho Points: {}'.format(self.rho_points),
                 '   Rho Mesh Spacing: ~{} Bohr radii'.format(un.round(self.rho_bound / self.rho_points, un.bohr_radius, 3)),
-                '   Total Mesh Points: {}'.format(self.z_points * self.rho_points)]
+                '   Total Mesh Points: {}'.format(int(self.z_points * self.rho_points))]
 
         return '\n'.join((super(CylindricalSliceSpecification, self).info(), *mesh))
 
@@ -419,6 +419,14 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def theta_mesh(self):
         return np.arccos(self.z_mesh / self.r_mesh)  # either of these work
         # return np.arctan2(self.rho_mesh, self.z_mesh)  # I have a slight preference for arccos because it will never divide by zero
+
+    @property
+    def sin_theta_mesh(self):
+        return np.sin(self.theta_mesh)
+
+    @property
+    def cos_theta_mesh(self):
+        return np.cos(self.theta_mesh)
 
     def flatten_mesh(self, mesh, flatten_along):
         """Return a mesh flattened along one of the mesh coordinates ('z' or 'rho')."""
@@ -584,6 +592,9 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         current_mesh_rho = np.imag(np.conj(self.g_mesh) * gradient_mesh_rho)
 
         return current_mesh_z, current_mesh_rho
+
+    def get_spline_for_mesh(self, mesh):
+        return sp.interp.RectBivariateSpline(self.z, self.rho, mesh)
 
     def evolve(self, time_step):
         """
@@ -776,19 +787,378 @@ class SphericalSliceSpecification(ElectricFieldSpecification):
                  r_bound = 20 * un.bohr_radius,
                  r_points = 2 ** 10, theta_points = 2 ** 10,
                  **kwargs):
-        super(SphericalSliceSpecification, self).__init__(name, mesh_type = SphericalSliceFiniteDifferenceMesh, **kwargs)
+        super(SphericalSliceSpecification, self).__init__(name, mesh_type = SphericalSliceFiniteDifferenceMesh, animator_type = animators.SphericalSliceAnimator, **kwargs)
 
         self.r_bound = r_bound
-        self.r_points = r_points
-        self.theta_points = theta_points
+
+        self.r_points = int(r_points)
+        self.theta_points = int(theta_points)
+
+    def info(self):
+        mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
+                '   R Boundary: {} Bohr radii'.format(un.round(self.r_bound, un.bohr_radius, 3)),
+                '   R Points: {}'.format(self.r_points),
+                '   R Mesh Spacing: ~{} Bohr radii'.format(un.round(self.r_bound / self.r_points, un.bohr_radius, 3)),
+                '   Theta Points: {}'.format(self.theta_points),
+                '   Theta Mesh Spacing: ~{} rad | ~{} deg'.format(un.round(un.pi / self.theta_points, un.rad, 3), un.round(un.round(un.pi / self.theta_points, un.deg, 3))),
+                '   Maximum Adjacent-Point Spacing: ~{} Bohr radii'.format(un.round(un.pi * self.r_bound / self.theta_points, un.bohr_radius, 3)),
+                '   Total Mesh Points: {}'.format(int(self.r_points * self.theta_points))]
+
+        return '\n'.join((super(SphericalSliceSpecification, self).info(), *mesh))
 
 
 class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def __init__(self, simulation):
         super(SphericalSliceFiniteDifferenceMesh, self).__init__(simulation)
 
+        self.r = np.linspace(0, self.spec.r_bound, self.spec.r_points)
+        self.theta = np.delete(np.linspace(0, un.pi, self.spec.theta_points + 1), 0)
+
+        self.delta_r = self.r[1] - self.r[0]
+        self.delta_theta = self.theta[1] - self.theta[0]
+
+        self.r += self.delta_r / 2
+        self.theta -= self.delta_theta / 2
+
+        self.r_max = np.max(self.r)
+
+        self.r_mesh, self.theta_mesh = np.meshgrid(self.r, self.theta, indexing = 'ij')
+
+        self.g_mesh = self.g_for_state(self.spec.initial_state)
+
+        self.mesh_points = len(self.r) * len(self.theta)
+        self.matrix_operator_shape = (self.mesh_points, self.mesh_points)
+        self.mesh_shape = np.shape(self.r_mesh)
+
+    @property
+    def g_factor(self):
+        return np.sqrt(un.twopi * np.sin(self.theta_mesh)) * self.r_mesh
+
+    @property
+    def psi_mesh(self):
+        return self.g_mesh / self.g_factor
+
+    @property
+    def z_mesh(self):
+        return self.r_mesh * np.cos(self.theta_mesh)
+
+    def flatten_mesh(self, mesh, flatten_along):
+        """Return a mesh flattened along one of the mesh coordinates ('theta' or 'r')."""
+        if flatten_along == 'r':
+            flat = 'F'
+        elif flatten_along == 'theta':
+            flat = 'C'
+        else:
+            raise ValueError("{} is not a valid specifier for flatten_mesh (valid specifiers: 'r', 'theta')".format(flatten_along))
+
+        return mesh.flatten(flat)
+
+    def wrap_vector(self, mesh, wrap_along):
+        if wrap_along == 'r':
+            wrap = 'F'
+        elif wrap_along == 'theta':
+            wrap = 'C'
+        else:
+            raise ValueError("{} is not a valid specifier for wrap_vector (valid specifiers: 'r', 'theta')".format(wrap_along))
+
+        return np.reshape(mesh, self.mesh_shape, wrap)
+
+    def inner_product(self, mesh_a = None, mesh_b = None):
+        """Inner product between two meshes. If either mesh is None, the state on the g_mesh is used for that state."""
+        if mesh_a is None:
+            mesh_a = self.g_mesh
+        if mesh_b is None:
+            mesh_b = self.g_mesh
+
+        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * (self.delta_r * self.delta_theta)
+
+    def state_overlap(self, state_a = None, state_b = None):
+        """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
+        if state_a is None:
+            mesh_a = self.g_mesh
+        else:
+            mesh_a = self.g_for_state(state_a)
+        if state_b is None:
+            mesh_b = self.g_mesh
+        else:
+            mesh_b = self.g_for_state(state_b)
+
+        return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
+
+    @property
     def norm(self):
+        return np.abs(self.inner_product())
+
+    @utils.memoize()
+    def g_for_state(self, state):
+        return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
+
+    @utils.memoize(copy_output = True)
+    def get_kinetic_energy_matrix_operators(self):
+        r_prefactor = -(un.hbar ** 2) / (2 * un.electron_mass_reduced * (self.delta_r ** 2))
+        theta_prefactor = -(un.hbar ** 2) / (2 * un.electron_mass_reduced * ((self.delta_r * self.delta_theta) ** 2))
+
+        r_diagonal = r_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
+        r_offdiagonal = r_prefactor * np.array([1 if (z_index + 1) % self.spec.r_points != 0 else 0 for z_index in range(self.mesh_points - 1)], dtype = np.complex128)
+
+        @utils.memoize()
+        def theta_j_prefactor(x):
+            return 1 / (x + 0.5) ** 2
+
+        @utils.memoize()
+        def sink(x):
+            return np.sin(x * self.delta_theta)
+
+        @utils.memoize()
+        def sqrt_sink_ratio(x_num, x_den):
+            return np.sqrt(sink(x_num) / sink(x_den))
+
+        @utils.memoize()
+        def cotank(x):
+            return 1 / np.tan(x * self.delta_theta)
+
+        theta_diagonal = (-2) * np.ones(self.mesh_points, dtype = np.complex128)
+        for theta_index in range(self.mesh_points):
+            j = theta_index // self.spec.theta_points
+            theta_diagonal[theta_index] *= theta_j_prefactor(j)
+        theta_diagonal *= theta_prefactor
+
+        theta_upper_diagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
+        theta_lower_diagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
+        for theta_index in range(self.mesh_points - 1):
+            if (theta_index + 1) % self.spec.theta_points != 0:
+                j = theta_index // self.spec.theta_points
+                k = theta_index % self.spec.theta_points
+                k_p = k + 1  # add 1 because the entry for the lower diagonal is really for the next point (k -> k + 1), not this one
+                theta_upper_diagonal[theta_index] = theta_j_prefactor(j) * (1 + (self.delta_theta / 2) * cotank(k + 0.5)) * sqrt_sink_ratio(k + 0.5, k + 1.5)
+                theta_lower_diagonal[theta_index] = theta_j_prefactor(j) * (1 - (self.delta_theta / 2) * cotank(k_p + 0.5)) * sqrt_sink_ratio(k_p + 0.5, k_p - 0.5)
+        theta_upper_diagonal *= theta_prefactor
+        theta_lower_diagonal *= theta_prefactor
+
+        r_kinetic = sparse.diags([r_offdiagonal, r_diagonal, r_offdiagonal], offsets = (-1, 0, 1))
+        theta_kinetic = sparse.diags([theta_lower_diagonal, theta_diagonal, theta_upper_diagonal], offsets = (-1, 0, 1))
+
+        return r_kinetic, theta_kinetic
+
+    @utils.memoize(copy_output = True)
+    def get_internal_hamiltonian_matrix_operators(self):
+        r_kinetic, theta_kinetic = self.get_kinetic_energy_matrix_operators()
+        potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
+
+        r_kinetic.data[1] += 0.5 * self.flatten_mesh(potential_mesh, 'r')
+        theta_kinetic.data[1] += 0.5 * self.flatten_mesh(potential_mesh, 'theta')
+
+        return r_kinetic, theta_kinetic
+
+    def tg_mesh(self, use_abs_g = False):
+        hamiltonian_r, hamiltonian_theta = self.get_kinetic_energy_matrix_operators()
+
+        if use_abs_g:
+            g_mesh = np.abs(self.g_mesh)
+        else:
+            g_mesh = self.g_mesh
+
+        g_vector_r = self.flatten_mesh(g_mesh, 'r')
+        hg_vector_r = hamiltonian_r.dot(g_vector_r)
+        hg_mesh_r = self.wrap_vector(hg_vector_r, 'r')
+
+        g_vector_theta = self.flatten_mesh(g_mesh, 'theta')
+        hg_vector_theta = hamiltonian_theta.dot(g_vector_theta)
+        hg_mesh_theta = self.wrap_vector(hg_vector_theta, 'theta')
+
+        return hg_mesh_r + hg_mesh_theta
+
+    def hg_mesh(self):
+        hamiltonian_r, hamiltonian_theta = self.get_internal_hamiltonian_matrix_operators()
+
+        g_vector_z = self.flatten_mesh(self.g_mesh, 'r')
+        hg_vector_z = hamiltonian_r.dot(g_vector_z)
+        hg_mesh_z = self.wrap_vector(hg_vector_z, 'r')
+
+        g_vector_rho = self.flatten_mesh(self.g_mesh, 'theta')
+        hg_vector_rho = hamiltonian_theta.dot(g_vector_rho)
+        hg_mesh_rho = self.wrap_vector(hg_vector_rho, 'theta')
+
+        return hg_mesh_z + hg_mesh_rho
+
+    @property
+    def energy_expectation_value(self):
+        return np.real(self.inner_product(mesh_b = self.hg_mesh()))
+
+    @utils.memoize()
+    def get_probability_current_matrix_operators(self):
         raise NotImplementedError
+
+    def get_probability_current_vector_field(self):
+        raise NotImplementedError
+
+    def get_spline_for_mesh(self, mesh):
+        return sp.interp.RectBivariateSpline(self.r, self.theta, mesh)
+
+    def evolve(self, delta_t, external_potential_amplitude = 0):
+        tau = delta_t / (2 * un.hbar)
+
+        if self.spec.electric_potential is not None:
+            electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
+        else:
+            electric_potential_energy_mesh = np.zeros(self.mesh_shape)
+
+        # add the external potential to the Hamiltonian matrices and multiply them by i * tau to get them ready for the next steps
+        hamiltonian_r, hamiltonian_theta = self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_r = hamiltonian_r.copy()
+        hamiltonian_theta = hamiltonian_theta.copy()
+
+        hamiltonian_r.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'r')
+        hamiltonian_r *= 1j * tau
+
+        hamiltonian_theta.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'theta')
+        hamiltonian_theta *= 1j * tau
+
+        # STEP 1
+        hamiltonian = -1 * hamiltonian_theta
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        g_vector = self.flatten_mesh(self.g_mesh, 'theta')
+        g_vector = hamiltonian.dot(g_vector)
+        self.g_mesh = self.wrap_vector(g_vector, 'theta')
+
+        # STEP 2
+        hamiltonian = hamiltonian_r.copy()
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        g_vector = self.flatten_mesh(self.g_mesh, 'r')
+        g_vector = cy.tdma(hamiltonian, g_vector)
+
+        # STEP 3
+        hamiltonian = -1 * hamiltonian_r
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        g_vector = hamiltonian.dot(g_vector)
+        self.g_mesh = self.wrap_vector(g_vector, 'r')
+
+        # STEP 4
+        hamiltonian = hamiltonian_theta.copy()
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        g_vector = self.flatten_mesh(self.g_mesh, 'theta')
+        g_vector = cy.tdma(hamiltonian, g_vector)
+        self.g_mesh = self.wrap_vector(g_vector, 'theta')
+
+    @utils.memoize()
+    def get_mesh_slicer(self, plot_limit = None):
+        if plot_limit is None:
+            mesh_slicer = slice(None, None, 1)
+        else:
+            r_lim_points = round(plot_limit / self.delta_r)
+            mesh_slicer = slice(0, r_lim_points + 1, 1)
+
+        return mesh_slicer
+
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None):
+        color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer(plot_limit)],
+                                     self.r_mesh[self.get_mesh_slicer(plot_limit)] / un.bohr_radius,
+                                     mesh[self.get_mesh_slicer(plot_limit)],
+                                     shading = 'gouraud', cmap = plt.cm.viridis)
+        color_mesh_mirror = axis.pcolormesh(-self.theta_mesh[self.get_mesh_slicer(plot_limit)] + (2 * un.pi),
+                                            self.r_mesh[self.get_mesh_slicer(plot_limit)] / un.bohr_radius,
+                                            mesh[self.get_mesh_slicer(plot_limit)],
+                                            shading = 'gouraud', cmap = plt.cm.viridis)  # another colormesh, mirroring the first mesh onto pi to 2pi
+
+        return color_mesh, color_mesh_mirror
+
+    def attach_probability_current_to_axis(self, axis, plot_limit = None):
+        raise NotImplementedError
+
+    def plot_mesh(self, mesh, show = False, save = False, name = '', target_dir = None, img_format = 'png', title = None, overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None, **kwargs):
+        plt.close()  # close any old figures
+
+        fig = plt.figure(figsize = (7, 7), dpi = 600)
+        fig.set_tight_layout(True)
+        axis = plt.subplot(111, projection = 'polar')
+
+        color_mesh, color_mesh_mirror = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit)
+        if overlay_probability_current:
+            quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit)
+
+        if title is not None:
+            title = axis.set_title(title, fontsize = 15)
+            title.set_x(.03)  # move title to the upper left corner
+            title.set_y(.97)
+
+        # make a colorbar
+        cbar_axis = fig.add_axes([1.01, .1, .04, .8])  # add a new axis for the cbar so that the old axis can stay square
+        cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
+        cbar.ax.tick_params(labelsize = 10)
+
+        axis.set_rmax((self.r_max - (self.delta_r / 2)) / un.bohr_radius)
+
+        axis.grid(True, color = 'pink', linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.set_thetagrids(np.arange(0, 360, 30), frac = 1.05)
+
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
+        axis.tick_params(axis = 'y', which = 'major', colors = 'pink', pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'both', which = 'both', length = 0)
+
+        axis.set_rlabel_position(10)
+        last_r_label = axis.get_yticklabels()[-1]
+        last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
+
+        if save:
+            utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
+        if show:
+            plt.show()
+
+        plt.close()
+
+    def abs_g_squared(self, normalize = False, log = False):
+        out = np.abs(self.g_mesh) ** 2
+        if normalize:
+            out /= np.nanmax(out)
+        if log:
+            out = np.log10(out)
+
+        return out
+
+    def attach_g_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
+        return self.attach_mesh_to_axis(axis, self.abs_g_squared(normalize = normalize, log = log), plot_limit = plot_limit)
+
+    def update_g_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
+        new_mesh = self.abs_g_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
+
+        colormesh.set_array(new_mesh.ravel())
+
+    def plot_g(self, normalize = True, name_postfix = '', **kwargs):
+        """Plot |g|^2. kwargs are for plot_mesh."""
+        title = ''
+        if normalize:
+            title = r'Normalized '
+        title += r'$|g|^2$'
+        name = 'g' + name_postfix
+
+        self.plot_mesh(self.abs_g_squared(normalize = normalize), name = name, title = title, **kwargs)
+
+    def abs_psi_squared(self, normalize = False, log = False):
+        out = np.abs(self.psi_mesh) ** 2
+        if normalize:
+            out /= np.nanmax(out)
+        if log:
+            out = np.log10(out)
+
+        return out
+
+    def attach_psi_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
+        return self.attach_mesh_to_axis(axis, self.abs_psi_squared(normalize = normalize, log = log), plot_limit = plot_limit)
+
+    def update_psi_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
+        new_mesh = self.abs_psi_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
+
+        colormesh.set_array(new_mesh.ravel())
+
+    def plot_psi(self, normalize = True, name_postfix = '', **kwargs):
+        """Plot |psi|^2. kwargs are for plot_mesh."""
+        title = ''
+        if normalize:
+            title = r'Normalized '
+        title += r'$|\psi|^2$'
+        name = 'psi' + name_postfix
+
+        self.plot_mesh(self.abs_psi_squared(normalize = normalize), name = name, title = title, **kwargs)
 
 
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
@@ -816,6 +1186,8 @@ class ElectricFieldSimulation(core.Simulation):
         super(ElectricFieldSimulation, self).__init__(spec)
 
         self.mesh = None
+        self.animator = None
+
         self.initialize_mesh()
 
         total_time = self.spec.time_final - self.spec.time_initial
@@ -831,7 +1203,8 @@ class ElectricFieldSimulation(core.Simulation):
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
 
-        self.animator = self.spec.animator_type(self)
+        if self.spec.animated:
+            self.animator = self.spec.animator_type(self)
 
     @property
     def time(self):
@@ -924,7 +1297,7 @@ class ElectricFieldSimulation(core.Simulation):
     @staticmethod
     def load(file_path, initialize_mesh = False):
         """Return a simulation loaded from the file_path. kwargs are for Beet.load."""
-        sim = super(ElectricFieldSimulation, self).load(file_path)
+        sim = core.Simulation.load(file_path)
 
         if initialize_mesh:
             sim.initialize_mesh()

@@ -36,6 +36,8 @@ s = 1
 kg = 1
 A = 1
 K = 1
+rad = 1
+deg = rad * 180 / pi
 
 unit_names_to_values.update({'m': m,
                              's': s,
