@@ -204,6 +204,8 @@ def save_current_figure(name, target_dir = None, img_format = 'png', scale_facto
 
     plt.savefig(path, dpi = scale_factor * plt.gcf().dpi, bbox_inches = 'tight')
 
+    logger.info('Saved matplotlib figure {} to {}'.format(name, path))
+
 
 def ask_for_input(question, default = None, cast_to = str):
     """Ask for input from the user, with a default value, and call cast_to on it before returning it."""

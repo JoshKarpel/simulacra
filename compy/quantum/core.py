@@ -22,9 +22,9 @@ def electron_wavenumber_from_energy(energy):
 
 
 class QuantumMesh:
-    def __init__(self, specification, simulation):
-        self.spec = specification
+    def __init__(self, simulation):
         self.sim = simulation
+        self.spec = simulation.spec
 
     def __str__(self):
         return '{} for {}'.format(self.__class__.__name__, str(self.sim))

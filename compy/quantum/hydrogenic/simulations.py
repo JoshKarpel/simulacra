@@ -1,11 +1,15 @@
 import datetime as dt
 import logging
+import functools
 import os
 
 import numpy as np
 import scipy as sp
 import scipy.special as special
 import scipy.sparse as sparse
+import matplotlib
+import matplotlib.pyplot as plt
+from cycler import cycler
 
 from compy import core, math, utils
 import compy.quantum as qm
@@ -145,7 +149,7 @@ class BoundStateSuperposition:
 
     @property
     def states(self):
-        yield from self.state
+        yield from self.state.keys()
 
     @property
     def amplitudes(self):
@@ -281,7 +285,7 @@ class ElectricFieldSpecification(core.Specification):
         self.test_mass = test_mass
         self.test_charge = test_charge
         self.initial_state = initial_state
-        self.test_states = tuple(test_states)
+        self.test_states = tuple(test_states)  # consume input iterators
 
         self.internal_potential = internal_potential
         self.electric_potential = electric_potential
@@ -355,7 +359,7 @@ class CylindricalSliceSpecification(ElectricFieldSpecification):
                  z_bound = 20 * un.bohr_radius, rho_bound = 20 * un.bohr_radius,
                  z_points = 2 ** 9, rho_points = 2 ** 8,
                  **kwargs):
-        super(CylindricalSliceSpecification, self).__init__(name, mesh_type = CylindricalSliceFiniteDifferenceMesh, **kwargs)
+        super(CylindricalSliceSpecification, self).__init__(name, mesh_type = CylindricalSliceFiniteDifferenceMesh, animator_type = animators.CylindricalSliceAnimator, **kwargs)
 
         self.z_bound = z_bound
         self.rho_bound = rho_bound
@@ -376,8 +380,8 @@ class CylindricalSliceSpecification(ElectricFieldSpecification):
 
 
 class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
-    def __init__(self, specification, simulation):
-        super(CylindricalSliceFiniteDifferenceMesh, self).__init__(specification, simulation)
+    def __init__(self, simulation):
+        super(CylindricalSliceFiniteDifferenceMesh, self).__init__(simulation)
 
         self.z = np.linspace(-self.spec.z_bound, self.spec.z_bound, self.spec.z_points)
         self.rho = np.delete(np.linspace(0, self.spec.rho_bound, self.spec.rho_points + 1), 0)
@@ -398,6 +402,23 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         self.mesh_points = len(self.z) * len(self.rho)
         self.matrix_operator_shape = (self.mesh_points, self.mesh_points)
         self.mesh_shape = np.shape(self.r_mesh)
+
+    @property
+    def g_factor(self):
+        return np.sqrt(un.twopi * self.rho_mesh)
+
+    @property
+    def psi_mesh(self):
+        return self.g_mesh / self.g_factor
+
+    @property
+    def r_mesh(self):
+        return np.sqrt((self.z_mesh ** 2) + (self.rho_mesh ** 2))
+
+    @property
+    def theta_mesh(self):
+        return np.arccos(self.z_mesh / self.r_mesh)  # either of these work
+        # return np.arctan2(self.rho_mesh, self.z_mesh)  # I have a slight preference for arccos because it will never divide by zero
 
     def flatten_mesh(self, mesh, flatten_along):
         """Return a mesh flattened along one of the mesh coordinates ('z' or 'rho')."""
@@ -420,20 +441,17 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
         return np.reshape(mesh, self.mesh_shape, wrap)
 
-    @property
-    def g_factor(self):
-        return np.sqrt(un.twopi * self.rho_mesh)
+    def inner_product(self, mesh_a = None, mesh_b = None):
+        """Inner product between two meshes. If either mesh is None, the state on the g_mesh is used for that state."""
+        if mesh_a is None:
+            mesh_a = self.g_mesh
+        if mesh_b is None:
+            mesh_b = self.g_mesh
 
-    @property
-    def r_mesh(self):
-        return np.sqrt((self.z_mesh ** 2) + (self.rho_mesh ** 2))
+        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * (self.delta_z * self.delta_rho)
 
-    @property
-    def theta_mesh(self):
-        return np.arctan(self.rho_mesh / self.z_mesh)
-
-    def inner_product(self, state_a = None, state_b = None):
-        """Inner product between two states. If mesh_b is None, the state on the g_mesh is used."""
+    def state_overlap(self, state_a = None, state_b = None):
+        """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
         if state_a is None:
             mesh_a = self.g_mesh
         else:
@@ -443,15 +461,11 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         else:
             mesh_b = self.g_for_state(state_b)
 
-        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * (self.delta_z * self.delta_rho)
-
-    def state_overlap(self, state_a = None, state_b = None):
-        """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
-        return np.abs(self.inner_product(state_a, state_b)) ** 2
+        return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
 
     @property
     def norm(self):
-        return np.real(self.inner_product())
+        return np.abs(self.inner_product())
 
     @utils.memoize()
     def g_for_state(self, state):
@@ -490,6 +504,41 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
         return z_kinetic, rho_kinetic
 
+    def tg_mesh(self, use_abs_g = False):
+        hamiltonian_z, hamiltonian_rho = self.get_kinetic_energy_matrix_operators()
+
+        if use_abs_g:
+            g_mesh = np.abs(self.g_mesh)
+        else:
+            g_mesh = self.g_mesh
+
+        g_vector_z = self.flatten_mesh(g_mesh, 'z')
+        hg_vector_z = hamiltonian_z.dot(g_vector_z)
+        hg_mesh_z = self.wrap_vector(hg_vector_z, 'z')
+
+        g_vector_rho = self.flatten_mesh(g_mesh, 'rho')
+        hg_vector_rho = hamiltonian_rho.dot(g_vector_rho)
+        hg_mesh_rho = self.wrap_vector(hg_vector_rho, 'rho')
+
+        return hg_mesh_z + hg_mesh_rho
+
+    def hg_mesh(self):
+        hamiltonian_z, hamiltonian_rho = self.get_internal_hamiltonian_matrix_operators()
+
+        g_vector_z = self.flatten_mesh(self.g_mesh, 'z')
+        hg_vector_z = hamiltonian_z.dot(g_vector_z)
+        hg_mesh_z = self.wrap_vector(hg_vector_z, 'z')
+
+        g_vector_rho = self.flatten_mesh(self.g_mesh, 'rho')
+        hg_vector_rho = hamiltonian_rho.dot(g_vector_rho)
+        hg_mesh_rho = self.wrap_vector(hg_vector_rho, 'rho')
+
+        return hg_mesh_z + hg_mesh_rho
+
+    @property
+    def energy_expectation_value(self):
+        return np.real(self.inner_product(mesh_b = self.hg_mesh()))
+
     @utils.memoize(copy_output = True)
     def get_probability_current_matrix_operators(self):
         """Get the mesh probability current operators for z and rho."""
@@ -520,6 +569,21 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         rho_current = sparse.diags([-rho_offdiagonal, rho_offdiagonal], offsets = [-1, 1])
 
         return z_current, rho_current
+
+    def get_probability_current_vector_field(self):
+        z_current, rho_current = self.get_probability_current_matrix_operators()
+
+        g_vector_z = self.flatten_mesh(self.g_mesh, 'z')
+        current_vector_z = z_current.dot(g_vector_z)
+        gradient_mesh_z = self.wrap_vector(current_vector_z, 'z')
+        current_mesh_z = np.imag(np.conj(self.g_mesh) * gradient_mesh_z)
+
+        g_vector_rho = self.flatten_mesh(self.g_mesh, 'rho')
+        current_vector_rho = rho_current.dot(g_vector_rho)
+        gradient_mesh_rho = self.wrap_vector(current_vector_rho, 'rho')
+        current_mesh_rho = np.imag(np.conj(self.g_mesh) * gradient_mesh_rho)
+
+        return current_mesh_z, current_mesh_rho
 
     def evolve(self, time_step):
         """
@@ -570,6 +634,142 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         g_vector = cy.tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'rho')
 
+    @utils.memoize()
+    def get_mesh_slicer(self, plot_limit = None):
+        if plot_limit is None:
+            mesh_slicer = (slice(None, None, 1), slice(None, None, 1))
+        else:
+            z_lim_points = round(plot_limit / self.delta_z)
+            rho_lim_points = round(plot_limit / self.delta_rho)
+            mesh_slicer = (slice(round(self.z_center_index - z_lim_points), round(self.z_center_index + z_lim_points + 1), 1), slice(0, rho_lim_points + 1, 1))
+
+        return mesh_slicer
+
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None):
+        color_mesh = axis.pcolormesh(self.z_mesh[self.get_mesh_slicer(plot_limit)] / un.bohr_radius,
+                                     self.rho_mesh[self.get_mesh_slicer(plot_limit)] / un.bohr_radius,
+                                     mesh[self.get_mesh_slicer(plot_limit)],
+                                     shading = 'gouraud', cmap = plt.cm.viridis)
+
+        return color_mesh
+
+    def attach_probability_current_to_axis(self, axis, plot_limit = None):
+        current_mesh_z, current_mesh_rho = self.get_probability_current_vector_field()
+
+        current_mesh_z *= self.delta_z
+        current_mesh_rho *= self.delta_rho
+
+        skip_count = int(self.z_mesh.shape[0] / 50), int(self.z_mesh.shape[1] / 50)
+        skip = (slice(None, None, skip_count[0]), slice(None, None, skip_count[1]))
+        normalization = np.max(np.sqrt(current_mesh_z ** 2 + current_mesh_rho ** 2)[skip])
+        if normalization == 0 or normalization is np.NaN:
+            normalization = 1
+
+        quiv = axis.quiver(self.z_mesh[self.get_mesh_slicer(plot_limit)][skip] / un.bohr_radius,
+                           self.rho_mesh[self.get_mesh_slicer(plot_limit)][skip] / un.bohr_radius,
+                           current_mesh_z[self.get_mesh_slicer(plot_limit)][skip] / normalization,
+                           current_mesh_rho[self.get_mesh_slicer(plot_limit)][skip] / normalization,
+                           pivot = 'middle', units = 'width', scale = 10, scale_units = 'width', width = 0.0015, alpha = 0.5)
+
+        return quiv
+
+    def plot_mesh(self, mesh, show = False, save = False, name = '', target_dir = None, img_format = 'png', title = None, overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None, **kwargs):
+        plt.close()  # close any old figures
+
+        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+        fig.set_tight_layout(True)
+        axis = plt.subplot(111)
+
+        color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit)
+        if overlay_probability_current:
+            quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit)
+
+        axis.set_xlabel(r'$z$ (Bohr radii)', fontsize = 15)
+        axis.set_ylabel(r'$\rho$ (Bohr radii)', fontsize = 15)
+        if title is not None:
+            title = axis.set_title(title, fontsize = 15)
+            title.set_y(1.05)  # move title up a bit
+
+        # make a colorbar
+        cbar = fig.colorbar(mappable = color_mesh, ax = axis)
+        cbar.ax.tick_params(labelsize = 10)
+
+        axis.axis('tight')  # removes blank space between color mesh and axes
+
+        axis.grid(True, color = 'pink', linestyle = ':')  # change grid color to make it show up against the colormesh
+
+        axis.tick_params(labelright = True, labeltop = True)  # ticks on all sides
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
+        axis.tick_params(axis = 'both', which = 'both', length = 0)
+
+        # set upper and lower y ticks to not display to avoid collisions with the x ticks at the edges
+        y_ticks = axis.yaxis.get_major_ticks()
+        y_ticks[0].label1.set_visible(False)
+        y_ticks[0].label2.set_visible(False)
+        y_ticks[-1].label1.set_visible(False)
+        y_ticks[-1].label2.set_visible(False)
+
+        if save:
+            utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
+        if show:
+            plt.show()
+
+        plt.close()
+
+    def abs_g_squared(self, normalize = False, log = False):
+        out = np.abs(self.g_mesh) ** 2
+        if normalize:
+            out /= np.nanmax(out)
+        if log:
+            out = np.log10(out)
+
+        return out
+
+    def attach_g_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
+        return self.attach_mesh_to_axis(axis, self.abs_g_squared(normalize = normalize, log = log), plot_limit = plot_limit)
+
+    def update_g_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
+        new_mesh = self.abs_g_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
+
+        colormesh.set_array(new_mesh.ravel())
+
+    def plot_g(self, normalize = True, name_postfix = '', **kwargs):
+        """Plot |g|^2. kwargs are for plot_mesh."""
+        title = ''
+        if normalize:
+            title = r'Normalized '
+        title += r'$|g|^2$'
+        name = 'g' + name_postfix
+
+        self.plot_mesh(self.abs_g_squared(normalize = normalize), name = name, title = title, **kwargs)
+
+    def abs_psi_squared(self, normalize = False, log = False):
+        out = np.abs(self.psi_mesh) ** 2
+        if normalize:
+            out /= np.nanmax(out)
+        if log:
+            out = np.log10(out)
+
+        return out
+
+    def attach_psi_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
+        return self.attach_mesh_to_axis(axis, self.abs_psi_squared(normalize = normalize, log = log), plot_limit = plot_limit)
+
+    def update_psi_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
+        new_mesh = self.abs_psi_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
+
+        colormesh.set_array(new_mesh.ravel())
+
+    def plot_psi(self, normalize = True, name_postfix = '', **kwargs):
+        """Plot |psi|^2. kwargs are for plot_mesh."""
+        title = ''
+        if normalize:
+            title = r'Normalized '
+        title += r'$|\psi|^2$'
+        name = 'psi' + name_postfix
+
+        self.plot_mesh(self.abs_psi_squared(normalize = normalize), name = name, title = title, **kwargs)
+
 
 class SphericalSliceSpecification(ElectricFieldSpecification):
     def __init__(self, name,
@@ -584,8 +784,8 @@ class SphericalSliceSpecification(ElectricFieldSpecification):
 
 
 class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
-    def __init__(self, parameters, simulation):
-        super(SphericalSliceFiniteDifferenceMesh, self).__init__(parameters, simulation)
+    def __init__(self, simulation):
+        super(SphericalSliceFiniteDifferenceMesh, self).__init__(simulation)
 
     def norm(self):
         raise NotImplementedError
@@ -604,8 +804,8 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
 
 
 class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
-    def __init__(self, parameters, simulation):
-        super(SphericalHarmonicFiniteDifferenceMesh, self).__init__(parameters, simulation)
+    def __init__(self, simulation):
+        super(SphericalHarmonicFiniteDifferenceMesh, self).__init__(simulation)
 
     def norm(self):
         raise NotImplementedError
@@ -617,7 +817,6 @@ class ElectricFieldSimulation(core.Simulation):
 
         self.mesh = None
         self.initialize_mesh()
-        # self.animator = self.spec.animator(self)
 
         total_time = self.spec.time_final - self.spec.time_initial
         self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
@@ -632,6 +831,8 @@ class ElectricFieldSimulation(core.Simulation):
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
 
+        self.animator = self.spec.animator_type(self)
+
     @property
     def time(self):
         return self.times[self.time_index]
@@ -645,7 +846,7 @@ class ElectricFieldSimulation(core.Simulation):
         return np.sum(overlap for overlap in self.state_overlaps_vs_time.values())
 
     def initialize_mesh(self):
-        self.mesh = self.spec.mesh_type(self.spec, self)
+        self.mesh = self.spec.mesh_type(self)
 
         logger.debug('Initialized mesh for simulation {}'.format(self.name))
 
@@ -654,7 +855,7 @@ class ElectricFieldSimulation(core.Simulation):
         self.norm_vs_time[time_index] = self.mesh.norm
 
         for state in self.spec.test_states:
-            self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(state)
+            self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(self.mesh.g_for_state(state))
 
         if self.spec.electric_potential is not None:
             self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_amplitude(t = self.times[time_index])
@@ -664,8 +865,8 @@ class ElectricFieldSimulation(core.Simulation):
     def run_simulation(self, only_end_data = False, store_intermediate_meshes = False):
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
 
-        # if self.animator is not None:
-        #     self.animator.initialize()
+        if self.animator is not None:
+            self.animator.initialize()
 
         self.status = 'running'
         logger.debug("{} {} status set to 'running'".format(self.__class__.__name__, self.name))
@@ -679,10 +880,10 @@ class ElectricFieldSimulation(core.Simulation):
             if not only_end_data or self.time_index == self.time_steps - 1:  # if last time step or taking all data
                 self.store_data(self.time_index)
 
-            # if self.animator is not None and (self.time_index == 0 or self.time_index == self.time_steps or self.time_index % self.animator.animation_decimation == 0):
-            #     self.animator.update_frame()
-            #     self.animator.send_frame_to_ffmpeg()
-            #     self.logger.debug('Made animation frame for time step {} / {}'.format(self.time_index + 1, self.time_steps))
+            if self.animator is not None and (self.time_index == 0 or self.time_index == self.time_steps or self.time_index % self.animator.animation_decimation == 0):
+                self.animator.update_frame()
+                self.animator.send_frame_to_ffmpeg()
+                logger.debug('Made animation frame for time index {} / {}'.format(self.time_index, self.time_steps - 1))
 
             self.time_index += 1
             if self.time_index == self.time_steps:
@@ -695,8 +896,8 @@ class ElectricFieldSimulation(core.Simulation):
                     self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
                     logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
 
-        # if self.animator is not None:
-        #     self.animator.cleanup()
+        if self.animator is not None:
+            self.animator.cleanup()
 
         self.end_time = dt.datetime.now()
         self.elapsed_time = self.end_time - self.start_time
@@ -729,3 +930,76 @@ class ElectricFieldSimulation(core.Simulation):
             sim.initialize_mesh()
 
         return sim
+
+    def plot_wavefunction_vs_time(self, show = False, save = False, grayscale = False, **kwargs):
+        plt.close()  # close any old figures
+
+        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+
+        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.04)
+        ax_overlaps = plt.subplot(grid_spec[0])
+        ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
+
+        if self.spec.electric_potential is not None:
+            ax_field.plot(self.times / un.asec, self.electric_field_amplitude_vs_time / un.atomic_electric_field, color = 'black', linewidth = 2)
+
+        ax_overlaps.plot(self.times / un.asec, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3, linestyle = '--')
+
+        if grayscale:  # stackplot with two lines in grayscale (initial and non-initial)
+            initial_overlap = [self.state_overlaps_vs_time[self.spec.initial_state]]
+            non_initial_overlaps = [self.state_overlaps_vs_time[state] for state in self.spec.test_states if state != self.spec.initial_state]
+            total_non_initial_overlaps = functools.reduce(np.add, non_initial_overlaps)
+            overlaps = [initial_overlap, total_non_initial_overlaps]
+            ax_overlaps.stackplot(self.times / un.asec, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$', r'$\left| \left\langle \psi|\psi_{n\leq5} \right\rangle \right|^2$'], colors = ['.3', '.5'])
+        else:  # stackplot with all states broken out in full color
+            overlaps = [self.state_overlaps_vs_time[state] for state in self.spec.test_states]
+            num_colors = len(overlaps)
+            ax_overlaps.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
+            ax_overlaps.stackplot(self.times / un.asec, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states])
+
+        ax_overlaps.set_ylim(0.0, 1.0)
+        ax_overlaps.set_xlim(self.spec.time_initial / un.asec, self.spec.time_final / un.asec)
+
+        ax_overlaps.grid()
+        ax_field.grid()
+
+        ax_field.set_xlabel('Time (as)', fontsize = 15)
+        ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 15)
+        ax_field.set_ylabel('E-Field (a.u.)', fontsize = 11)
+
+        if grayscale:
+            ax_overlaps.legend(loc = 'lower left', fontsize = 12)
+        else:
+            ax_overlaps.legend(bbox_to_anchor = (1.075, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10)
+
+        ax_overlaps.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+        ax_overlaps.tick_params(labelright = True)
+        ax_field.tick_params(labelright = True)
+        ax_overlaps.xaxis.tick_top()
+
+        plt.rcParams['xtick.major.pad'] = 5
+        plt.rcParams['ytick.major.pad'] = 5
+
+        # Find at most n+1 ticks on the y-axis at 'nice' locations
+        max_yticks = 6
+        yloc = plt.MaxNLocator(max_yticks, prune = 'upper')
+        ax_field.yaxis.set_major_locator(yloc)
+
+        max_xticks = 6
+        xloc = plt.MaxNLocator(max_xticks, prune = 'both')
+        ax_field.xaxis.set_major_locator(xloc)
+
+        ax_field.tick_params(axis = 'x', which = 'major', labelsize = 10)
+        ax_field.tick_params(axis = 'y', which = 'major', labelsize = 10)
+        ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
+
+        if save:
+            postfix = ''
+            if grayscale:
+                postfix += '_GS'
+            utils.save_current_figure(name = self.spec.file_name + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
+        if show:
+            plt.show()
+
+        plt.close()
+

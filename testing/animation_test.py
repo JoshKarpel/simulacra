@@ -22,16 +22,8 @@ if __name__ == '__main__':
                                                  z_points = 2 ** 9, rho_points = 2 ** 8,
                                                  z_bound = 30 * bohr_radius, rho_bound = 30 * bohr_radius,
                                                  initial_state = initial_state,
-                                                 electric_potential = e_field)
+                                                 electric_potential = e_field,
+                                                 animated = True, animation_dir = OUT_DIR)
         sim = hyd.ElectricFieldSimulation(spec)
 
-        logger.info(spec)
-        logger.info(sim)
-
         sim.run_simulation()
-
-        sim.plot_wavefunction_vs_time(save = True, target_dir = OUT_DIR)
-        sim.plot_wavefunction_vs_time(save = True, target_dir = OUT_DIR, grayscale = True)
-
-
-
