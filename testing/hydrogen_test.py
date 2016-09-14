@@ -24,7 +24,7 @@ if __name__ == '__main__':
     logger.info(bs)
     logger.info(repr(bs))
 
-    bss = hyd.BoundStateSuperposition({hyd.BoundState(n, l, 0): 1 for n in range(3) for l in range(n)})
+    bss = hyd.StateSuperposition({hyd.BoundState(n, l, 0): 1 for n in range(3) for l in range(n)})
 
     logger.info(bss)
     logger.info(repr(bss))

@@ -1,5 +1,6 @@
 import datetime as dt
 import logging
+import os
 
 import numpy as np
 import scipy as sp
@@ -89,15 +90,6 @@ class BoundState:
     def __hash__(self):
         return hash((self.n, self.l, self.m))
 
-    # @utils.memoize()
-    # def evaluate(self, r, theta, phi):
-    #     normalization = np.sqrt(((2 / (self.n * un.bohr_radius)) ** 3) * (sp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.math.factorial(self.n + self.l))))  # Griffith's normalization
-    #     r_dep = np.exp(-r / (self.n * un.bohr_radius)) * ((2 * r / (self.n * un.bohr_radius)) ** self.l)
-    #     lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * un.bohr_radius))
-    #     sph_harm = self.spherical_harmonic(theta, phi)
-    #
-    #     return normalization * r_dep * lag_poly * sph_harm
-
     def __call__(self, r, theta, phi):
         """
         Evaluate the hydrogenic bound state wavefunction at a point, or vectorized over an array of points.
@@ -107,7 +99,6 @@ class BoundState:
         :param phi: azimuthal coordinate
         :return: the value(s) of the wavefunction at (r, theta, phi)
         """
-        # return self.evaluate(r, theta, phi)
         normalization = np.sqrt(((2 / (self.n * un.bohr_radius)) ** 3) * (sp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.math.factorial(self.n + self.l))))  # Griffith's normalization
         r_dep = np.exp(-r / (self.n * un.bohr_radius)) * ((2 * r / (self.n * un.bohr_radius)) ** self.l)
         lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * un.bohr_radius))
@@ -154,7 +145,7 @@ class BoundStateSuperposition:
 
     @property
     def states(self):
-        yield from self.state.keys()
+        yield from self.state
 
     @property
     def amplitudes(self):
@@ -267,6 +258,8 @@ class FreeState:
 
 
 class ElectricFieldSpecification(core.Specification):
+    """A base Specification for a simulation with an electric field."""
+
     def __init__(self, name, mesh_type = None, animator_type = None,
                  test_mass = un.electron_mass_reduced, test_charge = un.electron_charge,
                  initial_state = BoundState(1, 0),
@@ -274,8 +267,9 @@ class ElectricFieldSpecification(core.Specification):
                  internal_potential = potentials.NuclearPotential(charge = un.proton_charge) + potentials.RadialImaginaryPotential(center = 20 * un.bohr_radius, width = 1 * un.bohr_radius, amplitude = 1 * un.atomic_electric_potential),
                  electric_potential = None,
                  time_initial = 0 * un.asec, time_final = 200 * un.asec, time_step = 1 * un.asec,
-                 extra_time = 0 * un.asec, extra_time_step = 1 * un.asec,
+                 extra_time = None, extra_time_step = 1 * un.asec,
                  checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
+                 animated = False, animation_time = 30, animation_fps = 30, animation_plot_limit = None, animation_normalize = True, animation_log_g = False, animation_overlay_probability_current = False, animation_dir = None,
                  **kwargs):
         super(ElectricFieldSpecification, self).__init__(name, **kwargs)
 
@@ -303,6 +297,58 @@ class ElectricFieldSpecification(core.Specification):
         self.checkpoint_at = checkpoint_at
         self.checkpoint_dir = checkpoint_dir
 
+        self.animated = animated
+        self.animation_time = animation_time
+        self.animation_fps = animation_fps
+        self.animation_plot_limit = animation_plot_limit
+        self.animation_normalize = animation_normalize
+        self.animation_log_g = animation_log_g
+        self.animation_overlay_probability_current = animation_overlay_probability_current
+        self.animation_dir = animation_dir
+
+    def info(self):
+        checkpoint = ['Checkpointing: ']
+        if self.checkpoints:
+            if self.animation_dir is not None:
+                working_in = self.checkpoint_dir
+            else:
+                working_in = os.getcwd()
+            checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_at, working_in)
+        else:
+            checkpoint[0] += 'disabled'
+
+        animation = ['Animation: ']
+        if self.animated:
+            if self.animation_dir is not None:
+                working_in = self.animation_dir
+            else:
+                working_in = os.getcwd()
+            animation[0] += 'enabled, working in {}'.format(working_in)
+
+            animation += ['   Movie Ideal FPS: {} fps'.format(self.animation_fps),
+                          '   Normalized: {}'.format(self.animation_normalize),
+                          '   Log g: {}'.format(self.animation_log_g),
+                          '   Overlay Probability Current: {}'.format(self.animation_overlay_probability_current)]
+        else:
+            animation[0] += 'disabled'
+
+        time_evolution = ['Time Evolution:',
+                          '   Initial State: {}'.format(self.initial_state),
+                          '   Initial Time: {} as'.format(un.round(self.time_initial, un.asec, 3)),
+                          '   Final Time: {} as'.format(un.round(self.time_final, un.asec, 3)),
+                          '   Time Step: {} as'.format(un.round(self.time_step, un.asec, 3))]
+
+        if self.extra_time is not None:
+            time_evolution += ['   Extra Time: {} as'.format(un.round(self.extra_time, un.asec, 3)),
+                               '   Extra Time Step: {} as'.format(un.round(self.extra_time, un.asec, 3))]
+
+        potentials = ['Potentials:']
+        potentials += ['   ' + str(potential) for potential in self.internal_potential]
+        if self.electric_potential is not None:
+            potentials += ['   ' + str(potential) for potential in self.electric_potential]
+
+        return '\n'.join(checkpoint + animation + time_evolution + potentials)
+
 
 class CylindricalSliceSpecification(ElectricFieldSpecification):
     def __init__(self, name,
@@ -315,6 +361,18 @@ class CylindricalSliceSpecification(ElectricFieldSpecification):
         self.rho_bound = rho_bound
         self.z_points = z_points
         self.rho_points = rho_points
+
+    def info(self):
+        mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
+                '   Z Boundary: {} Bohr radii'.format(un.round(self.z_bound, un.bohr_radius, 3)),
+                '   Z Points: {}'.format(self.z_points),
+                '   Z Mesh Spacing: ~{} Bohr radii'.format(un.round(2 * self.z_bound / self.z_points, un.bohr_radius, 3)),
+                '   Rho Boundary: {} Bohr radii'.format(un.round(self.rho_bound, un.bohr_radius, 3)),
+                '   Rho Points: {}'.format(self.rho_points),
+                '   Rho Mesh Spacing: ~{} Bohr radii'.format(un.round(self.rho_bound / self.rho_points, un.bohr_radius, 3)),
+                '   Total Mesh Points: {}'.format(self.z_points * self.rho_points)]
+
+        return '\n'.join((super(CylindricalSliceSpecification, self).info(), *mesh))
 
 
 class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
@@ -358,7 +416,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         elif wrap_along == 'rho':
             wrap = 'C'
         else:
-            raise ValueError("{} is not a valid specifier for flatten_along (valid specifiers: 'z', 'rho')".format(wrap_along))
+            raise ValueError("{} is not a valid specifier for wrap_vector (valid specifiers: 'z', 'rho')".format(wrap_along))
 
         return np.reshape(mesh, self.mesh_shape, wrap)
 
@@ -401,6 +459,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
     @utils.memoize(copy_output = True)
     def get_kinetic_energy_matrix_operators(self):
+        """Get the mesh kinetic energy operator matrices for z and rho."""
         z_prefactor = -(un.hbar ** 2) / (2 * self.spec.test_mass * (self.delta_z ** 2))
         rho_prefactor = -(un.hbar ** 2) / (2 * self.spec.test_mass * (self.delta_rho ** 2))
 
@@ -422,6 +481,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
     @utils.memoize(copy_output = True)
     def get_internal_hamiltonian_matrix_operators(self):
+        """Get the mesh internal Hamiltonian matrix operators for z and rho."""
         z_kinetic, rho_kinetic = self.get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
 
@@ -432,6 +492,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
     @utils.memoize(copy_output = True)
     def get_probability_current_matrix_operators(self):
+        """Get the mesh probability current operators for z and rho."""
         z_prefactor = un.hbar / (4 * un.pi * self.spec.test_mass * self.delta_rho * self.delta_z)
         rho_prefactor = un.hbar / (4 * un.pi * self.spec.test_mass * (self.delta_rho ** 2))
 
@@ -461,6 +522,12 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         return z_current, rho_current
 
     def evolve(self, time_step):
+        """
+        Evolve the mesh forward in time by time_step.
+
+        :param time_step:
+        :return:
+        """
         tau = time_step / (2 * un.hbar)
 
         if self.spec.electric_potential is not None:
@@ -548,7 +615,8 @@ class ElectricFieldSimulation(core.Simulation):
     def __init__(self, spec):
         super(ElectricFieldSimulation, self).__init__(spec)
 
-        self.mesh = self.initialize_mesh()
+        self.mesh = None
+        self.initialize_mesh()
         # self.animator = self.spec.animator(self)
 
         total_time = self.spec.time_final - self.spec.time_initial
@@ -564,14 +632,6 @@ class ElectricFieldSimulation(core.Simulation):
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
 
-        # diagnostic data
-        self.evictions = 0
-        self.start_time = dt.datetime.now()
-        self.end_time = None
-        self.elapsed_time = None
-        self.latest_load_time = dt.datetime.now()
-        self.run_time = dt.timedelta()
-
     @property
     def time(self):
         return self.times[self.time_index]
@@ -585,8 +645,9 @@ class ElectricFieldSimulation(core.Simulation):
         return np.sum(overlap for overlap in self.state_overlaps_vs_time.values())
 
     def initialize_mesh(self):
+        self.mesh = self.spec.mesh_type(self.spec, self)
+
         logger.debug('Initialized mesh for simulation {}'.format(self.name))
-        return self.spec.mesh_type(self.spec, self)
 
     def store_data(self, time_index):
         """Update the time-indexed data arrays with the current values."""
@@ -657,9 +718,14 @@ class ElectricFieldSimulation(core.Simulation):
         if not save_mesh:
             self.mesh = None
 
-        if self.status != 'finished':
-            self.run_time += dt.datetime.now() - self.latest_load_time
-            self.latest_load_time = dt.datetime.now()
-
         return super(ElectricFieldSimulation, self).save(target_dir = target_dir, file_extension = file_extension)
 
+    @staticmethod
+    def load(file_path, initialize_mesh = False):
+        """Return a simulation loaded from the file_path. kwargs are for Beet.load."""
+        sim = super(ElectricFieldSimulation, self).load(file_path)
+
+        if initialize_mesh:
+            sim.initialize_mesh()
+
+        return sim

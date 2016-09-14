@@ -1,4 +1,5 @@
 import logging
+import datetime as dt
 
 from compy import utils
 
@@ -58,6 +59,14 @@ class Simulation(utils.Beet):
 
         super(Simulation, self).__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from parameters
 
+        # diagnostic data
+        self.evictions = 0
+        self.start_time = dt.datetime.now()
+        self.end_time = None
+        self.elapsed_time = None
+        self.latest_load_time = dt.datetime.now()
+        self.run_time = dt.timedelta()
+
     def save(self, target_dir = None, file_extension = '.sim'):
         """
         Atomically pickle the Simulation to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
@@ -66,13 +75,39 @@ class Simulation(utils.Beet):
         :param file_extension: file extension to name the Simulation with
         :return: None
         """
+        if self.status != 'finished':
+            self.run_time += dt.datetime.now() - self.latest_load_time
+            self.latest_load_time = dt.datetime.now()
+
         return super(Simulation, self).save(target_dir, file_extension)
+    
+    @staticmethod
+    def load(file_path):
+        """
+        Load a Simulation from file_path.
+
+        :param file_path: the path to try to load a Simulation from
+        :return: the loaded Simulation
+        """
+        super(Simulation, self).load(file_path)
+
+        sim.latest_load_time = dt.datetime.now()
 
     def __str__(self):
-        return '{}: {} ({}) [{}] | {}'.format(self.__class__.__name__, self.name, self.file_name, self.uid, str(self.spec))
+        return '{}: {} ({}) [{}]  |  {}'.format(self.__class__.__name__, self.name, self.file_name, self.uid, self.spec)
 
     def __repr__(self):
         return '{}(spec = {}, uid = {})'.format(self.__class__.__name__, repr(self.spec), self.uid)
 
     def run_simulation(self):
         raise NotImplementedError
+
+    def info(self):
+        diag = ['Status: {}'.format(self.status),
+                '   Start Time: {}'.format(self.start_time),
+                '   Latest Load Time: {}'.format(self.latest_load_time),
+                '   End Time: {}'.format(self.end_time),
+                '   Elapsed Time: {}'.format(self.elapsed_time),
+                '   Run Time: {}'.format(self.run_time)]
+
+        return '\n'.join((str(self), *diag, self.spec.info()))

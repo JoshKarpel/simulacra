@@ -70,7 +70,8 @@ def fibonacci(n):
 
 
 def is_prime(n):
-    if n <= 1:
+    """Check whether n is prime."""
+    if n != int(n) or n < 2:
         return False
     elif n == 2:
         return True
@@ -83,6 +84,7 @@ def is_prime(n):
 
 
 def prime_generator():
+    """Yield primes forever."""
     yield 2
 
     primes = [2]
@@ -101,6 +103,7 @@ def prime_generator():
 
 
 def prime_sieve(limit):
+    """A generator that yields all of the primes below the limit."""
     yield 2
 
     primes = {n: True for n in range(3, limit + 1, 2)}
@@ -116,6 +119,10 @@ def prime_sieve(limit):
 
 
 def prime_factorization(n):
+    """Return the prime factorization of the input."""
+    if n != int(n) and n > 0:
+        raise ValueError('n ({}) must be a positive integer'.format(n))
+
     factors = []
     divisor = 2
     sqrt_n = math.sqrt(n)

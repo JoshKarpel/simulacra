@@ -178,6 +178,9 @@ class Beet:
 
         return beet
 
+    def info(self):
+        return str(self)
+
 
 def ensure_dir_exists(path):
     """Ensure that the directory tree to the path exists."""

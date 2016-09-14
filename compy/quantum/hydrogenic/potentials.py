@@ -24,6 +24,9 @@ class Potential:
     def __repr__(self):
         return '{}'.format(self.__class__.__name__)
 
+    def __iter__(self):
+        yield self
+
     def __add__(self, other):
         return PotentialSum(self, other)
 
@@ -43,6 +46,9 @@ class PotentialSum:
 
     def __repr__(self):
         return '{}({})'.format(self.__class__.__name__, ', '.join([repr(p) for p in self.potentials]))
+
+    def __iter__(self):
+        yield from self.potentials
 
     def __call__(self, **kwargs):
         return sum(p(**kwargs) for p in self.potentials)
@@ -126,13 +132,15 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
         out = '{}(start_time = {} as, end_time = {} as, amplitude = {} AEF'.format(self.__class__.__name__,
                                                                                    un.round(self.start_time, un.asec, 3),
                                                                                    un.round(self.end_time, un.asec, 3),
-                                                                                   un.round(self.amplitude, un.twopi, 3))
+                                                                                   un.round(self.amplitude, un.atomic_electric_field, 3))
 
         if self.window_time is not None and self.window_width is not None:
             out += ', window_time = {} as, window_width = {} as'.format(un.round(self.window_time, un.asec, 3),
                                                                         un.round(self.window_width, un.asec, 3))
 
         out += ')'
+
+        return out
 
     def __repr__(self):
         out = '{}(start_time = {}, end_time = {}, amplitude = {}'.format(self.__class__.__name__,
