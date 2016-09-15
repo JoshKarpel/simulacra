@@ -12,7 +12,7 @@ if __name__ == '__main__':
         n_max = 3
 
         bound = 30
-        points = 2 ** 9
+        points = 2 ** 10
         angular_points = 2 ** 7
 
         t_init = -200 * asec
@@ -29,7 +29,8 @@ if __name__ == '__main__':
 
                 ############## CYLINDRICAL SLICE ###################
 
-                cyl_spec = hyd.CylindricalSliceSpecification('cyl_slice', time_initial = t_init, time_final = t_final,
+                cyl_spec = hyd.CylindricalSliceSpecification('{}_{}__cyl_slice'.format(n, l),
+                                                             time_initial = t_init, time_final = t_final,
                                                              z_points = points, rho_points = points / 2,
                                                              z_bound = bound * bohr_radius, rho_bound = bound * bohr_radius,
                                                              initial_state = initial_state,
@@ -45,7 +46,7 @@ if __name__ == '__main__':
 
                 ############## SPHERICAL SLICE ###################
 
-                sph_spec = hyd.SphericalSliceSpecification('sph_slice', time_initial = t_init, time_final = t_final,
+                sph_spec = hyd.SphericalSliceSpecification('{}_{}__sph_slice'.format(n, l), time_initial = t_init, time_final = t_final,
                                                            r_points = points, theta_points = angular_points,
                                                            r_bound = bound * bohr_radius,
                                                            initial_state = initial_state,
@@ -57,4 +58,21 @@ if __name__ == '__main__':
                 logger.info(sph_sim.info())
 
                 sph_sim.plot_wavefunction_vs_time(save = True, target_dir = OUT_DIR)
+                # sph_sim.plot_wavefunction_vs_time(save = True, target_dir = OUT_DIR, grayscale = True)
+
+                ############# SPHERICAL HARMONICS ###################
+
+                sph_harm_spec = hyd.SphericalHarmonicSpecification('{}{}__sph_harm'.format(n, l), time_initial = t_init, time_final = t_final,
+                                                                   r_points = points,
+                                                                   r_bound = bound * bohr_radius,
+                                                                   spherical_harmonics_max_l = angular_points,
+                                                                   initial_state = initial_state,
+                                                                   electric_potential = e_field)
+                sph_harm_sim = hyd.ElectricFieldSimulation(sph_harm_spec)
+
+                logger.info(sph_harm_sim.info())
+                sph_harm_sim.run_simulation()
+                logger.info(sph_harm_sim.info())
+
+                sph_harm_sim.plot_wavefunction_vs_time(save = True, target_dir = OUT_DIR)
                 # sph_sim.plot_wavefunction_vs_time(save = True, target_dir = OUT_DIR, grayscale = True)

@@ -493,12 +493,16 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         z_diagonal = z_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         z_offdiagonal = z_prefactor * np.array([1 if (z_index + 1) % self.spec.z_points != 0 else 0 for z_index in range(self.mesh_points - 1)], dtype = np.complex128)
 
+        @utils.memoize()
+        def c(j):
+            return j / np.sqrt((j ** 2) - 0.25)
+
         rho_diagonal = rho_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         rho_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
         for rho_index in range(self.mesh_points - 1):
             if (rho_index + 1) % self.spec.rho_points != 0:
                 j = (rho_index % self.spec.rho_points) + 1  # get j for the upper diagonal
-                rho_offdiagonal[rho_index] = j / np.sqrt((j ** 2) - 0.25)
+                rho_offdiagonal[rho_index] = c(j)
         rho_offdiagonal *= rho_prefactor
 
         z_kinetic = sparse.diags([z_offdiagonal, z_diagonal, z_offdiagonal], offsets = (-1, 0, 1))
@@ -568,6 +572,10 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
                 z_offdiagonal[z_index] = 1 / (j + 0.5)
         z_offdiagonal *= z_prefactor
 
+        @utils.memoize()
+        def d(j):
+            return 1 / np.sqrt((j ** 2) - 0.25)
+
         # construct the diagonals of the rho probability current matrix operator
         rho_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
         for rho_index in range(0, self.mesh_points - 1):
@@ -575,7 +583,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
                 rho_offdiagonal[rho_index] = 0
             else:
                 j = (rho_index % self.spec.rho_points) + 1
-                rho_offdiagonal[rho_index] = 1 / np.sqrt((j ** 2) - 0.25)
+                rho_offdiagonal[rho_index] = d(j)
         rho_offdiagonal *= rho_prefactor
 
         z_current = sparse.diags([-z_offdiagonal, z_offdiagonal], offsets = [-1, 1])
@@ -976,15 +984,15 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def hg_mesh(self):
         hamiltonian_r, hamiltonian_theta = self.get_internal_hamiltonian_matrix_operators()
 
-        g_vector_z = self.flatten_mesh(self.g_mesh, 'r')
-        hg_vector_z = hamiltonian_r.dot(g_vector_z)
-        hg_mesh_z = self.wrap_vector(hg_vector_z, 'r')
+        g_vector_r = self.flatten_mesh(self.g_mesh, 'r')
+        hg_vector_r = hamiltonian_r.dot(g_vector_r)
+        hg_mesh_r = self.wrap_vector(hg_vector_r, 'r')
 
-        g_vector_rho = self.flatten_mesh(self.g_mesh, 'theta')
-        hg_vector_rho = hamiltonian_theta.dot(g_vector_rho)
-        hg_mesh_rho = self.wrap_vector(hg_vector_rho, 'theta')
+        g_vector_theta = self.flatten_mesh(self.g_mesh, 'theta')
+        hg_vector_theta = hamiltonian_theta.dot(g_vector_theta)
+        hg_mesh_theta = self.wrap_vector(hg_vector_theta, 'theta')
 
-        return hg_mesh_z + hg_mesh_rho
+        return hg_mesh_r + hg_mesh_theta
 
     @property
     def energy_expectation_value(self):
@@ -1169,21 +1177,22 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
     def __init__(self, name,
                  r_bound = 20 * un.bohr_radius,
-                 r_points = 2 ** 9, spherical_harmonics = tuple(math.SphericalHarmonic(l) for l in range(5)),
+                 r_points = 2 ** 9,
+                 spherical_harmonics_max_l = 20,
                  **kwargs):
         super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = SphericalHarmonicFiniteDifferenceMesh, **kwargs)
 
         self.r_bound = r_bound
         self.r_points = int(r_points)
-        self.spherical_harmonics = tuple(spherical_harmonics)
+        self.spherical_harmonics_max_l = spherical_harmonics_max_l
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
                 '   R Boundary: {} Bohr radii'.format(un.round(self.r_bound, un.bohr_radius, 3)),
                 '   R Points: {}'.format(self.r_points),
                 '   R Mesh Spacing: ~{} Bohr radii'.format(un.round(self.r_bound / self.r_points, un.bohr_radius, 3)),
-                '   Spherical Harmonics: {}'.format(len(self.spherical_harmonics)),
-                '   Total Mesh Points: {}'.format(int(self.r_points * len(self.spherical_harmonics)))]
+                '   Spherical Harmonics: {}'.format(self.spherical_harmonics_max_l + 1),
+                '   Total Mesh Points: {}'.format(self.r_points * (self.spherical_harmonics_max_l + 1))]
 
         return '\n'.join((super(SphericalHarmonicSpecification, self).info(), *mesh))
 
@@ -1197,38 +1206,192 @@ class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
         self.r += self.delta_r / 2
         self.r_max = np.max(self.r)
 
-        self.g_mesh = self.g_for_state(self.spec.initial_state)
+        self.l = np.array(range(0, self.spec.spherical_harmonics_max_l + 1))
+        self.spherical_harmonics = tuple(math.SphericalHarmonic(l, 0) for l in range(self.spec.spherical_harmonics_max_l + 1))
+        self.l_points = len(self.l)
+        self.spec.l_points = self.l_points
 
-        self.mesh_points = len(self.r) * len(self.spec.spherical_harmonics)
+        self.l_mesh, self.r_mesh = np.meshgrid(self.l, self.r, indexing = 'ij')
+
+        self.mesh_points = len(self.r) * len(self.l)
+        self.mesh_shape = np.shape(self.r_mesh)
+
+        self.g_mesh = self.g_for_state(self.spec.initial_state)
 
     @property
     def g_factor(self):
         return self.r
 
-    def blank_g(self):
-        return {sph_harm: np.zeros(self.spec.r_points) for sph_harm in self.spec.spherical_harmonics}
+    def flatten_mesh(self, mesh, flatten_along):
+        """Return a mesh flattened along one of the mesh coordinates ('theta' or 'r')."""
+        if flatten_along == 'l':
+            flat = 'F'
+        elif flatten_along == 'r':
+            flat = 'C'
+        else:
+            raise ValueError("{} is not a valid specifier for flatten_mesh (valid specifiers: 'l', 'r')".format(flatten_along))
+
+        return mesh.flatten(flat)
+
+    def wrap_vector(self, mesh, wrap_along):
+        if wrap_along == 'l':
+            wrap = 'F'
+        elif wrap_along == 'r':
+            wrap = 'C'
+        else:
+            raise ValueError("{} is not a valid specifier for wrap_vector (valid specifiers: 'l', 'r')".format(wrap_along))
+
+        return np.reshape(mesh, self.mesh_shape, wrap)
 
     def inner_product(self, mesh_a = None, mesh_b = None):
-        raise NotImplementedError
+        if mesh_a is None:
+            mesh_a = self.g_mesh
+        if mesh_b is None:
+            mesh_b = self.g_mesh
+
+        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * self.delta_r
 
     def state_overlap(self, state_a = None, state_b = None):
-        raise NotImplementedError
+        if state_a is None:
+            mesh_a = self.g_mesh
+        else:
+            mesh_a = self.g_for_state(state_a)
+        if state_b is None:
+            mesh_b = self.g_mesh
+        else:
+            mesh_b = self.g_for_state(state_b)
 
+        return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
+
+    @property
     def norm(self):
-        norm = 0
-
-        for sph_harm, radial_mesh in self.g_mesh.items():
-            norm += np.sum(np.abs(radial_mesh) ** 2)
-
-        norm *= self.delta_r
-
-        return norm
+        return np.abs(self.inner_product())
 
     def g_for_state(self, state):
+        g = np.zeros(self.mesh_shape)
+
+        g[state.l, :] = state.radial_part(self.r) * self.g_factor
+
+        return g
+
+    @utils.memoize(copy_output = True)
+    def get_kinetic_energy_matrix_operators(self):
+        r_prefactor = -(un.hbar ** 2) / (2 * un.electron_mass_reduced * (self.delta_r ** 2))
+        l_prefactor = 1
+
+        r_diagonal = r_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
+        r_offdiagonal = r_prefactor * np.ones(self.mesh_points - 1, dtype = np.complex128)
+
+        @utils.memoize()
+        def a(l):
+            return l * np.sqrt(1 / (4 * (l ** 2) - 1))
+
+        l_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
+        l_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
+        for l_index in range(self.mesh_points - 1):
+            if (l_index + 1) % self.spec.l_points != 0:
+                l = (l_index % self.spec.l_points) + 1
+                l_offdiagonal[l_index] = a(l)
+        l_offdiagonal *= l_prefactor
+
+        effective_potential_mesh = ((un.hbar ** 2) / (2 * un.electron_mass_reduced)) * self.l_mesh * (self.l_mesh + 1) / (self.r_mesh ** 2)
+        r_diagonal += self.flatten_mesh(effective_potential_mesh, 'r')
+
+        r_kinetic = sparse.diags([r_offdiagonal, r_diagonal, r_offdiagonal], offsets = (-1, 0, 1))
+        l_kinetic = sparse.diags([l_offdiagonal, l_diagonal, l_offdiagonal], offsets = (-1, 0, 1))
+
+        return r_kinetic, l_kinetic
+
+    @utils.memoize(copy_output = True)
+    def get_internal_hamiltonian_matrix_operators(self):
+        r_kinetic, l_kinetic = self.get_kinetic_energy_matrix_operators()
+        potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
+
+        r_kinetic.data[1] += self.flatten_mesh(potential_mesh, 'r')
+
+        return r_kinetic, l_kinetic
+
+    def tg_mesh(self, use_abs_g = False):
+        hamiltonian_r, hamiltonian_l = self.get_kinetic_energy_matrix_operators()
+
+        if use_abs_g:
+            g_mesh = np.abs(self.g_mesh)
+        else:
+            g_mesh = self.g_mesh
+
+        g_vector_r = self.flatten_mesh(g_mesh, 'r')
+        hg_vector_r = hamiltonian_r.dot(g_vector_r)
+        hg_mesh_r = self.wrap_vector(hg_vector_r, 'r')
+
+        g_vector_l = self.flatten_mesh(g_mesh, 'l')
+        hg_vector_l = hamiltonian_l.dot(g_vector_l)
+        hg_mesh_l = self.wrap_vector(hg_vector_l, 'l')
+
+        return hg_mesh_r + hg_mesh_l
+
+    def hg_mesh(self):
+        hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
+
+        g_vector_z = self.flatten_mesh(self.g_mesh, 'r')
+        hg_vector_z = hamiltonian_r.dot(g_vector_z)
+        hg_mesh_z = self.wrap_vector(hg_vector_z, 'r')
+
+        g_vector_l = self.flatten_mesh(self.g_mesh, 'l')
+        hg_vector_l = hamiltonian_l.dot(g_vector_l)
+        hg_mesh_l = self.wrap_vector(hg_vector_l, 'l')
+
+        return hg_mesh_z + hg_mesh_l
+
+    @property
+    def energy_expectation_value(self):
+        return np.real(self.inner_product(mesh_b = self.hg_mesh()))
+
+    @utils.memoize()
+    def get_probability_current_matrix_operators(self):
+        raise NotImplementedError
+
+    def get_probability_current_vector_field(self):
         raise NotImplementedError
 
     def evolve(self, delta_t):
-        raise NotImplementedError
+        tau = delta_t / (2 * un.hbar)
+
+        if self.spec.electric_potential is not None:
+            electric_field_amplitude = self.spec.electric_potential.get_amplitude(self.sim.time) * self.flatten_mesh(self.r_mesh, 'l')
+        else:
+            electric_field_amplitude = 0
+        l_multiplier = self.spec.test_charge * electric_field_amplitude
+
+        hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_r *= 1j * tau
+        hamiltonian_l.data[0] *= 1j * tau * l_multiplier
+        hamiltonian_l.data[2] *= 1j * tau * l_multiplier
+
+        # STEP 1
+        hamiltonian = -1 * hamiltonian_l
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        g_vector = self.flatten_mesh(self.g_mesh, 'l')
+        g_vector = hamiltonian.dot(g_vector)
+        self.g_mesh = self.wrap_vector(g_vector, 'l')
+
+        # STEP 2
+        hamiltonian = hamiltonian_r.copy()
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        g_vector = self.flatten_mesh(self.g_mesh, 'r')
+        g_vector = cy.tdma(hamiltonian, g_vector)
+
+        # STEP 3
+        hamiltonian = -1 * hamiltonian_r
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        g_vector = hamiltonian.dot(g_vector)
+        self.g_mesh = self.wrap_vector(g_vector, 'r')
+
+        # STEP 4
+        hamiltonian = hamiltonian_l.copy()
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        g_vector = self.flatten_mesh(self.g_mesh, 'l')
+        g_vector = cy.tdma(hamiltonian, g_vector)
+        self.g_mesh = self.wrap_vector(g_vector, 'l')
 
 
 class ElectricFieldSimulation(core.Simulation):
