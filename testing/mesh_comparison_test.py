@@ -12,7 +12,7 @@ if __name__ == '__main__':
         n_max = 3
 
         bound = 30
-        points = 2 ** 10
+        points = 2 ** 9
         angular_points = 2 ** 7
 
         t_init = -200 * asec
@@ -62,10 +62,10 @@ if __name__ == '__main__':
 
                 ############# SPHERICAL HARMONICS ###################
 
-                sph_harm_spec = hyd.SphericalHarmonicSpecification('{}{}__sph_harm'.format(n, l), time_initial = t_init, time_final = t_final,
+                sph_harm_spec = hyd.SphericalHarmonicSpecification('{}_{}__sph_harm'.format(n, l), time_initial = t_init, time_final = t_final,
                                                                    r_points = points,
                                                                    r_bound = bound * bohr_radius,
-                                                                   spherical_harmonics_max_l = angular_points,
+                                                                   spherical_harmonics_max_l = angular_points - 1,
                                                                    initial_state = initial_state,
                                                                    electric_potential = e_field)
                 sph_harm_sim = hyd.ElectricFieldSimulation(sph_harm_spec)

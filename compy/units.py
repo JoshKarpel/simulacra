@@ -471,10 +471,13 @@ unit_names_to_tex_strings.update({'c': r'$c$',
                                   'coulomb_force_constant': r'$k_e$',
                                   'n_vacuum': r'$n_{\mathrm{vac}}$'})
 
+
+atomic_energy = hartree
 atomic_electric_field = coulomb_force_constant * proton_charge / (bohr_radius ** 2)
 atomic_electric_potential = coulomb_force_constant * proton_charge / bohr_radius
 atomic_velocity = alpha * c
 atomic_momentum = electron_mass * atomic_velocity
+atomic_time = hbar / hartree
 
 unit_names_to_values.update({'atomic_electric_field': atomic_electric_field,
                              'atomic_electric_potential': atomic_electric_potential,

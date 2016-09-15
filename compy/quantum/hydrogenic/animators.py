@@ -32,7 +32,7 @@ class CylindricalSliceAnimator:
         self.fps = (self.sim.time_steps / self.animation_decimation) / self.spec.animation_time
 
         if cluster:
-            self.filename = self.sim.parameters.pickle_name + '.mp4'
+            self.filename = self.sim.spec.pickle_name + '.mp4'
         else:
             if self.spec.animation_dir is not None:
                 target_dir = self.spec.animation_dir
@@ -89,7 +89,7 @@ class CylindricalSliceAnimator:
             self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh, plot_limit = self.spec.animation_plot_limit)
 
         if self.spec.electric_potential is not None:
-            self.pulse_max = self.spec.electric_potential.get_peak_amplitude()
+            self.pulse_max = np.max(self.spec.electric_potential.get_amplitude(self.sim.times))
             self.electric_field_line, = self.ax_time.plot(self.sim.times / un.asec, np.abs(self.sim.electric_field_amplitude_vs_time / self.pulse_max),
                                                           label = r'Normalized $|E|$',
                                                           color = 'red', linewidth = 2)
@@ -186,7 +186,7 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         self.ax_time.set_xlabel('Time (as)', fontsize = 18)
         self.ax_time.set_ylabel('Ionization Metric', fontsize = 18)
 
-        self.ax_time.set_xlim(self.simulation.times[0] / asec, self.simulation.times[-1] / asec)
+        self.ax_time.set_xlim(self.sim.times[0] / un.asec, self.sim.times[-1] / un.asec)
         self.ax_time.set_ylim(0, 1)
 
         self.ax_mesh.tick_params(axis = 'both', which = 'major', labelsize = 12)  # increase size of tick labels
@@ -199,34 +199,35 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         self.ax_time.tick_params(labelright = True)
         self.ax_time.tick_params(axis = 'both', which = 'major', labelsize = 12)
 
-        self.mesh, self.mesh_mirror = self.simulation.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.parameters.animation_normalize, log = self.parameters.animation_log_g)
+        self.mesh, self.mesh_mirror = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.spec.animation_normalize, log = self.spec.animation_log_g)
 
         self.cbar_axis = self.fig.add_axes([1.01, .1, .04, .8])  # add a new axis for the cbar so that the old axis can stay square
         self.cbar = plt.colorbar(mappable = self.mesh, cax = self.cbar_axis)
         self.cbar.ax.tick_params(labelsize = 12)
 
-        if self.parameters.animation_overlay_probability_current:
-            self.quiver = self.simulation.mesh.attach_probability_current_quiver(self.ax_mesh)
+        if self.spec.animation_overlay_probability_current:
+            self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh)
 
-        self.pulse_max = self.parameters.external_potential.get_peak_amplitude()
-        self.external_potential_line, = self.ax_time.plot(self.simulation.times / asec, np.abs(self.simulation.external_potential_amplitude_vs_time / self.pulse_max),
+        if self.spec.electric_potential is not None:
+            self.pulse_max = np.max(self.spec.electric_potential.get_amplitude(self.sim.times))
+            self.electric_field_line, = self.ax_time.plot(self.sim.times / un.asec, np.abs(self.sim.electric_field_amplitude_vs_time / self.pulse_max),
                                                           label = r'Normalized $|E|$ Field', color = 'red', linewidth = 2)
 
-        self.norm_line, = self.ax_time.plot(self.simulation.times / asec, self.simulation.norm_vs_time,
+        self.norm_line, = self.ax_time.plot(self.sim.times / un.asec, self.sim.norm_vs_time,
                                             label = 'Wavefunction Norm', color = 'black', linestyle = '--', linewidth = 3)
 
-        self.overlaps_stackplot = self.ax_time.stackplot(self.simulation.times / asec, *self.compute_stackplot_overlaps(),
+        self.overlaps_stackplot = self.ax_time.stackplot(self.sim.times / un.asec, *self.compute_stackplot_overlaps(),
                                                          labels = ['Initial State Overlap', r'Overlap with $n \leq 5$'], colors = ['.3', '.5'])
 
-        self.time_line, = self.ax_time.plot([self.simulation.times[self.simulation.time_index] / asec, self.simulation.times[self.simulation.time_index] / asec], [0, 1],
+        self.time_line, = self.ax_time.plot([self.sim.times[self.sim.time_index] / un.asec, self.sim.times[self.sim.time_index] / un.asec], [0, 1],
                                             linestyle = '-.', color = 'gray')
 
         self.ax_mesh.axis('tight')
         self.ax_time.legend(loc = 'center left', fontsize = 12)
 
     def update_mesh_axis(self):
-        self.simulation.mesh.update_g_mesh(self.mesh, normalize = self.parameters.animation_normalize, log = self.parameters.animation_log_g)
-        self.simulation.mesh.update_g_mesh(self.mesh_mirror, normalize = self.parameters.animation_normalize, log = self.parameters.animation_log_g)
+        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.spec.animation_normalize, log = self.spec.animation_log_g)
+        self.sim.mesh.update_g_mesh(self.mesh_mirror, normalize = self.spec.animation_normalize, log = self.spec.animation_log_g)
 
-        if self.parameters.animation_overlay_probability_current:
-            self.simulation.mesh.update_probability_current_quiver(self.quiver)
+        if self.spec.animation_overlay_probability_current:
+            self.sim.mesh.update_probability_current_quiver(self.quiver)

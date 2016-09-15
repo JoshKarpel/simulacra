@@ -368,8 +368,8 @@ class CylindricalSliceSpecification(ElectricFieldSpecification):
 
         self.z_bound = z_bound
         self.rho_bound = rho_bound
-        self.z_points = z_points
-        self.rho_points = rho_points
+        self.z_points = int(z_points)
+        self.rho_points = int(rho_points)
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
@@ -813,7 +813,7 @@ class SphericalSliceSpecification(ElectricFieldSpecification):
                 '   R Points: {}'.format(self.r_points),
                 '   R Mesh Spacing: ~{} Bohr radii'.format(un.round(self.r_bound / self.r_points, un.bohr_radius, 3)),
                 '   Theta Points: {}'.format(self.theta_points),
-                '   Theta Mesh Spacing: ~{} rad | ~{} deg'.format(un.round(un.pi / self.theta_points, un.rad, 3), un.round(un.round(un.pi / self.theta_points, un.deg, 3))),
+                '   Theta Mesh Spacing: ~{} rad | ~{} deg'.format(un.round(un.pi / self.theta_points, un.rad, 3), un.round(un.round(180 / self.theta_points, 3))),
                 '   Maximum Adjacent-Point Spacing: ~{} Bohr radii'.format(un.round(un.pi * self.r_bound / self.theta_points, un.bohr_radius, 3)),
                 '   Total Mesh Points: {}'.format(int(self.r_points * self.theta_points))]
 
