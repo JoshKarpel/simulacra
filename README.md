@@ -1,2 +1,2 @@
 # compy
-Computation Physics package for Python
+Computational Physics package for Python

@@ -94,6 +94,13 @@ class BoundState:
     def __hash__(self):
         return hash((self.n, self.l, self.m))
 
+    def radial_part(self, r):
+        normalization = np.sqrt(((2 / (self.n * un.bohr_radius)) ** 3) * (sp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.math.factorial(self.n + self.l))))  # Griffith's normalization
+        r_dep = np.exp(-r / (self.n * un.bohr_radius)) * ((2 * r / (self.n * un.bohr_radius)) ** self.l)
+        lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * un.bohr_radius))
+
+        return normalization * r_dep * lag_poly
+
     def __call__(self, r, theta, phi):
         """
         Evaluate the hydrogenic bound state wavefunction at a point, or vectorized over an array of points.
@@ -103,12 +110,10 @@ class BoundState:
         :param phi: azimuthal coordinate
         :return: the value(s) of the wavefunction at (r, theta, phi)
         """
-        normalization = np.sqrt(((2 / (self.n * un.bohr_radius)) ** 3) * (sp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.math.factorial(self.n + self.l))))  # Griffith's normalization
-        r_dep = np.exp(-r / (self.n * un.bohr_radius)) * ((2 * r / (self.n * un.bohr_radius)) ** self.l)
-        lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * un.bohr_radius))
+        radial_part = self.radial_part(r)
         sph_harm = self.spherical_harmonic(theta, phi)
 
-        return normalization * r_dep * lag_poly * sph_harm
+        return radial_part * sph_harm
 
 
 class BoundStateSuperposition:
@@ -995,7 +1000,7 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def get_spline_for_mesh(self, mesh):
         return sp.interp.RectBivariateSpline(self.r, self.theta, mesh)
 
-    def evolve(self, delta_t, external_potential_amplitude = 0):
+    def evolve(self, delta_t):
         tau = delta_t / (2 * un.hbar)
 
         if self.spec.electric_potential is not None:
@@ -1164,20 +1169,65 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
     def __init__(self, name,
                  r_bound = 20 * un.bohr_radius,
-                 r_points = 2 ** 10, spherical_harmonics = (math.SphericalHarmonic(l) for l in range(5)),
+                 r_points = 2 ** 9, spherical_harmonics = tuple(math.SphericalHarmonic(l) for l in range(5)),
                  **kwargs):
         super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = SphericalHarmonicFiniteDifferenceMesh, **kwargs)
 
         self.r_bound = r_bound
-        self.r_points = r_points
-        self.spherical_harmonics = spherical_harmonics
+        self.r_points = int(r_points)
+        self.spherical_harmonics = tuple(spherical_harmonics)
+
+    def info(self):
+        mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
+                '   R Boundary: {} Bohr radii'.format(un.round(self.r_bound, un.bohr_radius, 3)),
+                '   R Points: {}'.format(self.r_points),
+                '   R Mesh Spacing: ~{} Bohr radii'.format(un.round(self.r_bound / self.r_points, un.bohr_radius, 3)),
+                '   Spherical Harmonics: {}'.format(len(self.spherical_harmonics)),
+                '   Total Mesh Points: {}'.format(int(self.r_points * len(self.spherical_harmonics)))]
+
+        return '\n'.join((super(SphericalHarmonicSpecification, self).info(), *mesh))
 
 
 class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
     def __init__(self, simulation):
         super(SphericalHarmonicFiniteDifferenceMesh, self).__init__(simulation)
 
+        self.r = np.linspace(0, self.spec.r_bound, self.spec.r_points)
+        self.delta_r = self.r[1] - self.r[0]
+        self.r += self.delta_r / 2
+        self.r_max = np.max(self.r)
+
+        self.g_mesh = self.g_for_state(self.spec.initial_state)
+
+        self.mesh_points = len(self.r) * len(self.spec.spherical_harmonics)
+
+    @property
+    def g_factor(self):
+        return self.r
+
+    def blank_g(self):
+        return {sph_harm: np.zeros(self.spec.r_points) for sph_harm in self.spec.spherical_harmonics}
+
+    def inner_product(self, mesh_a = None, mesh_b = None):
+        raise NotImplementedError
+
+    def state_overlap(self, state_a = None, state_b = None):
+        raise NotImplementedError
+
     def norm(self):
+        norm = 0
+
+        for sph_harm, radial_mesh in self.g_mesh.items():
+            norm += np.sum(np.abs(radial_mesh) ** 2)
+
+        norm *= self.delta_r
+
+        return norm
+
+    def g_for_state(self, state):
+        raise NotImplementedError
+
+    def evolve(self, delta_t):
         raise NotImplementedError
 
 
