@@ -9,10 +9,10 @@ BASE_OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
     with cp.utils.Logger(stdout_level = logging.INFO, file_logs = True, file_dir = BASE_OUT_DIR, file_level = logging.DEBUG) as logger:
-        n_max = 3
+        n_max = 4
 
-        bound = 30
-        points = 2 ** 9
+        bound = 50
+        points = 2 ** 10
         angular_points = 2 ** 7
 
         t_init = -200 * asec
@@ -25,7 +25,7 @@ if __name__ == '__main__':
         for n in range(n_max + 1):
             for l in range(n):
                 initial_state = hyd.BoundState(n, l, 0)
-                OUT_DIR = os.path.join(BASE_OUT_DIR, '{}_{}'.format(initial_state.n, initial_state.l))
+                OUT_DIR = os.path.join(BASE_OUT_DIR, '{}x{}'.format(points, angular_points), '{}_{}'.format(initial_state.n, initial_state.l))
 
                 ############## CYLINDRICAL SLICE ###################
 
