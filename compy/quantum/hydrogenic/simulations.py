@@ -260,7 +260,7 @@ class FreeState:
         return '<{} eV,{} 1/nm, {}, {}|'.format(un.round(self.energy, un.eV, 3), un.round(self.k, 1 / un.nm, 3), self.l, self.m)
 
     @property
-    def plot_str(self):
+    def tex_str(self):
         """Return a LaTeX-formatted string for the BoundState."""
         return r'\phi_{{{},{},{}}}'.format(un.round(self.energy, un.eV, 3), self.l, self.m)
 
