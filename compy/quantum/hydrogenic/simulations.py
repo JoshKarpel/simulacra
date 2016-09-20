@@ -91,8 +91,24 @@ class BoundState:
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.n == other.n and self.l == other.l and self.m == other.m
 
+    def __lt__(self, other):
+        return isinstance(other, self.__class__) and self.n < other.n and self.l < other.l and self.m < other.m
+
+    def __gt__(self, other):
+        return isinstance(other, self.__class__) and self.n > other.n and self.l > other.l and self.m > other.m
+
+    def __le__(self, other):
+        return isinstance(other, self.__class__) and self.n <= other.n and self.l <= other.l and self.m <= other.m
+
+    def __ge__(self, other):
+        return isinstance(other, self.__class__) and self.n >= other.n and self.l >= other.l and self.m >= other.m
+
     def __hash__(self):
         return hash((self.n, self.l, self.m))
+
+    @staticmethod
+    def sort_key(state):
+        return state.n, state.l, state.m
 
     def radial_part(self, r):
         normalization = np.sqrt(((2 / (self.n * un.bohr_radius)) ** 3) * (sp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.math.factorial(self.n + self.l))))  # Griffith's normalization
