@@ -73,7 +73,7 @@ class NuclearPotential(Potential):
         return '{}(charge = {})'.format(self.__class__.__name__, self.charge)
 
     def __str__(self):
-        return '{}(charge = {} e)'.format(self.__class__.__name__, un.round(self.charge, un.proton_charge, 3))
+        return '{}(charge = {} e)'.format(self.__class__.__name__, un.uround(self.charge, un.proton_charge, 3))
 
     def __call__(self, r = None, test_charge = None, **kwargs):
         return un.coulomb_force_constant * self.charge * test_charge / r
@@ -130,13 +130,13 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
 
     def __str__(self):
         out = '{}(start_time = {} as, end_time = {} as, amplitude = {} AEF'.format(self.__class__.__name__,
-                                                                                   un.round(self.start_time, un.asec, 3),
-                                                                                   un.round(self.end_time, un.asec, 3),
-                                                                                   un.round(self.amplitude, un.atomic_electric_field, 3))
+                                                                                   un.uround(self.start_time, un.asec, 3),
+                                                                                   un.uround(self.end_time, un.asec, 3),
+                                                                                   un.uround(self.amplitude, un.atomic_electric_field, 3))
 
         if self.window_time is not None and self.window_width is not None:
-            out += ', window_time = {} as, window_width = {} as'.format(un.round(self.window_time, un.asec, 3),
-                                                                        un.round(self.window_width, un.asec, 3))
+            out += ', window_time = {} as, window_width = {} as'.format(un.uround(self.window_time, un.asec, 3),
+                                                                        un.uround(self.window_width, un.asec, 3))
 
         out += ')'
 
@@ -176,13 +176,13 @@ class SineWave(UniformLinearlyPolarizedElectricField):
 
     def __str__(self):
         out = '{}(omega = 2pi * {} THz, amplitude = {} AEF, phase = 2pi * {}'.format(self.__class__.__name__,
-                                                                                     un.round(self.frequency, un.THz, 3),
-                                                                                     un.round(self.amplitude, un.atomic_electric_field, 3),
-                                                                                     un.round(self.phase, un.twopi, 3))
+                                                                                     un.uround(self.frequency, un.THz, 3),
+                                                                                     un.uround(self.amplitude, un.atomic_electric_field, 3),
+                                                                                     un.uround(self.phase, un.twopi, 3))
 
         if self.window_time is not None and self.window_width is not None:
-            out += ', window_time = {} as, window_width = {} as'.format(un.round(self.window_time, un.asec, 3),
-                                                                        un.round(self.window_width, un.asec, 3))
+            out += ', window_time = {} as, window_width = {} as'.format(un.uround(self.window_time, un.asec, 3),
+                                                                        un.uround(self.window_width, un.asec, 3))
 
         out += ')'
 

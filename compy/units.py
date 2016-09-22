@@ -11,7 +11,7 @@ unit_names_to_values = {}
 unit_names_to_tex_strings = {}
 
 
-def round(value, units = 1, digits = 3):
+def uround(value, units = 1, digits = 3):
     return np.around(value / units, digits)
 
 

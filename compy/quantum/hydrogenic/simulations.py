@@ -249,20 +249,20 @@ class FreeState:
         return self.ket
 
     def __repr__(self):
-        return '{}(T={} eV, k={} 1/nm, l={}, m={})'.format(self.__class__.__name__, un.round(self.energy, un.eV, 3), un.round(self.k, 1 / un.nm, 3), self.l, self.m)
+        return '{}(T={} eV, k={} 1/nm, l={}, m={})'.format(self.__class__.__name__, un.uround(self.energy, un.eV, 3), un.uround(self.k, 1 / un.nm, 3), self.l, self.m)
 
     @property
     def ket(self):
-        return '|{} eV,{} 1/nm, {}, {}>'.format(un.round(self.energy, un.eV, 3), un.round(self.k, 1 / un.nm, 3), self.l, self.m)
+        return '|{} eV,{} 1/nm, {}, {}>'.format(un.uround(self.energy, un.eV, 3), un.uround(self.k, 1 / un.nm, 3), self.l, self.m)
 
     @property
     def bra(self):
-        return '<{} eV,{} 1/nm, {}, {}|'.format(un.round(self.energy, un.eV, 3), un.round(self.k, 1 / un.nm, 3), self.l, self.m)
+        return '<{} eV,{} 1/nm, {}, {}|'.format(un.uround(self.energy, un.eV, 3), un.uround(self.k, 1 / un.nm, 3), self.l, self.m)
 
     @property
     def tex_str(self):
         """Return a LaTeX-formatted string for the BoundState."""
-        return r'\phi_{{{},{},{}}}'.format(un.round(self.energy, un.eV, 3), self.l, self.m)
+        return r'\phi_{{{},{},{}}}'.format(un.uround(self.energy, un.eV, 3), self.l, self.m)
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.energy == other.energy and self.l == other.l and self.m == other.m
@@ -359,13 +359,13 @@ class ElectricFieldSpecification(core.Specification):
 
         time_evolution = ['Time Evolution:',
                           '   Initial State: {}'.format(self.initial_state),
-                          '   Initial Time: {} as'.format(un.round(self.time_initial, un.asec, 3)),
-                          '   Final Time: {} as'.format(un.round(self.time_final, un.asec, 3)),
-                          '   Time Step: {} as'.format(un.round(self.time_step, un.asec, 3))]
+                          '   Initial Time: {} as'.format(un.uround(self.time_initial, un.asec, 3)),
+                          '   Final Time: {} as'.format(un.uround(self.time_final, un.asec, 3)),
+                          '   Time Step: {} as'.format(un.uround(self.time_step, un.asec, 3))]
 
         if self.extra_time is not None:
-            time_evolution += ['   Extra Time: {} as'.format(un.round(self.extra_time, un.asec, 3)),
-                               '   Extra Time Step: {} as'.format(un.round(self.extra_time, un.asec, 3))]
+            time_evolution += ['   Extra Time: {} as'.format(un.uround(self.extra_time, un.asec, 3)),
+                               '   Extra Time Step: {} as'.format(un.uround(self.extra_time, un.asec, 3))]
 
         potentials = ['Potentials:']
         potentials += ['   ' + str(potential) for potential in self.internal_potential]
@@ -389,12 +389,12 @@ class CylindricalSliceSpecification(ElectricFieldSpecification):
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
-                '   Z Boundary: {} Bohr radii'.format(un.round(self.z_bound, un.bohr_radius, 3)),
+                '   Z Boundary: {} Bohr radii'.format(un.uround(self.z_bound, un.bohr_radius, 3)),
                 '   Z Points: {}'.format(self.z_points),
-                '   Z Mesh Spacing: ~{} Bohr radii'.format(un.round(2 * self.z_bound / self.z_points, un.bohr_radius, 3)),
-                '   Rho Boundary: {} Bohr radii'.format(un.round(self.rho_bound, un.bohr_radius, 3)),
+                '   Z Mesh Spacing: ~{} Bohr radii'.format(un.uround(2 * self.z_bound / self.z_points, un.bohr_radius, 3)),
+                '   Rho Boundary: {} Bohr radii'.format(un.uround(self.rho_bound, un.bohr_radius, 3)),
                 '   Rho Points: {}'.format(self.rho_points),
-                '   Rho Mesh Spacing: ~{} Bohr radii'.format(un.round(self.rho_bound / self.rho_points, un.bohr_radius, 3)),
+                '   Rho Mesh Spacing: ~{} Bohr radii'.format(un.uround(self.rho_bound / self.rho_points, un.bohr_radius, 3)),
                 '   Total Mesh Points: {}'.format(int(self.z_points * self.rho_points))]
 
         return '\n'.join((super(CylindricalSliceSpecification, self).info(), *mesh))
@@ -825,12 +825,12 @@ class SphericalSliceSpecification(ElectricFieldSpecification):
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
-                '   R Boundary: {} Bohr radii'.format(un.round(self.r_bound, un.bohr_radius, 3)),
+                '   R Boundary: {} Bohr radii'.format(un.uround(self.r_bound, un.bohr_radius, 3)),
                 '   R Points: {}'.format(self.r_points),
-                '   R Mesh Spacing: ~{} Bohr radii'.format(un.round(self.r_bound / self.r_points, un.bohr_radius, 3)),
+                '   R Mesh Spacing: ~{} Bohr radii'.format(un.uround(self.r_bound / self.r_points, un.bohr_radius, 3)),
                 '   Theta Points: {}'.format(self.theta_points),
-                '   Theta Mesh Spacing: ~{} rad | ~{} deg'.format(un.round(un.pi / self.theta_points, un.rad, 3), un.round(un.round(180 / self.theta_points, 3))),
-                '   Maximum Adjacent-Point Spacing: ~{} Bohr radii'.format(un.round(un.pi * self.r_bound / self.theta_points, un.bohr_radius, 3)),
+                '   Theta Mesh Spacing: ~{} rad | ~{} deg'.format(un.uround(un.pi / self.theta_points, un.rad, 3), un.uround(un.uround(180 / self.theta_points, 3))),
+                '   Maximum Adjacent-Point Spacing: ~{} Bohr radii'.format(un.uround(un.pi * self.r_bound / self.theta_points, un.bohr_radius, 3)),
                 '   Total Mesh Points: {}'.format(int(self.r_points * self.theta_points))]
 
         return '\n'.join((super(SphericalSliceSpecification, self).info(), *mesh))
@@ -1204,9 +1204,9 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
-                '   R Boundary: {} Bohr radii'.format(un.round(self.r_bound, un.bohr_radius, 3)),
+                '   R Boundary: {} Bohr radii'.format(un.uround(self.r_bound, un.bohr_radius, 3)),
                 '   R Points: {}'.format(self.r_points),
-                '   R Mesh Spacing: ~{} Bohr radii'.format(un.round(self.r_bound / self.r_points, un.bohr_radius, 3)),
+                '   R Mesh Spacing: ~{} Bohr radii'.format(un.uround(self.r_bound / self.r_points, un.bohr_radius, 3)),
                 '   Spherical Harmonics: {}'.format(self.spherical_harmonics_max_l + 1),
                 '   Total Mesh Points: {}'.format(self.r_points * (self.spherical_harmonics_max_l + 1))]
 
@@ -1348,15 +1348,16 @@ class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
     def hg_mesh(self):
         hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
 
-        g_vector_z = self.flatten_mesh(self.g_mesh, 'r')
-        hg_vector_z = hamiltonian_r.dot(g_vector_z)
-        hg_mesh_z = self.wrap_vector(hg_vector_z, 'r')
+        g_vector_r = self.flatten_mesh(self.g_mesh, 'r')
+        hg_vector_r = hamiltonian_r.dot(g_vector_r)
+        hg_mesh_r = self.wrap_vector(hg_vector_r, 'r')
 
-        g_vector_l = self.flatten_mesh(self.g_mesh, 'l')
-        hg_vector_l = hamiltonian_l.dot(g_vector_l)
-        hg_mesh_l = self.wrap_vector(hg_vector_l, 'l')
+        # g_vector_l = self.flatten_mesh(self.g_mesh, 'l')
+        # hg_vector_l = hamiltonian_l.dot(g_vector_l)
+        # hg_mesh_l = self.wrap_vector(hg_vector_l, 'l')
 
-        return hg_mesh_z + hg_mesh_l
+        # return hg_mesh_r + hg_mesh_l
+        return hg_mesh_r
 
     @property
     def energy_expectation_value(self):
@@ -1429,6 +1430,7 @@ class ElectricFieldSimulation(core.Simulation):
 
         # simulation data storage
         self.norm_vs_time = np.zeros(self.time_steps) * np.NaN
+        self.energy_expectation_value_vs_time_internal = np.zeros(self.time_steps) * np.NaN
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
 
@@ -1455,6 +1457,7 @@ class ElectricFieldSimulation(core.Simulation):
     def store_data(self, time_index):
         """Update the time-indexed data arrays with the current values."""
         self.norm_vs_time[time_index] = self.mesh.norm
+        self.energy_expectation_value_vs_time_internal[time_index] = self.mesh.energy_expectation_value
 
         for state in self.spec.test_states:
             self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(self.mesh.g_for_state(state))
