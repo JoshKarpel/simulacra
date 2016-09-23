@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import compy as cp
 from compy.units import *
 import compy.quantum.hydrogenic as hyd
+import compy.quantum.hydrogenic.testing as hydt
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -563,57 +564,6 @@ def spherical_harmonic_time_stability(r_point_count, states, spherical_harmonics
     plt.close()
 
 
-class ConvergenceTestingSimulation(hyd.ElectricFieldSimulation):
-    @property
-    def norm_error_vs_time(self):
-        return np.abs(1 - self.norm_vs_time)
-
-    @property
-    def initial_state_overlap_error_vs_time(self):
-        return np.abs(1 - self.state_overlaps_vs_time[self.spec.initial_state])
-
-    @property
-    def initial_state_energy_expectation_error_vs_time(self):
-        return np.abs(1 - np.abs((self.energy_expectation_value_vs_time_internal / (rydberg / (self.spec.initial_state.n ** 2)))))
-
-    def attach_norm_error_vs_time_to_axis(self, axis):
-        line, = axis.plot(self.times / asec, self.norm_error_vs_time, label = r'{}'.format(self.spec.initial_state.tex_str))
-
-        return line
-
-    def attach_initial_state_overlap_error_to_axis(self, axis):
-        line, = axis.plot(self.times / asec, self.initial_state_overlap_error_vs_time, label = r'{}'.format(self.spec.initial_state.tex_str))
-
-        return line
-
-    def attach_initial_state_energy_expectation_error_to_axis(self, axis):
-        line, = axis.plot(self.times / asec, self.initial_state_energy_expectation_error_vs_time, label = r'{}'.format(self.spec.initial_state.tex_str))
-
-        return line
-
-    def plot_error_vs_time(self, show = False, save = False, **kwargs):
-        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
-        fig.set_tight_layout(True)
-        axis = plt.subplot(111)
-
-        axis.set_xlabel(r'Time (as)', fontsize = 15)
-
-        axis.set_yscale('log')
-
-        axis.set_xlim(self.times[0] / asec, self.times[-1] / asec)
-
-        axis.grid(True, color = 'black', linestyle = ':')  # change grid color to make it show up against the colormesh
-
-        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
-
-        if save:
-            utils.save_current_figure(name = self.spec.file_name + '__error_vs_time', **kwargs)
-        if show:
-            plt.show()
-
-        plt.close()
-
-
 
 
 
@@ -628,13 +578,26 @@ if __name__ == '__main__':
     states = [hyd.BoundState(n, l, 0) for n in range(1, n_max + 1) for l in range(n)]
     bound = 40 * bohr_radius
 
+    linear_points = 2 ** np.array([6, 7, 8, 9, 10, 11])
+
     with cp.utils.Logger() as logger:
         # cylindrical_slice_norm_energy(linear_points, states, bound = bound)
         # spherical_slice_norm_energy(radial_points, states, bound = bound, theta_points = angular_points)
         # spherical_harmonic_norm_energy(radial_points, states, bound = bound, spherical_harmonics = angular_points)
 
-        spherical_harmonic_norm_energy_evolved(radial_points, states, spherical_harmonics = angular_points, bound = bound,
-                                               evolve_for = 1000 * asec, evolve_at = 10 * asec)
+        # spherical_harmonic_norm_energy_evolved(radial_points, states, spherical_harmonics = angular_points, bound = bound,
+        #                                        evolve_for = 1000 * asec, evolve_at = 10 * asec)
 
         # spherical_harmonic_time_stability(1000, states, spherical_harmonics = angular_points, bound = bound,
         #                                   evolve_for = 1000 * asec, evolve_at = 1 * asec)
+
+        for zz in linear_points:
+            for state in states:
+                spec = hyd.CylindricalSliceSpecification('{}_{}__{}'.format(state.n, state.l, zz),
+                                                         z_points = zz, rho_points = zz / 2,
+                                                         time_final = 10000 * asec, time_step = 1 * asec)
+                sim = hydt.StaticConvergenceTestingSimulation(spec)
+
+                sim.run_simulation()
+
+                sim.plot_error_vs_time(save = True, target_dir = OUT_DIR)
