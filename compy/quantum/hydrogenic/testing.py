@@ -58,7 +58,7 @@ class StaticConvergenceTestingSimulation(simulations.ElectricFieldSimulation):
         title = axis.set_title(r'Error vs. Time for ${}$'.format(self.spec.initial_state.tex_str), fontsize = 15)
         title.set_y(1.05)
         axis.set_xlabel(r'Time (as)', fontsize = 15)
-        axis.set_ylabel(r'Error')
+        axis.set_ylabel(r'Error', fontsize = 15)
 
         axis.set_yscale('log')
         if self.times[-1] >= 1000 * un.asec:

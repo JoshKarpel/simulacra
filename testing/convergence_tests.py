@@ -564,21 +564,33 @@ def spherical_harmonic_time_stability(r_point_count, states, spherical_harmonics
     plt.close()
 
 
+def run_test(spec):
+    with cp.utils.Logger() as logger:
+        sim = hydt.StaticConvergenceTestingSimulation(spec)
+        sim.run_simulation()
 
+        sim.plot_error_vs_time(save = True, target_dir = os.path.join(OUT_DIR, 'individual_error_vs_time'))
+
+        sim.mesh = None
+
+        return sim
 
 
 if __name__ == '__main__':
     # cylindrical_slice_2d_z_rho_points(10, 20, 10, 20, hyd.BoundState(1, 0, 0))
     # z = [100, 101, 102, 103 200, 201, 202, 203, 400, 401, 402, 403, 600, 601, 602, 603, 800, 801, 802, 803, 1000, 1001, 1002, 1003]
     # nn = np.linspace(100, 1000, num = 200)
-    linear_points = np.logspace(start = 7, stop = 11, base = 2, num = 100)
-    radial_points = np.logspace(start = 7, stop = 10, base = 2, num = 100)
-    angular_points = 2 ** 7
+    # linear_points = np.logspace(start = 7, stop = 11, base = 2, num = 100)
+    # radial_points = np.logspace(start = 7, stop = 12, base = 2, num = 100)
+    angular_points = [2**6, 2 ** 7, 2 ** 8]
     n_max = 3
     states = [hyd.BoundState(n, l, 0) for n in range(1, n_max + 1) for l in range(n)]
     bound = 40 * bohr_radius
 
-    linear_points = 2 ** np.array([6, 7, 8, 9, 10, 11])
+    time_final = 10000
+    time_step = 1
+
+    linear_points = 2 ** np.array([6, 7, 8, 9, 10, 11, 12])
 
     with cp.utils.Logger() as logger:
         # cylindrical_slice_norm_energy(linear_points, states, bound = bound)
@@ -591,13 +603,28 @@ if __name__ == '__main__':
         # spherical_harmonic_time_stability(1000, states, spherical_harmonics = angular_points, bound = bound,
         #                                   evolve_for = 1000 * asec, evolve_at = 1 * asec)
 
-        for zz in linear_points:
-            for state in states:
-                spec = hyd.CylindricalSliceSpecification('{}_{}__{}'.format(state.n, state.l, zz),
+        specs = []
+
+        for state in states:
+            for zz in linear_points:
+                spec = hyd.CylindricalSliceSpecification('cyl__n{}_l{}__z{}_rho{}__t{}_dt{}'.format(state.n, state.l, zz, zz / 2, time_final, time_step),
                                                          z_points = zz, rho_points = zz / 2,
-                                                         time_final = 10000 * asec, time_step = 1 * asec)
-                sim = hydt.StaticConvergenceTestingSimulation(spec)
+                                                         time_initial = 1 * asec, time_final = time_final * asec + 1 * asec, time_step = time_step * asec)
 
-                sim.run_simulation()
+                specs.append(spec)
 
-                sim.plot_error_vs_time(save = True, target_dir = OUT_DIR)
+            for rr in linear_points:
+                for ll in angular_points:
+                    spec_sphslice = hyd.SphericalSliceSpecification('sphslice__n{}_l{}__r{}_theta{}__t{}_dt{}'.format(state.n, state.l, rr, ll, time_final, time_step),
+                                                                    r_points = rr, theta_points = ll,
+                                                                    time_initial = 1 * asec, time_final = time_final * asec + 1 * asec, time_step = time_step * asec)
+
+                    specs.append(spec_sphslice)
+
+                    spec_sphharm = hyd.SphericalHarmonicSpecification('sphharm__n{}_l{}__r{}_harms{}__t{}_dt{}'.format(state.n, state.l, rr, ll, time_final, time_step),
+                                                                      r_points = rr, theta_points = ll,
+                                                                      time_initial = 1 * asec, time_final = time_final * asec + 1 * asec, time_step = time_step * asec)
+
+                    specs.append(spec_sphharm)
+
+        sims = cp.utils.multi_map(run_test, specs, processes = 4)
