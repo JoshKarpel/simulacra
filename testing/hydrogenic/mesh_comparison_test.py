@@ -8,12 +8,12 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 BASE_OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger(stdout_level = logging.INFO, file_logs = True, file_dir = BASE_OUT_DIR, file_level = logging.DEBUG) as logger:
+    with cp.utils.Logger(stdout_level = logging.DEBUG, file_logs = True, file_dir = BASE_OUT_DIR, file_level = logging.DEBUG) as logger:
         n_max = 4
 
         bound = 50
         points = 2 ** 10
-        angular_points = 2 ** 7
+        angular_points = 2 ** 6
 
         t_init = -200 * asec
         t_final = -t_init
