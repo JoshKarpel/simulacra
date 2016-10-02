@@ -88,6 +88,9 @@ class Glass(Material):
 
 
 class Mode:
+
+    __slots__ = ('center_frequency', 'power', 'linewidth', '_phase')
+
     def __init__(self, center_frequency = 100 * un.THz, power = 1 * un.W, linewidth = 1 * un.GHz, phase = 0):
         self.center_frequency = center_frequency
         self.power = power
@@ -96,7 +99,7 @@ class Mode:
 
     @property
     def phase(self):
-        return self.phase % un.twopi
+        return self._phase % un.twopi
 
     @phase.setter
     def phase(self, phase):
@@ -107,7 +110,10 @@ class Mode:
         return opt.photon_wavelength_from_frequency(self.center_frequency)
 
     def propagate(self, material):
-        self.phase += material.length * material.index(self.wavelength) / un.c
+        self.phase += material.length * (un.twopi * material.index(self.wavelength) / self.wavelength)
+
+    def evaluate_at_t(self, t):
+        return np.sin(self.center_frequency * t)  # NEED TO MULTIPLE BY RIGHT THING HERE TO GET FIELD AMPLITUDE
 
     def __str__(self):
         return 'Mode(center_frequency = {} THz, linewidth = {} GHz, power = {} W, phase = {})'.format(un.uround(self.center_frequency, un.THz, 3),
@@ -120,14 +126,14 @@ class Mode:
 
 
 class Beam:
-    def __init__(self, modes):
-        self.modes = modes
+    def __init__(self, *modes):
+        self.modes = list(modes)
 
     def __iter__(self):
         yield from self.modes
 
     def __str__(self):
-        return 'Beam: {}'.format([str(mode) for mode in self.modes])
+        return 'Beam: {}'.format(', '.join([str(mode) for mode in self.modes]))
 
     def __repr__(self):
         return 'Beam({})'.format(', '.join([repr(mode) for mode in self.modes]))
@@ -136,6 +142,37 @@ class Beam:
         for mode in self.modes:
             mode.propagate(material)
 
+    def evaluate_at_time(self, t):
+        sum = np.zeros(np.shape(t))
+
+        for beam in self.modes:
+            sum += beam.evaluate_at_t(t)
+
+        return sum
+
+    def plot_field_vs_time(self, times, show = False, save = False, **kwargs):
+        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+        fig.set_tight_layout(True)
+        axis = plt.subplot(111)
+
+        plt.plot(t / un.fsec, self.evaluate_at_time(t))
+
+        title = axis.set_title(r'Beam Electric Field vs. Time', fontsize = 15)
+        title.set_y(1.05)
+        axis.set_xlabel(r'$t (fs)$', fontsize = 15)
+        axis.set_ylabel(r'$E(t)$', fontsize = 15)
+
+        axis.set_xlim(t[0], t[-1])
+        axis.grid(True, color = 'black', linestyle = '--')
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
+
+        if save:
+            utils.save_current_figure(name = 'electric_field_vs_time', **kwargs)
+        if show:
+            plt.show()
+
+        plt.close()
+
 
 def modulate_beam(beam, frequency_shift = 90 * un.THz, upshift_efficiency = 1e-4, downshift_efficiency = 1e-6):
     new_modes = []
@@ -143,19 +180,22 @@ def modulate_beam(beam, frequency_shift = 90 * un.THz, upshift_efficiency = 1e-4
     for mode in beam:
         upshift = Mode(center_frequency = mode.center_frequency + frequency_shift,
                        power = mode.power * upshift_efficiency,
-                       linewidth = mode.linewidth)
+                       linewidth = mode.linewidth,
+                       phase = mode.phase)
 
         downshift = Mode(center_frequency = mode.center_frequency - frequency_shift,
                          power = mode.power * downshift_efficiency,
-                         linewidth = mode.linewidth)
+                         linewidth = mode.linewidth,
+                         phase = mode.phase)
 
         notshift = Mode(center_frequency = mode.center_frequency,
                         power = mode.power - upshift.power - downshift.power,
-                        linewidth = mode.linewidth)
+                        linewidth = mode.linewidth,
+                        phase = mode.phase)
 
         new_modes.append(upshift)
         new_modes.append(downshift)
         new_modes.append(notshift)
 
-    return Beam(new_modes)
+    return Beam(*new_modes)
 

@@ -17,12 +17,17 @@ if __name__ == '__main__':
     bk.plot_index_vs_wavelength(wavelength_min, wavelength_max, save = True, target_dir = OUT_DIR, img_format = 'pdf')
 
     modes = [disp.Mode(center_frequency = n * 100 * THz) for n in range(1, 6)]
-    beam = disp.Beam(modes)
+    beam = disp.Beam(*modes)
 
     print(beam)
     print(repr(beam))
 
-    modulated = disp.modulate_beam(beam)
+    beam.propagate(bk)
 
-    print(modulated)
-    print(repr(modulated))
+    beam = disp.modulate_beam(beam)
+
+    beam.propagate(bk)
+
+    print(beam)
+    print(repr(beam))
+
