@@ -57,7 +57,7 @@ class Material:
         plt.close()
 
     def __str__(self):
-        raise NotImplementedError
+        return '{} cm of {}'.format(un.uround(self.length, un.cm, 2), self.name)
 
     def __repr__(self):
         raise NotImplementedError
@@ -84,17 +84,17 @@ class Glass(Material):
         self.b = np.array(b)
         self.c = np.array(c)
 
+    @utils.memoize()
     def index(self, wavelength):
         return np.sqrt(1 + np.sum((self.b / (wavelength ** 2 - self.c))) * (wavelength ** 2))
 
 
 class Mode:
+    __slots__ = ('center_frequency', 'intensity', 'linewidth', '_phase')
 
-    __slots__ = ('center_frequency', 'power', 'linewidth', '_phase')
-
-    def __init__(self, center_frequency = 100 * un.THz, power = 1 * un.W, phase = 0):
+    def __init__(self, center_frequency = 100 * un.THz, intensity = 1 * un.W / (un.cm ** 2), phase = 0):
         self.center_frequency = center_frequency
-        self.power = power
+        self.intensity = intensity
         self._phase = phase
 
     @property
@@ -106,22 +106,28 @@ class Mode:
         self._phase = phase % un.twopi
 
     @property
+    def amplitude(self):
+        return np.sqrt(self.intensity * 2 / (un.c * un.epsilon_0))
+
+    @property
     def wavelength(self):
         return opt.photon_wavelength_from_frequency(self.center_frequency)
 
     def propagate(self, material):
         self.phase += material.length * (un.twopi * material.index(self.wavelength) / self.wavelength)
 
-    def evaluate_at_t(self, t):
-        return np.exp((1j * un.twopi * self.center_frequency * t) + self.phase)  # NEED TO MULTIPLE BY RIGHT THING HERE TO GET FIELD AMPLITUDE
+        logger.debug('Propagated mode {} through {}'.format(self, material))
+
+    def evaluate_at_time(self, t):
+        return self.amplitude * np.exp((1j * un.twopi * self.center_frequency * t) + self.phase)
 
     def __str__(self):
-        return 'Mode(center_frequency = {} THz, power = {} W, phase = {})'.format(un.uround(self.center_frequency, un.THz, 3),
-                                                                                            un.uround(self.power, un.W, 3),
-                                                                                            self.phase)
+        return 'Mode(center_frequency = {} THz, intensity = {} W/m^2, phase = {})'.format(un.uround(self.center_frequency, un.THz, 3),
+                                                                                          un.uround(self.intensity, un.W, 3),
+                                                                                          self.phase)
 
     def __repr__(self):
-        return 'Mode(center_frequency = {}, power = {}, phase = {})'.format(self.center_frequency, self.power, self.phase)
+        return 'Mode(center_frequency = {}, intensity = {}, phase = {})'.format(self.center_frequency, self.intensity, self.phase)
 
 
 class Beam:
@@ -142,12 +148,21 @@ class Beam:
             mode.propagate(material)
 
     def evaluate_at_time(self, t):
-        sum = np.zeros(np.shape(t), dtype = np.complex128)
+        result = np.zeros(np.shape(t), dtype = np.complex128)
+        # frequencies = np.zeros(len(self.modes), dtype = np.complex128)
+        # phases = np.zeros(len(self.modes), dtype = np.complex128)
+        # amplitudes = np.zeros(len(self.modes), dtype = np.complex128)
 
         for beam in self.modes:
-            sum += beam.evaluate_at_t(t)
+            result += beam.evaluate_at_time(t)
 
-        return sum
+        # for ii, beam in enumerate(self.modes):
+        #     frequencies[ii] = beam.center_frequency
+        #     phases[ii] = beam.phase
+        #     amplitudes[ii] = beam.amplitude
+
+        # return np.sum(amplitudes * np.exp((1j * un.twopi * frequencies * t) + phases))
+        return result
 
     def fft_field(self, t):
         return fft.fft(np.real(self.evaluate_at_time(t)), norm = 'ortho'), fft.fftfreq(len(t), t[1] - t[0])
@@ -162,17 +177,17 @@ class Beam:
         electric_field = self.evaluate_at_time(t)
 
         plt.plot(t / un.fsec, np.real(electric_field),
-                 label = 'Electric Field')
+                 label = 'Electric Field', color = 'blue', linestyle = '-')
         plt.plot(t / un.fsec, np.abs(electric_field), t / un.fsec, -np.abs(electric_field),
-                 label = 'Envelope', color = 'orange')
+                 label = 'Envelope', color = 'red', linestyle = '--')
 
         title = axis.set_title(r'Beam Electric Field vs. Time', fontsize = 15)
         title.set_y(1.05)
         axis.set_xlabel(r'$t$ (fs)', fontsize = 15)
-        axis.set_ylabel(r'$E(t)$', fontsize = 15)
+        axis.set_ylabel(r'$E(t)$ (V/m)', fontsize = 15)
 
         axis.set_xlim(t[0] / un.fsec, t[-1] / un.fsec)
-        axis.grid(True, color = 'black', linestyle = '--')
+        axis.grid(True, color = 'grey', linestyle = ':')
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
         if save:
@@ -199,7 +214,7 @@ class Beam:
         axis.set_xlabel(r'$f$ (THz)', fontsize = 15)
         axis.set_ylabel(r'$\left|\hat{E}(f)\right|$', fontsize = 15)
 
-        axis.set_xlim(shifted_freq[0] / un.THz, shifted_freq[-1] / un.THz)
+        # axis.set_xlim(shifted_freq[0] / un.THz, shifted_freq[-1] / un.THz)
         axis.grid(True, color = 'black', linestyle = '--')
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
@@ -216,20 +231,41 @@ def modulate_beam(beam, frequency_shift = 90 * un.THz, upshift_efficiency = 1e-6
 
     for mode in beam:
         upshift = Mode(center_frequency = mode.center_frequency + frequency_shift,
-                       power = mode.power * upshift_efficiency,
+                       intensity = mode.intensity * upshift_efficiency,
                        phase = mode.phase)
 
         downshift = Mode(center_frequency = mode.center_frequency - frequency_shift,
-                         power = mode.power * downshift_efficiency,
+                         intensity = mode.intensity * downshift_efficiency,
                          phase = mode.phase)
 
         notshift = Mode(center_frequency = mode.center_frequency,
-                        power = mode.power - upshift.power - downshift.power,
+                        intensity = mode.intensity - upshift.intensity - downshift.intensity,
                         phase = mode.phase)
 
         new_modes.append(upshift)
         new_modes.append(downshift)
         new_modes.append(notshift)
 
+        logger.debug('Generated sidebands for mode {}:'.format(mode, upshift, downshift, notshift))
+
     return Beam(*new_modes)
 
+
+def bandblock_beam(beam, wavelength_min, wavelength_max, filter_by = 1e-6):
+    new_modes = []
+
+    for mode in beam:
+        if wavelength_min < mode.wavelength < wavelength_max:
+            new_mode = Mode(center_frequency = mode.center_frequency,
+                            intensity = mode.intensity * filter_by,
+                            phase = mode.phase)
+
+            logger.debug('Filtered mode {} to {}'.format(mode, new_mode))
+        else:
+            new_mode = mode
+
+            logger.debug('Filter ignored mode {}'.format(mode))
+
+        new_modes.append(new_mode)
+
+    return Beam(*new_modes)
