@@ -4,6 +4,7 @@ import functools
 import os
 
 import numpy as np
+import numpy.fft as fft
 import scipy as sp
 import matplotlib
 import matplotlib.pyplot as plt
@@ -91,10 +92,9 @@ class Mode:
 
     __slots__ = ('center_frequency', 'power', 'linewidth', '_phase')
 
-    def __init__(self, center_frequency = 100 * un.THz, power = 1 * un.W, linewidth = 1 * un.GHz, phase = 0):
+    def __init__(self, center_frequency = 100 * un.THz, power = 1 * un.W, phase = 0):
         self.center_frequency = center_frequency
         self.power = power
-        self.linewidth = linewidth
         self._phase = phase
 
     @property
@@ -113,16 +113,15 @@ class Mode:
         self.phase += material.length * (un.twopi * material.index(self.wavelength) / self.wavelength)
 
     def evaluate_at_t(self, t):
-        return np.sin(self.center_frequency * t)  # NEED TO MULTIPLE BY RIGHT THING HERE TO GET FIELD AMPLITUDE
+        return np.exp((1j * un.twopi * self.center_frequency * t) + self.phase)  # NEED TO MULTIPLE BY RIGHT THING HERE TO GET FIELD AMPLITUDE
 
     def __str__(self):
-        return 'Mode(center_frequency = {} THz, linewidth = {} GHz, power = {} W, phase = {})'.format(un.uround(self.center_frequency, un.THz, 3),
-                                                                                            un.uround(self.linewidth, un.GHz, 3),
+        return 'Mode(center_frequency = {} THz, power = {} W, phase = {})'.format(un.uround(self.center_frequency, un.THz, 3),
                                                                                             un.uround(self.power, un.W, 3),
                                                                                             self.phase)
 
     def __repr__(self):
-        return 'Mode(center_frequency = {}, linewidth = {}, power = {}, phase = {})'.format(self.center_frequency, self.linewidth, self.power, self.phase)
+        return 'Mode(center_frequency = {}, power = {}, phase = {})'.format(self.center_frequency, self.power, self.phase)
 
 
 class Beam:
@@ -143,54 +142,89 @@ class Beam:
             mode.propagate(material)
 
     def evaluate_at_time(self, t):
-        sum = np.zeros(np.shape(t))
+        sum = np.zeros(np.shape(t), dtype = np.complex128)
 
         for beam in self.modes:
             sum += beam.evaluate_at_t(t)
 
         return sum
 
-    def plot_field_vs_time(self, times, show = False, save = False, **kwargs):
+    def fft_field(self, t):
+        return fft.fft(np.real(self.evaluate_at_time(t)), norm = 'ortho'), fft.fftfreq(len(t), t[1] - t[0])
+
+    def plot_field_vs_time(self, time_initial = -200 * un.fsec, time_final = 200 * un.fsec, time_points = 10 ** 6, show = False, save = False, name_postfix = '', **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
         axis = plt.subplot(111)
 
-        plt.plot(t / un.fsec, self.evaluate_at_time(t))
+        t = np.linspace(time_initial, time_final, time_points)
+
+        electric_field = self.evaluate_at_time(t)
+
+        plt.plot(t / un.fsec, np.real(electric_field),
+                 label = 'Electric Field')
+        plt.plot(t / un.fsec, np.abs(electric_field), t / un.fsec, -np.abs(electric_field),
+                 label = 'Envelope', color = 'orange')
 
         title = axis.set_title(r'Beam Electric Field vs. Time', fontsize = 15)
         title.set_y(1.05)
-        axis.set_xlabel(r'$t (fs)$', fontsize = 15)
+        axis.set_xlabel(r'$t$ (fs)', fontsize = 15)
         axis.set_ylabel(r'$E(t)$', fontsize = 15)
 
-        axis.set_xlim(t[0], t[-1])
+        axis.set_xlim(t[0] / un.fsec, t[-1] / un.fsec)
         axis.grid(True, color = 'black', linestyle = '--')
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
         if save:
-            utils.save_current_figure(name = 'electric_field_vs_time', **kwargs)
+            utils.save_current_figure(name = 'electric_field_vs_time__' + name_postfix, **kwargs)
+        if show:
+            plt.show()
+
+        plt.close()
+
+    def plot_fft(self, time_initial = -200 * un.fsec, time_final = 200 * un.fsec, time_points = 10 ** 6, show = False, save = False, name_postfix = '', **kwargs):
+        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+        fig.set_tight_layout(True)
+        axis = plt.subplot(111)
+
+        t = np.linspace(time_initial, time_final, time_points)
+        fft_field, fft_freq = self.fft_field(t)
+        shifted_fft = fft.fftshift(fft_field)
+        shifted_freq = fft.fftshift(fft_freq)
+
+        plt.plot(shifted_freq / un.THz, np.abs(shifted_fft))
+
+        title = axis.set_title(r'FFT', fontsize = 15)
+        title.set_y(1.05)
+        axis.set_xlabel(r'$f$ (THz)', fontsize = 15)
+        axis.set_ylabel(r'$\left|\hat{E}(f)\right|$', fontsize = 15)
+
+        axis.set_xlim(shifted_freq[0] / un.THz, shifted_freq[-1] / un.THz)
+        axis.grid(True, color = 'black', linestyle = '--')
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
+
+        if save:
+            utils.save_current_figure(name = 'fft__' + name_postfix, **kwargs)
         if show:
             plt.show()
 
         plt.close()
 
 
-def modulate_beam(beam, frequency_shift = 90 * un.THz, upshift_efficiency = 1e-4, downshift_efficiency = 1e-6):
+def modulate_beam(beam, frequency_shift = 90 * un.THz, upshift_efficiency = 1e-6, downshift_efficiency = 1e-6):
     new_modes = []
 
     for mode in beam:
         upshift = Mode(center_frequency = mode.center_frequency + frequency_shift,
                        power = mode.power * upshift_efficiency,
-                       linewidth = mode.linewidth,
                        phase = mode.phase)
 
         downshift = Mode(center_frequency = mode.center_frequency - frequency_shift,
                          power = mode.power * downshift_efficiency,
-                         linewidth = mode.linewidth,
                          phase = mode.phase)
 
         notshift = Mode(center_frequency = mode.center_frequency,
                         power = mode.power - upshift.power - downshift.power,
-                        linewidth = mode.linewidth,
                         phase = mode.phase)
 
         new_modes.append(upshift)

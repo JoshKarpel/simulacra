@@ -16,11 +16,17 @@ if __name__ == '__main__':
 
     bk.plot_index_vs_wavelength(wavelength_min, wavelength_max, save = True, target_dir = OUT_DIR, img_format = 'pdf')
 
-    modes = [disp.Mode(center_frequency = n * 100 * THz) for n in range(1, 6)]
+    f_min = c / (810 * nm)
+    f_max = c / (770 * nm)
+    print(f_min / THz, f_max / THz)
+    modes = [disp.Mode(center_frequency = f) for f in np.linspace(f_min, f_max, 100)]
     beam = disp.Beam(*modes)
 
     print(beam)
     print(repr(beam))
+
+    beam.plot_field_vs_time(save = True, target_dir = OUT_DIR, name_postfix = 'pre')
+    beam.plot_fft(save = True, target_dir = OUT_DIR, name_postfix = 'pre')
 
     beam.propagate(bk)
 
@@ -30,4 +36,7 @@ if __name__ == '__main__':
 
     print(beam)
     print(repr(beam))
+
+    beam.plot_field_vs_time(save = True, target_dir = OUT_DIR, name_postfix = 'post')
+    beam.plot_fft(save = True, target_dir = OUT_DIR, name_postfix = 'post')
 
