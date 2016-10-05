@@ -12,6 +12,8 @@ from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 
+import compy.units as un
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -205,6 +207,68 @@ def save_current_figure(name, target_dir = None, img_format = 'png', scale_facto
     plt.savefig(path, dpi = scale_factor * plt.gcf().dpi, bbox_inches = 'tight')
 
     logger.info('Saved matplotlib figure {} to {}'.format(name, path))
+
+
+def xy_plot(x, y, legends = None, x_scale = None, y_scale = None, title = None, x_label = None, y_label = None,
+            log_x = False, log_y = False,
+            show = False, save = False, **kwargs):
+    fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+    fig.set_tight_layout(True)
+    axis = plt.subplot(111)
+
+    if x_scale is not None:
+        scaled_x = x / un.unit_names_to_values[x_scale]
+    else:
+        scaled_x = x
+
+    scaled_y = []
+    for yy in y:
+        if y_scale is not None:
+            scaled_y.append(yy / un.unit_names_to_values[y_scale])
+        else:
+            scaled_y.append(yy)
+
+    for ii, yy in enumerate(scaled_y):
+        if legends is not None:
+            plt.plot(scaled_x, yy, label = legends[ii])
+        else:
+            plt.plot(scaled_x, yy)
+
+    if title is not None:
+        title = axis.set_title(r'{}'.format(title), fontsize = 15)
+        title.set_y(1.05)
+
+    if x_label is not None:
+        if x_scale is not None:
+            x_label += r' ({})'.format(un.unit_names_to_tex_strings[x_scale])
+
+        axis.set_xlabel(r'{}'.format(x_label), fontsize = 15)
+
+    if y_label is not None:
+        if y_scale is not None:
+            y_label += r' ({})'.format(un.unit_names_to_tex_strings[y_scale])
+
+        axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
+
+    axis.set_xlim(np.min(scaled_x), np.max(scaled_x))
+
+    if log_x:
+        axis.set_xscale('log')
+    if log_y:
+        axis.set_yscale('log')
+
+    axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
+    axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
+
+    if legends is not None:
+        axis.legend(loc = 'best', fontsize = 12)
+
+    if save:
+        save_current_figure(**kwargs)
+    if show:
+        plt.show()
+
+    plt.close()
 
 
 def ask_for_input(question, default = None, cast_to = str):

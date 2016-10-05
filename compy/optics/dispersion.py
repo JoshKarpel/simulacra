@@ -90,10 +90,10 @@ class Glass(Material):
 
 
 class Mode:
-    __slots__ = ('center_frequency', 'intensity', 'linewidth', '_phase')
+    __slots__ = ('frequency', 'intensity', 'linewidth', '_phase')
 
     def __init__(self, center_frequency = 100 * un.THz, intensity = 1 * un.W / (un.cm ** 2), phase = 0):
-        self.center_frequency = center_frequency
+        self.frequency = center_frequency
         self.intensity = intensity
         self._phase = phase
 
@@ -110,24 +110,32 @@ class Mode:
         return np.sqrt(self.intensity * 2 / (un.c * un.epsilon_0))
 
     @property
+    def angular_frequency(self):
+        return un.twopi * self.frequency
+
+    @property
     def wavelength(self):
-        return opt.photon_wavelength_from_frequency(self.center_frequency)
+        return opt.photon_wavelength_from_frequency(self.frequency)
 
     def propagate(self, material):
-        self.phase += material.length * (un.twopi * material.index(self.wavelength) / self.wavelength)
+        # dphase = un.twopi * material.length * material.index(self.wavelength) / self.wavelength
+        # self.phase += dphase
 
-        logger.debug('Propagated mode {} through {}'.format(self, material))
+        self.phase += un.twopi * material.length * material.index(self.wavelength) / self.wavelength
+
+        # logger.debug('Propagated mode {} through {}, phase changed by {}'.format(self, material, dphase))
 
     def evaluate_at_time(self, t):
-        return self.amplitude * np.exp((1j * un.twopi * self.center_frequency * t) + self.phase)
+        return self.amplitude * np.exp((1j * un.twopi * self.frequency * t) + self.phase)
 
     def __str__(self):
-        return 'Mode(center_frequency = {} THz, intensity = {} W/m^2, phase = {})'.format(un.uround(self.center_frequency, un.THz, 3),
-                                                                                          un.uround(self.intensity, un.W, 3),
-                                                                                          self.phase)
+        return 'Mode(frequency = {} THz, wavelength = {} nm, intensity = {} W/m^2, phase = {})'.format(un.uround(self.frequency, un.THz, 3),
+                                                                                   un.uround(self.wavelength, un.nm, 3),
+                                                                                   un.uround(self.intensity, un.W, 3),
+                                                                                   self.phase)
 
     def __repr__(self):
-        return 'Mode(center_frequency = {}, intensity = {}, phase = {})'.format(self.center_frequency, self.intensity, self.phase)
+        return 'Mode(frequency = {}, wavelength = {}, intensity = {}, phase = {})'.format(self.frequency, self.wavelength, self.intensity, self.phase)
 
 
 class Beam:
@@ -149,6 +157,7 @@ class Beam:
 
     def evaluate_at_time(self, t):
         result = np.zeros(np.shape(t), dtype = np.complex128)
+
         # frequencies = np.zeros(len(self.modes), dtype = np.complex128)
         # phases = np.zeros(len(self.modes), dtype = np.complex128)
         # amplitudes = np.zeros(len(self.modes), dtype = np.complex128)
@@ -162,6 +171,7 @@ class Beam:
         #     amplitudes[ii] = beam.amplitude
 
         # return np.sum(amplitudes * np.exp((1j * un.twopi * frequencies * t) + phases))
+
         return result
 
     def fft_field(self, t):
@@ -246,7 +256,7 @@ def modulate_beam(beam, frequency_shift = 90 * un.THz, upshift_efficiency = 1e-6
         new_modes.append(downshift)
         new_modes.append(notshift)
 
-        logger.debug('Generated sidebands for mode {}:'.format(mode, upshift, downshift, notshift))
+        logger.debug('Generated sidebands for mode {}: {}, {}, {}'.format(mode, upshift, downshift, notshift))
 
     return Beam(*new_modes)
 
