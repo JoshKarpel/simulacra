@@ -77,36 +77,36 @@ if __name__ == '__main__':
         print(integ.simps(fitted, wavelengths))
 
 
-        # f_min = c / (810 * nm)
-        # f_max = c / (770 * nm)
-        # print(f_min / THz, f_max / THz)
-        # modes = [disp.Mode(center_frequency = f) for f in np.linspace(f_min, f_max, 100)]
-        # beam = disp.Beam(*modes)
-        #
-        # # print(beam)
-        # # print(repr(beam))
-        #
-        # # beam.plot_field_vs_time(save = True, target_dir = OUT_DIR, name_postfix = 'pre')
-        # # beam.plot_fft(save = True, target_dir = OUT_DIR, name_postfix = 'pre')
-        #
-        # logger.info('prop')
-        #
-        # with cp.utils.Timer() as timer:
-        #     # beam.propagate(bk)
-        #     beam = disp.modulate_beam(beam, frequency_shift = 30 * THz, downshift_efficiency = .33, upshift_efficiency = .33)
-        #     # beam.propagate(bk)
-        #     # beam = disp.bandblock_beam(beam, 700 * nm, 900 * nm, filter_by = 1e-6)
-        #
-        # print(timer)
-        #
-        # # print(beam)
-        # # print(repr(beam))
-        #
-        # logger.info('done')
-        #
-        # with cp.utils.Timer() as timer:
-        #     beam.plot_field_vs_time(save = True, target_dir = OUT_DIR, name_postfix = 'post')
-        #     # beam.plot_fft(save = True, target_dir = OUT_DIR, name_postfix = 'post')
-        #
-        # print(timer)
+        f_min = c / (810 * nm)
+        f_max = c / (770 * nm)
+        print(f_min / THz, f_max / THz)
+        modes = [disp.Mode(frequency = f) for f in np.linspace(f_min, f_max, 100)]
+        beam = disp.Beam(*modes)
+
+        # print(beam)
+        # print(repr(beam))
+
+        # beam.plot_field_vs_time(save = True, target_dir = OUT_DIR, name_postfix = 'pre')
+        # beam.plot_fft(save = True, target_dir = OUT_DIR, name_postfix = 'pre')
+
+        logger.info('prop')
+
+        with cp.utils.Timer() as timer:
+            # beam.propagate(bk)
+            beam = disp.modulate_beam(beam, frequency_shift = 30 * THz, downshift_efficiency = .33, upshift_efficiency = .33)
+            # beam.propagate(bk)
+            # beam = disp.bandblock_beam(beam, 700 * nm, 900 * nm, filter_by = 1e-6)
+
+        print(timer)
+
+        # print(beam)
+        # print(repr(beam))
+
+        logger.info('done')
+
+        with cp.utils.Timer() as timer:
+            beam.plot_field_vs_time(save = True, target_dir = OUT_DIR, name_postfix = 'post')
+            # beam.plot_fft(save = True, target_dir = OUT_DIR, name_postfix = 'post')
+
+        print(timer)
 

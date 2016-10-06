@@ -64,6 +64,7 @@ Tm = 1e12 * m
 Pm = 1e15 * m
 angstrom = 1e-10 * m
 bohr_radius = 5.2917721067e-11 * m
+inch = 2.54 * cm
 
 unit_names_to_values.update({'cm': cm,
                              'mm': mm,
@@ -77,7 +78,8 @@ unit_names_to_values.update({'cm': cm,
                              'Tm': Tm,
                              'Pm': Pm,
                              'angstrom': angstrom,
-                             'bohr_radius': bohr_radius})
+                             'bohr_radius': bohr_radius,
+                             'inch': inch})
 unit_names_to_tex_strings.update({'cm': r'$\mathrm{cm}$',
                                   'mm': r'$\mathrm{mm}$',
                                   'um': r'$\mathrm{um}$',
@@ -90,7 +92,8 @@ unit_names_to_tex_strings.update({'cm': r'$\mathrm{cm}$',
                                   'Tm': r'$\mathrm{Tm}$',
                                   'Pm': r'$\mathrm{Pm}$',
                                   'angstrom': r'$\mathrm{\AA}$',
-                                  'bohr_radius': r'$a_0$'})
+                                  'bohr_radius': r'$a_0$',
+                                  'inch': r'$\mathrm{in}$'})
 
 # time
 msec = 1e-3 * s

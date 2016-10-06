@@ -76,6 +76,9 @@ class ConstantIndex(Material):
 bk7_b = (1.03961212, 0.231792344, 1.01046945)
 bk7_c = (6.00069867e-3 * (un.um ** 2), 2.00179144e-2 * (un.um ** 2), 1.03560653e2 * (un.um ** 2))
 
+fs_b = (0.696166300, 0.407942600, 0.897479400)
+fs_c = (4.67914826e-3 * (un.um ** 2), 1.35120631e-2 * (un.um ** 2), 97.9340025 * (un.um ** 2))
+
 
 class Glass(Material):
     def __init__(self, name = 'BK7', length = 1 * un.cm, b = bk7_b, c = bk7_c):
@@ -92,8 +95,8 @@ class Glass(Material):
 class Mode:
     __slots__ = ('frequency', 'intensity', 'linewidth', '_phase')
 
-    def __init__(self, center_frequency = 100 * un.THz, intensity = 1 * un.W / (un.cm ** 2), phase = 0):
-        self.frequency = center_frequency
+    def __init__(self, frequency = 100 * un.THz, intensity = 1 * un.W / (un.cm ** 2), phase = 0):
+        self.frequency = frequency
         self.intensity = intensity
         self._phase = phase
 
@@ -240,20 +243,21 @@ def modulate_beam(beam, frequency_shift = 90 * un.THz, upshift_efficiency = 1e-6
     new_modes = []
 
     for mode in beam:
-        upshift = Mode(center_frequency = mode.center_frequency + frequency_shift,
+        upshift = Mode(frequency = mode.frequency + frequency_shift,
                        intensity = mode.intensity * upshift_efficiency,
                        phase = mode.phase)
+        new_modes.append(upshift)
 
-        downshift = Mode(center_frequency = mode.center_frequency - frequency_shift,
+        downshift = Mode(frequency = mode.frequency - frequency_shift,
                          intensity = mode.intensity * downshift_efficiency,
                          phase = mode.phase)
+        if downshift.frequency > 0:  # only add the downshifted mode if it's frequency is still greater than zero
+            new_modes.append(downshift)
 
-        notshift = Mode(center_frequency = mode.center_frequency,
+        notshift = Mode(frequency = mode.frequency,
                         intensity = mode.intensity - upshift.intensity - downshift.intensity,
                         phase = mode.phase)
 
-        new_modes.append(upshift)
-        new_modes.append(downshift)
         new_modes.append(notshift)
 
         logger.debug('Generated sidebands for mode {}: {}, {}, {}'.format(mode, upshift, downshift, notshift))
@@ -266,7 +270,7 @@ def bandblock_beam(beam, wavelength_min, wavelength_max, filter_by = 1e-6):
 
     for mode in beam:
         if wavelength_min < mode.wavelength < wavelength_max:
-            new_mode = Mode(center_frequency = mode.center_frequency,
+            new_mode = Mode(frequency = mode.frequency,
                             intensity = mode.intensity * filter_by,
                             phase = mode.phase)
 
