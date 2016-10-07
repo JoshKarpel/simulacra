@@ -210,6 +210,7 @@ def save_current_figure(name, target_dir = None, img_format = 'png', scale_facto
 
 
 def xy_plot(x, y, legends = None, x_scale = None, y_scale = None, title = None, x_label = None, y_label = None,
+            x_center = 0, x_range = None, y_range = None,
             log_x = False, log_y = False,
             show = False, save = False, **kwargs):
     fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
@@ -250,7 +251,14 @@ def xy_plot(x, y, legends = None, x_scale = None, y_scale = None, title = None, 
 
         axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
 
-    axis.set_xlim(np.min(scaled_x), np.max(scaled_x))
+    if x_range is None:
+        lower_limit_x = np.min(scaled_x)
+        upper_limit_x = np.max(scaled_x)
+    else:
+        lower_limit_x = (x_center - x_range) / un.unit_names_to_values[x_scale]
+        upper_limit_x = (x_center + x_range) / un.unit_names_to_values[x_scale]
+
+    axis.set_xlim(lower_limit_x, upper_limit_x)
 
     if log_x:
         axis.set_xscale('log')
@@ -365,7 +373,7 @@ def memoize(copy_output = False):
             try:
                 value = self.memo[key]
                 # logger.debug('Hit on memo for {}, key = {}'.format(repr(self.func), key))
-            except KeyError:
+            except (KeyError, TypeError):
                 value = self.func(*args, **kwargs)
                 self.memo[key] = value
                 # logger.debug('Miss on memo for {}, key = {}'.format(repr(self.func), key))

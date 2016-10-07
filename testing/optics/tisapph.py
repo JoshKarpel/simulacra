@@ -26,16 +26,19 @@ if __name__ == '__main__':
         wavelength_min = .2 * um
         wavelength_max = 1.6 * um
 
-        cavity_mirror.plot_index_vs_wavelength(wavelength_min, wavelength_max, save = True, target_dir = OUT_DIR, img_format = 'pdf')
-        lens_4mm.plot_index_vs_wavelength(wavelength_min, wavelength_max, save = True, target_dir = OUT_DIR, img_format = 'pdf')
+        # cavity_mirror.plot_index_vs_wavelength(wavelength_min, wavelength_max, save = True, target_dir = OUT_DIR, img_format = 'pdf')
+        # lens_4mm.plot_index_vs_wavelength(wavelength_min, wavelength_max, save = True, target_dir = OUT_DIR, img_format = 'pdf')
 
         f_min = c / (810 * nm)
         f_max = c / (770 * nm)
         print(f_min / THz, f_max / THz)
-        modes = [disp.Mode(frequency = f) for f in np.linspace(f_min, f_max, 100)]
+        num_modes = 100
+        modes = [disp.Mode(frequency = f) for f in np.linspace(f_min, f_max, num_modes)]
         beam = disp.Beam(*modes)
 
-        beam.plot_field_vs_time(save = True, target_dir = OUT_DIR, name_postfix = 'pre')
+        # beam.plot_field_vs_time(save = True, target_dir = OUT_DIR, name_postfix = 'pre_{}'.format(num_modes))
+
+        d = .1
 
         with cp.utils.Timer() as timer:
             # beam.propagate(lens_4mm)
@@ -43,22 +46,24 @@ if __name__ == '__main__':
             # beam.propagate(pickoff)
             # beam.propagate(cavity_window)
             # beam.propagate(cavity_mirror)
-            beam = disp.modulate_beam(beam, frequency_shift = 90 * THz, downshift_efficiency = 1e-6, upshift_efficiency = 1e-6)
+            # beam = disp.modulate_beam(beam, frequency_shift = 90 * THz, downshift_efficiency = 1e-6, upshift_efficiency = 1e-6)
             # beam.propagate(cavity_mirror)
             # beam.propagate(cavity_window)
             # beam.propagate(dichroic_mirror)
             # beam.propagate(bandblock_mirror)
-            beam = disp.bandblock_beam(beam, 700 * nm, 900 * nm, filter_by = 1e-6)
+            # beam = disp.bandblock_beam(beam, 700 * nm, 900 * nm, filter_by = 1e-6)
             # beam.propagate(lens_4mm)
             # beam.propagate(lens_4mm)
             # beam.propagate(lens_4mm)
             # beam.propagate(lens_4mm)
             # beam.propagate(beamsplitter)
 
+            beam.propagate(disp.Glass(name = 'fs_flat', length = d * cm, b = disp.fs_b, c = disp.fs_c))
+
         print(timer)
 
         with cp.utils.Timer() as timer:
-            beam.plot_field_vs_time(save = True, target_dir = OUT_DIR, name_postfix = 'post_test')
+            beam.plot_field_vs_time(time_initial = -10 * psec, time_final = 10 * psec, save = True, target_dir = OUT_DIR, name_postfix = 'post_fs_{}modes_{}cm'.format(num_modes, d))
 
         print(timer)
 

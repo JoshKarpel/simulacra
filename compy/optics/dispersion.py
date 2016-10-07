@@ -106,7 +106,7 @@ class Mode:
 
     @phase.setter
     def phase(self, phase):
-        self._phase = phase % un.twopi
+        self._phase = phase #% un.twopi
 
     @property
     def amplitude(self):
@@ -120,6 +120,10 @@ class Mode:
     def wavelength(self):
         return opt.photon_wavelength_from_frequency(self.frequency)
 
+    @property
+    def wavenumber(self):
+        return un.twopi / self.wavelength
+
     def propagate(self, material):
         # dphase = un.twopi * material.length * material.index(self.wavelength) / self.wavelength
         # self.phase += dphase
@@ -129,7 +133,7 @@ class Mode:
         # logger.debug('Propagated mode {} through {}, phase changed by {}'.format(self, material, dphase))
 
     def evaluate_at_time(self, t):
-        return self.amplitude * np.exp((1j * un.twopi * self.frequency * t) + self.phase)
+        return self.amplitude * np.exp(1j * ((un.twopi * self.frequency * t) + self.phase))
 
     def __str__(self):
         return 'Mode(frequency = {} THz, wavelength = {} nm, intensity = {} W/m^2, phase = {})'.format(un.uround(self.frequency, un.THz, 3),
@@ -180,7 +184,7 @@ class Beam:
     def fft_field(self, t):
         return fft.fft(np.real(self.evaluate_at_time(t)), norm = 'ortho'), fft.fftfreq(len(t), t[1] - t[0])
 
-    def plot_field_vs_time(self, time_initial = -200 * un.fsec, time_final = 200 * un.fsec, time_points = 10 ** 6, show = False, save = False, name_postfix = '', **kwargs):
+    def plot_field_vs_time(self, time_initial = -500 * un.fsec, time_final = 500 * un.fsec, time_points = 10 ** 5, show = False, save = False, name_postfix = '', **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
         axis = plt.subplot(111)
