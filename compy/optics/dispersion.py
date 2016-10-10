@@ -218,7 +218,7 @@ def bandblock_beam(beam, wavelength_min, wavelength_max, filter_by = 1e-6):
 
 
 IFFTResult = collections.namedtuple('IFFTResult', ('time', 'field'))
-PulseWidthFitResult = collections.namedtuple('PulseWidthFitResult', ('pulse_center', 'sigma', 'gaussian_prefactor', 'covariance_matrix'))
+PulseWidthFitResult = collections.namedtuple('PulseWidthFitResult', ('center', 'sigma', 'prefactor', 'covariance_matrix'))
 
 
 class ContinuousAmplitudeSpectrumSpecification(core.Specification):
@@ -265,7 +265,6 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         self.amplitude = spec.initial_amplitude.copy()
 
         self.materials = spec.materials
-        self.initial_fit = self.fit_pulse()[0]
 
         self.pulse_fits_vs_materials = []
 
@@ -297,12 +296,13 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         t, field = fft_result
 
         t_center = t[np.argmax(np.abs(field))]
+        field_max = np.max(np.abs(field))
 
-        guesses = [t_center, 50 * un.fsec, np.max(np.abs(field))]
+        guesses = [t_center, 100 * un.fsec, field_max]
         popt, pcov = optim.curve_fit(math.gaussian, t, np.real(np.abs(field)), p0 = guesses,
-                                     bounds = ([-100 * un.fsec + t_center, 5 * un.fsec, -np.inf], [t_center + 100 * un.fsec, 10 * un.psec, np.inf]))
+                                     bounds = ([-10 * un.fsec + t_center, 5 * un.fsec, 0], [t_center + 10 * un.fsec, 10 * un.psec, np.inf]))
 
-        return PulseWidthFitResult(pulse_center = popt[0], sigma = popt[1], gaussian_prefactor = popt[2], covariance_matrix = pcov), fft_result
+        return PulseWidthFitResult(center = popt[0], sigma = popt[1], prefactor = popt[2], covariance_matrix = pcov), fft_result
 
     def plot_amplitude_vs_frequency(self, **kwargs):
         raise NotImplementedError
@@ -342,7 +342,7 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         axis.plot(scaled_t, np.real(field) / e_scale, label = r'$E(t)$')
         axis.plot(scaled_t, np.abs(field) / e_scale, label = r'$\left| E(t) \right|$')
         axis.plot(scaled_t, fitted_envelope / e_scale,
-                  label = r'$\tau = {}$ {}'.format(un.uround(2 * t_width, un.unit_names_to_values[x_scale], 2), un.unit_names_to_tex_strings[x_scale]),
+                  label = r'$\tau = {}$ {}'.format(un.uround(math.gaussian_fwhm_from_sigma(fit_result.sigma), un.unit_names_to_values[x_scale], 2), un.unit_names_to_tex_strings[x_scale]),
                   linestyle = '--', color = 'orange')
 
         title = axis.set_title(r'Electric Field vs. Time', fontsize = 15)
@@ -389,7 +389,7 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
             target_dir = os.getcwd()
 
         if plot_intermediate_electric_fields:
-            self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_{}of{}'.format(0, len(self.materials))))
+            self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_0of{}'.format(len(self.materials))))
 
         for ii, material in enumerate(self.materials):
             self.propagate(material)
@@ -408,8 +408,10 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         logger.debug("Simulation status set to 'finished'")
         logger.info('Finished performing propagation on {} ({})'.format(self.name, self.file_name))
 
-    def print_pulse_width_vs_materials(self):
-        print('Initial: FWHM = {} fs'.format(un.uround(2 * self.initial_fit.sigma, un.fsec, 2)))
+    def get_pulse_width_vs_materials(self):
+        out = ['Initial: FWHM = {} fs,  Peak Amplitude = {}'.format(un.uround(math.gaussian_fwhm_from_sigma(self.pulse_fits_vs_materials[0].sigma), un.fsec, 2), self.pulse_fits_vs_materials[0].prefactor)]
 
-        for material, fit in zip(self.materials, self.pulse_fits_vs_materials):
-            print('After {}: FWHM = {} fs'.format(material, un.uround(2 * fit.sigma, un.fsec, 2)))
+        for material, fit in zip(self.materials, self.pulse_fits_vs_materials[1:]):
+            out.append('After {}: FWHM = {} fs, Peak Amplitude = {}'.format(material, un.uround(math.gaussian_fwhm_from_sigma(fit.sigma), un.fsec, 2), fit.prefactor))
+
+        return '\n'.join(out)

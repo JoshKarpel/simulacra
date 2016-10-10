@@ -7,7 +7,6 @@ import scipy.special as spc
 from compy import utils
 from compy.units import *
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -18,7 +17,12 @@ def sinc(x):
 
 
 def gaussian(x, center, sigma, prefactor):
-    return prefactor * np.exp(-(((x - center) / sigma) ** 2))
+    return prefactor * np.exp(-0.5 * (((x - center) / sigma) ** 2))
+    # return (prefactor / (sigma * np.sqrt(twopi))) * np.exp(-0.5 * (((x - center) / sigma) ** 2))
+
+
+def gaussian_fwhm_from_sigma(sigma):
+    return np.sqrt(8 * np.log(2)) * sigma
 
 
 class SphericalHarmonic:

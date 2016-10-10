@@ -16,13 +16,14 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 if __name__ == '__main__':
-    with cp.utils.Logger(stdout_level = logging.DEBUG) as logger:
+    with cp.utils.Logger(stdout_level = logging.DEBUG, file_logs = True, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
         frequencies = np.linspace(100 * THz, 1000 * THz, 2 ** 20)
-        materials = [opt.BK7(length = 1 * cm), opt.FS(length = 1 * cm)]
+        materials = [opt.FS(length = 1 * cm)]
 
         opt.BK7().plot_index_vs_wavelength(200 * nm, 1600 * nm, save = True, target_dir = OUT_DIR)
+        opt.FS().plot_index_vs_wavelength(200 * nm, 1600 * nm, save = True, target_dir = OUT_DIR)
 
-        spec = disp.ContinuousAmplitudeSpectrumSpecification.from_power_spectrum_csv('tisapph', frequencies, materials, 'tisapph_spectrum.txt', total_power = 150 * mW)
+        spec = disp.ContinuousAmplitudeSpectrumSpecification.from_power_spectrum_csv('TiSapph', frequencies, materials, 'tisapph_spectrum.txt', total_power = 150 * mW)
         sim = disp.ContinuousAmplitudeSpectrumSimulation(spec)
 
         sim.plot_power_vs_frequency(save = True, target_dir = OUT_DIR, x_scale = 'THz')
@@ -30,8 +31,5 @@ if __name__ == '__main__':
 
         sim.run_simulation(plot_intermediate_electric_fields = True, target_dir = OUT_DIR)
 
-        sim.print_pulse_width_vs_materials()
-
-
-
+        logger.info('\n' + sim.get_pulse_width_vs_materials())
 
