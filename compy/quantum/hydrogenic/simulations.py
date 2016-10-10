@@ -285,7 +285,8 @@ class FreeState:
 class ElectricFieldSpecification(core.Specification):
     """A base Specification for a simulation with an electric field."""
 
-    def __init__(self, name, mesh_type = None, animator_type = None,
+    def __init__(self, name,
+                 mesh_type = None, animator_type = None,
                  test_mass = un.electron_mass_reduced, test_charge = un.electron_charge,
                  initial_state = BoundState(1, 0),
                  test_states = tuple(BoundState(n, l) for n in range(5) for l in range(n)),

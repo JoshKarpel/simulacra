@@ -196,11 +196,11 @@ def ensure_dir_exists(path):
     logger.debug('Ensured path exists: {}'.format(make_path))
 
 
-def save_current_figure(name, target_dir = None, img_format = 'png', scale_factor = 1):
+def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'png', scale_factor = 1):
     """Save the current matplotlib figure with the given name to the given folder."""
     if target_dir is None:
         target_dir = os.getcwd()
-    path = os.path.join(target_dir, '{}.{}'.format(name, img_format))
+    path = os.path.join(target_dir, '{}{}.{}'.format(name, name_postfix, img_format))
 
     ensure_dir_exists(path)
 

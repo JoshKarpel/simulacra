@@ -17,6 +17,10 @@ def sinc(x):
     return np.sinc(x / pi)
 
 
+def gaussian(x, center, sigma, prefactor):
+    return prefactor * np.exp(-(((x - center) / sigma) ** 2))
+
+
 class SphericalHarmonic:
     """A class that represents a spherical harmonic."""
 

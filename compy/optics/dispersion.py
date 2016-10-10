@@ -2,10 +2,13 @@ import datetime as dt
 import logging
 import functools
 import os
+import collections
 
 import numpy as np
-import numpy.fft as fft
+import numpy.fft as nfft
 import scipy as sp
+import scipy.integrate as integ
+import scipy.optimize as optim
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -15,81 +18,6 @@ import compy.units as un
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-class Material:
-    def __init__(self, name = 'material', length = 1 * un.cm):
-        self.name = name
-        self.length = length
-
-    def index(self, wavelength):
-        raise NotImplementedError
-
-    def plot_index_vs_wavelength(self, wavelength_min, wavelength_max, show = False, save = False, **kwargs):
-        wavelengths = np.linspace(wavelength_min, wavelength_max, 10 ** 4)
-        indices = np.array([self.index(wavelength) for wavelength in wavelengths])
-
-        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
-        fig.set_tight_layout(True)
-        axis = plt.subplot(111)
-
-        plt.plot(wavelengths / un.nm, indices, label = self.name)
-
-        # title = axis.set_title(r' for ${}$'.format(self.spec.initial_state.tex_str), fontsize = 15)
-        # title.set_y(1.05)
-
-        axis.set_xlabel(r'Wavelength $\lambda$ (nm)', fontsize = 15)
-        axis.set_ylabel(r'Index of Refraction $n$', fontsize = 15)
-
-        axis.set_xlim(wavelengths[0] / un.nm, wavelengths[-1] / un.nm)
-
-        y_range = np.max(indices) - np.min(indices)
-        axis.set_ylim(np.min(indices) - 0.1 * y_range, np.max(indices) + 0.1 * y_range)
-
-        axis.grid(True, color = 'black', linestyle = ':')
-        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
-
-        if save:
-            utils.save_current_figure(name = self.name + '__index_vs_wavelength', **kwargs)
-        if show:
-            plt.show()
-
-        plt.close()
-
-    def __str__(self):
-        return '{} cm of {}'.format(un.uround(self.length, un.cm, 2), self.name)
-
-    def __repr__(self):
-        raise NotImplementedError
-
-
-class ConstantIndex(Material):
-    def __init__(self, name = 'vacuum', length = 1 * un.cm, index = 1):
-        super(ConstantIndex, self).__init__(name = name, length = length)
-
-        self.index = index
-
-    def index(self, wavelength):
-        return self.index
-
-
-bk7_b = (1.03961212, 0.231792344, 1.01046945)
-bk7_c = (6.00069867e-3 * (un.um ** 2), 2.00179144e-2 * (un.um ** 2), 1.03560653e2 * (un.um ** 2))
-
-fs_b = (0.696166300, 0.407942600, 0.897479400)
-fs_c = (4.67914826e-3 * (un.um ** 2), 1.35120631e-2 * (un.um ** 2), 97.9340025 * (un.um ** 2))
-
-
-class Glass(Material):
-    def __init__(self, name = 'BK7', length = 1 * un.cm, b = bk7_b, c = bk7_c):
-        super(Glass, self).__init__(name = name, length = length)
-
-        self.b = np.array(b)
-        self.c = np.array(c)
-
-    @utils.memoize()
-    def index(self, wavelength):
-        return np.sqrt(1 + np.sum((self.b / (wavelength ** 2 - self.c))) * (wavelength ** 2))
 
 
 class Mode:
@@ -106,7 +34,7 @@ class Mode:
 
     @phase.setter
     def phase(self, phase):
-        self._phase = phase #% un.twopi
+        self._phase = phase  # % un.twopi
 
     @property
     def amplitude(self):
@@ -137,9 +65,9 @@ class Mode:
 
     def __str__(self):
         return 'Mode(frequency = {} THz, wavelength = {} nm, intensity = {} W/m^2, phase = {})'.format(un.uround(self.frequency, un.THz, 3),
-                                                                                   un.uround(self.wavelength, un.nm, 3),
-                                                                                   un.uround(self.intensity, un.W, 3),
-                                                                                   self.phase)
+                                                                                                       un.uround(self.wavelength, un.nm, 3),
+                                                                                                       un.uround(self.intensity, un.W, 3),
+                                                                                                       self.phase)
 
     def __repr__(self):
         return 'Mode(frequency = {}, wavelength = {}, intensity = {}, phase = {})'.format(self.frequency, self.wavelength, self.intensity, self.phase)
@@ -182,7 +110,7 @@ class Beam:
         return result
 
     def fft_field(self, t):
-        return fft.fft(np.real(self.evaluate_at_time(t)), norm = 'ortho'), fft.fftfreq(len(t), t[1] - t[0])
+        return nfft.fft(np.real(self.evaluate_at_time(t)), norm = 'ortho'), nfft.fftfreq(len(t), t[1] - t[0])
 
     def plot_field_vs_time(self, time_initial = -500 * un.fsec, time_final = 500 * un.fsec, time_points = 10 ** 5, show = False, save = False, name_postfix = '', **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
@@ -221,8 +149,8 @@ class Beam:
 
         t = np.linspace(time_initial, time_final, time_points)
         fft_field, fft_freq = self.fft_field(t)
-        shifted_fft = fft.fftshift(fft_field)
-        shifted_freq = fft.fftshift(fft_freq)
+        shifted_fft = nfft.fftshift(fft_field)
+        shifted_freq = nfft.fftshift(fft_freq)
 
         plt.plot(shifted_freq / un.THz, np.abs(shifted_fft))
 
@@ -273,7 +201,7 @@ def bandblock_beam(beam, wavelength_min, wavelength_max, filter_by = 1e-6):
     new_modes = []
 
     for mode in beam:
-        if wavelength_min < mode.wavelength < wavelength_max:
+        if wavelength_min < mode.wavelengths < wavelength_max:
             new_mode = Mode(frequency = mode.frequency,
                             intensity = mode.intensity * filter_by,
                             phase = mode.phase)
@@ -287,3 +215,201 @@ def bandblock_beam(beam, wavelength_min, wavelength_max, filter_by = 1e-6):
         new_modes.append(new_mode)
 
     return Beam(*new_modes)
+
+
+IFFTResult = collections.namedtuple('IFFTResult', ('time', 'field'))
+PulseWidthFitResult = collections.namedtuple('PulseWidthFitResult', ('pulse_center', 'sigma', 'gaussian_prefactor', 'covariance_matrix'))
+
+
+class ContinuousAmplitudeSpectrumSpecification(core.Specification):
+    def __init__(self, name, frequencies, initial_amplitude, materials, **kwargs):
+        super(ContinuousAmplitudeSpectrumSpecification, self).__init__(name, **kwargs)
+
+        self.frequencies = frequencies
+        self.initial_amplitude = initial_amplitude.astype(np.complex128)
+
+        self.materials = materials
+
+    @classmethod
+    def from_power_spectrum_csv(cls, name, frequencies, materials,
+                                path_to_csv, total_power = 100 * un.mW, x_units = 'nm', y_units = 'dBm',
+                                fit_guess_center = 800 * un.nm, fit_guess_fwhm = 40 * un.nm):
+        wavelengths, power = np.loadtxt(path_to_csv, delimiter = ',', unpack = True, skiprows = 1)
+
+        wavelengths *= un.unit_names_to_values[x_units]
+
+        if y_units == 'dBm':
+            power = 1 * un.mW * (10 ** (power / 10))
+        else:
+            power *= un.unit_names_to_values[y_units]
+
+        spectrum_power = integ.simps(power, wavelengths)
+        power_ratio = total_power / spectrum_power
+        power *= power_ratio
+
+        guesses = (fit_guess_center, fit_guess_fwhm, np.max(power))
+        popt, pcov = optim.curve_fit(math.gaussian, wavelengths, power, p0 = guesses)
+
+        fitted_power = math.gaussian(opt.photon_wavelength_from_frequency(frequencies), *popt)
+        fitted_amplitude = np.sqrt(fitted_power)  # TODO: correct units
+
+        return cls(name, frequencies, fitted_amplitude, materials)
+
+
+class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
+    def __init__(self, spec):
+        super(ContinuousAmplitudeSpectrumSimulation, self).__init__(spec)
+
+        self.frequencies = spec.frequencies
+        self.df = self.frequencies[1] - self.frequencies[0]
+        self.amplitude = spec.initial_amplitude.copy()
+
+        self.materials = spec.materials
+        self.initial_fit = self.fit_pulse()[0]
+
+        self.pulse_fits_vs_materials = []
+
+    @property
+    def angular_frequencies(self):
+        return opt.photon_angular_frequency_from_frequency(self.frequencies)
+
+    @property
+    def wavelengths(self):
+        return opt.photon_wavelength_from_frequency(self.frequencies)
+
+    @property
+    def power(self):
+        return np.real(np.abs(self.amplitude) ** 2)
+
+    def fft(self):
+        t = nfft.fftshift(nfft.fftfreq(len(self.frequencies), self.df))
+
+        reference_frequency = self.frequencies[len(self.frequencies) // 2]
+        shifted_spectrum = nfft.fftshift(self.amplitude)
+
+        field = nfft.fftshift(nfft.ifft(shifted_spectrum, norm = 'ortho')) * np.exp(1j * reference_frequency * t)  # restore reference frequency
+
+        return IFFTResult(time = t, field = field)
+
+    def fit_pulse(self):
+        fft_result = self.fft()
+
+        t, field = fft_result
+
+        t_center = t[np.argmax(np.abs(field))]
+
+        guesses = [t_center, 50 * un.fsec, np.max(np.abs(field))]
+        popt, pcov = optim.curve_fit(math.gaussian, t, np.real(np.abs(field)), p0 = guesses,
+                                     bounds = ([-100 * un.fsec + t_center, 5 * un.fsec, -np.inf], [t_center + 100 * un.fsec, 10 * un.psec, np.inf]))
+
+        return PulseWidthFitResult(pulse_center = popt[0], sigma = popt[1], gaussian_prefactor = popt[2], covariance_matrix = pcov), fft_result
+
+    def plot_amplitude_vs_frequency(self, **kwargs):
+        raise NotImplementedError
+
+    def plot_power_vs_frequency(self, **kwargs):
+        utils.xy_plot(np.real(self.frequencies), [self.power], name = '{}__power_vs_frequency'.format(self.name), x_label = r'Frequency $f$', **kwargs)
+
+    def plot_amplitude_vs_wavelength(self, **kwargs):
+        raise NotImplementedError
+
+    def plot_power_vs_wavelength(self, **kwargs):
+        utils.xy_plot(np.real(self.wavelengths), [self.power],
+                      name = '{}__power_vs_wavelength'.format(self.name), x_label = r'Wavelength $\lambda$', **kwargs)
+
+    def plot_electric_field_vs_time(self, show = False, save = False, x_scale = 'fs', y_scale = None, **kwargs):
+        fit_result, fft_result = self.fit_pulse()
+
+        t_center, t_width, prefactor, _ = fit_result
+        t, field = fft_result
+
+        fitted_envelope = math.gaussian(t, t_center, t_width, prefactor)
+
+        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+        fig.set_tight_layout(True)
+        axis = plt.subplot(111)
+
+        if x_scale is not None:
+            scaled_t = t / un.unit_names_to_values[x_scale]
+        else:
+            scaled_t = t
+
+        if y_scale is not None:
+            e_scale = un.unit_names_to_values[y_scale]
+        else:
+            e_scale = 1
+
+        axis.plot(scaled_t, np.real(field) / e_scale, label = r'$E(t)$')
+        axis.plot(scaled_t, np.abs(field) / e_scale, label = r'$\left| E(t) \right|$')
+        axis.plot(scaled_t, fitted_envelope / e_scale,
+                  label = r'$\tau = {}$ {}'.format(un.uround(2 * t_width, un.unit_names_to_values[x_scale], 2), un.unit_names_to_tex_strings[x_scale]),
+                  linestyle = '--', color = 'orange')
+
+        title = axis.set_title(r'Electric Field vs. Time', fontsize = 15)
+        title.set_y(1.05)
+
+        x_label = r'Time $t$'
+        x_label += r' ({})'.format(un.unit_names_to_tex_strings[x_scale])
+        axis.set_xlabel(r'{}'.format(x_label), fontsize = 15)
+
+        y_label = r'Electric Field $E(t)$'
+        if y_scale is not None:
+            y_label += r' ({})'.format(un.unit_names_to_tex_strings[y_scale])
+        axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
+
+        x_range = 4 * t_width
+        lower_limit_x = t_center - x_range
+        upper_limit_x = t_center + x_range
+        axis.set_xlim(lower_limit_x / un.unit_names_to_values[x_scale], upper_limit_x / un.unit_names_to_values[x_scale])
+
+        axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
+
+        axis.legend(loc = 'best', fontsize = 12)
+
+        if save:
+            utils.save_current_figure(name = '{}__electric_field_vs_time'.format(self.name), **kwargs)
+        if show:
+            plt.show()
+
+        plt.close()
+
+        return fit_result
+
+    def propagate(self, material):
+        self.amplitude *= np.exp(1j * un.twopi * material.length * material.index(self.wavelengths) * self.frequencies / un.c)
+
+    def run_simulation(self, plot_intermediate_electric_fields = False, target_dir = None):
+        logger.info('Performing propagation on {} ({})'.format(self.name, self.file_name))
+
+        self.status = 'running'
+        logger.debug("{} {} status set to 'running'".format(self.__class__.__name__, self.name))
+
+        if target_dir is None:
+            target_dir = os.getcwd()
+
+        if plot_intermediate_electric_fields:
+            self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_{}of{}'.format(0, len(self.materials))))
+
+        for ii, material in enumerate(self.materials):
+            self.propagate(material)
+
+            if plot_intermediate_electric_fields:
+                self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_{}of{}'.format(ii + 1, len(self.materials))))
+            else:
+                self.pulse_fits_vs_materials.append(self.fit_pulse()[0])
+
+            logger.debug('Propagated {} through {} ({}/{} Materials)'.format(self.name, material, ii + 1, len(self.materials)))
+
+        self.end_time = dt.datetime.now()
+        self.elapsed_time = self.end_time - self.start_time
+
+        self.status = 'finished'
+        logger.debug("Simulation status set to 'finished'")
+        logger.info('Finished performing propagation on {} ({})'.format(self.name, self.file_name))
+
+    def print_pulse_width_vs_materials(self):
+        print('Initial: FWHM = {} fs'.format(un.uround(2 * self.initial_fit.sigma, un.fsec, 2)))
+
+        for material, fit in zip(self.materials, self.pulse_fits_vs_materials):
+            print('After {}: FWHM = {} fs'.format(material, un.uround(2 * fit.sigma, un.fsec, 2)))
