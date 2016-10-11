@@ -3,6 +3,7 @@ import logging
 
 import numpy as np
 import scipy.special as spc
+import scipy.sparse as sparse
 
 from compy import utils
 from compy.units import *
@@ -148,3 +149,39 @@ def prime_factorization(n):
             divisor += 1
 
     return factors
+
+
+def centered_first_derivative(y, dx):
+    """
+
+    :param y: vector of data to take a derivative of
+    :param dx: spacing between y points
+    :return:
+    """
+    dx = np.abs(dx)
+    offdiagonal = np.ones(len(y) - 1) / (2 * dx)
+    operator = sparse.diags([-offdiagonal, np.zeros(len(y)), offdiagonal], offsets = (-1, 0, 1))
+    operator.data[0][-2] = -1 / dx
+    operator.data[1][0] = -1 / dx
+    operator.data[1][-1] = 1 / dx
+    operator.data[2][1] = 1 / dx
+
+    return operator.dot(y)
+
+
+def centered_second_derivative(y, dx):
+    """
+
+    :param y: vector of data to take a derivative of
+    :param dx: spacing between y points
+    :return:
+    """
+    # offdiagonal = np.ones(len(y) - 1) / (dx ** 2)
+    # diagonal = -2 * np.ones(len(y)) / (dx ** 2)
+    # operator = sparse.diags([-offdiagonal, diagonal, offdiagonal], offsets = (-1, 0, 1))
+
+
+
+    # print(operator.toarray())
+
+    return centered_first_derivative(centered_first_derivative(y, dx), dx)
