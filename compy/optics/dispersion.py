@@ -145,15 +145,23 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
     def power(self):
         return np.real(np.abs(self.amplitudes) ** 2)
 
-    def fft(self):
+    def fft(self, spectrum = None):
+        if spectrum is None:
+            spectrum = self.amplitudes
+
         t = nfft.fftshift(nfft.fftfreq(len(self.frequencies), self.df))
 
         reference_frequency = self.frequencies[len(self.frequencies) // 2]
-        shifted_spectrum = nfft.fftshift(self.amplitudes)
+        shifted_spectrum = nfft.fftshift(spectrum)
 
-        field = nfft.fftshift(nfft.ifft(shifted_spectrum, norm = 'ortho')) * np.exp(1j * reference_frequency * t)  # restore reference frequency
+        field = nfft.fftshift(nfft.ifft(shifted_spectrum, norm = 'ortho')) * np.exp(1j * un.twopi * reference_frequency * t)  # restore reference frequency
 
         return IFFTResult(time = t, field = field)
+
+    def autocorrelation(self):
+        t, autocorrelation = self.fft(np.abs(self.amplitudes) ** 2)
+
+        return t, autocorrelation
 
     def fit_pulse(self):
         fft_result = self.fft()
@@ -241,6 +249,64 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         plt.close()
 
         return fit_result
+
+    def plot_autocorrelation(self, show = False, save = True, x_scale = 'fs', y_scale = None, **kwargs):
+        t, autocorrelation = self.autocorrelation()
+        fft_result, fit_result = self.fit_pulse()
+
+        t_center, t_width, = fit_result
+
+        t_center = t[np.argmax(autocorrelation)]
+
+        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+        fig.set_tight_layout(True)
+        axis = plt.subplot(111)
+
+        if x_scale is not None:
+            scaled_t = t / un.unit_names_to_values[x_scale]
+        else:
+            scaled_t = t
+
+        if y_scale is not None:
+            e_scale = un.unit_names_to_values[y_scale]
+        else:
+            e_scale = 1
+
+        axis.plot(scaled_t, autocorrelation / e_scale, label = r'$E(t)$', color = 'blue')
+        # axis.plot(scaled_t, np.real(autocorrelation) / e_scale, label = r'$E(t)$', color = 'blue')
+        # axis.plot(scaled_t, np.abs(autocorrelation) / e_scale, label = r'$\left| E(t) \right|$', color = 'green')
+        # axis.plot(scaled_t, -np.abs(autocorrelation) / e_scale, color = 'green')
+
+        title = axis.set_title(r'Autocorrelation', fontsize = 15)
+        title.set_y(1.05)
+
+        x_label = r'Time Delay $\tau$'
+        x_label += r' ({})'.format(un.unit_names_to_tex_strings[x_scale])
+        axis.set_xlabel(r'{}'.format(x_label), fontsize = 15)
+
+        y_label = r'Autocorrelation$'
+        if y_scale is not None:
+            y_label += r' ({})'.format(un.unit_names_to_tex_strings[y_scale])
+        axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
+
+        # x_range = 4 * t_width
+        # lower_limit_x = t_center - x_range
+        # upper_limit_x = t_center + x_range
+        # axis.set_xlim(lower_limit_x / un.unit_names_to_values[x_scale], upper_limit_x / un.unit_names_to_values[x_scale])
+
+        axis.set_xlim(-100, 100)
+
+        axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
+
+        axis.legend(loc = 'best', fontsize = 12)
+
+        if save:
+            utils.save_current_figure(name = '{}__autocorrelation'.format(self.name), **kwargs)
+        if show:
+            plt.show()
+
+        plt.close()
 
     def propagate(self, material):
         self.amplitudes *= np.exp(1j * un.twopi * material.length * material.index(self.wavelengths) * self.frequencies / un.c)

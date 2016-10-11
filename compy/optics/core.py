@@ -67,7 +67,7 @@ class Material:
 
     def plot_index_vs_wavelength(self, wavelength_min, wavelength_max, show = False, save = False, **kwargs):
         wavelengths = np.linspace(wavelength_min, wavelength_max, 1e6)
-        indices = np.array([self.index(wavelength) for wavelength in wavelengths])
+        indices = self.index(wavelengths)
 
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
@@ -158,7 +158,9 @@ class SellmeierGlass(Material):
         self.c = np.array(c)
 
     def index(self, wavelength):
-        return np.sqrt(1 + wavelength ** 2 * ((self.b[0] / (wavelength ** 2 - self.c[0])) + (self.b[1] / (wavelength ** 2 - self.c[1])) + (self.b[2] / (wavelength ** 2 - self.c[2]))))
+        n = np.sqrt(1 + wavelength ** 2 * ((self.b[0] / (wavelength ** 2 - self.c[0])) + (self.b[1] / (wavelength ** 2 - self.c[1])) + (self.b[2] / (wavelength ** 2 - self.c[2]))))
+
+        return np.ma.masked_invalid(n)
 
 
 bk7_b = (1.03961212, 0.231792344, 1.01046945)
