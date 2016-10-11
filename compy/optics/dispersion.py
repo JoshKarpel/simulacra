@@ -20,201 +20,68 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class Mode:
-    __slots__ = ('frequency', 'intensity', 'linewidth', '_phase')
+class BeamModifier:
+    def __init__(self, name = 'BeamModifier'):
+        self.name = name
 
-    def __init__(self, frequency = 100 * un.THz, intensity = 1 * un.W / (un.cm ** 2), phase = 0):
-        self.frequency = frequency
-        self.intensity = intensity
-        self._phase = phase
+    def propagate(self, frequencies, amplitudes):
+        raise NotImplementedError
 
-    @property
-    def phase(self):
-        return self._phase % un.twopi
 
-    @phase.setter
-    def phase(self, phase):
-        self._phase = phase  # % un.twopi
+class BandBlockBeam(BeamModifier):
+    def __init__(self, wavelength_min = 700 * un.nm, wavelength_max = 900 * un.nm, reduction_factor = 1e-6):
+        super(BandBlockBeam, self).__init__(name = 'BandBlock')
 
-    @property
-    def amplitude(self):
-        return np.sqrt(self.intensity * 2 / (un.c * un.epsilon_0))
+        self.wavelength_min = wavelength_min
+        self.wavelength_max = wavelength_max
 
-    @property
-    def angular_frequency(self):
-        return un.twopi * self.frequency
-
-    @property
-    def wavelength(self):
-        return opt.photon_wavelength_from_frequency(self.frequency)
-
-    @property
-    def wavenumber(self):
-        return un.twopi / self.wavelength
-
-    def propagate(self, material):
-        # dphase = un.twopi * material.length * material.index(self.wavelength) / self.wavelength
-        # self.phase += dphase
-
-        self.phase += un.twopi * material.length * material.index(self.wavelength) / self.wavelength
-
-        # logger.debug('Propagated mode {} through {}, phase changed by {}'.format(self, material, dphase))
-
-    def evaluate_at_time(self, t):
-        return self.amplitude * np.exp(1j * ((un.twopi * self.frequency * t) + self.phase))
+        self.reduction_factor = reduction_factor
 
     def __str__(self):
-        return 'Mode(frequency = {} THz, wavelength = {} nm, intensity = {} W/m^2, phase = {})'.format(un.uround(self.frequency, un.THz, 3),
-                                                                                                       un.uround(self.wavelength, un.nm, 3),
-                                                                                                       un.uround(self.intensity, un.W, 3),
-                                                                                                       self.phase)
+        return '{} ({}-{} nm)'.format(self.name, un.uround(self.wavelength_min, un.nm, 3), un.uround(self.wavelength_max, un.nm, 3))
 
     def __repr__(self):
-        return 'Mode(frequency = {}, wavelength = {}, intensity = {}, phase = {})'.format(self.frequency, self.wavelength, self.intensity, self.phase)
+        return 'BandBlockBeam(wavelength_min = {}, wavelength_max = {}, r = {}'.format(self.wavelength_min, self.wavelength_max, self.reduction_factor)
+
+    def propagate(self, frequencies, amplitudes):
+        block_amplitudes = self.reduction_factor * amplitudes
+        wavelengths = opt.photon_wavelength_from_frequency(frequencies)
+
+        return np.where(np.greater_equal(wavelengths, self.wavelength_min) * np.less_equal(wavelengths, self.wavelength_max), block_amplitudes, amplitudes)
 
 
-class Beam:
-    def __init__(self, *modes):
-        self.modes = list(modes)
+class ModulateBeam(BeamModifier):
+    def __init__(self, frequency_shift = 90 * un.THz, upshift_efficiency = 1e-6, downshift_efficiency = 1e-6):
+        super(ModulateBeam, self).__init__(name = 'Modulator')
 
-    def __iter__(self):
-        yield from self.modes
+        self.frequency_shift = frequency_shift
+        self.downshift_efficiency = downshift_efficiency
+        self.upshift_efficiency = upshift_efficiency
 
     def __str__(self):
-        return 'Beam: {}'.format(', '.join([str(mode) for mode in self.modes]))
+        return '{} ({} THz shift)'.format(self.name, un.uround(self.frequency_shift, un.THz, 3))
 
     def __repr__(self):
-        return 'Beam({})'.format(', '.join([repr(mode) for mode in self.modes]))
+        return 'ModulateBeam(frequency_shift = {}, upshift_efficiency = {}, downshift_efficiency = {}'.format(frequency_shift, upshift_efficiency, downshift_efficiency)
 
-    def propagate(self, material):
-        for mode in self.modes:
-            mode.propagate(material)
+    def propagate(self, frequencies, amplitudes):
+        new_amplitudes = np.zeros(np.shape(amplitudes), dtype = np.complex128)
+        shift = int(self.frequency_shift / (frequencies[1] - frequencies[0]))
 
-    def evaluate_at_time(self, t):
-        result = np.zeros(np.shape(t), dtype = np.complex128)
+        for ii, amp in enumerate(amplitudes):
+            new_amplitudes[ii] += amp
 
-        # frequencies = np.zeros(len(self.modes), dtype = np.complex128)
-        # phases = np.zeros(len(self.modes), dtype = np.complex128)
-        # amplitudes = np.zeros(len(self.modes), dtype = np.complex128)
+            try:
+                new_amplitudes[ii + shift] += amp * self.upshift_efficiency
+            except IndexError as e:
+                pass
 
-        for beam in self.modes:
-            result += beam.evaluate_at_time(t)
+            try:
+                new_amplitudes[ii - shift] += amp * self.downshift_efficiency
+            except IndexError as e:
+                pass
 
-        # for ii, beam in enumerate(self.modes):
-        #     frequencies[ii] = beam.center_frequency
-        #     phases[ii] = beam.phase
-        #     amplitudes[ii] = beam.amplitude
-
-        # return np.sum(amplitudes * np.exp((1j * un.twopi * frequencies * t) + phases))
-
-        return result
-
-    def fft_field(self, t):
-        return nfft.fft(np.real(self.evaluate_at_time(t)), norm = 'ortho'), nfft.fftfreq(len(t), t[1] - t[0])
-
-    def plot_field_vs_time(self, time_initial = -500 * un.fsec, time_final = 500 * un.fsec, time_points = 10 ** 5, show = False, save = False, name_postfix = '', **kwargs):
-        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
-        fig.set_tight_layout(True)
-        axis = plt.subplot(111)
-
-        t = np.linspace(time_initial, time_final, time_points)
-
-        electric_field = self.evaluate_at_time(t)
-
-        plt.plot(t / un.fsec, np.real(electric_field),
-                 label = 'Electric Field', color = 'blue', linestyle = '-')
-        plt.plot(t / un.fsec, np.abs(electric_field), t / un.fsec, -np.abs(electric_field),
-                 label = 'Envelope', color = 'red', linestyle = '--')
-
-        title = axis.set_title(r'Beam Electric Field vs. Time', fontsize = 15)
-        title.set_y(1.05)
-        axis.set_xlabel(r'$t$ (fs)', fontsize = 15)
-        axis.set_ylabel(r'$E(t)$ (V/m)', fontsize = 15)
-
-        axis.set_xlim(t[0] / un.fsec, t[-1] / un.fsec)
-        axis.grid(True, color = 'grey', linestyle = ':')
-        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
-
-        if save:
-            utils.save_current_figure(name = 'electric_field_vs_time__' + name_postfix, **kwargs)
-        if show:
-            plt.show()
-
-        plt.close()
-
-    def plot_fft(self, time_initial = -200 * un.fsec, time_final = 200 * un.fsec, time_points = 10 ** 6, show = False, save = False, name_postfix = '', **kwargs):
-        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
-        fig.set_tight_layout(True)
-        axis = plt.subplot(111)
-
-        t = np.linspace(time_initial, time_final, time_points)
-        fft_field, fft_freq = self.fft_field(t)
-        shifted_fft = nfft.fftshift(fft_field)
-        shifted_freq = nfft.fftshift(fft_freq)
-
-        plt.plot(shifted_freq / un.THz, np.abs(shifted_fft))
-
-        title = axis.set_title(r'FFT', fontsize = 15)
-        title.set_y(1.05)
-        axis.set_xlabel(r'$f$ (THz)', fontsize = 15)
-        axis.set_ylabel(r'$\left|\hat{E}(f)\right|$', fontsize = 15)
-
-        # axis.set_xlim(shifted_freq[0] / un.THz, shifted_freq[-1] / un.THz)
-        axis.grid(True, color = 'black', linestyle = '--')
-        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
-
-        if save:
-            utils.save_current_figure(name = 'fft__' + name_postfix, **kwargs)
-        if show:
-            plt.show()
-
-        plt.close()
-
-
-def modulate_beam(beam, frequency_shift = 90 * un.THz, upshift_efficiency = 1e-6, downshift_efficiency = 1e-6):
-    new_modes = []
-
-    for mode in beam:
-        upshift = Mode(frequency = mode.frequency + frequency_shift,
-                       intensity = mode.intensity * upshift_efficiency,
-                       phase = mode.phase)
-        new_modes.append(upshift)
-
-        downshift = Mode(frequency = mode.frequency - frequency_shift,
-                         intensity = mode.intensity * downshift_efficiency,
-                         phase = mode.phase)
-        if downshift.frequency > 0:  # only add the downshifted mode if it's frequency is still greater than zero
-            new_modes.append(downshift)
-
-        notshift = Mode(frequency = mode.frequency,
-                        intensity = mode.intensity - upshift.intensity - downshift.intensity,
-                        phase = mode.phase)
-
-        new_modes.append(notshift)
-
-        logger.debug('Generated sidebands for mode {}: {}, {}, {}'.format(mode, upshift, downshift, notshift))
-
-    return Beam(*new_modes)
-
-
-def bandblock_beam(beam, wavelength_min, wavelength_max, filter_by = 1e-6):
-    new_modes = []
-
-    for mode in beam:
-        if wavelength_min < mode.wavelengths < wavelength_max:
-            new_mode = Mode(frequency = mode.frequency,
-                            intensity = mode.intensity * filter_by,
-                            phase = mode.phase)
-
-            logger.debug('Filtered mode {} to {}'.format(mode, new_mode))
-        else:
-            new_mode = mode
-
-            logger.debug('Filter ignored mode {}'.format(mode))
-
-        new_modes.append(new_mode)
-
-    return Beam(*new_modes)
+        return new_amplitudes
 
 
 IFFTResult = collections.namedtuple('IFFTResult', ('time', 'field'))
@@ -222,13 +89,13 @@ PulseWidthFitResult = collections.namedtuple('PulseWidthFitResult', ('center', '
 
 
 class ContinuousAmplitudeSpectrumSpecification(core.Specification):
-    def __init__(self, name, frequencies, initial_amplitude, materials, **kwargs):
+    def __init__(self, name, frequencies, initial_amplitudes, optics, **kwargs):
         super(ContinuousAmplitudeSpectrumSpecification, self).__init__(name, **kwargs)
 
         self.frequencies = frequencies
-        self.initial_amplitude = initial_amplitude.astype(np.complex128)
+        self.initial_amplitudes = initial_amplitudes.astype(np.complex128)
 
-        self.materials = materials
+        self.optics = optics
 
     @classmethod
     def from_power_spectrum_csv(cls, name, frequencies, materials,
@@ -262,9 +129,7 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
 
         self.frequencies = spec.frequencies
         self.df = self.frequencies[1] - self.frequencies[0]
-        self.amplitude = spec.initial_amplitude.copy()
-
-        self.materials = spec.materials
+        self.amplitudes = spec.initial_amplitudes.copy()
 
         self.pulse_fits_vs_materials = []
 
@@ -278,13 +143,13 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
 
     @property
     def power(self):
-        return np.real(np.abs(self.amplitude) ** 2)
+        return np.real(np.abs(self.amplitudes) ** 2)
 
     def fft(self):
         t = nfft.fftshift(nfft.fftfreq(len(self.frequencies), self.df))
 
         reference_frequency = self.frequencies[len(self.frequencies) // 2]
-        shifted_spectrum = nfft.fftshift(self.amplitude)
+        shifted_spectrum = nfft.fftshift(self.amplitudes)
 
         field = nfft.fftshift(nfft.ifft(shifted_spectrum, norm = 'ortho')) * np.exp(1j * reference_frequency * t)  # restore reference frequency
 
@@ -339,8 +204,9 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         else:
             e_scale = 1
 
-        axis.plot(scaled_t, np.real(field) / e_scale, label = r'$E(t)$')
-        axis.plot(scaled_t, np.abs(field) / e_scale, label = r'$\left| E(t) \right|$')
+        axis.plot(scaled_t, np.real(field) / e_scale, label = r'$E(t)$', color = 'blue')
+        axis.plot(scaled_t, np.abs(field) / e_scale, label = r'$\left| E(t) \right|$', color = 'green')
+        axis.plot(scaled_t, -np.abs(field) / e_scale, color = 'green')
         axis.plot(scaled_t, fitted_envelope / e_scale,
                   label = r'$\tau = {}$ {}'.format(un.uround(math.gaussian_fwhm_from_sigma(fit_result.sigma), un.unit_names_to_values[x_scale], 2), un.unit_names_to_tex_strings[x_scale]),
                   linestyle = '--', color = 'orange')
@@ -377,9 +243,9 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         return fit_result
 
     def propagate(self, material):
-        self.amplitude *= np.exp(1j * un.twopi * material.length * material.index(self.wavelengths) * self.frequencies / un.c)
+        self.amplitudes *= np.exp(1j * un.twopi * material.length * material.index(self.wavelengths) * self.frequencies / un.c)
 
-    def run_simulation(self, plot_intermediate_electric_fields = False, target_dir = None):
+    def run_simulation(self, store_intermediate_fits = False, plot_intermediate_electric_fields = False, target_dir = None):
         logger.info('Performing propagation on {} ({})'.format(self.name, self.file_name))
 
         self.status = 'running'
@@ -389,17 +255,20 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
             target_dir = os.getcwd()
 
         if plot_intermediate_electric_fields:
-            self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_0of{}'.format(len(self.materials))))
+            self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_0of{}'.format(len(self.spec.optics))))
 
-        for ii, material in enumerate(self.materials):
-            self.propagate(material)
+        for ii, optic in enumerate(self.spec.optics):
+            if isinstance(optic, opt.Material):
+                self.propagate(optic)
+            if isinstance(optic, BeamModifier):
+                self.amplitudes = optic.propagate(self.frequencies, self.amplitudes)
 
             if plot_intermediate_electric_fields:
-                self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_{}of{}'.format(ii + 1, len(self.materials))))
-            else:
+                self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_{}of{}'.format(ii + 1, len(self.spec.optics))))
+            elif store_intermediate_fits:
                 self.pulse_fits_vs_materials.append(self.fit_pulse()[0])
 
-            logger.debug('Propagated {} through {} ({}/{} Materials)'.format(self.name, material, ii + 1, len(self.materials)))
+            logger.debug('Propagated {} through {} ({}/{} optics)'.format(self.name, optic, ii + 1, len(self.spec.optics)))
 
         self.end_time = dt.datetime.now()
         self.elapsed_time = self.end_time - self.start_time
@@ -409,9 +278,12 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         logger.info('Finished performing propagation on {} ({})'.format(self.name, self.file_name))
 
     def get_pulse_width_vs_materials(self):
-        out = ['Initial: FWHM = {} fs,  Peak Amplitude = {}'.format(un.uround(math.gaussian_fwhm_from_sigma(self.pulse_fits_vs_materials[0].sigma), un.fsec, 2), self.pulse_fits_vs_materials[0].prefactor)]
+        try:
+            out = ['Initial: FWHM = {} fs,  Peak Amplitude = {}'.format(un.uround(math.gaussian_fwhm_from_sigma(self.pulse_fits_vs_materials[0].sigma), un.fsec, 2), self.pulse_fits_vs_materials[0].prefactor)]
 
-        for material, fit in zip(self.materials, self.pulse_fits_vs_materials[1:]):
-            out.append('After {}: FWHM = {} fs, Peak Amplitude = {}'.format(material, un.uround(math.gaussian_fwhm_from_sigma(fit.sigma), un.fsec, 2), fit.prefactor))
+            for material, fit in zip(self.spec.optics, self.pulse_fits_vs_materials[1:]):
+                out.append('After {}: FWHM = {} fs, Peak Amplitude = {}'.format(material, un.uround(math.gaussian_fwhm_from_sigma(fit.sigma), un.fsec, 2), fit.prefactor))
 
-        return '\n'.join(out)
+            return '\n'.join(out)
+        except IndexError:
+            return 'No Intermediate Pulse Data Stored'

@@ -75,7 +75,7 @@ class NuclearPotential(Potential):
     def __str__(self):
         return '{}(charge = {} e)'.format(self.__class__.__name__, un.uround(self.charge, un.proton_charge, 3))
 
-    def __call__(self, r = None, test_charge = None, **kwargs):
+    def __call__(self, *, r, test_charge, **kwargs):
         return un.coulomb_force_constant * self.charge * test_charge / r
 
 
@@ -96,7 +96,7 @@ class RadialImaginaryPotential(Potential):
 
         self.prefactor = -1j * self.amplitude * (un.proton_charge ** 2)
 
-    def __call__(self, r = None, **kwargs):
+    def __call__(self, *, r, **kwargs):
         return self.prefactor * np.exp(-(((r - self.center) / self.width) ** 2))
 
 
@@ -116,7 +116,7 @@ class UniformLinearlyPolarizedElectricField(Potential):
     def get_amplitude(self, t):
         raise NotImplementedError
 
-    def __call__(self, t = None, distance_along_polarization = None, test_charge = None, **kwargs):
+    def __call__(self, *, t, distance_along_polarization, test_charge, **kwargs):
         return distance_along_polarization * test_charge * self.get_amplitude(t)
 
 
