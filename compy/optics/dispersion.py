@@ -100,7 +100,8 @@ class ContinuousAmplitudeSpectrumSpecification(core.Specification):
     @classmethod
     def from_power_spectrum_csv(cls, name, frequencies, materials,
                                 path_to_csv, total_power = 100 * un.mW, x_units = 'nm', y_units = 'dBm',
-                                fit_guess_center = 800 * un.nm, fit_guess_fwhm = 40 * un.nm):
+                                fit_guess_center = 800 * un.nm, fit_guess_fwhm = 40 * un.nm,
+                                plot_fit = True, **kwargs):
         wavelengths, power = np.loadtxt(path_to_csv, delimiter = ',', unpack = True, skiprows = 1)
 
         wavelengths *= un.unit_names_to_values[x_units]
@@ -120,6 +121,22 @@ class ContinuousAmplitudeSpectrumSpecification(core.Specification):
         fitted_power = math.gaussian(opt.photon_wavelength_from_frequency(frequencies), *popt)
         fitted_amplitude = np.sqrt(fitted_power)  # TODO: correct units
 
+        if plot_fit:
+            fitted_power_for_plotting = math.gaussian(wavelengths, *popt)
+
+            utils.xy_plot(wavelengths, [10 * np.log10(power / un.mW), 10 * np.log10(fitted_power_for_plotting / un.mW)], legends = ['Measured', 'Fitted'], x_scale = 'nm',
+                          title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power (dBm)',
+                          save = True, name = '{}__power_spectrum_fit_dbm'.format(name), **kwargs)
+
+            utils.xy_plot(wavelengths, [power, fitted_power_for_plotting], legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
+                          title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
+                          save = True, name = '{}__power_spectrum_fit'.format(name), **kwargs)
+
+            utils.xy_plot(wavelengths, [power, fitted_power_for_plotting], legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
+                          title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
+                          log_y = True,
+                          save = True, name = '{}__power_spectrum_fit_log'.format(name), **kwargs)
+
         return cls(name, frequencies, fitted_amplitude, materials)
 
 
@@ -132,6 +149,7 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         self.amplitudes = spec.initial_amplitudes.copy()
 
         self.pulse_fits_vs_materials = []
+        self.gdd = np.zeros(np.shape(self.frequencies))
 
     @property
     def angular_frequencies(self):
@@ -159,7 +177,7 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         return IFFTResult(time = t, field = field)
 
     def autocorrelation(self):
-        t, autocorrelation = self.fft(np.abs(self.amplitudes) ** 2)
+        t, autocorrelation = self.fft(self.amplitudes ** 2)
 
         return t, autocorrelation
 
@@ -193,10 +211,10 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
     def plot_electric_field_vs_time(self, show = False, save = False, x_scale = 'fs', y_scale = None, **kwargs):
         fit_result, fft_result = self.fit_pulse()
 
-        t_center, t_width, prefactor, _ = fit_result
+        t_center, sigma, prefactor, _ = fit_result
         t, field = fft_result
 
-        fitted_envelope = math.gaussian(t, t_center, t_width, prefactor)
+        fitted_envelope = math.gaussian(t, t_center, sigma, prefactor)
 
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
@@ -231,7 +249,7 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
             y_label += r' ({})'.format(un.unit_names_to_tex_strings[y_scale])
         axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
 
-        x_range = 4 * t_width
+        x_range = 4 * sigma
         lower_limit_x = t_center - x_range
         upper_limit_x = t_center + x_range
         axis.set_xlim(lower_limit_x / un.unit_names_to_values[x_scale], upper_limit_x / un.unit_names_to_values[x_scale])
@@ -252,9 +270,9 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
 
     def plot_autocorrelation(self, show = False, save = True, x_scale = 'fs', y_scale = None, **kwargs):
         t, autocorrelation = self.autocorrelation()
-        fft_result, fit_result = self.fit_pulse()
+        fit_result, fft_result = self.fit_pulse()
 
-        t_center, t_width, = fit_result
+        t_center, sigma, prefactor, cov = fit_result
 
         t_center = t[np.argmax(autocorrelation)]
 
@@ -272,10 +290,10 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         else:
             e_scale = 1
 
-        axis.plot(scaled_t, autocorrelation / e_scale, label = r'$E(t)$', color = 'blue')
-        # axis.plot(scaled_t, np.real(autocorrelation) / e_scale, label = r'$E(t)$', color = 'blue')
-        # axis.plot(scaled_t, np.abs(autocorrelation) / e_scale, label = r'$\left| E(t) \right|$', color = 'green')
-        # axis.plot(scaled_t, -np.abs(autocorrelation) / e_scale, color = 'green')
+        # axis.plot(scaled_t, autocorrelation / e_scale, label = r'$E(t)$', color = 'blue')
+        axis.plot(scaled_t, np.real(autocorrelation) / e_scale, label = r'$Real(AC)$', color = 'blue')
+        axis.plot(scaled_t, np.abs(autocorrelation) / e_scale, label = r'$\left| AC \right|$', color = 'green')
+        axis.plot(scaled_t, -np.abs(autocorrelation) / e_scale, color = 'green')
 
         title = axis.set_title(r'Autocorrelation', fontsize = 15)
         title.set_y(1.05)
@@ -284,17 +302,15 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         x_label += r' ({})'.format(un.unit_names_to_tex_strings[x_scale])
         axis.set_xlabel(r'{}'.format(x_label), fontsize = 15)
 
-        y_label = r'Autocorrelation$'
+        y_label = r'Autocorrelation'
         if y_scale is not None:
             y_label += r' ({})'.format(un.unit_names_to_tex_strings[y_scale])
         axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
 
-        # x_range = 4 * t_width
-        # lower_limit_x = t_center - x_range
-        # upper_limit_x = t_center + x_range
-        # axis.set_xlim(lower_limit_x / un.unit_names_to_values[x_scale], upper_limit_x / un.unit_names_to_values[x_scale])
-
-        axis.set_xlim(-100, 100)
+        x_range = 5 * sigma
+        lower_limit_x = t_center - x_range
+        upper_limit_x = t_center + x_range
+        axis.set_xlim(lower_limit_x / un.unit_names_to_values[x_scale], upper_limit_x / un.unit_names_to_values[x_scale])
 
         axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
@@ -308,8 +324,15 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
 
         plt.close()
 
+    def plot_gdd_vs_wavelength(self, **kwargs):
+        utils.xy_plot(self.wavelengths, [un.uround(self.gdd, un.fsec ** 2, 10)], x_scale = 'nm',
+                      title = 'GDD',
+                      name = '{}__gdd_vs_wavelength'.format(self.name),
+                      **kwargs)
+
     def propagate(self, material):
         self.amplitudes *= np.exp(1j * un.twopi * material.length * material.index(self.wavelengths) * self.frequencies / un.c)
+        self.gdd += opt.calculate_gvd(self.frequencies, material) * material.length
 
     def run_simulation(self, store_intermediate_fits = False, plot_intermediate_electric_fields = False, target_dir = None):
         logger.info('Performing propagation on {} ({})'.format(self.name, self.file_name))
