@@ -39,7 +39,7 @@ class Logger:
         self.file_level = file_level
 
         if file_name is None:
-            file_name = 'compy__{}'.format(dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
+            file_name = '{}__{}'.format(self.logger_name, dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
         self.file_name = file_name
 
         if file_dir is None:
@@ -96,7 +96,7 @@ def strip_illegal_characters(string):
 
 class Beet:
     """
-    A superclass for anything that should be pickleable.
+    A superclass that provides an easy interface for pickling and unpickling instances.
 
     Two Beets compare and hash equal if they have the same Beet.uid, a uuid4 generated at initialization.
     """
@@ -184,6 +184,11 @@ class Beet:
         return str(self)
 
 
+def index_of_closest(array, value):
+    """Returns the index of the numpy array entry closest to the given value."""
+    return np.argmin(np.abs(array - value))
+
+
 def ensure_dir_exists(path):
     """Ensure that the directory tree to the path exists."""
     split_path = os.path.splitext(path)
@@ -209,19 +214,23 @@ def save_current_figure(name, name_postfix = '', target_dir = None, img_format =
     logger.info('Saved matplotlib figure {} to {}'.format(name, path))
 
 
-def xy_plot(x, y, legends = None, x_scale = None, y_scale = None, title = None, x_label = None, y_label = None,
-            x_center = 0, x_range = None, y_range = None,
+def xy_plot(x, y, legends = None,
+            x_scale = None, y_scale = None,
+            title = None, x_label = None, y_label = None,
+            x_center = 0, x_range = None,
             log_x = False, log_y = False,
-            show = False, save = False, **kwargs):
+            **kwargs):
     fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
     fig.set_tight_layout(True)
     axis = plt.subplot(111)
 
+    # generate scaled x data
     if x_scale is not None:
         scaled_x = x / un.unit_names_to_values[x_scale]
     else:
         scaled_x = x
 
+    # generate scaled y data
     scaled_y = []
     for yy in y:
         if y_scale is not None:
@@ -229,28 +238,33 @@ def xy_plot(x, y, legends = None, x_scale = None, y_scale = None, title = None, 
         else:
             scaled_y.append(yy)
 
+    # plot y vs. x data
     for ii, yy in enumerate(scaled_y):
         if legends is not None:
             plt.plot(scaled_x, yy, label = legends[ii])
         else:
             plt.plot(scaled_x, yy)
 
+    # set title
     if title is not None:
         title = axis.set_title(r'{}'.format(title), fontsize = 15)
         title.set_y(1.05)
 
+    # set x label
     if x_label is not None:
         if x_scale is not None:
             x_label += r' ({})'.format(un.unit_names_to_tex_strings[x_scale])
 
         axis.set_xlabel(r'{}'.format(x_label), fontsize = 15)
 
+    # set y label
     if y_label is not None:
         if y_scale is not None:
             y_label += r' ({})'.format(un.unit_names_to_tex_strings[y_scale])
 
         axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
 
+    # set x axis limits
     if x_range is None:
         lower_limit_x = np.min(scaled_x)
         upper_limit_x = np.max(scaled_x)
@@ -260,21 +274,21 @@ def xy_plot(x, y, legends = None, x_scale = None, y_scale = None, title = None, 
 
     axis.set_xlim(lower_limit_x, upper_limit_x)
 
+    # set whether axes are log scale
     if log_x:
         axis.set_xscale('log')
     if log_y:
         axis.set_yscale('log')
 
+    # grid and tick options
     axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
     axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
+    # draw legend
     if legends is not None:
         axis.legend(loc = 'best', fontsize = 12)
 
-    if save:
-        save_current_figure(**kwargs)
-    if show:
-        plt.show()
+    save_current_figure(**kwargs)
 
     plt.close()
 

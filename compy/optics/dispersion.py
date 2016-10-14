@@ -208,7 +208,7 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         utils.xy_plot(np.real(self.wavelengths), [self.power],
                       name = '{}__power_vs_wavelength'.format(self.name), x_label = r'Wavelength $\lambda$', **kwargs)
 
-    def plot_electric_field_vs_time(self, show = False, save = False, x_scale = 'fs', y_scale = None, **kwargs):
+    def plot_electric_field_vs_time(self, x_scale = 'fs', y_scale = None, **kwargs):
         fit_result, fft_result = self.fit_pulse()
 
         t_center, sigma, prefactor, _ = fit_result
@@ -259,16 +259,13 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
 
         axis.legend(loc = 'best', fontsize = 12)
 
-        if save:
-            utils.save_current_figure(name = '{}__electric_field_vs_time'.format(self.name), **kwargs)
-        if show:
-            plt.show()
+        utils.save_current_figure(name = '{}__electric_field_vs_time'.format(self.name), **kwargs)
 
         plt.close()
 
         return fit_result
 
-    def plot_autocorrelation(self, show = False, save = True, x_scale = 'fs', y_scale = None, **kwargs):
+    def plot_autocorrelation(self, x_scale = 'fs', y_scale = None, **kwargs):
         t, autocorrelation = self.autocorrelation()
         fit_result, fft_result = self.fit_pulse()
 
@@ -317,10 +314,7 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
 
         axis.legend(loc = 'best', fontsize = 12)
 
-        if save:
-            utils.save_current_figure(name = '{}__autocorrelation'.format(self.name), **kwargs)
-        if show:
-            plt.show()
+        utils.save_current_figure(name = '{}__autocorrelation'.format(self.name), **kwargs)
 
         plt.close()
 

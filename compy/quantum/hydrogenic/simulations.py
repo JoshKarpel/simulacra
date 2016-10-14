@@ -676,12 +676,13 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         self.g_mesh = self.wrap_vector(g_vector, 'rho')
 
     @utils.memoize()
-    def get_mesh_slicer(self, plot_limit = None):
-        if plot_limit is None:
+    def get_mesh_slicer(self, distance_from_center = None):
+        """Returns a slice object that slices a mesh to the given distance of the center."""
+        if distance_from_center is None:
             mesh_slicer = (slice(None, None, 1), slice(None, None, 1))
         else:
-            z_lim_points = round(plot_limit / self.delta_z)
-            rho_lim_points = round(plot_limit / self.delta_rho)
+            z_lim_points = round(distance_from_center / self.delta_z)
+            rho_lim_points = round(distance_from_center / self.delta_rho)
             mesh_slicer = (slice(round(self.z_center_index - z_lim_points), round(self.z_center_index + z_lim_points + 1), 1), slice(0, rho_lim_points + 1, 1))
 
         return mesh_slicer
@@ -714,9 +715,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
         return quiv
 
-    def plot_mesh(self, mesh, show = False, save = False, name = '', target_dir = None, img_format = 'png', title = None, overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None, **kwargs):
-        plt.close()  # close any old figures
-
+    def plot_mesh(self, mesh, name = '', target_dir = None, img_format = 'png', title = None, overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
         axis = plt.subplot(111)
@@ -750,10 +749,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         y_ticks[-1].label1.set_visible(False)
         y_ticks[-1].label2.set_visible(False)
 
-        if save:
-            utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
-        if show:
-            plt.show()
+        utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
 
         plt.close()
 
@@ -1071,11 +1067,12 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         self.g_mesh = self.wrap_vector(g_vector, 'theta')
 
     @utils.memoize()
-    def get_mesh_slicer(self, plot_limit = None):
-        if plot_limit is None:
+    def get_mesh_slicer(self, distance_from_center = None):
+        """Returns a slice object that slices a mesh to the given distance of the center."""
+        if distance_from_center is None:
             mesh_slicer = slice(None, None, 1)
         else:
-            r_lim_points = round(plot_limit / self.delta_r)
+            r_lim_points = round(distance_from_center / self.delta_r)
             mesh_slicer = slice(0, r_lim_points + 1, 1)
 
         return mesh_slicer
@@ -1537,7 +1534,7 @@ class ElectricFieldSimulation(core.Simulation):
 
         return sim
 
-    def plot_wavefunction_vs_time(self, show = False, save = False, grayscale = False, **kwargs):
+    def plot_wavefunction_vs_time(self, grayscale = False, **kwargs):
         plt.close()  # close any old figures
 
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
@@ -1599,13 +1596,10 @@ class ElectricFieldSimulation(core.Simulation):
         ax_field.tick_params(axis = 'y', which = 'major', labelsize = 10)
         ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
-        if save:
-            postfix = ''
-            if grayscale:
-                postfix += '_GS'
-            utils.save_current_figure(name = self.spec.file_name + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
-        if show:
-            plt.show()
+        postfix = ''
+        if grayscale:
+            postfix += '_GS'
+        utils.save_current_figure(name = self.spec.file_name + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
 
         plt.close()
 

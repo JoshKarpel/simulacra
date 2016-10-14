@@ -9,6 +9,7 @@ def fib(n):
     else:
         return fib(n - 1) + fib(n - 2)
 
+
 @memoize()
 def foo(a = 5):
     time.sleep(1)
@@ -16,7 +17,7 @@ def foo(a = 5):
 
 
 if __name__ == '__main__':
-    test = 20
+    test = 25
 
     with Timer() as t_bare:
         print([(n, fib(n)) for n in range(test)])

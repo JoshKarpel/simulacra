@@ -65,7 +65,7 @@ class Material:
     def index(self, wavelength):
         raise NotImplementedError
 
-    def plot_index_vs_wavelength(self, wavelength_min, wavelength_max, show = False, save = False, **kwargs):
+    def plot_index_vs_wavelength(self, wavelength_min, wavelength_max, **kwargs):
         wavelengths = np.linspace(wavelength_min, wavelength_max, 1e6)
         indices = self.index(wavelengths)
 
@@ -89,14 +89,11 @@ class Material:
         axis.grid(True, color = 'black', linestyle = ':')
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
-        if save:
-            utils.save_current_figure(name = self.name + '__index_vs_wavelength', **kwargs)
-        if show:
-            plt.show()
+        utils.save_current_figure(name = self.name + '__index_vs_wavelength', **kwargs)
 
         plt.close()
 
-    def plot_gvd_vs_wavelength(self, wavelength_min, wavelength_max, show = False, save = False, ** kwargs):
+    def plot_gvd_vs_wavelength(self, wavelength_min, wavelength_max, ** kwargs):
         lower_frequency = photon_frequency_from_wavelength(wavelength_max)
         upper_frequency = photon_frequency_from_wavelength(wavelength_min)
         frequencies = np.linspace(lower_frequency, upper_frequency, 1e6)  # have to start with evenly spaced frequencies for the simple centered difference in calculate_gvd() to work
@@ -126,10 +123,7 @@ class Material:
         axis.grid(True, color = 'black', linestyle = ':')
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
-        if save:
-            utils.save_current_figure(name = self.name + '__gvd_vs_wavelength', **kwargs)
-        if show:
-            plt.show()
+        utils.save_current_figure(name = self.name + '__gvd_vs_wavelength', **kwargs)
 
         plt.close()
 
