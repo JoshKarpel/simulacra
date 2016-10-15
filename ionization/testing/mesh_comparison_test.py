@@ -1,7 +1,8 @@
 import os
 
-import compy as cp
 import compy.quantum.hydrogenic as hyd
+
+import compy as cp
 from compy.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]

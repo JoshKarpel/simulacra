@@ -1,14 +1,11 @@
 import os
-import sys
-import logging
 
-import numpy as np
 import matplotlib.pyplot as plt
 
 import compy as cp
+import ionization as ion
+import ionization.testing as test
 from compy.units import *
-import compy.quantum.hydrogenic as hyd
-import compy.quantum.hydrogenic.testing as hydt
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -65,11 +62,11 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 #
 #     for z, z_point in enumerate(z_points):
 #         for rho, rho_point in enumerate(rho_points):
-#             spec = hyd.CylindricalSliceSpecification('test',
+#             spec = ion.CylindricalSliceSpecification('test',
 #                                                      initial_state = state,
 #                                                      z_points = z_point, rho_points = rho_point)
 #
-#             sim = hyd.ElectricFieldSimulation(spec)
+#             sim = ion.ElectricFieldSimulation(spec)
 #
 #             norm[z, rho] = sim.mesh.norm
 #             energy[z, rho] = sim.mesh.energy_expectation_value
@@ -93,11 +90,11 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 #
 #     for ii, (z, rho) in enumerate(zip(z_points, rho_points)):
 #         print(ii)
-#         spec = hyd.CylindricalSliceSpecification('test',
+#         spec = ion.CylindricalSliceSpecification('test',
 #                                                  initial_state = state,
 #                                                  z_points = z, rho_points = rho)
 #
-#         sim = hyd.ElectricFieldSimulation(spec)
+#         sim = ion.ElectricFieldSimulation(spec)
 #
 #         norm[ii] = sim.mesh.norm
 #         energy[ii] = sim.mesh.energy_expectation_value
@@ -153,11 +150,11 @@ def cylindrical_slice_norm_energy(z_points, states, bound = 30 * bohr_radius):
     energies = {state: np.zeros(len(rho_points)) for state in states}
 
     for ii, (z, rho) in enumerate(zip(z_points, rho_points)):
-        spec = hyd.CylindricalSliceSpecification('test',
+        spec = ion.CylindricalSliceSpecification('test',
                                                  z_bound = bound, rho_bound = bound,
                                                  z_points = z, rho_points = rho)
 
-        sim = hyd.ElectricFieldSimulation(spec)
+        sim = ion.ElectricFieldSimulation(spec)
 
         for state in states:
             sim.mesh.g_mesh = sim.mesh.g_for_state(state)
@@ -229,11 +226,11 @@ def spherical_slice_norm_energy(r_points, states, theta_points = 128, bound = 30
     energies = {state: np.zeros(len(r_points)) for state in states}
 
     for ii, r in enumerate(r_points):
-        spec = hyd.SphericalSliceSpecification('test',
+        spec = ion.SphericalSliceSpecification('test',
                                                r_bound = bound,
                                                r_points = r, theta_points = theta_points)
 
-        sim = hyd.ElectricFieldSimulation(spec)
+        sim = ion.ElectricFieldSimulation(spec)
 
         for state in states:
             sim.mesh.g_mesh = sim.mesh.g_for_state(state)
@@ -305,11 +302,11 @@ def spherical_harmonic_norm_energy(r_points, states, spherical_harmonics = 128, 
     energies = {state: np.zeros(len(r_points)) for state in states}
 
     for ii, r in enumerate(r_points):
-        spec = hyd.SphericalHarmonicSpecification('test',
+        spec = ion.SphericalHarmonicSpecification('test',
                                                   r_bound = bound,
                                                   r_points = r, spherical_harmonics_max_l = spherical_harmonics - 1)
 
-        sim = hyd.ElectricFieldSimulation(spec)
+        sim = ion.ElectricFieldSimulation(spec)
 
         for state in states:
             sim.mesh.g_mesh = sim.mesh.g_for_state(state)
@@ -383,13 +380,13 @@ def spherical_harmonic_norm_energy_evolved(r_points, states, spherical_harmonics
 
     for ii, r in enumerate(r_points):
         for state in states:
-            spec = hyd.SphericalHarmonicSpecification('test',
+            spec = ion.SphericalHarmonicSpecification('test',
                                                       r_bound = bound,
                                                       initial_state = state,
                                                       r_points = r, spherical_harmonics_max_l = spherical_harmonics - 1,
                                                       time_final = evolve_for, time_step = evolve_at)
 
-            sim = hyd.ElectricFieldSimulation(spec)
+            sim = ion.ElectricFieldSimulation(spec)
 
             sim.run_simulation()
 
@@ -476,13 +473,13 @@ def spherical_harmonic_time_stability(r_point_count, states, spherical_harmonics
     init_overlap = {state: None for state in states}
 
     for state in states:
-        spec = hyd.SphericalHarmonicSpecification('test',
+        spec = ion.SphericalHarmonicSpecification('test',
                                                   r_bound = bound,
                                                   initial_state = state,
                                                   r_points = r_point_count, spherical_harmonics_max_l = spherical_harmonics - 1,
                                                   time_final = evolve_for, time_step = evolve_at)
 
-        sim = hyd.ElectricFieldSimulation(spec)
+        sim = ion.ElectricFieldSimulation(spec)
 
         times = sim.times.copy()
 
@@ -566,7 +563,7 @@ def spherical_harmonic_time_stability(r_point_count, states, spherical_harmonics
 
 def run_test(spec):
     with cp.utils.Logger() as logger:
-        sim = hydt.StaticConvergenceTestingSimulation(spec)
+        sim = test.StaticConvergenceTestingSimulation(spec)
         sim.run_simulation()
 
         sim.plot_error_vs_time(save = True, target_dir = os.path.join(OUT_DIR, 'individual_error_vs_time'))
@@ -577,14 +574,14 @@ def run_test(spec):
 
 
 if __name__ == '__main__':
-    # cylindrical_slice_2d_z_rho_points(10, 20, 10, 20, hyd.BoundState(1, 0, 0))
+    # cylindrical_slice_2d_z_rho_points(10, 20, 10, 20, ion.BoundState(1, 0, 0))
     # z = [100, 101, 102, 103 200, 201, 202, 203, 400, 401, 402, 403, 600, 601, 602, 603, 800, 801, 802, 803, 1000, 1001, 1002, 1003]
     # nn = np.linspace(100, 1000, num = 200)
     # linear_points = np.logspace(start = 7, stop = 11, base = 2, num = 100)
     # radial_points = np.logspace(start = 7, stop = 12, base = 2, num = 100)
     angular_points = [2**6, 2 ** 7, 2 ** 8]
     n_max = 3
-    states = [hyd.BoundState(n, l, 0) for n in range(1, n_max + 1) for l in range(n)]
+    states = [ion.BoundState(n, l, 0) for n in range(1, n_max + 1) for l in range(n)]
     bound = 40 * bohr_radius
 
     time_final = 10000
@@ -607,7 +604,7 @@ if __name__ == '__main__':
 
         for state in states:
             for zz in linear_points:
-                spec = hyd.CylindricalSliceSpecification('cyl__n{}_l{}__z{}_rho{}__t{}_dt{}'.format(state.n, state.l, zz, zz / 2, time_final, time_step),
+                spec = ion.CylindricalSliceSpecification('cyl__n{}_l{}__z{}_rho{}__t{}_dt{}'.format(state.n, state.l, zz, zz / 2, time_final, time_step),
                                                          z_points = zz, rho_points = zz / 2,
                                                          time_initial = 1 * asec, time_final = time_final * asec + 1 * asec, time_step = time_step * asec)
 
@@ -615,13 +612,13 @@ if __name__ == '__main__':
 
             for rr in linear_points:
                 for ll in angular_points:
-                    spec_sphslice = hyd.SphericalSliceSpecification('sphslice__n{}_l{}__r{}_theta{}__t{}_dt{}'.format(state.n, state.l, rr, ll, time_final, time_step),
+                    spec_sphslice = ion.SphericalSliceSpecification('sphslice__n{}_l{}__r{}_theta{}__t{}_dt{}'.format(state.n, state.l, rr, ll, time_final, time_step),
                                                                     r_points = rr, theta_points = ll,
                                                                     time_initial = 1 * asec, time_final = time_final * asec + 1 * asec, time_step = time_step * asec)
 
                     specs.append(spec_sphslice)
 
-                    spec_sphharm = hyd.SphericalHarmonicSpecification('sphharm__n{}_l{}__r{}_harms{}__t{}_dt{}'.format(state.n, state.l, rr, ll, time_final, time_step),
+                    spec_sphharm = ion.SphericalHarmonicSpecification('sphharm__n{}_l{}__r{}_harms{}__t{}_dt{}'.format(state.n, state.l, rr, ll, time_final, time_step),
                                                                       r_points = rr, theta_points = ll,
                                                                       time_initial = 1 * asec, time_final = time_final * asec + 1 * asec, time_step = time_step * asec)
 

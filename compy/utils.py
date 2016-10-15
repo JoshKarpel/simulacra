@@ -1,19 +1,18 @@
-import os
-import sys
-import pickle
-import gzip
-import uuid
-import logging
 import datetime as dt
 import functools
+import gzip
+import logging
 import multiprocessing as mp
+import os
+import pickle
+import sys
+import uuid
 from copy import deepcopy
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 import compy.units as un
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -291,21 +290,6 @@ def xy_plot(x, y, legends = None,
     save_current_figure(**kwargs)
 
     plt.close()
-
-
-def ask_for_input(question, default = None, cast_to = str):
-    """Ask for input from the user, with a default value, and call cast_to on it before returning it."""
-    input_str = input(question + ' [Default: {}]: '.format(default))
-
-    trimmed = input_str.replace(' ', '')
-    if trimmed == '':
-        out = cast_to(default)
-    else:
-        out = cast_to(trimmed)
-
-    logger.debug('Got input from cmd line: {} [type: {}]'.format(out, type(out)))
-
-    return out
 
 
 def multi_map(function, targets, processes = None):

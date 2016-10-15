@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -7,8 +7,6 @@ logger.addHandler(logging.NullHandler())
 
 import matplotlib
 matplotlib.rcParams['font.family'] = 'serif'
-
-from compy import core, math, units, utils
 
 # set up platform-independent runtime cython compilation and imports
 import numpy as np

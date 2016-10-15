@@ -1,10 +1,9 @@
+import logging
 import os
 
 import compy as cp
+import dispersion as disp
 from compy.units import *
-import compy.optics.core as opt
-import compy.optics.dispersion as disp
-
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -26,16 +25,16 @@ if __name__ == '__main__':
         #
         # cp.utils.xy_plot(x, [ddyddx], save = True, target_dir = OUT_DIR, name = 'ddyddx')
 
-        mat = opt.BK7(length = 1 * cm)
+        mat = disp.BK7(length = 1 * cm)
 
-        opt.BK7().plot_gvd_vs_wavelength(300 * nm, 2000 * nm, save = True, target_dir = OUT_DIR)
-        opt.FS().plot_gvd_vs_wavelength(300 * nm, 2000 * nm, save = True, target_dir = OUT_DIR)
+        disp.BK7().plot_gvd_vs_wavelength(300 * nm, 2000 * nm, save = True, target_dir = OUT_DIR)
+        disp.FS().plot_gvd_vs_wavelength(300 * nm, 2000 * nm, save = True, target_dir = OUT_DIR)
 
         # angular_frequencies = twopi * np.linspace(100 * THz, 1000 * THz, 1e6)
-        # wavelengths = opt.photon_wavelength_from_angular_frequency(angular_frequencies)
+        # wavelengths = disp.photon_wavelength_from_angular_frequency(angular_frequencies)
         #
         # # wavelengths = np.linspace(500 * nm, 1100 * nm, 1e6)
-        # # angular_frequencies = twopi * opt.photon_frequency_from_wavelength(wavelengths)
+        # # angular_frequencies = twopi * disp.photon_frequency_from_wavelength(wavelengths)
         #
         # n = mat.index(wavelengths)
         #

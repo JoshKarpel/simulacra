@@ -1,9 +1,6 @@
 import logging
 
-import numpy as np
-
-from compy import utils
-import compy.units as un
+from compy.units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -14,7 +11,7 @@ class Potential:
     A class that represents a potential, defined over some kwargs.
 
     The result of a call to a Potential should be the potential energy / charge (V = J/C for electric interactions, V = J/kg for gravitational interactions, etc.) at the coordinates given by kwargs.
-    
+
     Caution: use numpy meshgrids to vectorize over multiple kwargs.
     """
 
@@ -64,7 +61,7 @@ class PotentialSum:
 class NuclearPotential(Potential):
     """A Potential representing the electric potential of the nucleus of a hydrogenic atom."""
 
-    def __init__(self, charge = 1 * un.proton_charge):
+    def __init__(self, charge = 1 * proton_charge):
         super(NuclearPotential, self).__init__()
 
         self.charge = charge
@@ -73,14 +70,14 @@ class NuclearPotential(Potential):
         return '{}(charge = {})'.format(self.__class__.__name__, self.charge)
 
     def __str__(self):
-        return '{}(charge = {} e)'.format(self.__class__.__name__, un.uround(self.charge, un.proton_charge, 3))
+        return '{}(charge = {} e)'.format(self.__class__.__name__, uround(self.charge, proton_charge, 3))
 
     def __call__(self, *, r, test_charge, **kwargs):
-        return un.coulomb_force_constant * self.charge * test_charge / r
+        return coulomb_force_constant * self.charge * test_charge / r
 
 
 class RadialImaginaryPotential(Potential):
-    def __init__(self, center = 20 * un.bohr_radius, width = 2 * un.bohr_radius, amplitude = 1 * un.atomic_electric_field):
+    def __init__(self, center = 20 * bohr_radius, width = 2 * bohr_radius, amplitude = 1 * atomic_electric_field):
         """
         Construct a RadialImaginaryPotential. The potential is shaped like a Gaussian and has an imaginary amplitude.
 
@@ -94,7 +91,7 @@ class RadialImaginaryPotential(Potential):
         self.width = width
         self.amplitude = amplitude
 
-        self.prefactor = -1j * self.amplitude * (un.proton_charge ** 2)
+        self.prefactor = -1j * self.amplitude * (proton_charge ** 2)
 
     def __call__(self, *, r, **kwargs):
         return self.prefactor * np.exp(-(((r - self.center) / self.width) ** 2))
@@ -121,7 +118,7 @@ class UniformLinearlyPolarizedElectricField(Potential):
 
 
 class Rectangle(UniformLinearlyPolarizedElectricField):
-    def __init__(self, start_time = 0 * un.asec, end_time = 50 * un.asec, amplitude = 1 * un.atomic_electric_field, **kwargs):
+    def __init__(self, start_time = 0 * asec, end_time = 50 * asec, amplitude = 1 * atomic_electric_field, **kwargs):
         super(Rectangle, self).__init__(**kwargs)
 
         self.start_time = start_time
@@ -130,13 +127,13 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
 
     def __str__(self):
         out = '{}(start_time = {} as, end_time = {} as, amplitude = {} AEF'.format(self.__class__.__name__,
-                                                                                   un.uround(self.start_time, un.asec, 3),
-                                                                                   un.uround(self.end_time, un.asec, 3),
-                                                                                   un.uround(self.amplitude, un.atomic_electric_field, 3))
+                                                                                   uround(self.start_time, asec, 3),
+                                                                                   uround(self.end_time, asec, 3),
+                                                                                   uround(self.amplitude, atomic_electric_field, 3))
 
         if self.window_time is not None and self.window_width is not None:
-            out += ', window_time = {} as, window_width = {} as'.format(un.uround(self.window_time, un.asec, 3),
-                                                                        un.uround(self.window_width, un.asec, 3))
+            out += ', window_time = {} as, window_width = {} as'.format(uround(self.window_time, asec, 3),
+                                                                        uround(self.window_width, asec, 3))
 
         out += ')'
 
@@ -167,22 +164,22 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
 
 
 class SineWave(UniformLinearlyPolarizedElectricField):
-    def __init__(self, omega, amplitude = 1 * un.atomic_electric_field, phase = 0, **kwargs):
+    def __init__(self, omega, amplitude = 1 * atomic_electric_field, phase = 0, **kwargs):
         super(SineWave, self).__init__(**kwargs)
 
         self.omega = omega
-        self.phase = phase % un.twopi
+        self.phase = phase % twopi
         self.amplitude = amplitude
 
     def __str__(self):
         out = '{}(omega = 2pi * {} THz, amplitude = {} AEF, phase = 2pi * {}'.format(self.__class__.__name__,
-                                                                                     un.uround(self.frequency, un.THz, 3),
-                                                                                     un.uround(self.amplitude, un.atomic_electric_field, 3),
-                                                                                     un.uround(self.phase, un.twopi, 3))
+                                                                                     uround(self.frequency, THz, 3),
+                                                                                     uround(self.amplitude, atomic_electric_field, 3),
+                                                                                     uround(self.phase, twopi, 3))
 
         if self.window_time is not None and self.window_width is not None:
-            out += ', window_time = {} as, window_width = {} as'.format(un.uround(self.window_time, un.asec, 3),
-                                                                        un.uround(self.window_width, un.asec, 3))
+            out += ', window_time = {} as, window_width = {} as'.format(uround(self.window_time, asec, 3),
+                                                                        uround(self.window_width, asec, 3))
 
         out += ')'
 
@@ -204,15 +201,15 @@ class SineWave(UniformLinearlyPolarizedElectricField):
 
     @classmethod
     def from_frequency(cls, frequency, amplitude, phase = 0, window_time = None, window_width = None):
-        return cls(frequency * un.twopi, amplitude, phase = phase, window_time = window_time, window_width = window_width)
+        return cls(frequency * twopi, amplitude, phase = phase, window_time = window_time, window_width = window_width)
 
     @property
     def frequency(self):
-        return self.omega / un.twopi
+        return self.omega / twopi
 
     @frequency.setter
     def frequency(self, frequency):
-        self.omega = frequency * un.twopi
+        self.omega = frequency * twopi
 
     @property
     def period(self):
@@ -229,4 +226,4 @@ class SineWave(UniformLinearlyPolarizedElectricField):
         return self.amplitude
 
     def get_peak_power_density(self):
-        return un.c * un.epsilon_0 * (np.abs(self.amplitude) ** 2)
+        return c * epsilon_0 * (np.abs(self.amplitude) ** 2)

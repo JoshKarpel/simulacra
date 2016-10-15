@@ -1,16 +1,11 @@
-import datetime as dt
 import logging
-import functools
-import os
 
-import numpy as np
 import matplotlib.pyplot as plt
-from cycler import cycler
-
-from compy import core, math, utils
-import compy.quantum as qm
+import numpy as np
 from compy.quantum.hydrogenic import simulations
+
 import compy.units as un
+from compy import utils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

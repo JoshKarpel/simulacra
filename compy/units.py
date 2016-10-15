@@ -1,11 +1,6 @@
 """Import this as get access to SI units and fundamental constants, with values from CODATA 2014."""
 
-import logging
-
 import numpy as np
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 unit_names_to_values = {}
 unit_names_to_tex_strings = {}

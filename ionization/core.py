@@ -1,25 +1,35 @@
 import datetime as dt
-import logging
 import functools
+import logging
 import os
+from copy import deepcopy
 
-import numpy as np
-import scipy as sp
-import scipy.special as special
-import scipy.sparse as sparse
 import matplotlib
 import matplotlib.pyplot as plt
+import scipy as sp
+import scipy.sparse as sparse
+import scipy.special as special
 from cycler import cycler
 
-from compy import core, math, utils
-import compy.quantum as qm
-from compy.quantum.hydrogenic import animators, potentials
-import compy.units as un
+import compy as cp
 import compy.cy as cy
-
+from compy.units import *
+from ionization import animators, potentials
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+class IllegalQuantumState(Exception):
+    pass
+
+
+def electron_energy_from_wavenumber(k):
+    return (hbar * k) ** 2 / (2 * electron_mass)
+
+
+def electron_wavenumber_from_energy(energy):
+    return np.sqrt(2 * electron_mass * energy) / hbar
 
 
 class BoundState:
@@ -36,56 +46,64 @@ class BoundState:
         :param m: quantum number for angular momentum z-component
         """
         if any(int(x) != x for x in (n, l, m)):
-            raise qm.IllegalQuantumState('n, l, and m must be integers')
+            raise IllegalQuantumState('n, l, and m must be integers')
 
         if n > 0:
             self._n = n
         else:
-            raise qm.IllegalQuantumState('n ({}) must be greater than zero'.format(n))
+            raise IllegalQuantumState('n ({}) must be greater than zero'.format(n))
 
         if 0 <= l < n:
             self._l = l
         else:
-            raise qm.IllegalQuantumState('l ({}) must be less than n ({}) and greater than or equal to zero'.format(l, n))
+            raise IllegalQuantumState('l ({}) must be less than n ({}) and greater than or equal to zero'.format(l, n))
 
         if -l <= m <= l:
             self._m = m
         else:
-            raise qm.IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
+            raise IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
 
     @property
     def n(self):
+        """Gets _n."""
         return self._n
 
     @property
     def l(self):
+        """Gets _l."""
         return self._l
 
     @property
     def m(self):
+        """Gets _m."""
         return self._m
 
     @property
     def spherical_harmonic(self):
-        return math.SphericalHarmonic(l = self.l, m = self.m)
+        """Gets the SphericalHarmonic associated with the BoundState's l and m."""
+        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
 
     def __str__(self):
+        """Returns the external string representation of the BoundState."""
         return self.ket
 
     def __repr__(self):
+        """Returns the internal string representation of the BoundState."""
         return '{}(n={}, l={}, m={})'.format(self.__class__.__name__, self.n, self.l, self.m)
 
     @property
     def ket(self):
+        """Gets the ket representation of the BoundState."""
         return '|{},{},{}>'.format(self.n, self.l, self.m)
 
     @property
     def bra(self):
+        """Gets the bra representation of the BoundState"""
         return '<{},{},{}|'.format(self.n, self.l, self.m)
 
     @property
     def tex_str(self):
-        """Return a LaTeX-formatted string for the BoundState."""
+        """Gets a LaTeX-formatted string for the BoundState."""
         return r'\psi_{{{},{},{}}}'.format(self.n, self.l, self.m)
 
     def __eq__(self, other):
@@ -111,9 +129,9 @@ class BoundState:
         return state.n, state.l, state.m
 
     def radial_part(self, r):
-        normalization = np.sqrt(((2 / (self.n * un.bohr_radius)) ** 3) * (sp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.math.factorial(self.n + self.l))))  # Griffith's normalization
-        r_dep = np.exp(-r / (self.n * un.bohr_radius)) * ((2 * r / (self.n * un.bohr_radius)) ** self.l)
-        lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * un.bohr_radius))
+        normalization = np.sqrt(((2 / (self.n * bohr_radius)) ** 3) * (sp.cp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.cp.math.factorial(self.n + self.l))))  # Griffith's normalization
+        r_dep = np.exp(-r / (self.n * bohr_radius)) * ((2 * r / (self.n * bohr_radius)) ** self.l)
+        lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * bohr_radius))
 
         return normalization * r_dep * lag_poly
 
@@ -192,7 +210,7 @@ class FreeState:
 
     __slots__ = ('_energy', '_l', '_m')
 
-    def __init__(self, energy = 1 * un.eV, l = 0, m = 0):
+    def __init__(self, energy = 1 * eV, l = 0, m = 0):
         """
         Construct a FreeState from its energy and angular momentum quantum numbers.
 
@@ -201,27 +219,27 @@ class FreeState:
         :param m: quantum number for angular momentum z-component
         """
         if any(int(x) != x for x in (l, m)):
-            raise qm.IllegalQuantumState('l and m must be integers')
+            raise IllegalQuantumState('l and m must be integers')
 
         if energy > 0:
             self._energy = energy
         else:
-            raise qm.IllegalQuantumState('energy must be greater than zero')
+            raise IllegalQuantumState('energy must be greater than zero')
 
         if l >= 0:
             self._l = l
         else:
-            raise qm.IllegalQuantumState('l ({}) must be greater than or equal to zero'.format(l))
+            raise IllegalQuantumState('l ({}) must be greater than or equal to zero'.format(l))
 
         if -l <= m <= l:
             self._m = m
         else:
-            raise qm.IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
+            raise IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
 
     @classmethod
     def from_wavenumber(cls, k, l = 0, m = 0):
         """Construct a FreeState from its wavenumber and angular momentum quantum numbers."""
-        energy = qm.electron_energy_from_wavenumber(k)
+        energy = electron_energy_from_wavenumber(k)
 
         return cls(energy, l, m)
 
@@ -231,7 +249,7 @@ class FreeState:
 
     @property
     def k(self):
-        return qm.electron_wavenumber_from_energy(self.energy)
+        return electron_wavenumber_from_energy(self.energy)
 
     @property
     def l(self):
@@ -243,26 +261,26 @@ class FreeState:
 
     @property
     def spherical_harmonic(self):
-        return math.SphericalHarmonic(l = self.l, m = self.m)
+        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
 
     def __str__(self):
         return self.ket
 
     def __repr__(self):
-        return '{}(T={} eV, k={} 1/nm, l={}, m={})'.format(self.__class__.__name__, un.uround(self.energy, un.eV, 3), un.uround(self.k, 1 / un.nm, 3), self.l, self.m)
+        return '{}(T={} eV, k={} 1/nm, l={}, m={})'.format(self.__class__.__name__, uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
 
     @property
     def ket(self):
-        return '|{} eV,{} 1/nm, {}, {}>'.format(un.uround(self.energy, un.eV, 3), un.uround(self.k, 1 / un.nm, 3), self.l, self.m)
+        return '|{} eV,{} 1/nm, {}, {}>'.format(uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
 
     @property
     def bra(self):
-        return '<{} eV,{} 1/nm, {}, {}|'.format(un.uround(self.energy, un.eV, 3), un.uround(self.k, 1 / un.nm, 3), self.l, self.m)
+        return '<{} eV,{} 1/nm, {}, {}|'.format(uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
 
     @property
     def tex_str(self):
         """Return a LaTeX-formatted string for the BoundState."""
-        return r'\phi_{{{},{},{}}}'.format(un.uround(self.energy, un.eV, 3), self.l, self.m)
+        return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.energy == other.energy and self.l == other.l and self.m == other.m
@@ -282,22 +300,44 @@ class FreeState:
         raise NotImplementedError
 
 
-class ElectricFieldSpecification(core.Specification):
-    """A base Specification for a simulation with an electric field."""
+class QuantumMesh:
+    def __init__(self, simulation):
+        self.sim = simulation
+        self.spec = simulation.spec
+
+    def __str__(self):
+        return '{} for {}'.format(self.__class__.__name__, str(self.sim))
+
+    def __repr__(self):
+        return '{}(parameters = {}, simulation = {})'.format(self.__class__.__name__, repr(self.spec), repr(self.sim))
+
+    @property
+    def norm(self):
+        raise NotImplementedError
+
+    def __abs__(self):
+        return self.norm
+
+    def copy(self):
+        return deepcopy(self)
+
+
+class ElectricFieldSpecification(cp.core.Specification):
+    """A base Specification for a Simulation with an electric field."""
 
     def __init__(self, name,
                  mesh_type = None, animator_type = None,
-                 test_mass = un.electron_mass_reduced, test_charge = un.electron_charge,
+                 test_mass = electron_mass_reduced, test_charge = electron_charge,
                  initial_state = BoundState(1, 0),
                  test_states = tuple(BoundState(n, l) for n in range(5) for l in range(n)),
-                 internal_potential = potentials.NuclearPotential(charge = un.proton_charge) + potentials.RadialImaginaryPotential(center = 20 * un.bohr_radius, width = 1 * un.bohr_radius, amplitude = 1 * un.atomic_electric_potential),
+                 internal_potential = potentials.NuclearPotential(charge = proton_charge) + potentials.RadialImaginaryPotential(center = 20 * bohr_radius, width = 1 * bohr_radius, amplitude = 1 * atomic_electric_potential),
                  electric_potential = None,
-                 time_initial = 0 * un.asec, time_final = 200 * un.asec, time_step = 1 * un.asec,
-                 extra_time = None, extra_time_step = 1 * un.asec,
+                 time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
+                 extra_time = None, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
                  animated = False, animation_time = 30, animation_fps = 30, animation_plot_limit = None, animation_normalize = True, animation_log_g = False, animation_overlay_probability_current = False, animation_dir = None,
                  **kwargs):
-        super(ElectricFieldSpecification, self).__init__(name, **kwargs)
+        super(ElectricFieldSpecification, self).__init__(name, simulation_type = ElectricFieldSimulation, **kwargs)
 
         if mesh_type is None:
             raise ValueError('{} must have a mesh_type'.format(name))
@@ -360,13 +400,13 @@ class ElectricFieldSpecification(core.Specification):
 
         time_evolution = ['Time Evolution:',
                           '   Initial State: {}'.format(self.initial_state),
-                          '   Initial Time: {} as'.format(un.uround(self.time_initial, un.asec, 3)),
-                          '   Final Time: {} as'.format(un.uround(self.time_final, un.asec, 3)),
-                          '   Time Step: {} as'.format(un.uround(self.time_step, un.asec, 3))]
+                          '   Initial Time: {} as'.format(uround(self.time_initial, asec, 3)),
+                          '   Final Time: {} as'.format(uround(self.time_final, asec, 3)),
+                          '   Time Step: {} as'.format(uround(self.time_step, asec, 3))]
 
         if self.extra_time is not None:
-            time_evolution += ['   Extra Time: {} as'.format(un.uround(self.extra_time, un.asec, 3)),
-                               '   Extra Time Step: {} as'.format(un.uround(self.extra_time, un.asec, 3))]
+            time_evolution += ['   Extra Time: {} as'.format(uround(self.extra_time, asec, 3)),
+                               '   Extra Time Step: {} as'.format(uround(self.extra_time, asec, 3))]
 
         potentials = ['Potentials:']
         potentials += ['   ' + str(potential) for potential in self.internal_potential]
@@ -378,7 +418,7 @@ class ElectricFieldSpecification(core.Specification):
 
 class CylindricalSliceSpecification(ElectricFieldSpecification):
     def __init__(self, name,
-                 z_bound = 20 * un.bohr_radius, rho_bound = 20 * un.bohr_radius,
+                 z_bound = 20 * bohr_radius, rho_bound = 20 * bohr_radius,
                  z_points = 2 ** 9, rho_points = 2 ** 8,
                  **kwargs):
         super(CylindricalSliceSpecification, self).__init__(name, mesh_type = CylindricalSliceFiniteDifferenceMesh, animator_type = animators.CylindricalSliceAnimator, **kwargs)
@@ -390,18 +430,18 @@ class CylindricalSliceSpecification(ElectricFieldSpecification):
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
-                '   Z Boundary: {} Bohr radii'.format(un.uround(self.z_bound, un.bohr_radius, 3)),
+                '   Z Boundary: {} Bohr radii'.format(uround(self.z_bound, bohr_radius, 3)),
                 '   Z Points: {}'.format(self.z_points),
-                '   Z Mesh Spacing: ~{} Bohr radii'.format(un.uround(2 * self.z_bound / self.z_points, un.bohr_radius, 3)),
-                '   Rho Boundary: {} Bohr radii'.format(un.uround(self.rho_bound, un.bohr_radius, 3)),
+                '   Z Mesh Spacing: ~{} Bohr radii'.format(uround(2 * self.z_bound / self.z_points, bohr_radius, 3)),
+                '   Rho Boundary: {} Bohr radii'.format(uround(self.rho_bound, bohr_radius, 3)),
                 '   Rho Points: {}'.format(self.rho_points),
-                '   Rho Mesh Spacing: ~{} Bohr radii'.format(un.uround(self.rho_bound / self.rho_points, un.bohr_radius, 3)),
+                '   Rho Mesh Spacing: ~{} Bohr radii'.format(uround(self.rho_bound / self.rho_points, bohr_radius, 3)),
                 '   Total Mesh Points: {}'.format(int(self.z_points * self.rho_points))]
 
         return '\n'.join((super(CylindricalSliceSpecification, self).info(), *mesh))
 
 
-class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
+class CylindricalSliceFiniteDifferenceMesh(QuantumMesh):
     def __init__(self, simulation):
         super(CylindricalSliceFiniteDifferenceMesh, self).__init__(simulation)
 
@@ -427,7 +467,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
     @property
     def g_factor(self):
-        return np.sqrt(un.twopi * self.rho_mesh)
+        return np.sqrt(twopi * self.rho_mesh)
 
     @property
     def psi_mesh(self):
@@ -497,20 +537,20 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def norm(self):
         return np.abs(self.inner_product())
 
-    @utils.memoize()
+    @cp.utils.memoize()
     def g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
-    @utils.memoize(copy_output = True)
+    @cp.utils.memoize(copy_output = True)
     def get_kinetic_energy_matrix_operators(self):
         """Get the mesh kinetic energy operator matrices for z and rho."""
-        z_prefactor = -(un.hbar ** 2) / (2 * self.spec.test_mass * (self.delta_z ** 2))
-        rho_prefactor = -(un.hbar ** 2) / (2 * self.spec.test_mass * (self.delta_rho ** 2))
+        z_prefactor = -(hbar ** 2) / (2 * self.spec.test_mass * (self.delta_z ** 2))
+        rho_prefactor = -(hbar ** 2) / (2 * self.spec.test_mass * (self.delta_rho ** 2))
 
         z_diagonal = z_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         z_offdiagonal = z_prefactor * np.array([1 if (z_index + 1) % self.spec.z_points != 0 else 0 for z_index in range(self.mesh_points - 1)], dtype = np.complex128)
 
-        @utils.memoize()
+        @cp.utils.memoize()
         def c(j):
             return j / np.sqrt((j ** 2) - 0.25)
 
@@ -527,7 +567,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
         return z_kinetic, rho_kinetic
 
-    @utils.memoize(copy_output = True)
+    @cp.utils.memoize(copy_output = True)
     def get_internal_hamiltonian_matrix_operators(self):
         """Get the mesh internal Hamiltonian matrix operators for z and rho."""
         z_kinetic, rho_kinetic = self.get_kinetic_energy_matrix_operators()
@@ -573,11 +613,11 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def energy_expectation_value(self):
         return np.real(self.inner_product(mesh_b = self.hg_mesh()))
 
-    @utils.memoize(copy_output = True)
+    @cp.utils.memoize(copy_output = True)
     def get_probability_current_matrix_operators(self):
         """Get the mesh probability current operators for z and rho."""
-        z_prefactor = un.hbar / (4 * un.pi * self.spec.test_mass * self.delta_rho * self.delta_z)
-        rho_prefactor = un.hbar / (4 * un.pi * self.spec.test_mass * (self.delta_rho ** 2))
+        z_prefactor = hbar / (4 * pi * self.spec.test_mass * self.delta_rho * self.delta_z)
+        rho_prefactor = hbar / (4 * pi * self.spec.test_mass * (self.delta_rho ** 2))
 
         # construct the diagonals of the z probability current matrix operator
         z_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
@@ -589,7 +629,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
                 z_offdiagonal[z_index] = 1 / (j + 0.5)
         z_offdiagonal *= z_prefactor
 
-        @utils.memoize()
+        @cp.utils.memoize()
         def d(j):
             return 1 / np.sqrt((j ** 2) - 0.25)
 
@@ -633,7 +673,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         :param time_step:
         :return:
         """
-        tau = time_step / (2 * un.hbar)
+        tau = time_step / (2 * hbar)
 
         if self.spec.electric_potential is not None:
             electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
@@ -675,7 +715,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         g_vector = cy.tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'rho')
 
-    @utils.memoize()
+    @cp.utils.memoize()
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
         if distance_from_center is None:
@@ -688,8 +728,8 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         return mesh_slicer
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None):
-        color_mesh = axis.pcolormesh(self.z_mesh[self.get_mesh_slicer(plot_limit)] / un.bohr_radius,
-                                     self.rho_mesh[self.get_mesh_slicer(plot_limit)] / un.bohr_radius,
+        color_mesh = axis.pcolormesh(self.z_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
+                                     self.rho_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                      mesh[self.get_mesh_slicer(plot_limit)],
                                      shading = 'gouraud', cmap = plt.cm.viridis)
 
@@ -707,8 +747,8 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         if normalization == 0 or normalization is np.NaN:
             normalization = 1
 
-        quiv = axis.quiver(self.z_mesh[self.get_mesh_slicer(plot_limit)][skip] / un.bohr_radius,
-                           self.rho_mesh[self.get_mesh_slicer(plot_limit)][skip] / un.bohr_radius,
+        quiv = axis.quiver(self.z_mesh[self.get_mesh_slicer(plot_limit)][skip] / bohr_radius,
+                           self.rho_mesh[self.get_mesh_slicer(plot_limit)][skip] / bohr_radius,
                            current_mesh_z[self.get_mesh_slicer(plot_limit)][skip] / normalization,
                            current_mesh_rho[self.get_mesh_slicer(plot_limit)][skip] / normalization,
                            pivot = 'middle', units = 'width', scale = 10, scale_units = 'width', width = 0.0015, alpha = 0.5)
@@ -749,7 +789,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         y_ticks[-1].label1.set_visible(False)
         y_ticks[-1].label2.set_visible(False)
 
-        utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
+        cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
 
         plt.close()
 
@@ -810,7 +850,7 @@ class CylindricalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
 class SphericalSliceSpecification(ElectricFieldSpecification):
     def __init__(self, name,
-                 r_bound = 20 * un.bohr_radius,
+                 r_bound = 20 * bohr_radius,
                  r_points = 2 ** 10, theta_points = 2 ** 10,
                  **kwargs):
         super(SphericalSliceSpecification, self).__init__(name, mesh_type = SphericalSliceFiniteDifferenceMesh, animator_type = animators.SphericalSliceAnimator, **kwargs)
@@ -822,23 +862,23 @@ class SphericalSliceSpecification(ElectricFieldSpecification):
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
-                '   R Boundary: {} Bohr radii'.format(un.uround(self.r_bound, un.bohr_radius, 3)),
+                '   R Boundary: {} Bohr radii'.format(uround(self.r_bound, bohr_radius, 3)),
                 '   R Points: {}'.format(self.r_points),
-                '   R Mesh Spacing: ~{} Bohr radii'.format(un.uround(self.r_bound / self.r_points, un.bohr_radius, 3)),
+                '   R Mesh Spacing: ~{} Bohr radii'.format(uround(self.r_bound / self.r_points, bohr_radius, 3)),
                 '   Theta Points: {}'.format(self.theta_points),
-                '   Theta Mesh Spacing: ~{} rad | ~{} deg'.format(un.uround(un.pi / self.theta_points, un.rad, 3), un.uround(un.uround(180 / self.theta_points, 3))),
-                '   Maximum Adjacent-Point Spacing: ~{} Bohr radii'.format(un.uround(un.pi * self.r_bound / self.theta_points, un.bohr_radius, 3)),
+                '   Theta Mesh Spacing: ~{} rad | ~{} deg'.format(uround(pi / self.theta_points, rad, 3), uround(uround(180 / self.theta_points, 3))),
+                '   Maximum Adjacent-Point Spacing: ~{} Bohr radii'.format(uround(pi * self.r_bound / self.theta_points, bohr_radius, 3)),
                 '   Total Mesh Points: {}'.format(int(self.r_points * self.theta_points))]
 
         return '\n'.join((super(SphericalSliceSpecification, self).info(), *mesh))
 
 
-class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
+class SphericalSliceFiniteDifferenceMesh(QuantumMesh):
     def __init__(self, simulation):
         super(SphericalSliceFiniteDifferenceMesh, self).__init__(simulation)
 
         self.r = np.linspace(0, self.spec.r_bound, self.spec.r_points)
-        self.theta = np.delete(np.linspace(0, un.pi, self.spec.theta_points + 1), 0)
+        self.theta = np.delete(np.linspace(0, pi, self.spec.theta_points + 1), 0)
 
         self.delta_r = self.r[1] - self.r[0]
         self.delta_theta = self.theta[1] - self.theta[0]
@@ -858,7 +898,7 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
     @property
     def g_factor(self):
-        return np.sqrt(un.twopi * np.sin(self.theta_mesh)) * self.r_mesh
+        return np.sqrt(twopi * np.sin(self.theta_mesh)) * self.r_mesh
 
     @property
     def psi_mesh(self):
@@ -915,31 +955,31 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def norm(self):
         return np.abs(self.inner_product())
 
-    @utils.memoize()
+    @cp.utils.memoize()
     def g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
-    @utils.memoize(copy_output = True)
+    @cp.utils.memoize(copy_output = True)
     def get_kinetic_energy_matrix_operators(self):
-        r_prefactor = -(un.hbar ** 2) / (2 * un.electron_mass_reduced * (self.delta_r ** 2))
-        theta_prefactor = -(un.hbar ** 2) / (2 * un.electron_mass_reduced * ((self.delta_r * self.delta_theta) ** 2))
+        r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
+        theta_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * ((self.delta_r * self.delta_theta) ** 2))
 
         r_diagonal = r_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         r_offdiagonal = r_prefactor * np.array([1 if (z_index + 1) % self.spec.r_points != 0 else 0 for z_index in range(self.mesh_points - 1)], dtype = np.complex128)
 
-        @utils.memoize()
+        @cp.utils.memoize()
         def theta_j_prefactor(x):
             return 1 / (x + 0.5) ** 2
 
-        @utils.memoize()
+        @cp.utils.memoize()
         def sink(x):
             return np.sin(x * self.delta_theta)
 
-        @utils.memoize()
+        @cp.utils.memoize()
         def sqrt_sink_ratio(x_num, x_den):
             return np.sqrt(sink(x_num) / sink(x_den))
 
-        @utils.memoize()
+        @cp.utils.memoize()
         def cotank(x):
             return 1 / np.tan(x * self.delta_theta)
 
@@ -966,7 +1006,7 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
         return r_kinetic, theta_kinetic
 
-    @utils.memoize(copy_output = True)
+    @cp.utils.memoize(copy_output = True)
     def get_internal_hamiltonian_matrix_operators(self):
         r_kinetic, theta_kinetic = self.get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
@@ -1011,7 +1051,7 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def energy_expectation_value(self):
         return np.real(self.inner_product(mesh_b = self.hg_mesh()))
 
-    @utils.memoize()
+    @cp.utils.memoize()
     def get_probability_current_matrix_operators(self):
         raise NotImplementedError
 
@@ -1022,7 +1062,7 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         return sp.interp.RectBivariateSpline(self.r, self.theta, mesh)
 
     def evolve(self, delta_t):
-        tau = delta_t / (2 * un.hbar)
+        tau = delta_t / (2 * hbar)
 
         if self.spec.electric_potential is not None:
             electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
@@ -1066,7 +1106,7 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         g_vector = cy.tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'theta')
 
-    @utils.memoize()
+    @cp.utils.memoize()
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
         if distance_from_center is None:
@@ -1079,11 +1119,11 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None):
         color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer(plot_limit)],
-                                     self.r_mesh[self.get_mesh_slicer(plot_limit)] / un.bohr_radius,
+                                     self.r_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                      mesh[self.get_mesh_slicer(plot_limit)],
                                      shading = 'gouraud', cmap = plt.cm.viridis)
-        color_mesh_mirror = axis.pcolormesh(-self.theta_mesh[self.get_mesh_slicer(plot_limit)] + (2 * un.pi),
-                                            self.r_mesh[self.get_mesh_slicer(plot_limit)] / un.bohr_radius,
+        color_mesh_mirror = axis.pcolormesh(-self.theta_mesh[self.get_mesh_slicer(plot_limit)] + (2 * pi),
+                                            self.r_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                             mesh[self.get_mesh_slicer(plot_limit)],
                                             shading = 'gouraud', cmap = plt.cm.viridis)  # another colormesh, mirroring the first mesh onto pi to 2pi
 
@@ -1092,7 +1132,10 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
     def attach_probability_current_to_axis(self, axis, plot_limit = None):
         raise NotImplementedError
 
-    def plot_mesh(self, mesh, show = False, save = False, name = '', target_dir = None, img_format = 'png', title = None, overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None, **kwargs):
+    def plot_mesh(self, mesh,
+                  name = '', target_dir = None, img_format = 'png', title = None,
+                  overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
+                  **kwargs):
         plt.close()  # close any old figures
 
         fig = plt.figure(figsize = (7, 7), dpi = 600)
@@ -1113,7 +1156,7 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
         cbar.ax.tick_params(labelsize = 10)
 
-        axis.set_rmax((self.r_max - (self.delta_r / 2)) / un.bohr_radius)
+        axis.set_rmax((self.r_max - (self.delta_r / 2)) / bohr_radius)
 
         axis.grid(True, color = 'pink', linestyle = ':')  # change grid color to make it show up against the colormesh
         axis.set_thetagrids(np.arange(0, 360, 30), frac = 1.05)
@@ -1126,10 +1169,7 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
         last_r_label = axis.get_yticklabels()[-1]
         last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
 
-        if save:
-            utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
-        if show:
-            plt.show()
+        cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
 
         plt.close()
 
@@ -1190,7 +1230,7 @@ class SphericalSliceFiniteDifferenceMesh(qm.QuantumMesh):
 
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
     def __init__(self, name,
-                 r_bound = 20 * un.bohr_radius,
+                 r_bound = 20 * bohr_radius,
                  r_points = 2 ** 9,
                  spherical_harmonics_max_l = 20,
                  **kwargs):
@@ -1202,16 +1242,16 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
-                '   R Boundary: {} Bohr radii'.format(un.uround(self.r_bound, un.bohr_radius, 3)),
+                '   R Boundary: {} Bohr radii'.format(uround(self.r_bound, bohr_radius, 3)),
                 '   R Points: {}'.format(self.r_points),
-                '   R Mesh Spacing: ~{} Bohr radii'.format(un.uround(self.r_bound / self.r_points, un.bohr_radius, 3)),
+                '   R Mesh Spacing: ~{} Bohr radii'.format(uround(self.r_bound / self.r_points, bohr_radius, 3)),
                 '   Spherical Harmonics: {}'.format(self.spherical_harmonics_max_l + 1),
                 '   Total Mesh Points: {}'.format(self.r_points * (self.spherical_harmonics_max_l + 1))]
 
         return '\n'.join((super(SphericalHarmonicSpecification, self).info(), *mesh))
 
 
-class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
+class SphericalHarmonicFiniteDifferenceMesh(QuantumMesh):
     def __init__(self, simulation):
         super(SphericalHarmonicFiniteDifferenceMesh, self).__init__(simulation)
 
@@ -1221,7 +1261,7 @@ class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
         self.r_max = np.max(self.r)
 
         self.l = np.array(range(0, self.spec.spherical_harmonics_max_l + 1))
-        self.spherical_harmonics = tuple(math.SphericalHarmonic(l, 0) for l in range(self.spec.spherical_harmonics_max_l + 1))
+        self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.spec.spherical_harmonics_max_l + 1))
         self.l_points = len(self.l)
         self.spec.l_points = self.l_points
 
@@ -1288,15 +1328,15 @@ class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
 
         return g
 
-    @utils.memoize(copy_output = True)
+    @cp.utils.memoize(copy_output = True)
     def get_kinetic_energy_matrix_operators(self):
-        r_prefactor = -(un.hbar ** 2) / (2 * un.electron_mass_reduced * (self.delta_r ** 2))
+        r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
         l_prefactor = 1
 
         r_diagonal = r_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         r_offdiagonal = r_prefactor * np.ones(self.mesh_points - 1, dtype = np.complex128)
 
-        @utils.memoize()
+        @cp.utils.memoize()
         def a(l):
             return l * np.sqrt(1 / (4 * (l ** 2) - 1))
 
@@ -1308,7 +1348,7 @@ class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
                 l_offdiagonal[l_index] = a(l)
         l_offdiagonal *= l_prefactor
 
-        effective_potential_mesh = ((un.hbar ** 2) / (2 * un.electron_mass_reduced)) * self.l_mesh * (self.l_mesh + 1) / (self.r_mesh ** 2)
+        effective_potential_mesh = ((hbar ** 2) / (2 * electron_mass_reduced)) * self.l_mesh * (self.l_mesh + 1) / (self.r_mesh ** 2)
         r_diagonal += self.flatten_mesh(effective_potential_mesh, 'r')
 
         r_kinetic = sparse.diags([r_offdiagonal, r_diagonal, r_offdiagonal], offsets = (-1, 0, 1))
@@ -1316,7 +1356,7 @@ class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
 
         return r_kinetic, l_kinetic
 
-    @utils.memoize(copy_output = True)
+    @cp.utils.memoize(copy_output = True)
     def get_internal_hamiltonian_matrix_operators(self):
         r_kinetic, l_kinetic = self.get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
@@ -1361,7 +1401,7 @@ class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
     def energy_expectation_value(self):
         return np.real(self.inner_product(mesh_b = self.hg_mesh()))
 
-    @utils.memoize()
+    @cp.utils.memoize()
     def get_probability_current_matrix_operators(self):
         raise NotImplementedError
 
@@ -1369,7 +1409,7 @@ class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
         raise NotImplementedError
 
     def evolve(self, delta_t):
-        tau = delta_t / (2 * un.hbar)
+        tau = delta_t / (2 * hbar)
 
         if self.spec.electric_potential is not None:
             electric_field_amplitude = self.spec.electric_potential.get_amplitude(self.sim.time) * self.flatten_mesh(self.r_mesh, 'l')
@@ -1409,7 +1449,7 @@ class SphericalHarmonicFiniteDifferenceMesh(qm.QuantumMesh):
         self.g_mesh = self.wrap_vector(g_vector, 'l')
 
 
-class ElectricFieldSimulation(core.Simulation):
+class ElectricFieldSimulation(cp.core.Simulation):
     def __init__(self, spec):
         super(ElectricFieldSimulation, self).__init__(spec)
 
@@ -1478,7 +1518,8 @@ class ElectricFieldSimulation(core.Simulation):
             self.evictions += 1
 
         while True:
-            logger.debug('{} {} working on time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.time_index, self.time_steps - 1, np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
+            logger.debug('{} {} working on time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.time_index, self.time_steps - 1,
+                                                                            np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
 
             if not only_end_data or self.time_index == self.time_steps - 1:  # if last time step or taking all data
                 self.store_data(self.time_index)
@@ -1527,7 +1568,7 @@ class ElectricFieldSimulation(core.Simulation):
     @staticmethod
     def load(file_path, initialize_mesh = False):
         """Return a simulation loaded from the file_path. kwargs are for Beet.load."""
-        sim = core.Simulation.load(file_path)
+        sim = cp.core.Simulation.load(file_path)
 
         if initialize_mesh:
             sim.initialize_mesh()
@@ -1544,24 +1585,26 @@ class ElectricFieldSimulation(core.Simulation):
         ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
 
         if self.spec.electric_potential is not None:
-            ax_field.plot(self.times / un.asec, self.electric_field_amplitude_vs_time / un.atomic_electric_field, color = 'black', linewidth = 2)
+            ax_field.plot(self.times / asec, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
 
-        ax_overlaps.plot(self.times / un.asec, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3, linestyle = '--')
+        ax_overlaps.plot(self.times / asec, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3, linestyle = '--')
 
         if grayscale:  # stackplot with two lines in grayscale (initial and non-initial)
             initial_overlap = [self.state_overlaps_vs_time[self.spec.initial_state]]
             non_initial_overlaps = [self.state_overlaps_vs_time[state] for state in self.spec.test_states if state != self.spec.initial_state]
             total_non_initial_overlaps = functools.reduce(np.add, non_initial_overlaps)
             overlaps = [initial_overlap, total_non_initial_overlaps]
-            ax_overlaps.stackplot(self.times / un.asec, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$', r'$\left| \left\langle \psi|\psi_{n\leq5} \right\rangle \right|^2$'], colors = ['.3', '.5'])
+            ax_overlaps.stackplot(self.times / asec, *overlaps, alpha = 1,
+                                  labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$', r'$\left| \left\langle \psi|\psi_{n\leq5} \right\rangle \right|^2$'],
+                                  colors = ['.3', '.5'])
         else:  # stackplot with all states broken out in full color
             overlaps = [self.state_overlaps_vs_time[state] for state in self.spec.test_states]
             num_colors = len(overlaps)
             ax_overlaps.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
-            ax_overlaps.stackplot(self.times / un.asec, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states])
+            ax_overlaps.stackplot(self.times / asec, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states])
 
         ax_overlaps.set_ylim(0.0, 1.0)
-        ax_overlaps.set_xlim(self.spec.time_initial / un.asec, self.spec.time_final / un.asec)
+        ax_overlaps.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
 
         ax_overlaps.grid()
         ax_field.grid()
@@ -1599,7 +1642,7 @@ class ElectricFieldSimulation(core.Simulation):
         postfix = ''
         if grayscale:
             postfix += '_GS'
-        utils.save_current_figure(name = self.spec.file_name + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
+        cp.utils.save_current_figure(name = self.spec.file_name + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
 
         plt.close()
 
