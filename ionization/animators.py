@@ -1,15 +1,14 @@
+import functools
 import logging
 import os
-import functools
 import subprocess
 
 import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import numpy as np
 
-from compy import utils
-import compy.units as un
+import compy as cp
+from compy.units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -45,7 +44,7 @@ class CylindricalSliceAnimator:
 
             self.filename = os.path.join(target_dir, '{}{}.mp4'.format(self.spec.name, postfix))
 
-        utils.ensure_dir_exists(self.filename)
+        cp.utils.ensure_dir_exists(self.filename)
 
         try:
             os.remove(self.filename)
@@ -71,7 +70,7 @@ class CylindricalSliceAnimator:
         self.ax_time.set_xlabel('Time (as)', fontsize = 18)
         self.ax_time.set_ylabel('Ionization Metric', fontsize = 18)
 
-        self.ax_time.set_xlim(self.sim.times[0] / un.asec, self.sim.times[-1] / un.asec)
+        self.ax_time.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
         self.ax_time.set_ylim(0, 1)
 
         self.ax_time.tick_params(labelright = True)
@@ -90,20 +89,20 @@ class CylindricalSliceAnimator:
 
         if self.spec.electric_potential is not None:
             self.pulse_max = np.max(self.spec.electric_potential.get_amplitude(self.sim.times))
-            self.electric_field_line, = self.ax_time.plot(self.sim.times / un.asec, np.abs(self.sim.electric_field_amplitude_vs_time / self.pulse_max),
+            self.electric_field_line, = self.ax_time.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time / self.pulse_max),
                                                           label = r'Normalized $|E|$',
                                                           color = 'red', linewidth = 2)
 
-        self.norm_line, = self.ax_time.plot(self.sim.times / un.asec, self.sim.norm_vs_time,
+        self.norm_line, = self.ax_time.plot(self.sim.times / asec, self.sim.norm_vs_time,
                                             label = r'$\left\langle \psi|\psi \right\rangle$',
                                             color = 'black', linestyle = '--', linewidth = 3)
 
-        self.overlaps_stackplot = self.ax_time.stackplot(self.sim.times / un.asec, *self.compute_stackplot_overlaps(),
+        self.overlaps_stackplot = self.ax_time.stackplot(self.sim.times / asec, *self.compute_stackplot_overlaps(),
                                                          labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$',
                                                                    r'$\left| \left\langle \psi|\psi_{n\leq5} \right\rangle \right|^2$'],
                                                          colors = ['.3', '.5'])
 
-        self.time_line, = self.ax_time.plot([self.sim.times[self.sim.time_index] / un.asec, self.sim.times[self.sim.time_index] / un.asec], [0, 1],
+        self.time_line, = self.ax_time.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
                                             linestyle = '-.', color = 'gray')
 
         self.ax_mesh.axis('tight')
@@ -133,9 +132,9 @@ class CylindricalSliceAnimator:
             pass
 
         self.norm_line.set_ydata(self.sim.norm_vs_time)
-        self.overlaps_stackplot = self.ax_time.stackplot(self.sim.times / un.asec, *self.compute_stackplot_overlaps(),
+        self.overlaps_stackplot = self.ax_time.stackplot(self.sim.times / asec, *self.compute_stackplot_overlaps(),
                                                          labels = ['Initial State Overlap', r'Overlap with $n \leq 5$'], colors = ['.3', '.5'])
-        self.time_line.set_xdata([self.sim.times[self.sim.time_index] / un.asec, self.sim.times[self.sim.time_index] / un.asec])
+        self.time_line.set_xdata([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec])
 
     def initialize(self):
         self.initialize_figure()
@@ -186,7 +185,7 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         self.ax_time.set_xlabel('Time (as)', fontsize = 18)
         self.ax_time.set_ylabel('Ionization Metric', fontsize = 18)
 
-        self.ax_time.set_xlim(self.sim.times[0] / un.asec, self.sim.times[-1] / un.asec)
+        self.ax_time.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
         self.ax_time.set_ylim(0, 1)
 
         self.ax_mesh.tick_params(axis = 'both', which = 'major', labelsize = 12)  # increase size of tick labels
@@ -210,16 +209,16 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
 
         if self.spec.electric_potential is not None:
             self.pulse_max = np.max(self.spec.electric_potential.get_amplitude(self.sim.times))
-            self.electric_field_line, = self.ax_time.plot(self.sim.times / un.asec, np.abs(self.sim.electric_field_amplitude_vs_time / self.pulse_max),
+            self.electric_field_line, = self.ax_time.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time / self.pulse_max),
                                                           label = r'Normalized $|E|$ Field', color = 'red', linewidth = 2)
 
-        self.norm_line, = self.ax_time.plot(self.sim.times / un.asec, self.sim.norm_vs_time,
+        self.norm_line, = self.ax_time.plot(self.sim.times / asec, self.sim.norm_vs_time,
                                             label = 'Wavefunction Norm', color = 'black', linestyle = '--', linewidth = 3)
 
-        self.overlaps_stackplot = self.ax_time.stackplot(self.sim.times / un.asec, *self.compute_stackplot_overlaps(),
+        self.overlaps_stackplot = self.ax_time.stackplot(self.sim.times / asec, *self.compute_stackplot_overlaps(),
                                                          labels = ['Initial State Overlap', r'Overlap with $n \leq 5$'], colors = ['.3', '.5'])
 
-        self.time_line, = self.ax_time.plot([self.sim.times[self.sim.time_index] / un.asec, self.sim.times[self.sim.time_index] / un.asec], [0, 1],
+        self.time_line, = self.ax_time.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
                                             linestyle = '-.', color = 'gray')
 
         self.ax_mesh.axis('tight')

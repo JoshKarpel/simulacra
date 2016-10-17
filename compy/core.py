@@ -1,8 +1,7 @@
-import logging
 import datetime as dt
+import logging
 
 from compy import utils
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -14,7 +13,8 @@ class Specification(utils.Beet):
 
     It should be subclassed for each type of simulation and all additional information necessary to run that kind of simulation should be added via keyword arguments.
     """
-    def __init__(self, name, file_name = None, **kwargs):
+
+    def __init__(self, name, file_name = None, simulation_type = None, **kwargs):
         """
         Construct a Specification.
 
@@ -26,7 +26,8 @@ class Specification(utils.Beet):
         """
         super(Specification, self).__init__(name, file_name = file_name)
 
-        self.extra = kwargs
+        self.simulation_type = simulation_type
+        self.extra_args = kwargs
 
     def save(self, target_dir = None, file_extension = '.spec'):
         """
@@ -37,6 +38,9 @@ class Specification(utils.Beet):
         :return: None
         """
         super(Specification, self).save(target_dir, file_extension)
+
+    def to_simulation(self):
+        return self.simulation_type(self)
 
 
 class Simulation(utils.Beet):
@@ -80,7 +84,7 @@ class Simulation(utils.Beet):
             self.latest_load_time = dt.datetime.now()
 
         return super(Simulation, self).save(target_dir, file_extension)
-    
+
     @staticmethod
     def load(file_path):
         """
@@ -89,9 +93,11 @@ class Simulation(utils.Beet):
         :param file_path: the path to try to load a Simulation from
         :return: the loaded Simulation
         """
-        super(Simulation, self).load(file_path)
+        sim = super(Simulation, self).load(file_path)
 
         sim.latest_load_time = dt.datetime.now()
+
+        return sim
 
     def __str__(self):
         return '{}: {} ({}) [{}]  |  {}'.format(self.__class__.__name__, self.name, self.file_name, self.uid, self.spec)

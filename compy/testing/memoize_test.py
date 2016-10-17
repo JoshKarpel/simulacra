@@ -1,6 +1,6 @@
 import time
 
-from compy.utils import memoize, Timer
+from compy.utils import Timer, memoize
 
 
 def fib(n):

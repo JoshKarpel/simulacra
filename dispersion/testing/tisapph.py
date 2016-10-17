@@ -1,10 +1,9 @@
+import logging
 import os
 
 import compy as cp
+import dispersion as disp
 from compy.units import *
-import compy.optics.core as opt
-import compy.optics.dispersion as disp
-
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -18,15 +17,15 @@ if __name__ == '__main__':
         wavelength_min = c / f_max
         wavelength_max = c / f_min
         frequencies = np.linspace(f_min, f_max, 2 ** power)
-        optics = [opt.FS(length = 1 * cm)]
-        # optics = [opt.FS(length = 1 * cm), disp.ModulateBeam(90 * THz), disp.BandBlockBeam()]
-        optics = [opt.BK7(name = '8 lenses', length = 8 * 3 * mm),
-                  opt.FS(name = 'cavity', length = 2 * inch),
-                  opt.FS(name = 'dichroic mirror', length = np.sqrt(2) * 3.2 * mm),
-                  opt.FS(name = 'beamsplitter', length = np.sqrt(2) * 5 * mm)]
+        optics = [disp.FS(length = 1 * cm)]
+        # optics = [disp.FS(length = 1 * cm), disp.ModulateBeam(90 * THz), disp.BandBlockBeam()]
+        optics = [disp.BK7(name = '8 lenses', length = 8 * 3 * mm),
+                  disp.FS(name = 'cavity', length = 2 * inch),
+                  disp.FS(name = 'dichroic mirror', length = np.sqrt(2) * 3.2 * mm),
+                  disp.FS(name = 'beamsplitter', length = np.sqrt(2) * 5 * mm)]
 
-        opt.BK7().plot_index_vs_wavelength(wavelength_min, wavelength_max, target_dir = OUT_DIR)
-        opt.FS().plot_index_vs_wavelength(wavelength_min, wavelength_max, target_dir = OUT_DIR)
+        disp.BK7().plot_index_vs_wavelength(wavelength_min, wavelength_max, target_dir = OUT_DIR)
+        disp.FS().plot_index_vs_wavelength(wavelength_min, wavelength_max, target_dir = OUT_DIR)
 
         spec = disp.ContinuousAmplitudeSpectrumSpecification.from_power_spectrum_csv('TiSapph_{}THz_{}pts'.format(uround(f_max - f_min, THz, 0), power), frequencies, optics,
                                                                                      'tisapph_spectrum.txt', total_power = 150 * mW,

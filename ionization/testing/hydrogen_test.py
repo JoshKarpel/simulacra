@@ -1,11 +1,9 @@
-import os
-import sys
 import logging
+import os
 import random
+import sys
 
 import compy as cp
-from compy.quantum.core import IllegalQuantumState
-import compy.quantum.hydrogenic as hyd
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)

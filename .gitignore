@@ -89,7 +89,7 @@ ENV/
 .ropeproject
 
 .idea/
-.pyxbld/
 /compy/.pyxbld/
-/testing/hydrogenic/out/
-/testing/optics/out/
+/compy/testing/out
+/dispersion/testing/out
+/ionization/testing/out
