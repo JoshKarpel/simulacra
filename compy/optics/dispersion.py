@@ -1,20 +1,17 @@
+import collections
 import datetime as dt
 import logging
-import functools
 import os
-import collections
 
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.fft as nfft
-import scipy as sp
 import scipy.integrate as integ
 import scipy.optimize as optim
-import matplotlib
-import matplotlib.pyplot as plt
 
-from compy import core, math, utils
 import compy.optics.core as opt
 import compy.units as un
+from compy import core, math, utils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -126,16 +123,16 @@ class ContinuousAmplitudeSpectrumSpecification(core.Specification):
 
             utils.xy_plot(wavelengths, [10 * np.log10(power / un.mW), 10 * np.log10(fitted_power_for_plotting / un.mW)], legends = ['Measured', 'Fitted'], x_scale = 'nm',
                           title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power (dBm)',
-                          save = True, name = '{}__power_spectrum_fit_dbm'.format(name), **kwargs)
+                          name = '{}__power_spectrum_fit_dbm'.format(name), **kwargs)
 
             utils.xy_plot(wavelengths, [power, fitted_power_for_plotting], legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
                           title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
-                          save = True, name = '{}__power_spectrum_fit'.format(name), **kwargs)
+                          name = '{}__power_spectrum_fit'.format(name), **kwargs)
 
             utils.xy_plot(wavelengths, [power, fitted_power_for_plotting], legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
                           title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
                           log_y = True,
-                          save = True, name = '{}__power_spectrum_fit_log'.format(name), **kwargs)
+                          name = '{}__power_spectrum_fit_log'.format(name), **kwargs)
 
         return cls(name, frequencies, fitted_amplitude, materials)
 
@@ -338,7 +335,7 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
             target_dir = os.getcwd()
 
         if plot_intermediate_electric_fields:
-            self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_0of{}'.format(len(self.spec.optics))))
+            self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(target_dir = target_dir, name_postfix = '_0of{}'.format(len(self.spec.optics))))
 
         for ii, optic in enumerate(self.spec.optics):
             if isinstance(optic, opt.Material):
@@ -347,7 +344,7 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
                 self.amplitudes = optic.propagate(self.frequencies, self.amplitudes)
 
             if plot_intermediate_electric_fields:
-                self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_{}of{}'.format(ii + 1, len(self.spec.optics))))
+                self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(target_dir = target_dir, name_postfix = '_{}of{}'.format(ii + 1, len(self.spec.optics))))
             elif store_intermediate_fits:
                 self.pulse_fits_vs_materials.append(self.fit_pulse()[0])
 
