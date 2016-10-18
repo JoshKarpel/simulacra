@@ -1,3 +1,5 @@
+__all__ = ['core', 'math', 'utils', 'units']
+
 import logging
 import os
 
@@ -15,3 +17,5 @@ pyx_dir = os.path.join(os.path.dirname(__file__), '.pyxbld')
 pyximport.install(setup_args = {"include_dirs": np.get_include()},
                   build_dir = pyx_dir,
                   language_level = 3)
+
+from compy import math, utils

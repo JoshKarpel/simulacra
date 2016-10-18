@@ -1,8 +1,7 @@
 import os
 
-import compy.quantum.hydrogenic as hyd
-
 import compy as cp
+import ionization as ion
 from compy.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -17,17 +16,17 @@ if __name__ == '__main__':
 
         coords = {'t': t, 'r': r, 'distance_along_polarization': distance_along_polarization, 'test_charge': electron_charge}
 
-        coulomb = hyd.potentials.NuclearPotential()
+        coulomb = ion.potentials.NuclearPotential()
         logger.info(coulomb)
         logger.info(repr(coulomb))
         logger.info(coulomb(**coords) / eV)
 
-        sine = hyd.potentials.SineWave.from_frequency(frequency = 1 * Hz, amplitude = 1 * atomic_electric_field)
+        sine = ion.potentials.SineWave.from_frequency(frequency = 1 * Hz, amplitude = 1 * atomic_electric_field)
         logger.info(sine)
         logger.info(repr(sine))
         logger.info(sine(**coords) / eV)
 
-        combined = hyd.potentials.PotentialSum(coulomb, sine)
+        combined = ion.potentials.PotentialSum(coulomb, sine)
         logger.info(combined)
         logger.info(repr(combined))
         logger.info(combined(**coords) / eV)

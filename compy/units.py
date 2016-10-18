@@ -1,20 +1,20 @@
-"""Import this as get access to SI units and fundamental constants, with values from CODATA 2014."""
+"""Import this to get access to SI units and fundamental constants, with values from CODATA 2014."""
 
-import numpy as np
+import numpy as _np
 
 unit_names_to_values = {}
 unit_names_to_tex_strings = {}
 
 
 def uround(value, units = 1, digits = 3):
-    return np.around(value / units, digits)
+    return _np.around(value / units, digits)
 
 
 # dimensionless constants
 alpha = 7.2973525664e-3
-pi = np.pi
-twopi = 2 * np.pi
-e = np.e
+pi = _np.pi
+twopi = 2 * _np.pi
+e = _np.e
 
 unit_names_to_values.update({'alpha': alpha,
                              'pi': pi,

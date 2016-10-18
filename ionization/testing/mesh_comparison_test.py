@@ -1,8 +1,7 @@
 import os
 
-import compy.quantum.hydrogenic as hyd
-
 import compy as cp
+import ionization as ion
 from compy.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -19,24 +18,24 @@ if __name__ == '__main__':
         t_init = -200 * asec
         t_final = -t_init
 
-        # e_field = hyd.Rectangle(start_time = 20 * asec, end_time = 180 * asec, amplitude = 1 * atomic_electric_field)
-        e_field = hyd.SineWave(omega = twopi / (50 * asec), amplitude = 1 * atomic_electric_field, window_time = 100 * asec, window_width = 10 * asec)
+        # e_field = ion.Rectangle(start_time = 20 * asec, end_time = 180 * asec, amplitude = 1 * atomic_electric_field)
+        e_field = ion.SineWave(omega = twopi / (50 * asec), amplitude = 1 * atomic_electric_field, window_time = 100 * asec, window_width = 10 * asec)
         # e_field = None
 
         for n in range(n_max + 1):
             for l in range(n):
-                initial_state = hyd.BoundState(n, l, 0)
+                initial_state = ion.BoundState(n, l, 0)
                 OUT_DIR = os.path.join(BASE_OUT_DIR, '{}x{}'.format(points, angular_points), '{}_{}'.format(initial_state.n, initial_state.l))
 
                 ############## CYLINDRICAL SLICE ###################
 
-                cyl_spec = hyd.CylindricalSliceSpecification('{}_{}__cyl_slice'.format(n, l),
+                cyl_spec = ion.CylindricalSliceSpecification('{}_{}__cyl_slice'.format(n, l),
                                                              time_initial = t_init, time_final = t_final,
                                                              z_points = points, rho_points = points / 2,
                                                              z_bound = bound * bohr_radius, rho_bound = bound * bohr_radius,
                                                              initial_state = initial_state,
                                                              electric_potential = e_field)
-                cyl_sim = hyd.ElectricFieldSimulation(cyl_spec)
+                cyl_sim = ion.ElectricFieldSimulation(cyl_spec)
 
                 logger.info(cyl_sim.info())
                 cyl_sim.run_simulation()
@@ -47,12 +46,12 @@ if __name__ == '__main__':
 
                 ############## SPHERICAL SLICE ###################
 
-                sph_spec = hyd.SphericalSliceSpecification('{}_{}__sph_slice'.format(n, l), time_initial = t_init, time_final = t_final,
+                sph_spec = ion.SphericalSliceSpecification('{}_{}__sph_slice'.format(n, l), time_initial = t_init, time_final = t_final,
                                                            r_points = points, theta_points = angular_points,
                                                            r_bound = bound * bohr_radius,
                                                            initial_state = initial_state,
                                                            electric_potential = e_field)
-                sph_sim = hyd.ElectricFieldSimulation(sph_spec)
+                sph_sim = ion.ElectricFieldSimulation(sph_spec)
 
                 logger.info(sph_sim.info())
                 sph_sim.run_simulation()
@@ -63,13 +62,13 @@ if __name__ == '__main__':
 
                 ############# SPHERICAL HARMONICS ###################
 
-                sph_harm_spec = hyd.SphericalHarmonicSpecification('{}_{}__sph_harm'.format(n, l), time_initial = t_init, time_final = t_final,
+                sph_harm_spec = ion.SphericalHarmonicSpecification('{}_{}__sph_harm'.format(n, l), time_initial = t_init, time_final = t_final,
                                                                    r_points = points,
                                                                    r_bound = bound * bohr_radius,
                                                                    spherical_harmonics_max_l = angular_points - 1,
                                                                    initial_state = initial_state,
                                                                    electric_potential = e_field)
-                sph_harm_sim = hyd.ElectricFieldSimulation(sph_harm_spec)
+                sph_harm_sim = ion.ElectricFieldSimulation(sph_harm_spec)
 
                 logger.info(sph_harm_sim.info())
                 sph_harm_sim.run_simulation()

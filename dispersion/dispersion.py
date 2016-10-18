@@ -8,21 +8,21 @@ import numpy as np
 import numpy.fft as nfft
 import scipy.integrate as integ
 import scipy.optimize as optim
+from cycler import cycler
 
-import compy.units as un
-import dispersion.core as opt
-from compy import core, math, utils
+import compy as cp
+from compy.units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
 def photon_wavelength_from_frequency(frequency):
-    return un.c / frequency
+    return c / frequency
 
 
 def photon_frequency_from_wavelength(wavelength):
-    return un.c / wavelength
+    return c / wavelength
 
 
 def photon_wavenumber_from_wavelength(wavelength):
@@ -34,11 +34,11 @@ def photon_wavelength_from_wavenumber(wavenumber):
 
 
 def photon_angular_frequency_from_frequency(frequency):
-    return un.twopi * frequency
+    return twopi * frequency
 
 
 def photon_frequency_from_angular_frequency(angular_frequency):
-    return angular_frequency / un.twopi
+    return angular_frequency / twopi
 
 
 def photon_wavelength_from_angular_frequency(angular_frequency):
@@ -56,16 +56,16 @@ def calculate_gvd(frequencies, material):
     n = material.index(wavelengths)
 
     dw = angular_frequencies[1] - angular_frequencies[0]
-    dn_dw = math.centered_first_derivative(n, dw)
-    ddn_ddw = math.centered_first_derivative(dn_dw, dw)
+    dn_dw = cp.math.centered_first_derivative(n, dw)
+    ddn_ddw = cp.math.centered_first_derivative(dn_dw, dw)
 
-    gvd = ((2 / un.c) * dn_dw) + ((angular_frequencies / un.c) * ddn_ddw)
+    gvd = ((2 / c) * dn_dw) + ((angular_frequencies / c) * ddn_ddw)
 
     return gvd
 
 
 class Material:
-    def __init__(self, name = 'Material', length = 1 * un.cm):
+    def __init__(self, name = 'Material', length = 1 * cm):
         self.name = name
         self.length = length
 
@@ -80,7 +80,7 @@ class Material:
         fig.set_tight_layout(True)
         axis = plt.subplot(111)
 
-        plt.plot(wavelengths / un.nm, indices, label = self.name)
+        plt.plot(wavelengths / nm, indices, label = self.name)
 
         title = axis.set_title(r'$n$ vs. $\lambda$ for {}'.format(self.name), fontsize = 15)
         title.set_y(1.05)
@@ -88,7 +88,7 @@ class Material:
         axis.set_xlabel(r'Wavelength $\lambda$ (nm)', fontsize = 15)
         axis.set_ylabel(r'Index of Refraction $n$', fontsize = 15)
 
-        axis.set_xlim(wavelengths[0] / un.nm, wavelengths[-1] / un.nm)
+        axis.set_xlim(wavelengths[0] / nm, wavelengths[-1] / nm)
 
         y_range = np.max(indices) - np.min(indices)
         axis.set_ylim(np.min(indices) - 0.1 * y_range, np.max(indices) + 0.1 * y_range)
@@ -96,7 +96,7 @@ class Material:
         axis.grid(True, color = 'black', linestyle = ':')
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
-        utils.save_current_figure(name = self.name + '__index_vs_wavelength', **kwargs)
+        cp.utils.save_current_figure(name = self.name + '__index_vs_wavelength', **kwargs)
 
         plt.close()
 
@@ -112,9 +112,9 @@ class Material:
         fig.set_tight_layout(True)
         axis = plt.subplot(111)
 
-        y_scale = (un.fsec ** 2) / un.mm
+        y_scale = (fsec ** 2) / mm
 
-        plt.plot(wavelengths / un.nm, un.uround(gvd, y_scale, 10), label = self.name)
+        plt.plot(wavelengths / nm, uround(gvd, y_scale, 10), label = self.name)
 
         title = axis.set_title(r'GVD vs. $\lambda$ for {}'.format(self.name), fontsize = 15)
         title.set_y(1.05)
@@ -122,7 +122,7 @@ class Material:
         axis.set_xlabel(r'Wavelength $\lambda$ (nm)', fontsize = 15)
         axis.set_ylabel(r'GVD ($\mathrm{fs}^2/\mathrm{mm})$', fontsize = 15)
 
-        axis.set_xlim(np.min(wavelengths) / un.nm, np.max(wavelengths) / un.nm)
+        axis.set_xlim(np.min(wavelengths) / nm, np.max(wavelengths) / nm)
 
         y_range = np.max(gvd) - np.min(gvd)
         axis.set_ylim((np.min(gvd) - 0.1 * y_range) / y_scale, (np.max(gvd) + 0.1 * y_range) / y_scale)
@@ -130,19 +130,19 @@ class Material:
         axis.grid(True, color = 'black', linestyle = ':')
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
-        utils.save_current_figure(name = self.name + '__gvd_vs_wavelength', **kwargs)
+        cp.utils.save_current_figure(name = self.name + '__gvd_vs_wavelength', **kwargs)
 
         plt.close()
 
     def __str__(self):
-        return '{} cm of {}'.format(un.uround(self.length, un.cm, 2), self.name)
+        return '{} cm of {}'.format(uround(self.length, cm, 2), self.name)
 
     def __repr__(self):
-        return '{}(length = {} cm)'.format(self.__class__.__name__, un.uround(self.length, un.cm, 3))
+        return '{}(length = {} cm)'.format(self.__class__.__name__, uround(self.length, cm, 3))
 
 
 class ConstantIndex(Material):
-    def __init__(self, name = 'Vacuum', length = 1 * un.cm, index = 1):
+    def __init__(self, name = 'Vacuum', length = 1 * cm, index = 1):
         super(ConstantIndex, self).__init__(name = name, length = length)
 
         self._index = index
@@ -152,7 +152,7 @@ class ConstantIndex(Material):
 
 
 class SellmeierGlass(Material):
-    def __init__(self, name = 'Glass', length = 1 * un.cm, b = (0, 0, 0), c = (0, 0, 0)):
+    def __init__(self, name = 'Glass', length = 1 * cm, b = (0, 0, 0), c = (0, 0, 0)):
         super(SellmeierGlass, self).__init__(name = name, length = length)
 
         self.b = np.array(b)
@@ -165,20 +165,20 @@ class SellmeierGlass(Material):
 
 
 bk7_b = (1.03961212, 0.231792344, 1.01046945)
-bk7_c = (6.00069867e-3 * (un.um ** 2), 2.00179144e-2 * (un.um ** 2), 1.03560653e2 * (un.um ** 2))
+bk7_c = (6.00069867e-3 * (um ** 2), 2.00179144e-2 * (um ** 2), 1.03560653e2 * (um ** 2))
 
 
 class BK7(SellmeierGlass):
-    def __init__(self, name = 'BK7', length = 1 * un.cm):
+    def __init__(self, name = 'BK7', length = 1 * cm):
         super(BK7, self).__init__(name = name, length = length, b = bk7_b, c = bk7_c)
 
 
 fs_b = (0.696166300, 0.407942600, 0.897479400)
-fs_c = (4.67914826e-3 * (un.um ** 2), 1.35120631e-2 * (un.um ** 2), 97.9340025 * (un.um ** 2))
+fs_c = (4.67914826e-3 * (um ** 2), 1.35120631e-2 * (um ** 2), 97.9340025 * (um ** 2))
 
 
 class FS(SellmeierGlass):
-    def __init__(self, name = 'FS', length = 1 * un.cm):
+    def __init__(self, name = 'FS', length = 1 * cm):
         super(FS, self).__init__(name = name, length = length, b = fs_b, c = fs_c)
 
 
@@ -191,7 +191,7 @@ class BeamModifier:
 
 
 class BandBlockBeam(BeamModifier):
-    def __init__(self, wavelength_min = 700 * un.nm, wavelength_max = 900 * un.nm, reduction_factor = 1e-6):
+    def __init__(self, wavelength_min = 700 * nm, wavelength_max = 900 * nm, reduction_factor = 1e-6):
         super(BandBlockBeam, self).__init__(name = 'BandBlock')
 
         self.wavelength_min = wavelength_min
@@ -200,20 +200,20 @@ class BandBlockBeam(BeamModifier):
         self.reduction_factor = reduction_factor
 
     def __str__(self):
-        return '{} ({}-{} nm)'.format(self.name, un.uround(self.wavelength_min, un.nm, 3), un.uround(self.wavelength_max, un.nm, 3))
+        return '{} ({}-{} nm)'.format(self.name, uround(self.wavelength_min, nm, 3), uround(self.wavelength_max, nm, 3))
 
     def __repr__(self):
         return 'BandBlockBeam(wavelength_min = {}, wavelength_max = {}, r = {}'.format(self.wavelength_min, self.wavelength_max, self.reduction_factor)
 
     def propagate(self, frequencies, amplitudes):
         block_amplitudes = self.reduction_factor * amplitudes
-        wavelengths = opt.photon_wavelength_from_frequency(frequencies)
+        wavelengths = photon_wavelength_from_frequency(frequencies)
 
         return np.where(np.greater_equal(wavelengths, self.wavelength_min) * np.less_equal(wavelengths, self.wavelength_max), block_amplitudes, amplitudes)
 
 
 class ModulateBeam(BeamModifier):
-    def __init__(self, frequency_shift = 90 * un.THz, upshift_efficiency = 1e-6, downshift_efficiency = 1e-6):
+    def __init__(self, frequency_shift = 90 * THz, upshift_efficiency = 1e-4, downshift_efficiency = 1e-6):
         super(ModulateBeam, self).__init__(name = 'Modulator')
 
         self.frequency_shift = frequency_shift
@@ -221,7 +221,7 @@ class ModulateBeam(BeamModifier):
         self.upshift_efficiency = upshift_efficiency
 
     def __str__(self):
-        return '{} ({} THz shift)'.format(self.name, un.uround(self.frequency_shift, un.THz, 3))
+        return '{} ({} THz shift)'.format(self.name, uround(self.frequency_shift, THz, 3))
 
     def __repr__(self):
         return 'ModulateBeam(frequency_shift = {}, upshift_efficiency = {}, downshift_efficiency = {}'.format(self.frequency_shift, self.upshift_efficiency, self.downshift_efficiency)
@@ -250,7 +250,7 @@ IFFTResult = collections.namedtuple('IFFTResult', ('time', 'field'))
 PulseWidthFitResult = collections.namedtuple('PulseWidthFitResult', ('center', 'sigma', 'prefactor', 'covariance_matrix'))
 
 
-class ContinuousAmplitudeSpectrumSpecification(core.Specification):
+class ContinuousAmplitudeSpectrumSpecification(cp.Specification):
     def __init__(self, name, frequencies, initial_amplitudes, optics, **kwargs):
         super(ContinuousAmplitudeSpectrumSpecification, self).__init__(name, **kwargs)
 
@@ -261,48 +261,48 @@ class ContinuousAmplitudeSpectrumSpecification(core.Specification):
 
     @classmethod
     def from_power_spectrum_csv(cls, name, frequencies, materials,
-                                path_to_csv, total_power = 100 * un.mW, x_units = 'nm', y_units = 'dBm',
-                                fit_guess_center = 800 * un.nm, fit_guess_fwhm = 40 * un.nm,
+                                path_to_csv, total_power = 100 * mW, x_units = 'nm', y_units = 'dBm',
+                                fit_guess_center = 800 * nm, fit_guess_fwhm = 40 * nm,
                                 plot_fit = True, **kwargs):
         wavelengths, power = np.loadtxt(path_to_csv, delimiter = ',', unpack = True, skiprows = 1)
 
-        wavelengths *= un.unit_names_to_values[x_units]
+        wavelengths *= unit_names_to_values[x_units]
 
         if y_units == 'dBm':
-            power = 1 * un.mW * (10 ** (power / 10))
+            power = 1 * mW * (10 ** (power / 10))
         else:
-            power *= un.unit_names_to_values[y_units]
+            power *= unit_names_to_values[y_units]
 
         spectrum_power = integ.simps(power, wavelengths)
         power_ratio = total_power / spectrum_power
         power *= power_ratio
 
         guesses = (fit_guess_center, fit_guess_fwhm, np.max(power))
-        popt, pcov = optim.curve_fit(math.gaussian, wavelengths, power, p0 = guesses)
+        popt, pcov = optim.curve_fit(cp.math.gaussian, wavelengths, power, p0 = guesses)
 
-        fitted_power = math.gaussian(opt.photon_wavelength_from_frequency(frequencies), *popt)
+        fitted_power = cp.math.gaussian(photon_wavelength_from_frequency(frequencies), *popt)
         fitted_amplitude = np.sqrt(fitted_power)  # TODO: correct units
 
         if plot_fit:
-            fitted_power_for_plotting = math.gaussian(wavelengths, *popt)
+            fitted_power_for_plotting = cp.math.gaussian(wavelengths, *popt)
 
-            utils.xy_plot(wavelengths, [10 * np.log10(power / un.mW), 10 * np.log10(fitted_power_for_plotting / un.mW)], legends = ['Measured', 'Fitted'], x_scale = 'nm',
-                          title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power (dBm)',
-                          save = True, name = '{}__power_spectrum_fit_dbm'.format(name), **kwargs)
+            cp.utils.xy_plot(wavelengths, 10 * np.log10(power / mW), 10 * np.log10(fitted_power_for_plotting / mW), legends = ['Measured', 'Fitted'], x_scale = 'nm',
+                             title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power (dBm)',
+                             name = '{}__power_spectrum_fit_dbm'.format(name), **kwargs)
 
-            utils.xy_plot(wavelengths, [power, fitted_power_for_plotting], legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
-                          title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
-                          save = True, name = '{}__power_spectrum_fit'.format(name), **kwargs)
+            cp.utils.xy_plot(wavelengths, power, fitted_power_for_plotting, legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
+                             title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
+                             name = '{}__power_spectrum_fit'.format(name), **kwargs)
 
-            utils.xy_plot(wavelengths, [power, fitted_power_for_plotting], legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
-                          title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
-                          log_y = True,
-                          save = True, name = '{}__power_spectrum_fit_log'.format(name), **kwargs)
+            cp.utils.xy_plot(wavelengths, power, fitted_power_for_plotting, legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
+                             title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
+                             log_y = True,
+                             name = '{}__power_spectrum_fit_log'.format(name), **kwargs)
 
         return cls(name, frequencies, fitted_amplitude, materials)
 
 
-class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
+class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
     def __init__(self, spec):
         super(ContinuousAmplitudeSpectrumSimulation, self).__init__(spec)
 
@@ -312,14 +312,15 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
 
         self.pulse_fits_vs_materials = []
         self.gdd = np.zeros(np.shape(self.frequencies))
+        self.gdd_per_element = [np.zeros(np.shape(self.frequencies)) for _ in self.spec.optics]
 
     @property
     def angular_frequencies(self):
-        return opt.photon_angular_frequency_from_frequency(self.frequencies)
+        return photon_angular_frequency_from_frequency(self.frequencies)
 
     @property
     def wavelengths(self):
-        return opt.photon_wavelength_from_frequency(self.frequencies)
+        return photon_wavelength_from_frequency(self.frequencies)
 
     @property
     def power(self):
@@ -334,7 +335,7 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         reference_frequency = self.frequencies[len(self.frequencies) // 2]
         shifted_spectrum = nfft.fftshift(spectrum)
 
-        field = nfft.fftshift(nfft.ifft(shifted_spectrum, norm = 'ortho')) * np.exp(1j * un.twopi * reference_frequency * t)  # restore reference frequency
+        field = nfft.fftshift(nfft.ifft(shifted_spectrum, norm = 'ortho')) * np.exp(1j * twopi * reference_frequency * t)  # restore reference frequency
 
         return IFFTResult(time = t, field = field)
 
@@ -351,9 +352,9 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         t_center = t[np.argmax(np.abs(field))]
         field_max = np.max(np.abs(field))
 
-        guesses = [t_center, 100 * un.fsec, field_max]
-        popt, pcov = optim.curve_fit(math.gaussian, t, np.real(np.abs(field)), p0 = guesses,
-                                     bounds = ([-10 * un.fsec + t_center, 5 * un.fsec, 0], [t_center + 10 * un.fsec, 10 * un.psec, np.inf]))
+        guesses = [t_center, 100 * fsec, field_max]
+        popt, pcov = optim.curve_fit(cp.math.gaussian, t, np.real(np.abs(field)), p0 = guesses,
+                                     bounds = ([-10 * fsec + t_center, 5 * fsec, 0], [t_center + 10 * fsec, 10 * psec, np.inf]))
 
         return PulseWidthFitResult(center = popt[0], sigma = popt[1], prefactor = popt[2], covariance_matrix = pcov), fft_result
 
@@ -361,34 +362,35 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         raise NotImplementedError
 
     def plot_power_vs_frequency(self, **kwargs):
-        utils.xy_plot(np.real(self.frequencies), [self.power], name = '{}__power_vs_frequency'.format(self.name), x_label = r'Frequency $f$', **kwargs)
+        cp.utils.xy_plot(np.real(self.frequencies), self.power,
+                         name = '{}__power_vs_frequency'.format(self.name), x_label = r'Frequency $f$', **kwargs)
 
     def plot_amplitude_vs_wavelength(self, **kwargs):
         raise NotImplementedError
 
     def plot_power_vs_wavelength(self, **kwargs):
-        utils.xy_plot(np.real(self.wavelengths), [self.power],
-                      name = '{}__power_vs_wavelength'.format(self.name), x_label = r'Wavelength $\lambda$', **kwargs)
+        cp.utils.xy_plot(np.real(self.wavelengths), self.power,
+                         name = '{}__power_vs_wavelength'.format(self.name), x_label = r'Wavelength $\lambda$', **kwargs)
 
-    def plot_electric_field_vs_time(self, x_scale = 'fs', y_scale = None, **kwargs):
+    def plot_electric_field_vs_time(self, x_scale = 'fs', y_scale = None, find_center = True, x_lower_lim = -200 * fsec, x_upper_lim = 200 * fsec, **kwargs):
         fit_result, fft_result = self.fit_pulse()
 
         t_center, sigma, prefactor, _ = fit_result
         t, field = fft_result
 
-        fitted_envelope = math.gaussian(t, t_center, sigma, prefactor)
+        fitted_envelope = cp.math.gaussian(t, t_center, sigma, prefactor)
 
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
         axis = plt.subplot(111)
 
         if x_scale is not None:
-            scaled_t = t / un.unit_names_to_values[x_scale]
+            scaled_t = t / unit_names_to_values[x_scale]
         else:
             scaled_t = t
 
         if y_scale is not None:
-            e_scale = un.unit_names_to_values[y_scale]
+            e_scale = unit_names_to_values[y_scale]
         else:
             e_scale = 1
 
@@ -396,32 +398,35 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         axis.plot(scaled_t, np.abs(field) / e_scale, label = r'$\left| E(t) \right|$', color = 'green')
         axis.plot(scaled_t, -np.abs(field) / e_scale, color = 'green')
         axis.plot(scaled_t, fitted_envelope / e_scale,
-                  label = r'$\tau = {}$ {}'.format(un.uround(math.gaussian_fwhm_from_sigma(fit_result.sigma), un.unit_names_to_values[x_scale], 2), un.unit_names_to_tex_strings[x_scale]),
+                  label = r'$\tau = {}$ {}'.format(uround(cp.math.gaussian_fwhm_from_sigma(fit_result.sigma), unit_names_to_values[x_scale], 2), unit_names_to_tex_strings[x_scale]),
                   linestyle = '--', color = 'orange')
 
         title = axis.set_title(r'Electric Field vs. Time', fontsize = 15)
         title.set_y(1.05)
 
         x_label = r'Time $t$'
-        x_label += r' ({})'.format(un.unit_names_to_tex_strings[x_scale])
+        x_label += r' ({})'.format(unit_names_to_tex_strings[x_scale])
         axis.set_xlabel(r'{}'.format(x_label), fontsize = 15)
 
         y_label = r'Electric Field $E(t)$'
         if y_scale is not None:
-            y_label += r' ({})'.format(un.unit_names_to_tex_strings[y_scale])
+            y_label += r' ({})'.format(unit_names_to_tex_strings[y_scale])
         axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
 
-        x_range = 4 * sigma
-        lower_limit_x = t_center - x_range
-        upper_limit_x = t_center + x_range
-        axis.set_xlim(lower_limit_x / un.unit_names_to_values[x_scale], upper_limit_x / un.unit_names_to_values[x_scale])
+        if find_center:
+            x_range = 4 * sigma
+            lower_limit_x = t_center - x_range
+            upper_limit_x = t_center + x_range
+            axis.set_xlim(lower_limit_x / unit_names_to_values[x_scale], upper_limit_x / unit_names_to_values[x_scale])
+        else:
+            axis.set_xlim(x_lower_lim / unit_names_to_values[x_scale], x_upper_lim / unit_names_to_values[x_scale])
 
         axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
         axis.legend(loc = 'best', fontsize = 12)
 
-        utils.save_current_figure(name = '{}__electric_field_vs_time'.format(self.name), **kwargs)
+        cp.utils.save_current_figure(name = '{}__electric_field_vs_time'.format(self.name), **kwargs)
 
         plt.close()
 
@@ -440,12 +445,12 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         axis = plt.subplot(111)
 
         if x_scale is not None:
-            scaled_t = t / un.unit_names_to_values[x_scale]
+            scaled_t = t / unit_names_to_values[x_scale]
         else:
             scaled_t = t
 
         if y_scale is not None:
-            e_scale = un.unit_names_to_values[y_scale]
+            e_scale = unit_names_to_values[y_scale]
         else:
             e_scale = 1
 
@@ -458,37 +463,59 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
         title.set_y(1.05)
 
         x_label = r'Time Delay $\tau$'
-        x_label += r' ({})'.format(un.unit_names_to_tex_strings[x_scale])
+        x_label += r' ({})'.format(unit_names_to_tex_strings[x_scale])
         axis.set_xlabel(r'{}'.format(x_label), fontsize = 15)
 
         y_label = r'Autocorrelation'
         if y_scale is not None:
-            y_label += r' ({})'.format(un.unit_names_to_tex_strings[y_scale])
+            y_label += r' ({})'.format(unit_names_to_tex_strings[y_scale])
         axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
 
         x_range = 5 * sigma
         lower_limit_x = t_center - x_range
         upper_limit_x = t_center + x_range
-        axis.set_xlim(lower_limit_x / un.unit_names_to_values[x_scale], upper_limit_x / un.unit_names_to_values[x_scale])
+        axis.set_xlim(lower_limit_x / unit_names_to_values[x_scale], upper_limit_x / unit_names_to_values[x_scale])
 
         axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
         axis.legend(loc = 'best', fontsize = 12)
 
-        utils.save_current_figure(name = '{}__autocorrelation'.format(self.name), **kwargs)
+        cp.utils.save_current_figure(name = '{}__autocorrelation'.format(self.name), **kwargs)
 
         plt.close()
 
     def plot_gdd_vs_wavelength(self, **kwargs):
-        utils.xy_plot(self.wavelengths, [un.uround(self.gdd, un.fsec ** 2, 10)], x_scale = 'nm',
-                      title = 'GDD',
-                      name = '{}__gdd_vs_wavelength'.format(self.name),
-                      **kwargs)
+        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+        fig.set_tight_layout(True)
+        axis = plt.subplot(111)
+
+        overlaps = [gdd / (fsec ** 2) for gdd in self.gdd_per_element]
+        num_colors = len(overlaps)
+        axis.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
+        axis.stackplot(self.wavelengths / nm, *overlaps, alpha = 1, labels = [optic.name for optic in self.spec.optics if not isinstance(optic, BeamModifier)])
+
+        axis.set_xlim(500, 1100)
+        axis.set_ylim(-1000, 10000)
+
+        axis.legend(loc = 'best', fontsize = 12)
+
+        cp.utils.save_current_figure(name = '{}__gdd_vs_wavelength'.format(self.name), **kwargs)
+
+        plt.close()
+
+
+        # cp.utils.xy_plot(self.wavelengths, uround(self.gdd, fsec ** 2, 10), x_scale = 'nm',
+        #               title = 'GDD',
+        #               name = '{}__gdd_vs_wavelength'.format(self.name),
+        #               **kwargs)
 
     def propagate(self, material):
-        self.amplitudes *= np.exp(1j * un.twopi * material.length * material.index(self.wavelengths) * self.frequencies / un.c)
-        self.gdd += opt.calculate_gvd(self.frequencies, material) * material.length
+        self.amplitudes *= np.exp(1j * twopi * material.length * material.index(self.wavelengths) * self.frequencies / c)
+
+        gdd = calculate_gvd(self.frequencies, material) * material.length
+        self.gdd += gdd
+        self.gdd_per_element.append(gdd)
 
     def run_simulation(self, store_intermediate_fits = False, plot_intermediate_electric_fields = False, target_dir = None):
         logger.info('Performing propagation on {} ({})'.format(self.name, self.file_name))
@@ -500,16 +527,16 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
             target_dir = os.getcwd()
 
         if plot_intermediate_electric_fields:
-            self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_0of{}'.format(len(self.spec.optics))))
+            self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(target_dir = target_dir, name_postfix = '_0of{}'.format(len(self.spec.optics))))
 
         for ii, optic in enumerate(self.spec.optics):
-            if isinstance(optic, opt.Material):
+            if isinstance(optic, Material):
                 self.propagate(optic)
             if isinstance(optic, BeamModifier):
                 self.amplitudes = optic.propagate(self.frequencies, self.amplitudes)
 
             if plot_intermediate_electric_fields:
-                self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(save = True, target_dir = target_dir, name_postfix = '_{}of{}'.format(ii + 1, len(self.spec.optics))))
+                self.pulse_fits_vs_materials.append(self.plot_electric_field_vs_time(target_dir = target_dir, name_postfix = '_{}of{}'.format(ii + 1, len(self.spec.optics))))
             elif store_intermediate_fits:
                 self.pulse_fits_vs_materials.append(self.fit_pulse()[0])
 
@@ -524,10 +551,10 @@ class ContinuousAmplitudeSpectrumSimulation(core.Simulation):
 
     def get_pulse_width_vs_materials(self):
         try:
-            out = ['Initial: FWHM = {} fs,  Peak Amplitude = {}'.format(un.uround(math.gaussian_fwhm_from_sigma(self.pulse_fits_vs_materials[0].sigma), un.fsec, 2), self.pulse_fits_vs_materials[0].prefactor)]
+            out = ['Initial: FWHM = {} fs,  Peak Amplitude = {}'.format(uround(cp.math.gaussian_fwhm_from_sigma(self.pulse_fits_vs_materials[0].sigma), fsec, 2), self.pulse_fits_vs_materials[0].prefactor)]
 
             for material, fit in zip(self.spec.optics, self.pulse_fits_vs_materials[1:]):
-                out.append('After {}: FWHM = {} fs, Peak Amplitude = {}'.format(material, un.uround(math.gaussian_fwhm_from_sigma(fit.sigma), un.fsec, 2), fit.prefactor))
+                out.append('After {}: FWHM = {} fs, Peak Amplitude = {}'.format(material, uround(cp.math.gaussian_fwhm_from_sigma(fit.sigma), fsec, 2), fit.prefactor))
 
             return '\n'.join(out)
         except IndexError:

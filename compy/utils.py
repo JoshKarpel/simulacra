@@ -12,7 +12,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 
-import compy.units as un
+from compy.units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -27,7 +27,17 @@ class Logger:
     def __init__(self, logger_name = 'compy',
                  stdout_logs = True, stdout_level = logging.DEBUG,
                  file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'a'):
-        """Construct a Logger context manager."""
+        """
+
+        :param logger_name:
+        :param stdout_logs:
+        :param stdout_level:
+        :param file_logs:
+        :param file_level:
+        :param file_name:
+        :param file_dir:
+        :param file_mode:
+        """
 
         self.logger_name = logger_name
 
@@ -50,6 +60,7 @@ class Logger:
         self.logger = None
 
     def __enter__(self):
+        """Enter special method. Gets a logger with the specified name, replace it's handlers with, and returns itself."""
         self.logger = logging.getLogger(self.logger_name)
 
         new_handlers = [logging.NullHandler()]
@@ -81,6 +92,7 @@ class Logger:
         return self.logger
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit special method. Restores the logger to it's pre-context state."""
         self.logger.level = self.old_level
         self.logger.handlers = self.old_handlers
 
@@ -213,10 +225,11 @@ def save_current_figure(name, name_postfix = '', target_dir = None, img_format =
     logger.info('Saved matplotlib figure {} to {}'.format(name, path))
 
 
-def xy_plot(x, y, legends = None,
+def xy_plot(x, *y, legends = None,
             x_scale = None, y_scale = None,
             title = None, x_label = None, y_label = None,
             x_center = 0, x_range = None,
+            y_center = None, y_range = None,
             log_x = False, log_y = False,
             **kwargs):
     fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
@@ -225,7 +238,7 @@ def xy_plot(x, y, legends = None,
 
     # generate scaled x data
     if x_scale is not None:
-        scaled_x = x / un.unit_names_to_values[x_scale]
+        scaled_x = x / unit_names_to_values[x_scale]
     else:
         scaled_x = x
 
@@ -233,7 +246,7 @@ def xy_plot(x, y, legends = None,
     scaled_y = []
     for yy in y:
         if y_scale is not None:
-            scaled_y.append(yy / un.unit_names_to_values[y_scale])
+            scaled_y.append(yy / unit_names_to_values[y_scale])
         else:
             scaled_y.append(yy)
 
@@ -252,14 +265,14 @@ def xy_plot(x, y, legends = None,
     # set x label
     if x_label is not None:
         if x_scale is not None:
-            x_label += r' ({})'.format(un.unit_names_to_tex_strings[x_scale])
+            x_label += r' ({})'.format(unit_names_to_tex_strings[x_scale])
 
         axis.set_xlabel(r'{}'.format(x_label), fontsize = 15)
 
     # set y label
     if y_label is not None:
         if y_scale is not None:
-            y_label += r' ({})'.format(un.unit_names_to_tex_strings[y_scale])
+            y_label += r' ({})'.format(unit_names_to_tex_strings[y_scale])
 
         axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
 
@@ -268,10 +281,15 @@ def xy_plot(x, y, legends = None,
         lower_limit_x = np.min(scaled_x)
         upper_limit_x = np.max(scaled_x)
     else:
-        lower_limit_x = (x_center - x_range) / un.unit_names_to_values[x_scale]
-        upper_limit_x = (x_center + x_range) / un.unit_names_to_values[x_scale]
+        lower_limit_x = (x_center - x_range) / unit_names_to_values[x_scale]
+        upper_limit_x = (x_center + x_range) / unit_names_to_values[x_scale]
 
     axis.set_xlim(lower_limit_x, upper_limit_x)
+
+    if y_center is not None and y_range is not None:
+        y_lower = (y_center - y_range)  # TODO: units
+        y_upper = (y_center + y_range)
+        axis.set_ylim(y_lower, y_upper)
 
     # set whether axes are log scale
     if log_x:

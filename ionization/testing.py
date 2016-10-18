@@ -2,16 +2,15 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-from compy.quantum.hydrogenic import simulations
 
-import compy.units as un
-from compy import utils
+import ionization as ion
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class StaticConvergenceTestingSimulation(simulations.ElectricFieldSimulation):
+class StaticConvergenceTestingSimulation(ion.ElectricFieldSimulation):
     @property
     def norm_error_vs_time(self):
         return np.abs(1 - self.norm_vs_time)

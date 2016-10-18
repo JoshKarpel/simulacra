@@ -1,10 +1,10 @@
-import math
 import logging
 
 import numpy as np
-import scipy.special as spc
 import scipy.sparse as sparse
+import scipy.special as spc
 
+import math
 from compy import utils
 from compy.units import *
 
