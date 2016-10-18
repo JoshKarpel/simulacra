@@ -340,7 +340,8 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
         return IFFTResult(time = t, field = field)
 
     def autocorrelation(self):
-        t, autocorrelation = self.fft(self.amplitudes ** 2)
+        t, autocorrelation = self.fft(np.abs(self.amplitudes) ** 2)
+        # autocorrelation = np.real(autocorrelation) ** 2  # square autocorrelation so that it's what's seen in the photodiode (power, not amplitude)
 
         return t, autocorrelation
 
@@ -455,9 +456,9 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
             e_scale = 1
 
         # axis.plot(scaled_t, autocorrelation / e_scale, label = r'$E(t)$', color = 'blue')
-        axis.plot(scaled_t, np.real(autocorrelation) / e_scale, label = r'$Real(AC)$', color = 'blue')
-        axis.plot(scaled_t, np.abs(autocorrelation) / e_scale, label = r'$\left| AC \right|$', color = 'green')
-        axis.plot(scaled_t, -np.abs(autocorrelation) / e_scale, color = 'green')
+        axis.plot(scaled_t, np.real(autocorrelation) / e_scale, label = r'$AC$', color = 'blue')
+        # axis.plot(scaled_t, np.abs(autocorrelation) / e_scale, label = r'$\left| AC \right|$', color = 'green')
+        # axis.plot(scaled_t, -np.abs(autocorrelation) / e_scale, color = 'green')
 
         title = axis.set_title(r'Autocorrelation', fontsize = 15)
         title.set_y(1.05)

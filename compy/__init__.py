@@ -18,4 +18,5 @@ pyximport.install(setup_args = {"include_dirs": np.get_include()},
                   build_dir = pyx_dir,
                   language_level = 3)
 
+from compy.core import *
 from compy import math, utils
