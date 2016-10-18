@@ -1,5 +1,7 @@
 import logging
 
+import numpy as np
+
 from compy.units import *
 
 logger = logging.getLogger(__name__)

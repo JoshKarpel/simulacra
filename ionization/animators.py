@@ -5,6 +5,7 @@ import subprocess
 
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import compy as cp
@@ -150,8 +151,9 @@ class CylindricalSliceAnimator:
                           '-pix_fmt', 'argb',  # format
                           '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
                           '-vcodec', 'mpeg4',
+
                           # '-b:v', '2000k',
-                          '-qscale', '1',
+                          '-q:v', '1',
                           self.filename)  # output encoding
 
         self.ffmpeg = subprocess.Popen(self.cmdstring, stdin = subprocess.PIPE, bufsize = -1)

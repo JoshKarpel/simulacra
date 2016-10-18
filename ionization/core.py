@@ -6,6 +6,7 @@ from copy import deepcopy
 
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import scipy as sp
 import scipy.sparse as sparse
 import scipy.special as special
@@ -129,7 +130,7 @@ class BoundState:
         return state.n, state.l, state.m
 
     def radial_part(self, r):
-        normalization = np.sqrt(((2 / (self.n * bohr_radius)) ** 3) * (sp.cp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.cp.math.factorial(self.n + self.l))))  # Griffith's normalization
+        normalization = np.sqrt(((2 / (self.n * bohr_radius)) ** 3) * (sp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.math.factorial(self.n + self.l))))  # Griffith's normalization
         r_dep = np.exp(-r / (self.n * bohr_radius)) * ((2 * r / (self.n * bohr_radius)) ** self.l)
         lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * bohr_radius))
 
@@ -1576,8 +1577,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         return sim
 
     def plot_wavefunction_vs_time(self, grayscale = False, **kwargs):
-        plt.close()  # close any old figures
-
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.04)

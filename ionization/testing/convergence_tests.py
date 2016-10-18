@@ -1,6 +1,7 @@
 import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 import compy as cp
 import ionization as ion

@@ -61,7 +61,8 @@ class Simulation(utils.Beet):
         self.spec = spec
         self.status = initial_status
 
-        super(Simulation, self).__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from parameters
+        super(Simulation, self).__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from spec
+        self.spec.simulation_type = self.__class__
 
         # diagnostic data
         self.evictions = 0
