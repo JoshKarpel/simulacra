@@ -7,13 +7,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.fft as nfft
 import scipy.integrate as integ
+import scipy.interpolate as interp
 import scipy.optimize as optim
 from cycler import cycler
 
 import compy as cp
 from compy.units import *
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('compy.' + __name__)
 logger.setLevel(logging.DEBUG)
 
 
@@ -263,6 +264,7 @@ class ContinuousAmplitudeSpectrumSpecification(cp.Specification):
     def from_power_spectrum_csv(cls, name, frequencies, materials,
                                 path_to_csv, total_power = 100 * mW, x_units = 'nm', y_units = 'dBm',
                                 fit_guess_center = 800 * nm, fit_guess_fwhm = 40 * nm,
+                                fit = 'gaussian',
                                 plot_fit = True, **kwargs):
         wavelengths, power = np.loadtxt(path_to_csv, delimiter = ',', unpack = True, skiprows = 1)
 
@@ -277,15 +279,27 @@ class ContinuousAmplitudeSpectrumSpecification(cp.Specification):
         power_ratio = total_power / spectrum_power
         power *= power_ratio
 
-        guesses = (fit_guess_center, fit_guess_fwhm, np.max(power))
-        popt, pcov = optim.curve_fit(cp.math.gaussian, wavelengths, power, p0 = guesses)
+        if fit == 'gaussian':
+            guesses = (fit_guess_center, fit_guess_fwhm, np.max(power))
+            popt, pcov = optim.curve_fit(cp.math.gaussian, wavelengths, power, p0 = guesses)
 
-        fitted_power = cp.math.gaussian(photon_wavelength_from_frequency(frequencies), *popt)
-        fitted_amplitude = np.sqrt(fitted_power)  # TODO: correct units
+            fitted_power = cp.math.gaussian(photon_wavelength_from_frequency(frequencies), *popt)
+            fitted_amplitude = np.sqrt(fitted_power)  # TODO: correct units
+
+            fitted_power_for_plotting = cp.math.gaussian(wavelengths, *popt)
+        elif fit == 'spline':
+            spline = interp.UnivariateSpline(wavelengths, power)
+
+            fit_wavelengths = photon_wavelength_from_frequency(frequencies)
+
+            fitted_power = spline(photon_wavelength_from_frequency(frequencies))
+            fitted_power = np.where(np.greater_equal(fit_wavelengths, wavelengths[0]) * np.less_equal(fit_wavelengths, wavelengths[-1]),
+                                    fitted_power, 0)
+            fitted_amplitude = np.sqrt(fitted_power)
+
+            fitted_power_for_plotting = spline(wavelengths)
 
         if plot_fit:
-            fitted_power_for_plotting = cp.math.gaussian(wavelengths, *popt)
-
             cp.utils.xy_plot(wavelengths, 10 * np.log10(power / mW), 10 * np.log10(fitted_power_for_plotting / mW), legends = ['Measured', 'Fitted'], x_scale = 'nm',
                              title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power (dBm)',
                              name = '{}__power_spectrum_fit_dbm'.format(name), **kwargs)
@@ -326,18 +340,98 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
     def power(self):
         return np.real(np.abs(self.amplitudes) ** 2)
 
-    def fft(self, spectrum = None):
-        if spectrum is None:
-            spectrum = self.amplitudes
+    def fft(self, amplitudes = None):
+        if amplitudes is None:
+            amplitudes = self.amplitudes
 
         t = nfft.fftshift(nfft.fftfreq(len(self.frequencies), self.df))
 
         reference_frequency = self.frequencies[len(self.frequencies) // 2]
-        shifted_spectrum = nfft.fftshift(spectrum)
+        shifted_amplitudes = nfft.fftshift(amplitudes)
 
-        field = nfft.fftshift(nfft.ifft(shifted_spectrum, norm = 'ortho')) * np.exp(1j * twopi * reference_frequency * t)  # restore reference frequency
+        field = nfft.fftshift(nfft.ifft(shifted_amplitudes, norm = 'ortho')) * np.exp(1j * twopi * reference_frequency * t)  # restore reference frequency
 
         return IFFTResult(time = t, field = field)
+
+    def michelson_autocorrelation(self, tau_range = 100 * fsec, **kwargs):
+        t, electric_field = self.fft()
+
+        taus = np.linspace(-tau_range, tau_range, 1e4)
+        intensity = np.zeros(len(taus))
+
+        for ii, tau in enumerate(taus):
+            _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
+            integrand = np.abs(np.real(electric_field) + np.real(electric_field_shifted)) ** 2
+            intensity[ii] = integ.simps(integrand, dx = t[1] - t[0])
+            logger.debug('Calculated Michelson Intensity for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
+
+        cp.utils.xy_plot(taus, intensity,
+                         title = 'Michelson Interferometer Autocorrelation Signal',
+                         x_label = r'Time Delay $\tau$', x_scale = 'fs',
+                         y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right) + E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
+                         name = '{}__michelson_autocorrelation'.format(self.name),
+                         **kwargs)
+
+    def intensity_autocorrelation(self, tau_range = 100 * fsec, **kwargs):
+        t, electric_field = self.fft()
+
+        taus = np.linspace(-tau_range, tau_range, 1e4)
+        intensity = np.zeros(len(taus))
+
+        for ii, tau in enumerate(taus):
+            _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
+            integrand = (np.abs(electric_field) ** 2) * (np.abs(electric_field_shifted) ** 2)
+            # integrand = np.abs(np.real(electric_field) * np.real(electric_field_shifted)) ** 2
+            intensity[ii] = integ.simps(integrand, dx = t[1] - t[0])
+            logger.debug('Calculated Intensity Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
+
+        cp.utils.xy_plot(taus, intensity,
+                         title = 'Intensity Autocorrelation Signal',
+                         x_label = r'Time Delay $\tau$', x_scale = 'fs',
+                         y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right)\right|^2 \, \left|E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
+                         # y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right) \, E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
+                         name = '{}__intensity_autocorrelation'.format(self.name),
+                         **kwargs)
+
+    def intensity_autocorrelation_v2(self, tau_range = 100 * fsec, **kwargs):
+        t, electric_field = self.fft()
+
+        taus = np.linspace(-tau_range, tau_range, 1e4)
+        intensity = np.zeros(len(taus))
+
+        for ii, tau in enumerate(taus):
+            _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
+            # integrand = (np.abs(electric_field) ** 2) * (np.abs(electric_field_shifted) ** 2)
+            integrand = np.abs(np.real(electric_field) * np.real(electric_field_shifted)) ** 2
+            intensity[ii] = integ.simps(integrand, dx = t[1] - t[0])
+            logger.debug('Calculated Intensity Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
+
+        cp.utils.xy_plot(taus, intensity,
+                         title = 'Intensity Autocorrelation Signal',
+                         x_label = r'Time Delay $\tau$', x_scale = 'fs',
+                         # y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right)\right|^2 \, \left|E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
+                         y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right) \, E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
+                         name = '{}__intensity_autocorrelation_alt'.format(self.name),
+                         **kwargs)
+
+    def interferometric_autocorrelation(self, tau_range = 100 * fsec, **kwargs):
+        t, electric_field = self.fft()
+
+        taus = np.linspace(-tau_range, tau_range, 1e4)
+        intensity = np.zeros(len(taus))
+
+        for ii, tau in enumerate(taus):
+            _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
+            integrand = np.abs((np.real(electric_field) + np.real(electric_field_shifted)) ** 2) ** 2
+            intensity[ii] = integ.simps(integrand, dx = t[1] - t[0])
+            logger.debug('Calculated Interferometric Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
+
+        cp.utils.xy_plot(taus, intensity,
+                         title = 'Interferometric Autocorrelation Signal',
+                         x_label = r'Time Delay $\tau$', x_scale = 'fs',
+                         y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|\left[ E\left( t \right) + E\left( t - \tau \right) \right]^2 \right|^2 dt$   (arb. units)',
+                         name = '{}__interferometric_autocorrelation'.format(self.name),
+                         **kwargs)
 
     def autocorrelation(self):
         t, autocorrelation = self.fft(np.abs(self.amplitudes) ** 2)
@@ -504,7 +598,6 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
         cp.utils.save_current_figure(name = '{}__gdd_vs_wavelength'.format(self.name), **kwargs)
 
         plt.close()
-
 
         # cp.utils.xy_plot(self.wavelengths, uround(self.gdd, fsec ** 2, 10), x_scale = 'nm',
         #               title = 'GDD',
