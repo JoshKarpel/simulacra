@@ -15,7 +15,11 @@ def run_sim(spec):
     with cp.utils.Logger(stdout_level = logging.DEBUG) as logger:
         FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
         OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
-        OUT_DIR = os.path.join(OUT_DIR, 'dispersion', spec.name)
+        if 'disp' in spec.name:
+            dir_name = 'dispersion_on'
+        else:
+            dir_name = 'dispersion_off'
+        OUT_DIR = os.path.join(OUT_DIR, dir_name, spec.name)
 
         tau_range = 150 * fsec
 
@@ -27,10 +31,11 @@ def run_sim(spec):
         # sim.plot_power_vs_wavelength(target_dir = OUT_DIR_BEFORE, x_scale = 'nm')
         # sim.plot_power_vs_wavelength(target_dir = OUT_DIR_BEFORE, x_scale = 'nm', log_y = True, name_postfix = '_log')
         sim.plot_electric_field_vs_time(find_center = True, target_dir = OUT_DIR_BEFORE)
-        sim.michelson_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
-        sim.intensity_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
+        sim.plot_autocorrelations(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
+        # sim.michelson_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
+        # sim.intensity_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
         # sim.intensity_autocorrelation_v2(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
-        sim.interferometric_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
+        # sim.interferometric_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
 
         sim.run_simulation()
 
@@ -40,10 +45,11 @@ def run_sim(spec):
         # sim.plot_power_vs_wavelength(target_dir = OUT_DIR_AFTER, x_scale = 'nm')
         # sim.plot_power_vs_wavelength(target_dir = OUT_DIR_AFTER, x_scale = 'nm', log_y = True, name_postfix = '_log')
         sim.plot_electric_field_vs_time(find_center = True, target_dir = OUT_DIR_AFTER)
-        sim.michelson_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
-        sim.intensity_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
+        sim.plot_autocorrelations(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
+        # sim.michelson_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
+        # sim.intensity_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
         # sim.intensity_autocorrelation_v2(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
-        sim.interferometric_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
+        # sim.interferometric_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
 
 
 if __name__ == '__main__':
@@ -65,6 +71,29 @@ if __name__ == '__main__':
         for fit_method in ('gaussian', 'spline'):
             for bandblock in (-2, -3, -4, -5, -6):
                 optics = [
+                    # disp.BK7(name = '4 lenses 1', length = 4 * 3 * mm),
+                    # disp.FS(name = 'cavity 1', length = 1 * inch),
+                    disp.ModulateBeam(90 * THz, upshift_efficiency = 1e-4, downshift_efficiency = 1e-6),
+                    # disp.FS(name = 'cavity 2', length = 1 * inch),
+                    # disp.BK7(name = '4 lenses 2', length = 4 * 3 * mm),
+                    # disp.FS(name = 'dichroic mirror', length = np.sqrt(2) * 3.2 * mm),
+                    # disp.FS(name = 'beamsplitter', length = np.sqrt(2) * 5 * mm),
+                    disp.BandBlockBeam(reduction_factor = 10 ** bandblock)
+                ]
+
+                name = 'TiSapph_FitMethod={}_UpshiftEfficiencyExp=-4_BlockingPowerExp={}'.format(fit_method, bandblock)
+
+                spec = disp.ContinuousAmplitudeSpectrumSpecification.from_power_spectrum_csv(name,
+                                                                                             frequencies, optics,
+                                                                                             "tisapph_spectrum2.txt", total_power = 150 * mW,
+                                                                                             fit = fit_method,
+                                                                                             plot_fit = True, target_dir = os.path.join(OUT_DIR, 'dispersion_off', name))
+
+                specs.append(spec)
+
+        for fit_method in ('gaussian', 'spline'):
+            for bandblock in (-2, -3, -4, -5, -6):
+                optics = [
                     disp.BK7(name = '4 lenses 1', length = 4 * 3 * mm),
                     disp.FS(name = 'cavity 1', length = 1 * inch),
                     disp.ModulateBeam(90 * THz, upshift_efficiency = 1e-4, downshift_efficiency = 1e-6),
@@ -75,17 +104,17 @@ if __name__ == '__main__':
                     disp.BandBlockBeam(reduction_factor = 10 ** bandblock)
                 ]
 
-                name = 'TiSapph_FitMethod={}_UpshiftEfficiencyExp=-4_BlockingPowerExp={}'.format(fit_method, bandblock)
+                name = 'TiSapph_FitMethod={}_UpshiftEfficiencyExp=-4_BlockingPowerExp={}__disp'.format(fit_method, bandblock)
 
                 spec = disp.ContinuousAmplitudeSpectrumSpecification.from_power_spectrum_csv(name,
                                                                                              frequencies, optics,
                                                                                              "tisapph_spectrum2.txt", total_power = 150 * mW,
                                                                                              fit = fit_method,
-                                                                                             plot_fit = True, target_dir = os.path.join(OUT_DIR, 'dispersion', name))
+                                                                                             plot_fit = True, target_dir = os.path.join(OUT_DIR, 'dispersion_on', name))
 
                 specs.append(spec)
 
-        cp.utils.multi_map(run_sim, specs, processes = 2)
+        cp.utils.multi_map(run_sim, specs, processes = 4)
 
         # sim = disp.ContinuousAmplitudeSpectrumSimulation(spec)
         #

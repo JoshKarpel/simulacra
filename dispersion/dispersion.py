@@ -353,15 +353,60 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
 
         return IFFTResult(time = t, field = field)
 
-    def michelson_autocorrelation(self, tau_range = 100 * fsec, **kwargs):
+    def plot_autocorrelations(self, tau_range = 100 * fsec, **kwargs):
         t, electric_field = self.fft()
+        electric_field = np.real(electric_field)
 
         taus = np.linspace(-tau_range, tau_range, 1e4)
         intensity = np.zeros(len(taus))
 
         for ii, tau in enumerate(taus):
             _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
-            integrand = np.abs(np.real(electric_field) + np.real(electric_field_shifted)) ** 2
+            electric_field_shifted = np.real(electric_field_shifted)
+            integrand = np.abs(electric_field + electric_field_shifted) ** 2
+            michelson[ii] = integ.simps(integrand, dx = t[1] - t[0])
+            logger.debug('Calculated Michelson Intensity for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
+
+            integrand = (np.abs(electric_field) ** 2) * (np.abs(electric_field_shifted) ** 2)
+            intensity[ii] = integ.simps(integrand, dx = t[1] - t[0])
+            logger.debug('Calculated Intensity Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
+
+            integrand = np.abs((electric_field + electric_field_shifted) ** 2) ** 2
+            interferometric[ii] = integ.simps(integrand, dx = t[1] - t[0])
+            logger.debug('Calculated Interferometric Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
+
+        cp.utils.xy_plot(taus, michelson,
+                         title = 'Michelson Autocorrelation Signal',
+                         x_label = r'Time Delay $\tau$', x_scale = 'fs',
+                         y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right) + E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
+                         name = '{}__michelson_autocorrelation'.format(self.name),
+                         **kwargs)
+
+        cp.utils.xy_plot(taus, intensity,
+                         title = 'Intensity Autocorrelation Signal',
+                         x_label = r'Time Delay $\tau$', x_scale = 'fs',
+                         y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right)\right|^2 \, \left|E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
+                         name = '{}__intensity_autocorrelation'.format(self.name),
+                         **kwargs)
+
+        cp.utils.xy_plot(taus, interferometric,
+                         title = 'Interferometric Autocorrelation Signal',
+                         x_label = r'Time Delay $\tau$', x_scale = 'fs',
+                         y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|\left[ E\left( t \right) + E\left( t - \tau \right) \right]^2 \right|^2 dt$   (arb. units)',
+                         name = '{}__interferometric_autocorrelation'.format(self.name),
+                         **kwargs)
+
+    def michelson_autocorrelation(self, tau_range = 100 * fsec, **kwargs):
+        t, electric_field = self.fft()
+        electric_field = np.real(electric_field)
+
+        taus = np.linspace(-tau_range, tau_range, 1e4)
+        intensity = np.zeros(len(taus))
+
+        for ii, tau in enumerate(taus):
+            _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
+            electric_field_shifted = np.real(electric_field_shifted)
+            integrand = np.abs(electric_field + electric_field_shifted) ** 2
             intensity[ii] = integ.simps(integrand, dx = t[1] - t[0])
             logger.debug('Calculated Michelson Intensity for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
 
@@ -374,12 +419,14 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
 
     def intensity_autocorrelation(self, tau_range = 100 * fsec, **kwargs):
         t, electric_field = self.fft()
+        electric_field = np.real(electric_field)
 
         taus = np.linspace(-tau_range, tau_range, 1e4)
         intensity = np.zeros(len(taus))
 
         for ii, tau in enumerate(taus):
             _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
+            electric_field_shifted = np.real(electric_field_shifted)
             integrand = (np.abs(electric_field) ** 2) * (np.abs(electric_field_shifted) ** 2)
             # integrand = np.abs(np.real(electric_field) * np.real(electric_field_shifted)) ** 2
             intensity[ii] = integ.simps(integrand, dx = t[1] - t[0])
@@ -395,14 +442,16 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
 
     def intensity_autocorrelation_v2(self, tau_range = 100 * fsec, **kwargs):
         t, electric_field = self.fft()
+        electric_field = np.real(electric_field)
 
         taus = np.linspace(-tau_range, tau_range, 1e4)
         intensity = np.zeros(len(taus))
 
         for ii, tau in enumerate(taus):
             _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
+            electric_field_shifted = np.real(electric_field_shifted)
             # integrand = (np.abs(electric_field) ** 2) * (np.abs(electric_field_shifted) ** 2)
-            integrand = np.abs(np.real(electric_field) * np.real(electric_field_shifted)) ** 2
+            integrand = np.abs(electric_field * electric_field_shifted) ** 2
             intensity[ii] = integ.simps(integrand, dx = t[1] - t[0])
             logger.debug('Calculated Intensity Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
 
@@ -416,13 +465,15 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
 
     def interferometric_autocorrelation(self, tau_range = 100 * fsec, **kwargs):
         t, electric_field = self.fft()
+        electric_field = np.real(electric_field)
 
         taus = np.linspace(-tau_range, tau_range, 1e4)
         intensity = np.zeros(len(taus))
 
         for ii, tau in enumerate(taus):
             _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
-            integrand = np.abs((np.real(electric_field) + np.real(electric_field_shifted)) ** 2) ** 2
+            electric_field_shifted = np.real(electric_field_shifted)
+            integrand = np.abs((electric_field + electric_field_shifted) ** 2) ** 2
             intensity[ii] = integ.simps(integrand, dx = t[1] - t[0])
             logger.debug('Calculated Interferometric Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
 
