@@ -212,7 +212,7 @@ def ensure_dir_exists(path):
     logger.debug('Ensured path exists: {}'.format(make_path))
 
 
-def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'png', scale_factor = 1):
+def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'png', scale_factor = 1, **kwargs):
     """Save the current matplotlib figure with the given name to the given folder."""
     if target_dir is None:
         target_dir = os.getcwd()
@@ -231,6 +231,7 @@ def xy_plot(x, *y, legends = None,
             x_center = 0, x_range = None,
             y_center = None, y_range = None,
             log_x = False, log_y = False,
+            save_csv = False,
             **kwargs):
     fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
     fig.set_tight_layout(True)
@@ -306,6 +307,12 @@ def xy_plot(x, *y, legends = None,
         axis.legend(loc = 'best', fontsize = 12)
 
     save_current_figure(**kwargs)
+
+    if save_csv:
+        path = os.path.join(kwargs['target_dir'], '{}.csv'.format(kwargs['name']))
+        np.savetxt(path, (x, *y), delimiter = ',', newline = '\n')
+
+        logger.info('Saved figure data from {} to {}'.format(kwargs['name'], path))
 
     plt.close()
 

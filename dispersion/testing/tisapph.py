@@ -12,7 +12,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def run_sim(spec):
-    with cp.utils.Logger(stdout_level = logging.DEBUG) as logger:
+    with cp.utils.Logger(stdout_level = logging.INFO) as logger:
         FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
         OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
         if 'disp' in spec.name:
@@ -21,7 +21,7 @@ def run_sim(spec):
             dir_name = 'dispersion_off'
         OUT_DIR = os.path.join(OUT_DIR, dir_name, spec.name)
 
-        tau_range = 150 * fsec
+        tau_range = 200 * fsec
 
         sim = disp.ContinuousAmplitudeSpectrumSimulation(spec)
 
@@ -30,8 +30,11 @@ def run_sim(spec):
         # sim.plot_power_vs_frequency(target_dir = OUT_DIR_BEFORE, x_scale = 'THz', log_y = True, name_postfix = '_log')
         # sim.plot_power_vs_wavelength(target_dir = OUT_DIR_BEFORE, x_scale = 'nm')
         # sim.plot_power_vs_wavelength(target_dir = OUT_DIR_BEFORE, x_scale = 'nm', log_y = True, name_postfix = '_log')
-        sim.plot_electric_field_vs_time(find_center = True, target_dir = OUT_DIR_BEFORE)
-        sim.plot_autocorrelations(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
+        if 'spline' not in sim.name:
+            sim.plot_electric_field_vs_time(find_center = True, target_dir = OUT_DIR_BEFORE)
+        else:
+            sim.plot_electric_field_vs_time(find_center = False, x_lower_lim = -300 * fsec, x_upper_lim = 300 * fsec, target_dir = OUT_DIR_BEFORE)
+        sim.plot_autocorrelations(tau_range = tau_range, target_dir = OUT_DIR_BEFORE, save_csv = True)
         # sim.michelson_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
         # sim.intensity_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
         # sim.intensity_autocorrelation_v2(tau_range = tau_range, target_dir = OUT_DIR_BEFORE)
@@ -44,8 +47,11 @@ def run_sim(spec):
         # sim.plot_power_vs_frequency(target_dir = OUT_DIR_AFTER, x_scale = 'THz', log_y = True, name_postfix = '_log')
         # sim.plot_power_vs_wavelength(target_dir = OUT_DIR_AFTER, x_scale = 'nm')
         # sim.plot_power_vs_wavelength(target_dir = OUT_DIR_AFTER, x_scale = 'nm', log_y = True, name_postfix = '_log')
-        sim.plot_electric_field_vs_time(find_center = True, target_dir = OUT_DIR_AFTER)
-        sim.plot_autocorrelations(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
+        if 'spline' not in sim.name:
+            sim.plot_electric_field_vs_time(find_center = True, target_dir = OUT_DIR_AFTER)
+        else:
+            sim.plot_electric_field_vs_time(find_center = False, x_lower_lim = -300 * fsec, x_upper_lim = 300 * fsec, target_dir = OUT_DIR_BEFORE)
+        sim.plot_autocorrelations(tau_range = tau_range, target_dir = OUT_DIR_AFTER, save_csv = True)
         # sim.michelson_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
         # sim.intensity_autocorrelation(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
         # sim.intensity_autocorrelation_v2(tau_range = tau_range, target_dir = OUT_DIR_AFTER)
@@ -53,11 +59,11 @@ def run_sim(spec):
 
 
 if __name__ == '__main__':
-    with cp.utils.Logger(stdout_level = logging.DEBUG, file_logs = True, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
+    with cp.utils.Logger(stdout_level = logging.INFO, file_logs = True, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
 
         f_min = 50 * THz
         f_max = 5000 * THz
-        power = 16
+        power = 15
         wavelength_min = c / f_max
         wavelength_max = c / f_min
         frequencies = np.linspace(f_min, f_max, 2 ** power)
@@ -67,8 +73,11 @@ if __name__ == '__main__':
         # disp.BK7().plot_index_vs_wavelength(wavelength_min, wavelength_max, target_dir = OUT_DIR)
         # disp.FS().plot_index_vs_wavelength(wavelength_min, wavelength_max, target_dir = OUT_DIR)
 
+        methods = ['spline']
+        # methods = ['gaussian', 'spline']
+
         specs = []
-        for fit_method in ('gaussian', 'spline'):
+        for fit_method in methods:
             for bandblock in (-2, -3, -4, -5, -6):
                 optics = [
                     # disp.BK7(name = '4 lenses 1', length = 4 * 3 * mm),
@@ -81,13 +90,13 @@ if __name__ == '__main__':
                     disp.BandBlockBeam(reduction_factor = 10 ** bandblock)
                 ]
 
-                name = 'TiSapph_FitMethod={}_UpshiftEfficiencyExp=-4_BlockingPowerExp={}'.format(fit_method, bandblock)
+                name = 'TiSapph_Fit={}_UpshiftExp=-4_BlockingExp={}'.format(fit_method, bandblock)
 
                 spec = disp.ContinuousAmplitudeSpectrumSpecification.from_power_spectrum_csv(name,
                                                                                              frequencies, optics,
                                                                                              "tisapph_spectrum2.txt", total_power = 150 * mW,
                                                                                              fit = fit_method,
-                                                                                             plot_fit = True, target_dir = os.path.join(OUT_DIR, 'dispersion_off', name))
+                                                                                             plot_fit = False, target_dir = os.path.join(OUT_DIR, 'dispersion_off', name))
 
                 specs.append(spec)
 
@@ -104,17 +113,17 @@ if __name__ == '__main__':
                     disp.BandBlockBeam(reduction_factor = 10 ** bandblock)
                 ]
 
-                name = 'TiSapph_FitMethod={}_UpshiftEfficiencyExp=-4_BlockingPowerExp={}__disp'.format(fit_method, bandblock)
+                name = 'TiSapph_Fit={}_UpshiftExp=-4_BlockingExp={}__disp'.format(fit_method, bandblock)
 
                 spec = disp.ContinuousAmplitudeSpectrumSpecification.from_power_spectrum_csv(name,
                                                                                              frequencies, optics,
                                                                                              "tisapph_spectrum2.txt", total_power = 150 * mW,
                                                                                              fit = fit_method,
-                                                                                             plot_fit = True, target_dir = os.path.join(OUT_DIR, 'dispersion_on', name))
+                                                                                             plot_fit = False, target_dir = os.path.join(OUT_DIR, 'dispersion_on', name))
 
                 specs.append(spec)
 
-        cp.utils.multi_map(run_sim, specs, processes = 4)
+        cp.utils.multi_map(run_sim, specs, processes = 2)
 
         # sim = disp.ContinuousAmplitudeSpectrumSimulation(spec)
         #

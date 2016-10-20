@@ -198,16 +198,16 @@ class BandBlockBeam(BeamModifier):
         self.wavelength_min = wavelength_min
         self.wavelength_max = wavelength_max
 
-        self.reduction_factor = reduction_factor
+        self.power_reduction_factor = reduction_factor
 
     def __str__(self):
         return '{} ({}-{} nm)'.format(self.name, uround(self.wavelength_min, nm, 3), uround(self.wavelength_max, nm, 3))
 
     def __repr__(self):
-        return 'BandBlockBeam(wavelength_min = {}, wavelength_max = {}, r = {}'.format(self.wavelength_min, self.wavelength_max, self.reduction_factor)
+        return 'BandBlockBeam(wavelength_min = {}, wavelength_max = {}, r = {}'.format(self.wavelength_min, self.wavelength_max, self.power_reduction_factor)
 
     def propagate(self, frequencies, amplitudes):
-        block_amplitudes = self.reduction_factor * amplitudes
+        block_amplitudes = np.sqrt(self.power_reduction_factor) * amplitudes
         wavelengths = photon_wavelength_from_frequency(frequencies)
 
         return np.where(np.greater_equal(wavelengths, self.wavelength_min) * np.less_equal(wavelengths, self.wavelength_max), block_amplitudes, amplitudes)
@@ -218,14 +218,14 @@ class ModulateBeam(BeamModifier):
         super(ModulateBeam, self).__init__(name = 'Modulator')
 
         self.frequency_shift = frequency_shift
-        self.downshift_efficiency = downshift_efficiency
-        self.upshift_efficiency = upshift_efficiency
+        self.downshift_power_efficiency = downshift_efficiency
+        self.upshift_power_efficiency = upshift_efficiency
 
     def __str__(self):
         return '{} ({} THz shift)'.format(self.name, uround(self.frequency_shift, THz, 3))
 
     def __repr__(self):
-        return 'ModulateBeam(frequency_shift = {}, upshift_efficiency = {}, downshift_efficiency = {}'.format(self.frequency_shift, self.upshift_efficiency, self.downshift_efficiency)
+        return 'ModulateBeam(frequency_shift = {}, upshift_efficiency = {}, downshift_efficiency = {}'.format(self.frequency_shift, self.upshift_power_efficiency, self.downshift_power_efficiency)
 
     def propagate(self, frequencies, amplitudes):
         new_amplitudes = np.zeros(np.shape(amplitudes), dtype = np.complex128)
@@ -235,12 +235,12 @@ class ModulateBeam(BeamModifier):
             new_amplitudes[ii] += amp
 
             try:
-                new_amplitudes[ii + shift] += amp * self.upshift_efficiency
+                new_amplitudes[ii + shift] += amp * np.sqrt(self.upshift_power_efficiency)  # power efficiency, not amplitude efficiency
             except IndexError as e:
                 pass
 
             try:
-                new_amplitudes[ii - shift] += amp * self.downshift_efficiency
+                new_amplitudes[ii - shift] += amp * np.sqrt(self.downshift_power_efficiency)
             except IndexError as e:
                 pass
 
@@ -287,6 +287,7 @@ class ContinuousAmplitudeSpectrumSpecification(cp.Specification):
             fitted_amplitude = np.sqrt(fitted_power)  # TODO: correct units
 
             fitted_power_for_plotting = cp.math.gaussian(wavelengths, *popt)
+            print(*popt)
         elif fit == 'spline':
             spline = interp.UnivariateSpline(wavelengths, power)
 
@@ -357,8 +358,10 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
         t, electric_field = self.fft()
         electric_field = np.real(electric_field)
 
-        taus = np.linspace(-tau_range, tau_range, 1e4)
+        taus = np.linspace(-tau_range, tau_range, 5e3)
+        michelson = np.zeros(len(taus))
         intensity = np.zeros(len(taus))
+        interferometric = np.zeros(len(taus))
 
         for ii, tau in enumerate(taus):
             _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
