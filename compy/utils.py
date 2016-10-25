@@ -212,7 +212,7 @@ def ensure_dir_exists(path):
     logger.debug('Ensured path exists: {}'.format(make_path))
 
 
-def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'png', scale_factor = 1, **kwargs):
+def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'png', img_scale = 1, **kwargs):
     """Save the current matplotlib figure with the given name to the given folder."""
     if target_dir is None:
         target_dir = os.getcwd()
@@ -220,7 +220,7 @@ def save_current_figure(name, name_postfix = '', target_dir = None, img_format =
 
     ensure_dir_exists(path)
 
-    plt.savefig(path, dpi = scale_factor * plt.gcf().dpi, bbox_inches = 'tight')
+    plt.savefig(path, dpi = img_scale * plt.gcf().dpi, bbox_inches = 'tight')
 
     logger.info('Saved matplotlib figure {} to {}'.format(name, path))
 

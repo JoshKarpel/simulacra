@@ -355,19 +355,19 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
 
         return IFFTResult(time = t, field = field)
 
-    def plot_autocorrelations(self, tau_range = 100 * fsec, **kwargs):
+    def plot_autocorrelations(self, tau_range = 100 * fsec, tau_points = 1e4, **kwargs):
         t, electric_field = self.fft()
-        electric_field = np.real(electric_field)
+        electric_field_real = np.real(electric_field)
 
-        taus = np.linspace(-tau_range, tau_range, 5e3)
+        taus = np.linspace(-tau_range, tau_range, tau_points)
         michelson = np.zeros(len(taus))
         intensity = np.zeros(len(taus))
         interferometric = np.zeros(len(taus))
 
         for ii, tau in enumerate(taus):
             _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
-            electric_field_shifted = np.real(electric_field_shifted)
-            integrand = np.abs(electric_field + electric_field_shifted) ** 2
+            electric_field_shifted_real = np.real(electric_field_shifted)
+            integrand = np.abs(electric_field_real + electric_field_shifted_real) ** 2
             michelson[ii] = integ.simps(integrand, dx = t[1] - t[0])
             logger.debug('Calculated Michelson Intensity for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
 
@@ -375,29 +375,32 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
             intensity[ii] = integ.simps(integrand, dx = t[1] - t[0])
             logger.debug('Calculated Intensity Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
 
-            integrand = np.abs((electric_field + electric_field_shifted) ** 2) ** 2
+            integrand = np.abs((electric_field_real + electric_field_shifted_real) ** 2) ** 2
             interferometric[ii] = integ.simps(integrand, dx = t[1] - t[0])
             logger.debug('Calculated Interferometric Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
 
-        cp.utils.xy_plot(taus, michelson,
+        cp.utils.xy_plot(taus, michelson / np.nanmax(michelson),
                          title = 'Michelson Autocorrelation Signal',
                          x_label = r'Time Delay $\tau$', x_scale = 'fs',
                          y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right) + E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
                          name = '{}__michelson_autocorrelation'.format(self.name),
+                         y_center = 0.5, y_range = 0.5,
                          **kwargs)
 
-        cp.utils.xy_plot(taus, intensity,
+        cp.utils.xy_plot(taus, intensity / np.nanmax(intensity),
                          title = 'Intensity Autocorrelation Signal',
                          x_label = r'Time Delay $\tau$', x_scale = 'fs',
                          y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right)\right|^2 \, \left|E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
                          name = '{}__intensity_autocorrelation'.format(self.name),
+                         y_center = 0.5, y_range = 0.5,
                          **kwargs)
 
-        cp.utils.xy_plot(taus, interferometric,
+        cp.utils.xy_plot(taus, interferometric / np.nanmax(interferometric),
                          title = 'Interferometric Autocorrelation Signal',
                          x_label = r'Time Delay $\tau$', x_scale = 'fs',
                          y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|\left[ E\left( t \right) + E\left( t - \tau \right) \right]^2 \right|^2 dt$   (arb. units)',
                          name = '{}__interferometric_autocorrelation'.format(self.name),
+                         y_center = 0.5, y_range = 0.5,
                          **kwargs)
 
     def michelson_autocorrelation(self, tau_range = 100 * fsec, **kwargs):
@@ -644,7 +647,7 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
 
         overlaps = [(optic, gdd / (fsec ** 2)) for optic, gdd in self.gdd_per_element]
         num_colors = len(overlaps)
-        axis.set_prop_cycle(cycler('color', [plt.get_cmap('Paired')(n / num_colors) for n in range(num_colors)]))
+        axis.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
         axis.stackplot(self.wavelengths / nm, [gdd for optic, gdd in overlaps], alpha = 1,
                        labels = [optic.name for optic, gdd in overlaps])
 

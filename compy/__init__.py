@@ -20,4 +20,5 @@ pyximport.install(setup_args = {"include_dirs": np.get_include()},
 
 np.set_printoptions(linewidth = 200)
 
+from compy.core import *
 from compy import math, utils
