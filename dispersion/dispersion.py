@@ -642,20 +642,16 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
         fig.set_tight_layout(True)
         axis = plt.subplot(111)
 
-        overlaps = [gdd / (fsec ** 2) for gdd, optic in zip(self.gdd_per_element, self.spec.optics) if not isinstance(optic, BeamModifier)]
+        overlaps = [(optic, gdd / (fsec ** 2)) for optic, gdd in self.gdd_per_element]
         num_colors = len(overlaps)
-        axis.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
-        axis.stackplot(self.wavelengths / nm, *overlaps, alpha = 1,
-                       labels = [optic.name for optic in self.spec.optics if not isinstance(optic, BeamModifier)])
+        axis.set_prop_cycle(cycler('color', [plt.get_cmap('Paired')(n / num_colors) for n in range(num_colors)]))
+        axis.stackplot(self.wavelengths / nm, [gdd for optic, gdd in overlaps], alpha = 1,
+                       labels = [optic.name for optic, gdd in overlaps])
 
         title = axis.set_title(r'Group Delay Dispersion vs. Wavelength')
         title.set_y(1.025)
         axis.set_xlabel('Wavelength $\lambda$ ($\mathrm{nm}$)')
         axis.set_ylabel('GDD ($\mathrm{fs}^2$)')
-
-        # axis.set_ylim(-1000, 10000)
-
-        axis.legend(loc = 'best', fontsize = 12)
 
         if overlay_power_spectrum:
             axis_2 = axis.twinx()
@@ -674,6 +670,8 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
                                 self.gdd, np.NaN) / (fsec ** 2)
         axis.set_ylim(0, 1.05 * np.nanmax(gdd_stripped))
 
+        axis.legend(loc = 'best', fontsize = 12)
+
         cp.utils.save_current_figure(name = '{}__gdd_vs_wavelength'.format(self.name), **kwargs)
 
         plt.close()
@@ -683,7 +681,10 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
 
         gdd = calculate_gvd(self.frequencies, material) * material.length
         self.gdd += gdd
-        self.gdd_per_element.append(gdd)
+        self.gdd_per_element.append((material, gdd))
+
+        start = 27500
+        stop = start + 10
 
     def run_simulation(self, store_intermediate_fits = False, plot_intermediate_electric_fields = False, target_dir = None):
         logger.info('Performing propagation on {} ({})'.format(self.name, self.file_name))

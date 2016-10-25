@@ -2,7 +2,7 @@ import logging
 
 import compy as cp
 from compy.units import *
-from ionization import core
+from ionization import ionization
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -14,7 +14,7 @@ def ask_mesh_type():
     mesh_type = cp.cluster.ask_for_input('Mesh Type (cyl | sph | harm)', default = 'cyl', cast_to = str)
 
     if mesh_type == 'cyl':
-        param_type = core.CylindricalSliceSpecification
+        param_type = ionization.CylindricalSliceSpecification
 
         mesh_specification['z_bound'] = bohr_radius * cp.cluster.ask_for_input('Z Bound (Bohr radii)', default = 30, cast_to = float)
         mesh_specification['rho_bound'] = bohr_radius * cp.cluster.ask_for_input('Rho Bound (Bohr radii)', default = 30, cast_to = float)
@@ -22,14 +22,14 @@ def ask_mesh_type():
         mesh_specification['rho_points'] = (mesh_specification['rho_bound'] / bohr_radius) * cp.cluster.ask_for_input('Rho Points per Bohr Radii', default = 20, cast_to = int)
 
     elif mesh_type == 'sph':
-        param_type = core.SphericalSliceSpecification
+        param_type = ionization.SphericalSliceSpecification
 
         mesh_specification['r_bound'] = cp.cluster.ask_for_input('R Bound (Bohr radii)', default = 30, cast_to = float)
         mesh_specification['r_points'] = (mesh_specification['r_bound'] / bohr_radius) * ask_for_input('R Points per Bohr Radii', default = 40, cast_to = int)
         mesh_specification['theta_points'] = cp.cluster.ask_for_input('Theta Points', default = 500, cast_to = int)
 
     elif mesh_type == 'harm':
-        param_type = core.SphericalHarmonicSpecification
+        param_type = ionization.SphericalHarmonicSpecification
 
         mesh_specification['r_bound'] = cp.cluster.ask_for_input('R Bound (Bohr radii)', default = 30, cast_to = float)
         mesh_specification['r_points'] = (mesh_specification['r_bound'] / bohr_radius) * ask_for_input('R Points per Bohr Radii', default = 40, cast_to = int)

@@ -369,6 +369,8 @@ def memoize(copy_output = False):
     :return: a Memoize decorator
     """
 
+    # TODO: add @functools.wraps
+
     class Memoize:
 
         __slots__ = ('func', 'memo', '__doc__')

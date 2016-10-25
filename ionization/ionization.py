@@ -154,7 +154,7 @@ class BoundState:
 class BoundStateSuperposition:
     """A class that represents a superposition of bound states."""
 
-    __slots__ = ('state', )
+    __slots__ = ('state',)
 
     def __init__(self, state, normalize = True):
         """
@@ -1644,4 +1644,3 @@ class ElectricFieldSimulation(cp.core.Simulation):
         cp.utils.save_current_figure(name = self.spec.file_name + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
 
         plt.close()
-

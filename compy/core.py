@@ -74,7 +74,7 @@ class Simulation(utils.Beet):
 
     def save(self, target_dir = None, file_extension = '.sim'):
         """
-        Atomically pickle the Simulation to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
+        Atomically pickle the Simulation to {target_dir}/{self.file_name}.{file_extension}, and gzip it.
 
         :param target_dir: directory to save the Simulation to
         :param file_extension: file extension to name the Simulation with
