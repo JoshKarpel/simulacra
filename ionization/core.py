@@ -502,7 +502,7 @@ class CylindricalSliceFiniteDifferenceMesh(QuantumMesh):
 
         return mesh.flatten(flat)
 
-    def wrap_vector(self, mesh, wrap_along):
+    def wrap_vector(self, vector, wrap_along):
         if wrap_along == 'z':
             wrap = 'F'
         elif wrap_along == 'rho':
@@ -510,7 +510,7 @@ class CylindricalSliceFiniteDifferenceMesh(QuantumMesh):
         else:
             raise ValueError("{} is not a valid specifier for wrap_vector (valid specifiers: 'z', 'rho')".format(wrap_along))
 
-        return np.reshape(mesh, self.mesh_shape, wrap)
+        return np.reshape(vector, self.mesh_shape, wrap)
 
     def inner_product(self, mesh_a = None, mesh_b = None):
         """Inner product between two meshes. If either mesh is None, the state on the g_mesh is used for that state."""

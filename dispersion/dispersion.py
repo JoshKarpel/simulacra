@@ -327,7 +327,8 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
 
         self.pulse_fits_vs_materials = []
         self.gdd = np.zeros(np.shape(self.frequencies))
-        self.gdd_per_element = [np.zeros(np.shape(self.frequencies)) for _ in self.spec.optics]
+        self.gdd_per_element = []
+        # self.gdd_per_element = [np.zeros(np.shape(self.frequencies)) for _ in self.spec.optics]
 
     @property
     def angular_frequencies(self):
@@ -634,29 +635,48 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
 
         plt.close()
 
-    def plot_gdd_vs_wavelength(self, **kwargs):
+    def plot_gdd_vs_wavelength(self, x_lower_lim = 500 * nm, x_upper_lim = 1200 * nm,
+                               overlay_power_spectrum = False,
+                               **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
         axis = plt.subplot(111)
 
-        overlaps = [gdd / (fsec ** 2) for gdd in self.gdd_per_element]
+        overlaps = [gdd / (fsec ** 2) for gdd, optic in zip(self.gdd_per_element, self.spec.optics) if not isinstance(optic, BeamModifier)]
         num_colors = len(overlaps)
         axis.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
-        axis.stackplot(self.wavelengths / nm, *overlaps, alpha = 1, labels = [optic.name for optic in self.spec.optics if not isinstance(optic, BeamModifier)])
+        axis.stackplot(self.wavelengths / nm, *overlaps, alpha = 1,
+                       labels = [optic.name for optic in self.spec.optics if not isinstance(optic, BeamModifier)])
 
-        axis.set_xlim(500, 1100)
-        axis.set_ylim(-1000, 10000)
+        title = axis.set_title(r'Group Delay Dispersion vs. Wavelength')
+        title.set_y(1.025)
+        axis.set_xlabel('Wavelength $\lambda$ ($\mathrm{nm}$)')
+        axis.set_ylabel('GDD ($\mathrm{fs}^2$)')
+
+        # axis.set_ylim(-1000, 10000)
 
         axis.legend(loc = 'best', fontsize = 12)
+
+        if overlay_power_spectrum:
+            axis_2 = axis.twinx()
+
+            # axis_2.plot(self.wavelengths / nm, self.power / np.max(self.power),
+            #             color = 'black', linestyle = '-')
+
+            axis_2.fill_between(self.wavelengths / nm, self.power / np.max(self.power),
+                                color = 'black', facecolor = 'black', alpha = 0.5)
+
+            axis_2.set_ylabel(r'Power Spectrum (arb. units.)')
+
+        axis.set_xlim(x_lower_lim / nm, x_upper_lim / nm)
+
+        gdd_stripped = np.where(np.greater_equal(self.wavelengths, x_lower_lim) * np.less_equal(self.wavelengths, x_upper_lim),
+                                self.gdd, np.NaN) / (fsec ** 2)
+        axis.set_ylim(0, 1.05 * np.nanmax(gdd_stripped))
 
         cp.utils.save_current_figure(name = '{}__gdd_vs_wavelength'.format(self.name), **kwargs)
 
         plt.close()
-
-        # cp.utils.xy_plot(self.wavelengths, uround(self.gdd, fsec ** 2, 10), x_scale = 'nm',
-        #               title = 'GDD',
-        #               name = '{}__gdd_vs_wavelength'.format(self.name),
-        #               **kwargs)
 
     def propagate(self, material):
         self.amplitudes *= np.exp(1j * twopi * material.length * material.index(self.wavelengths) * self.frequencies / c)
