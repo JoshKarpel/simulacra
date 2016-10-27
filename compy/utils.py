@@ -3,6 +3,7 @@ import functools
 import logging
 import multiprocessing as mp
 import os
+import gzip
 import pickle
 import sys
 import uuid
@@ -166,8 +167,7 @@ class Beet:
 
         ensure_dir_exists(file_path_working)
 
-        with open(file_path_working, mode = 'wb') as file:  # TODO: undo this
-            # with gzip.open(file_path_working, mode = 'wb') as file:
+        with gzip.open(file_path_working, mode = 'wb') as file:
             pickle.dump(self, file, protocol = -1)
 
         os.replace(file_path_working, file_path)
@@ -184,8 +184,7 @@ class Beet:
         :param file_path: the path to try to load a Beet from
         :return: the loaded Beet
         """
-        with open(file_path, mode = 'rb') as file:  # TODO: undo this
-            # with gzip.open(file_path, mode = 'rb') as file:
+        with gzip.open(file_path, mode = 'rb') as file:
             beet = pickle.load(file)
 
         logger.info('Loaded {} {} from {}'.format(beet.__class__.__name__, beet.name, file_path))

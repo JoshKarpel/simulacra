@@ -21,12 +21,16 @@ def ask_mesh_type():
         mesh_specification['z_points'] = 2 * (mesh_specification['z_bound'] / bohr_radius) * cp.cluster.ask_for_input('Z Points per Bohr Radii', default = 20, cast_to = int)
         mesh_specification['rho_points'] = (mesh_specification['rho_bound'] / bohr_radius) * cp.cluster.ask_for_input('Rho Points per Bohr Radii', default = 20, cast_to = int)
 
+        memory_estimate = 128 * mesh_specification['z_points'] * mesh_specification['rho_points']
+
     elif mesh_type == 'sph':
         param_type = core.SphericalSliceSpecification
 
         mesh_specification['r_bound'] = cp.cluster.ask_for_input('R Bound (Bohr radii)', default = 30, cast_to = float)
         mesh_specification['r_points'] = (mesh_specification['r_bound'] / bohr_radius) * ask_for_input('R Points per Bohr Radii', default = 40, cast_to = int)
         mesh_specification['theta_points'] = cp.cluster.ask_for_input('Theta Points', default = 500, cast_to = int)
+
+        memory_estimate = 128 * mesh_specification['r_points'] * mesh_specification['theta_points']
 
     elif mesh_type == 'harm':
         param_type = core.SphericalHarmonicSpecification
@@ -35,9 +39,15 @@ def ask_mesh_type():
         mesh_specification['r_points'] = (mesh_specification['r_bound'] / bohr_radius) * ask_for_input('R Points per Bohr Radii', default = 40, cast_to = int)
         mesh_specification['spherical_harmonics'] = cp.cluster.ask_for_input('Spherical Harmonics', default = 500, cast_to = int)
 
+        memory_estimate = mesh_specification['r_points'] * mesh_specification['spherical_harmonics']
+
     else:
         exception_text = 'Mesh type {} not found!'.format(mesh_type)
         raise Exception(exception_text)
+
+    memory_estimate /= (8 * 1024)
+    if memory_estimate > 10000:
+        logger.warning('Predicted memory usage per Simulation is {} KB'.format(memory_estimate))
 
     return param_type, mesh_specification
 

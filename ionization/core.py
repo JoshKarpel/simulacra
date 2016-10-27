@@ -454,17 +454,26 @@ class CylindricalSliceFiniteDifferenceMesh(QuantumMesh):
 
         self.rho -= self.delta_rho / 2
 
-        self.z_center_index = self.spec.z_points / 2
+        self.z_center_index = int(self.spec.z_points // 2)
         self.z_max = np.max(self.z)
         self.rho_max = np.max(self.rho)
 
-        self.z_mesh, self.rho_mesh = np.meshgrid(self.z, self.rho, indexing = 'ij')
-
+        # self.z_mesh, self.rho_mesh = np.meshgrid(self.z, self.rho, indexing = 'ij')
         self.g_mesh = self.g_for_state(self.spec.initial_state)
 
         self.mesh_points = len(self.z) * len(self.rho)
         self.matrix_operator_shape = (self.mesh_points, self.mesh_points)
         self.mesh_shape = np.shape(self.r_mesh)
+
+    @property
+    @cp.utils.memoize()
+    def z_mesh(self):
+        return np.meshgrid(self.z, self.rho, indexing = 'ij')[0]
+
+    @property
+    @cp.utils.memoize()
+    def rho_mesh(self):
+        return np.meshgrid(self.z, self.rho, indexing = 'ij')[1]
 
     @property
     def g_factor(self):
@@ -889,13 +898,22 @@ class SphericalSliceFiniteDifferenceMesh(QuantumMesh):
 
         self.r_max = np.max(self.r)
 
-        self.r_mesh, self.theta_mesh = np.meshgrid(self.r, self.theta, indexing = 'ij')
-
+        # self.r_mesh, self.theta_mesh = np.meshgrid(self.r, self.theta, indexing = 'ij')
         self.g_mesh = self.g_for_state(self.spec.initial_state)
 
         self.mesh_points = len(self.r) * len(self.theta)
         self.matrix_operator_shape = (self.mesh_points, self.mesh_points)
         self.mesh_shape = np.shape(self.r_mesh)
+
+    @property
+    @cp.utils.memoize()
+    def r_mesh(self):
+        return np.meshgrid(self.r, self.theta, indexing = 'ij')[0]
+
+    @property
+    @cp.utils.memoize()
+    def theta_mesh(self):
+        return np.meshgrid(self.r, self.theta, indexing = 'ij')[1]
 
     @property
     def g_factor(self):
