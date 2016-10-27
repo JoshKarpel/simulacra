@@ -212,7 +212,7 @@ def ensure_dir_exists(path):
     logger.debug('Ensured path exists: {}'.format(make_path))
 
 
-def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'png', img_scale = 1, **kwargs):
+def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'png', img_scale = 1, transparent = True, **kwargs):
     """Save the current matplotlib figure with the given name to the given folder."""
     if target_dir is None:
         target_dir = os.getcwd()
@@ -220,7 +220,7 @@ def save_current_figure(name, name_postfix = '', target_dir = None, img_format =
 
     ensure_dir_exists(path)
 
-    plt.savefig(path, dpi = img_scale * plt.gcf().dpi, bbox_inches = 'tight')
+    plt.savefig(path, dpi = img_scale * plt.gcf().dpi, bbox_inches = 'tight', transparent = transparent)
 
     logger.info('Saved matplotlib figure {} to {}'.format(name, path))
 
@@ -231,9 +231,10 @@ def xy_plot(x, *y, legends = None,
             x_center = 0, x_range = None,
             y_center = None, y_range = None,
             log_x = False, log_y = False,
+            aspect_ratio = 1.5, title_size = 15, label_size = 15, unit_size = 10, legend_size = 12,
             save_csv = False,
             **kwargs):
-    fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+    fig = plt.figure(figsize = (7 * aspect_ratio, 7), dpi = 600)
     fig.set_tight_layout(True)
     axis = plt.subplot(111)
 
@@ -260,22 +261,22 @@ def xy_plot(x, *y, legends = None,
 
     # set title
     if title is not None:
-        title = axis.set_title(r'{}'.format(title), fontsize = 15)
-        title.set_y(1.05)
+        title = axis.set_title(r'{}'.format(title), fontsize = title_size)
+        title.set_y(1.025)
 
     # set x label
     if x_label is not None:
         if x_scale is not None:
             x_label += r' ({})'.format(unit_names_to_tex_strings[x_scale])
 
-        axis.set_xlabel(r'{}'.format(x_label), fontsize = 15)
+        axis.set_xlabel(r'{}'.format(x_label), fontsize = label_size)
 
     # set y label
     if y_label is not None:
         if y_scale is not None:
             y_label += r' ({})'.format(unit_names_to_tex_strings[y_scale])
 
-        axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
+        axis.set_ylabel(r'{}'.format(y_label), fontsize = label_size)
 
     # set x axis limits
     if x_range is None:
@@ -300,11 +301,11 @@ def xy_plot(x, *y, legends = None,
 
     # grid and tick options
     axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
-    axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
+    axis.tick_params(axis = 'both', which = 'major', labelsize = unit_size)
 
     # draw legend
     if legends is not None:
-        axis.legend(loc = 'best', fontsize = 12)
+        axis.legend(loc = 'best', fontsize = legend_size)
 
     save_current_figure(**kwargs)
 

@@ -25,10 +25,15 @@ if __name__ == '__main__':
                 cp.utils.xy_plot(delay, signal,
                                  x_label = r'Time Delay $\tau$', x_scale = 'fs',
                                  y_label = r'SHG Power (arb. units)',
+                                 label_size = 20,
                                  name = 'after_cavity', img_format = fmt, target_dir = OUT_DIR)
 
                 cp.utils.xy_plot(delay, signal,
                                  x_label = r'Time Delay $\tau$', x_scale = 'fs',
                                  y_label = r'SHG Power (arb. units)',
-                                 title = r'Interferometric Autocorrelation Signal',
+                                 label_size = 26,
+                                 title_size = 26,
+                                 unit_size = 16,
+                                 title = r'Measured Interferometric Autocorrelation (No Modulation)',
+                                 aspect_ratio = 1.8,
                                  name = 'after_cavity_with_title', img_format = fmt, target_dir = OUT_DIR)

@@ -379,29 +379,38 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
             interferometric[ii] = integ.simps(integrand, dx = t[1] - t[0])
             logger.debug('Calculated Interferometric Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
 
+        michelson_plot_options = {'title': 'Michelson Autocorrelation',
+                                  'x_label': r'Time Delay $\tau$',
+                                  'x_scale': 'fs',
+                                  'y_label': r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right) + E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
+                                  'name': '{}__michelson_autocorrelation'.format(self.name),
+                                  'y_center': 0.5,
+                                  'y_range': 0.5}
+        michelson_plot_options.update(kwargs)
         cp.utils.xy_plot(taus, michelson / np.nanmax(michelson),
-                         title = 'Michelson Autocorrelation Signal',
-                         x_label = r'Time Delay $\tau$', x_scale = 'fs',
-                         y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right) + E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
-                         name = '{}__michelson_autocorrelation'.format(self.name),
-                         y_center = 0.5, y_range = 0.5,
-                         **kwargs)
+                         **michelson_plot_options)
 
+        intensity_plot_options = {'title': 'Intensity Autocorrelation',
+                                  'x_label': r'Time Delay $\tau$',
+                                  'x_scale': 'fs',
+                                  'y_label': r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right)\right|^2 \, \left|E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
+                                  'name': '{}__intensity_autocorrelation'.format(self.name),
+                                  'y_center': 0.5,
+                                  'y_range': 0.5}
+        intensity_plot_options.update(kwargs)
         cp.utils.xy_plot(taus, intensity / np.nanmax(intensity),
-                         title = 'Intensity Autocorrelation Signal',
-                         x_label = r'Time Delay $\tau$', x_scale = 'fs',
-                         y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right)\right|^2 \, \left|E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
-                         name = '{}__intensity_autocorrelation'.format(self.name),
-                         y_center = 0.5, y_range = 0.5,
-                         **kwargs)
+                         **intensity_plot_options)
 
+        interferometric_plot_options = {'title': 'Interferometric Autocorrelation',
+                                        'x_label': r'Time Delay $\tau$',
+                                        'x_scale': 'fs',
+                                        'y_label': r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|\left[ E\left( t \right) + E\left( t - \tau \right) \right]^2 \right|^2 dt$   (arb. units)',
+                                        'name': '{}__interferometric_autocorrelation'.format(self.name),
+                                        'y_center': 0.5,
+                                        'y_range': 0.5}
+        interferometric_plot_options.update(kwargs)
         cp.utils.xy_plot(taus, interferometric / np.nanmax(interferometric),
-                         title = 'Interferometric Autocorrelation Signal',
-                         x_label = r'Time Delay $\tau$', x_scale = 'fs',
-                         y_label = r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|\left[ E\left( t \right) + E\left( t - \tau \right) \right]^2 \right|^2 dt$   (arb. units)',
-                         name = '{}__interferometric_autocorrelation'.format(self.name),
-                         y_center = 0.5, y_range = 0.5,
-                         **kwargs)
+                         **interferometric_plot_options)
 
     def michelson_autocorrelation(self, tau_range = 100 * fsec, **kwargs):
         t, electric_field = self.fft()

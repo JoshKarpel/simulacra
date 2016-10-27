@@ -9,14 +9,9 @@ from compy.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
+# OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME + '_mod')
 
 if __name__ == '__main__':
-    with open('after_cavity.xlsx') as f:
-        _, _, position, time, power = np.loadtxt(f, skiprows = 1, unpack = True)
-
-        print(position)
-        print(time)
-        print(power)
     with cp.utils.Logger(stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
         f_min = 50 * THz
         f_max = 5000 * THz
@@ -33,10 +28,11 @@ if __name__ == '__main__':
         print('wave min', wavelength_min / nm)
         print('wave max', wavelength_max / nm)
 
-        power = 17
+        power = 16
         frequencies = np.linspace(f_min, f_max, 2 ** power)
 
-        methods = ['gaussian', 'spline']
+        # methods = ['gaussian', 'spline']
+        methods = ['spline']
 
         # optics = [disp.FS(name = 'a', length = 1 * cm),
         #           disp.FS(name = 'b', length = 2 * cm),
@@ -64,10 +60,11 @@ if __name__ == '__main__':
 
             sim = disp.ContinuousAmplitudeSpectrumSimulation(spec)
 
-            OUT_DIR_BEFORE = os.path.join(OUT_DIR, 'before')
-            sim.plot_autocorrelations(tau_range = 200 * fsec, tau_points = 5e3, target_dir = OUT_DIR_BEFORE, save_csv = True)
-            # sim.plot_autocorrelations(tau_range = 500 * fsec, tau_points = 1e4, target_dir = OUT_DIR_BEFORE)
-            sim.plot_electric_field_vs_time(target_dir = OUT_DIR_BEFORE)
+            # OUT_DIR_BEFORE = os.path.join(OUT_DIR, 'before')
+            # sim.plot_autocorrelations(tau_range = 160 * fsec, tau_points = 5e3, target_dir = OUT_DIR_BEFORE, save_csv = True,
+            #                           title = None, y_label = 'SHG Power (arb. units)', label_size = 20)
+            # # sim.plot_autocorrelations(tau_range = 500 * fsec, tau_points = 1e4, target_dir = OUT_DIR_BEFORE)
+            # sim.plot_electric_field_vs_time(target_dir = OUT_DIR_BEFORE)
 
             sim.run_simulation()
 
@@ -75,6 +72,8 @@ if __name__ == '__main__':
                                        x_lower_lim = 550 * nm, x_upper_lim = 1150 * nm)
 
             OUT_DIR_AFTER = os.path.join(OUT_DIR, 'after')
-            sim.plot_autocorrelations(tau_range = 500 * fsec, tau_points = 5e3, target_dir = OUT_DIR_AFTER, save_csv = True)
+            sim.plot_autocorrelations(tau_range = 160 * fsec, tau_points = 5e3, target_dir = OUT_DIR_AFTER, save_csv = True,
+                                      title = 'Simulated Interferometric Autocorrelation (No Modulation)', y_label = 'SHG Power (arb. units)',
+                                      label_size = 26, title_size = 26, unit_size = 16, aspect_ratio = 1.8)
             # sim.plot_autocorrelations(tau_range = 500 * fsec, tau_points = 1e4, target_dir = OUT_DIR_AFTER)
             sim.plot_electric_field_vs_time(target_dir = OUT_DIR_AFTER)
