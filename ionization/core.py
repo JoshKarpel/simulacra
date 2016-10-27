@@ -17,7 +17,7 @@ import compy.cy as cy
 from compy.units import *
 from ionization import animators, potentials
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('compy.' + __name__)
 logger.setLevel(logging.DEBUG)
 
 
@@ -1322,6 +1322,7 @@ class SphericalHarmonicFiniteDifferenceMesh(QuantumMesh):
     def norm(self):
         return np.abs(self.inner_product())
 
+    @cp.utils.memoize(copy_output = True)
     def g_for_state(self, state):
         g = np.zeros(self.mesh_shape)
 
@@ -1562,9 +1563,15 @@ class ElectricFieldSimulation(cp.core.Simulation):
         """
 
         if not save_mesh:
+            mesh = self.mesh.copy()
             self.mesh = None
 
-        return super(ElectricFieldSimulation, self).save(target_dir = target_dir, file_extension = file_extension)
+        out = super(ElectricFieldSimulation, self).save(target_dir = target_dir, file_extension = file_extension)
+
+        if not save_mesh:
+            self.mesh = mesh
+
+        return out
 
     @staticmethod
     def load(file_path, initialize_mesh = False):

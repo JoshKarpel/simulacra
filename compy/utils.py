@@ -1,6 +1,5 @@
 import datetime as dt
 import functools
-import gzip
 import logging
 import multiprocessing as mp
 import os
@@ -167,7 +166,8 @@ class Beet:
 
         ensure_dir_exists(file_path_working)
 
-        with gzip.open(file_path_working, mode = 'wb') as file:
+        with open(file_path_working, mode = 'wb') as file:  # TODO: undo this
+            # with gzip.open(file_path_working, mode = 'wb') as file:
             pickle.dump(self, file, protocol = -1)
 
         os.replace(file_path_working, file_path)
@@ -176,15 +176,16 @@ class Beet:
 
         return file_path
 
-    @staticmethod
-    def load(file_path):
+    @classmethod
+    def load(cls, file_path):
         """
         Load a Beet from file_path.
 
         :param file_path: the path to try to load a Beet from
         :return: the loaded Beet
         """
-        with gzip.open(file_path, mode = 'rb') as file:
+        with open(file_path, mode = 'rb') as file:  # TODO: undo this
+            # with gzip.open(file_path, mode = 'rb') as file:
             beet = pickle.load(file)
 
         logger.info('Loaded {} {} from {}'.format(beet.__class__.__name__, beet.name, file_path))

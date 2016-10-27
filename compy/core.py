@@ -86,15 +86,15 @@ class Simulation(utils.Beet):
 
         return super(Simulation, self).save(target_dir, file_extension)
 
-    @staticmethod
-    def load(file_path):
+    @classmethod
+    def load(cls, file_path):
         """
         Load a Simulation from file_path.
 
         :param file_path: the path to try to load a Simulation from
         :return: the loaded Simulation
         """
-        sim = super(Simulation, self).load(file_path)
+        sim = super(Simulation, cls).load(file_path)
 
         sim.latest_load_time = dt.datetime.now()
 
