@@ -17,7 +17,7 @@ import compy.cy as cy
 from compy.units import *
 from ionization import animators, potentials
 
-logger = logging.getLogger('compy.' + __name__)
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 

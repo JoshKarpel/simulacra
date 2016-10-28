@@ -14,7 +14,7 @@ from cycler import cycler
 import compy as cp
 from compy.units import *
 
-logger = logging.getLogger('compy.' + __name__)
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 

@@ -24,7 +24,8 @@ LOG_FORMATTER = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(me
 class Logger:
     """A context manager to easily set up logging."""
 
-    def __init__(self, logger_name = 'compy',
+    def __init__(self, *logger_names,
+                 manual_logger_name = None,
                  stdout_logs = True, stdout_level = logging.DEBUG,
                  file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'a'):
         """
@@ -38,8 +39,9 @@ class Logger:
         :param file_dir:
         :param file_mode:
         """
-
-        self.logger_name = logger_name
+        self.logger_names = list(logger_names)
+        if manual_logger_name is not None:
+            self.logger_names = [manual_logger_name] + self.logger_names
 
         self.stdout_logs = stdout_logs
         self.stdout_level = stdout_level
@@ -48,7 +50,7 @@ class Logger:
         self.file_level = file_level
 
         if file_name is None:
-            file_name = '{}__{}'.format(self.logger_name, dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
+            file_name = '{}__{}'.format('log', dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
         self.file_name = file_name
 
         if file_dir is None:
@@ -61,7 +63,7 @@ class Logger:
 
     def __enter__(self):
         """Enter special method. Gets a logger with the specified name, replace it's handlers with, and returns itself."""
-        self.logger = logging.getLogger(self.logger_name)
+        self.loggers = {name: logging.getLogger(name) for name in self.logger_names}
 
         new_handlers = [logging.NullHandler()]
 
@@ -83,18 +85,23 @@ class Logger:
 
             new_handlers.append(file_handler)
 
-        self.old_level = self.logger.level
-        self.old_handlers = self.logger.handlers
+        self.old_levels = {name: logger.level for name, logger in self.loggers.items()}
+        self.old_handlers = {name: logger.handlers for name, logger in self.loggers.items()}
 
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.handlers = new_handlers
+        for logger in self.loggers.values():
+            logger.setLevel(logging.DEBUG)
+            logger.handlers = new_handlers
 
-        return self.logger
+        return self.loggers[self.logger_names[0]]
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit special method. Restores the logger to it's pre-context state."""
         self.logger.level = self.old_level
         self.logger.handlers = self.old_handlers
+
+        for name, logger in self.loggers.items():
+            logger.level = self.old_levels[name]
+            logger.handlers = self.old_handlers[name]
 
 
 ILLEGAL_FILENAME_CHARACTERS = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']  # these characters should be stripped from file names before use
