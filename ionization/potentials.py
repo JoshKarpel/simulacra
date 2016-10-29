@@ -21,7 +21,7 @@ class Potential:
         return repr(self)
 
     def __repr__(self):
-        return '{}'.format(self.__class__.__name__)
+        return self.__class__.__name__
 
     def __iter__(self):
         yield self
@@ -79,7 +79,7 @@ class NuclearPotential(Potential):
 
 
 class RadialImaginaryPotential(Potential):
-    def __init__(self, center = 20 * bohr_radius, width = 2 * bohr_radius, amplitude = 1 * atomic_electric_field):
+    def __init__(self, center = 20 * bohr_radius, width = 2 * bohr_radius, amplitude = 1 * atomic_electric_potential):
         """
         Construct a RadialImaginaryPotential. The potential is shaped like a Gaussian and has an imaginary amplitude.
 
@@ -95,25 +95,77 @@ class RadialImaginaryPotential(Potential):
 
         self.prefactor = -1j * self.amplitude * (proton_charge ** 2)
 
+    def __repr__(self):
+        return '{}(center = {}, width = {}, amplitude = {})'.format(self.__class__.__name__, self.center, self.width, self.amplitude)
+
+    def __str__(self):
+        return '{}(center = {} Bohr radii, width = {} Bohr radii, amplitude = {} AEP)'.format(self.__class__.__name__,
+                                                                                              uround(self.center, bohr_radius, 3),
+                                                                                              uround(self.width, bohr_radius, 3),
+                                                                                              uround(self.amplitude, atomic_electric_potential, 3))
+
     def __call__(self, *, r, **kwargs):
         return self.prefactor * np.exp(-(((r - self.center) / self.width) ** 2))
 
 
-class UniformLinearlyPolarizedElectricField(Potential):
-    def __init__(self, window_time = None, window_width = None):
-        super(UniformLinearlyPolarizedElectricField, self).__init__()
+class ElectricFieldWindow:
+    def __init__(self):
+        pass
 
+    def __str__(self):
+        return self.__class__.__name__
+
+    def __call__(self, t):
+        raise NotImplementedError
+
+
+class NoWindow(ElectricFieldWindow):
+    def __call__(self, t):
+        return 1
+
+
+class LinearRampWindow(ElectricFieldWindow):
+    def __init__(self, ramp_on_time = 0 * asec, ramp_time = 50 * asec):
+        self.ramp_on_time = ramp_on_time
+        self.ramp_time = ramp_time
+
+        super(LinearRampWindow, self).__init__()
+
+    def __call__(self, t):
+        cond = np.greater_equal(t, self.ramp_on_time)
+        on = 1
+        off = 0
+
+        out_1 = np.where(cond, on, off)
+
+        cond = np.less_equal(t, self.ramp_on_time + self.ramp_time)
+        on = np.ones(np.shape(t)) * (t - self.ramp_on_time) / self.ramp_time
+        off = 1
+
+        out_2 = np.where(cond, on, off)
+
+        return out_1 * out_2
+
+
+class ExponentialWindow(ElectricFieldWindow):
+    def __init__(self, window_time = 10 * asec, window_width = 10 * asec):
         self.window_time = window_time
         self.window_width = window_width
 
-    def get_window(self, t):
-        if self.window_time is not None and self.window_width is not None:
-            return 1 / (1 + np.exp(-(t + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-(t - self.window_time) / self.window_width))
-        else:
-            return 1
+        super(ExponentialWindow, self).__init__()
+
+    def __call__(self, t):
+        return 1 / (1 + np.exp(-(t + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-(t - self.window_time) / self.window_width))
+
+
+class UniformLinearlyPolarizedElectricField(Potential):
+    def __init__(self, window = NoWindow()):
+        super(UniformLinearlyPolarizedElectricField, self).__init__()
+
+        self.window = window
 
     def get_amplitude(self, t):
-        raise NotImplementedError
+        return self.window(t)
 
     def __call__(self, *, t, distance_along_polarization, test_charge, **kwargs):
         return distance_along_polarization * test_charge * self.get_amplitude(t)
@@ -128,30 +180,21 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
         self.amplitude = amplitude
 
     def __str__(self):
-        out = '{}(start_time = {} as, end_time = {} as, amplitude = {} AEF'.format(self.__class__.__name__,
-                                                                                   uround(self.start_time, asec, 3),
-                                                                                   uround(self.end_time, asec, 3),
-                                                                                   uround(self.amplitude, atomic_electric_field, 3))
+        out = '{}(start_time = {} as, end_time = {} as, amplitude = {} AEF)'.format(self.__class__.__name__,
+                                                                                    uround(self.start_time, asec, 3),
+                                                                                    uround(self.end_time, asec, 3),
+                                                                                    uround(self.amplitude, atomic_electric_field, 3))
 
-        if self.window_time is not None and self.window_width is not None:
-            out += ', window_time = {} as, window_width = {} as'.format(uround(self.window_time, asec, 3),
-                                                                        uround(self.window_width, asec, 3))
-
-        out += ')'
+        out += ' with {}'.format(self.window)
 
         return out
 
     def __repr__(self):
-        out = '{}(start_time = {}, end_time = {}, amplitude = {}'.format(self.__class__.__name__,
-                                                                         self.start_time,
-                                                                         self.end_time,
-                                                                         self.amplitude)
-
-        if self.window_time is not None and self.window_width is not None:
-            out += ', window_time = {}, window_width = {}'.format(self.window_time,
-                                                                  self.window_width)
-
-        out += ')'
+        out = '{}(start_time = {}, end_time = {}, amplitude = {}, window_function = {})'.format(self.__class__.__name__,
+                                                                                                self.start_time,
+                                                                                                self.end_time,
+                                                                                                self.amplitude,
+                                                                                                repr(self.window))
 
         return out
 
@@ -160,9 +203,9 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
         on = np.ones(np.shape(t))
         off = np.zeros(np.shape(t))
 
-        out = np.where(cond, on, off) * self.amplitude * self.get_window(t)
+        out = np.where(cond, on, off) * self.amplitude * super(Rectangle, self).get_amplitude(t)
 
-        return out
+        return out * super(Rectangle, self).get_amplitude(t)
 
 
 class SineWave(UniformLinearlyPolarizedElectricField):
@@ -174,30 +217,21 @@ class SineWave(UniformLinearlyPolarizedElectricField):
         self.amplitude = amplitude
 
     def __str__(self):
-        out = '{}(omega = 2pi * {} THz, amplitude = {} AEF, phase = 2pi * {}'.format(self.__class__.__name__,
-                                                                                     uround(self.frequency, THz, 3),
-                                                                                     uround(self.amplitude, atomic_electric_field, 3),
-                                                                                     uround(self.phase, twopi, 3))
+        out = '{}(omega = 2pi * {} THz, amplitude = {} AEF, phase = 2pi * {})'.format(self.__class__.__name__,
+                                                                                      uround(self.frequency, THz, 3),
+                                                                                      uround(self.amplitude, atomic_electric_field, 3),
+                                                                                      uround(self.phase, twopi, 3))
 
-        if self.window_time is not None and self.window_width is not None:
-            out += ', window_time = {} as, window_width = {} as'.format(uround(self.window_time, asec, 3),
-                                                                        uround(self.window_width, asec, 3))
-
-        out += ')'
+        out += ' with {}'.format(self.window)
 
         return out
 
     def __repr__(self):
-        out = '{}(omega = {}, amplitude = {}, phase = {}'.format(self.__class__.__name__,
-                                                                 self.omega,
-                                                                 self.amplitude,
-                                                                 self.phase)
-
-        if self.window_time is not None and self.window_width is not None:
-            out += ', window_time = {}, window_width = {}'.format(self.window_time,
-                                                                  self.window_width)
-
-        out += ')'
+        out = '{}(omega = {}, amplitude = {}, phase = {}, window_function = {})'.format(self.__class__.__name__,
+                                                                                        self.omega,
+                                                                                        self.amplitude,
+                                                                                        self.phase,
+                                                                                        repr(self.window))
 
         return out
 
@@ -222,7 +256,7 @@ class SineWave(UniformLinearlyPolarizedElectricField):
         self.frequency = 1 / period
 
     def get_amplitude(self, t):
-        return self.amplitude * np.sin((self.omega * t) + self.phase) * self.get_window(t)
+        return self.amplitude * np.sin((self.omega * t) + self.phase) * super(SineWave, self).get_amplitude(t)
 
     def get_peak_amplitude(self):
         return self.amplitude

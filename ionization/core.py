@@ -1516,7 +1516,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.mesh = self.spec.mesh_type(self)
 
         if not (.99 < self.mesh.norm < 1.01):
-            logger.warning('Initial wavefunction for {} {} may not be normalized (norm = {})'.format(self.__class__.__name__, self.name, self.norm))
+            logger.warning('Initial wavefunction for {} {} may not be normalized (norm = {})'.format(self.__class__.__name__, self.name, self.mesh.norm))
 
         logger.debug('Initialized mesh for simulation {}'.format(self.name))
 
