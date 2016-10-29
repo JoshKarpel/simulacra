@@ -49,6 +49,11 @@ class SphericalHarmonic:
     def __repr__(self):
         return '{}(l={}, m={})'.format(self.__class__.__name__, self.l, self.m)
 
+    @property
+    def tex_str(self):
+        """Gets a LaTeX-formatted string for the BoundState."""
+        return r'Y_{}^{}'.format(self.m, self.l)
+
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.l == other.l and self.m == other.m
 

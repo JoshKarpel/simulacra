@@ -551,6 +551,10 @@ class CylindricalSliceFiniteDifferenceMesh(QuantumMesh):
     def g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
+    @property
+    def dipole_moment(self):
+        return self.spec.test_charge * self.inner_product(mesh_b = self.z_mesh * self.g_mesh)
+
     @cp.utils.memoize(copy_output = True)
     def get_kinetic_energy_matrix_operators(self):
         """Get the mesh kinetic energy operator matrices for z and rho."""
@@ -1491,6 +1495,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.energy_expectation_value_vs_time_internal = np.zeros(self.time_steps) * np.NaN
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
+        self.electric_dipole_moment_vs_time = np.zeros(self.time_steps, dtype = np.complex128) * np.NaN
 
         if self.spec.animated:
             self.animator = self.spec.animator_type(self)
@@ -1510,12 +1515,19 @@ class ElectricFieldSimulation(cp.core.Simulation):
     def initialize_mesh(self):
         self.mesh = self.spec.mesh_type(self)
 
+        if not (.99 < self.mesh.norm < 1.01):
+            logger.warning('Initial wavefunction for {} {} may not be normalized (norm = {})'.format(self.__class__.__name__, self.name, self.norm))
+
         logger.debug('Initialized mesh for simulation {}'.format(self.name))
 
     def store_data(self, time_index):
         """Update the time-indexed data arrays with the current values."""
-        self.norm_vs_time[time_index] = self.mesh.norm
+        norm = self.mesh.norm
+        if norm > self.norm_vs_time[0]:
+            logger.warning('Wavefunction norm ({}) has exceeded initial norm ({}) for {} {}'.format(norm, self.norm_vs_time[0], self.__class__.__name__, self.name))
+        self.norm_vs_time[time_index] = norm
         self.energy_expectation_value_vs_time_internal[time_index] = self.mesh.energy_expectation_value
+        self.electric_dipole_moment_vs_time[time_index] = self.mesh.dipole_moment
 
         for state in self.spec.test_states:
             self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(self.mesh.g_for_state(state))
@@ -1633,7 +1645,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_overlaps.grid()
         ax_field.grid()
 
-        ax_field.set_xlabel('Time (as)', fontsize = 15)
+        ax_field.set_xlabel('Time $t$ (as)', fontsize = 15)
         ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 15)
         ax_field.set_ylabel('E-Field (a.u.)', fontsize = 11)
 
@@ -1669,3 +1681,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
         cp.utils.save_current_figure(name = self.spec.file_name + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
 
         plt.close()
+
+    def plot_dipole_moment_vs_time(self, **kwargs):
+        cp.utils.xy_plot(self.times, np.real(self.electric_dipole_moment_vs_time), np.imag(self.electric_dipole_moment_vs_time),
+                         legends = ('$\mathrm{Re} \, d(t)$', '$\mathrm{Im} \, d(t)$'),
+                         x_scale = 'as', y_scale = 'atomic_electric_dipole',
+                         x_label = 'Time $t$', y_label = 'Dipole Moment $d(t)$',
+                         name = self.spec.file_name + '__dipole_moment_vs_time',
+                         **kwargs)

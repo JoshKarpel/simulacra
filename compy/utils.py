@@ -29,18 +29,20 @@ class Logger:
                  stdout_logs = True, stdout_level = logging.DEBUG,
                  file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'a'):
         """
+        Initialize a Logger context manager.
 
-        :param logger_name:
-        :param stdout_logs:
-        :param stdout_level:
-        :param file_logs:
-        :param file_level:
-        :param file_name:
-        :param file_dir:
-        :param file_mode:
+        :param logger_names: the names of loggers to catch/modify and/or create
+        :param manual_logger_name: the name of the logger that will be returned by the context manager's __enter__ method
+        :param stdout_logs: whether to print log messages to stdout
+        :param stdout_level: the lowest level for stdout log messages
+        :param file_logs: whether to print log messages to a file
+        :param file_level: the lowest level for file log messages
+        :param file_name: the filename for the log file, defaults to 'log__{timestamp}'
+        :param file_dir: the director for the log file, defaults to the current working directory
+        :param file_mode: the file mode to open the log file with, defaults to 'a' (append)
         """
         self.logger_names = list(logger_names)
-        if manual_logger_name is not None:
+        if manual_logger_name is not None and manual_logger_name not in self.logger_names:
             self.logger_names = [manual_logger_name] + self.logger_names
 
         self.stdout_logs = stdout_logs
@@ -96,9 +98,6 @@ class Logger:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit special method. Restores the logger to it's pre-context state."""
-        self.logger.level = self.old_level
-        self.logger.handlers = self.old_handlers
-
         for name, logger in self.loggers.items():
             logger.level = self.old_levels[name]
             logger.handlers = self.old_handlers[name]
@@ -232,7 +231,8 @@ def save_current_figure(name, name_postfix = '', target_dir = None, img_format =
     logger.info('Saved matplotlib figure {} to {}'.format(name, path))
 
 
-def xy_plot(x, *y, legends = None,
+def xy_plot(x, *y,
+            legends = None, plot_args = None,
             x_scale = None, y_scale = None,
             title = None, x_label = None, y_label = None,
             x_center = 0, x_range = None,
@@ -258,6 +258,8 @@ def xy_plot(x, *y, legends = None,
             scaled_y.append(yy / unit_names_to_values[y_scale])
         else:
             scaled_y.append(yy)
+
+    # TODO: figure out plot_args
 
     # plot y vs. x data
     for ii, yy in enumerate(scaled_y):

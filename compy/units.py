@@ -104,20 +104,34 @@ week = 7 * day
 year = 365 * day
 
 unit_names_to_values.update({'ms': msec,
+                             'msec': msec,
                              'us': usec,
+                             'usec': usec,
                              'ns': nsec,
+                             'nsec': nsec,
                              'ps': psec,
+                             'psec': psec,
                              'fs': fsec,
+                             'fsec': fsec,
+                             'as': asec,
+                             'asec': asec,
                              'minutes': minute,
                              'hours': hour,
                              'days': day,
                              'weeks': week,
                              'years': year})
 unit_names_to_tex_strings.update({'ms': r'$\mathrm{ms}$',
+                                  'msec': r'$\mathrm{ms}$',
                                   'us': r'$\mathrm{us}$',
+                                  'usec': r'$\mathrm{us}$',
                                   'ns': r'$\mathrm{ns}$',
+                                  'nsec': r'$\mathrm{ns}$',
                                   'ps': r'$\mathrm{ps}$',
+                                  'psec': r'$\mathrm{ps}$',
                                   'fs': r'$\mathrm{fs}$',
+                                  'fsec': r'$\mathrm{fs}$',
+                                  'as': r'$\mathrm{as}$',
+                                  'asec': r'$\mathrm{as}$',
                                   'minutes': '$\mathrm{minutes}$',
                                   'hours': '$\mathrm{hours}$',
                                   'days': '$\mathrm{days}$',
@@ -469,15 +483,21 @@ unit_names_to_tex_strings.update({'c': r'$c$',
                                   'coulomb_force_constant': r'$k_e$',
                                   'n_vacuum': r'$n_{\mathrm{vac}}$'})
 
-
 atomic_energy = hartree
 atomic_electric_field = coulomb_force_constant * proton_charge / (bohr_radius ** 2)
 atomic_electric_potential = coulomb_force_constant * proton_charge / bohr_radius
+atomic_electric_dipole = proton_charge * bohr_radius  # TODO: check whether + or -
 atomic_velocity = alpha * c
 atomic_momentum = electron_mass * atomic_velocity
 atomic_time = hbar / hartree
 
 unit_names_to_values.update({'atomic_electric_field': atomic_electric_field,
                              'atomic_electric_potential': atomic_electric_potential,
+                             'atomic_electric_dipole': atomic_electric_dipole,
                              'atomic_velocity': atomic_velocity,
                              'atomic_momentum': atomic_momentum})
+unit_names_to_tex_strings.update({'atomic_electric_field': r'',  # TODO: add these
+                                  'atomic_electric_potential': r'',
+                                  'atomic_electric_dipole': r'$e \, a_0$',
+                                  'atomic_velocity': r'',
+                                  'atomic_momentum': r''})

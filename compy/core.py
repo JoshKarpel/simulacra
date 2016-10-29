@@ -18,7 +18,7 @@ class Specification(utils.Beet):
         """
         Construct a Specification.
 
-        Any number of additional keyword arguments can be passed. They will be stored in an attribute called extra.
+        Any number of additional keyword arguments can be passed. They will be stored in an attribute called extra_args.
 
         :param name: the internal name of the Specification
         :param file_name: the desired external name, used for pickling. Illegal characters are stripped before use.
