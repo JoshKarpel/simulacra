@@ -7,6 +7,7 @@ from copy import deepcopy
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.fft as nfft
 import scipy as sp
 import scipy.sparse as sparse
 import scipy.special as special
@@ -1683,9 +1684,34 @@ class ElectricFieldSimulation(cp.core.Simulation):
         plt.close()
 
     def plot_dipole_moment_vs_time(self, **kwargs):
-        cp.utils.xy_plot(self.times, np.real(self.electric_dipole_moment_vs_time), np.imag(self.electric_dipole_moment_vs_time),
-                         legends = ('$\mathrm{Re} \, d(t)$', '$\mathrm{Im} \, d(t)$'),
+        cp.utils.xy_plot(self.times, np.real(self.electric_dipole_moment_vs_time),
+                         # legends = ('$\mathrm{Re} \, d(t)$', '$\mathrm{Im} \, d(t)$'),
                          x_scale = 'as', y_scale = 'atomic_electric_dipole',
                          x_label = 'Time $t$', y_label = 'Dipole Moment $d(t)$',
                          name = self.spec.file_name + '__dipole_moment_vs_time',
+                         **kwargs)
+
+        # TODO: include imaginary part?
+        # cp.utils.xy_plot(self.times, np.real(self.electric_dipole_moment_vs_time), np.imag(self.electric_dipole_moment_vs_time),
+        #                  legends = ('$\mathrm{Re} \, d(t)$', '$\mathrm{Im} \, d(t)$'),
+        #                  x_scale = 'as', y_scale = 'atomic_electric_dipole',
+        #                  x_label = 'Time $t$', y_label = 'Dipole Moment $d(t)$',
+        #                  name = self.spec.file_name + '__dipole_moment_vs_time',
+        #                  **kwargs)
+
+    def dipole_moment_vs_frequency(self):
+        frequency = nfft.fftshift(nfft.fftfreq(self.time_steps, self.spec.time_step))
+        dipole_moment = nfft.fftshift(nfft.fft(self.electric_dipole_moment_vs_time, norm = 'ortho'))
+
+        return frequency, dipole_moment
+
+    def plot_dipole_moment_vs_frequency(self, frequency_range = 10000 * THz, **kwargs):
+        frequency, dipole_moment = self.dipole_moment_vs_frequency()
+        # dipole_moment *= np.abs(twopi * frequency) ** 3
+        cp.utils.xy_plot(frequency, np.abs(dipole_moment) ** 2,
+                         x_scale = 'THz',
+                         log_y = True,
+                         x_label = 'Frequency $f$', y_label = r'Dipole Moment $\left| d(\omega) \right|^2$ $\left( e \, a_0 \right))$',
+                         x_range = frequency_range / 2, x_center = frequency_range / 2,
+                         name = self.spec.file_name + '__dipole_moment_vs_frequency',
                          **kwargs)

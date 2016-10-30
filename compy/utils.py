@@ -238,6 +238,7 @@ def xy_plot(x, *y,
             x_center = 0, x_range = None,
             y_center = None, y_range = None,
             log_x = False, log_y = False,
+            vlines = None,
             aspect_ratio = 1.5, title_size = 15, label_size = 15, unit_size = 10, legend_size = 12,
             save_csv = False,
             **kwargs):
@@ -307,6 +308,10 @@ def xy_plot(x, *y,
         axis.set_xscale('log')
     if log_y:
         axis.set_yscale('log')
+
+    if vlines is not None:
+        for x in vlines:
+            plt.axvline(x / unit_names_to_values[x_scale], color = 'red', linestyle = ':')
 
     # grid and tick options
     axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
