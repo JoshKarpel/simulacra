@@ -1699,14 +1699,23 @@ class ElectricFieldSimulation(cp.core.Simulation):
         #                  name = self.spec.file_name + '__dipole_moment_vs_time',
         #                  **kwargs)
 
-    def dipole_moment_vs_frequency(self):
-        frequency = nfft.fftshift(nfft.fftfreq(self.time_steps, self.spec.time_step))
-        dipole_moment = nfft.fftshift(nfft.fft(self.electric_dipole_moment_vs_time, norm = 'ortho'))
+    def dipole_moment_vs_frequency(self, first_time = None, last_time = None):
+        if first_time is None:
+            first_time_index, first_time = 0, self.times[0]
+        else:
+            first_time_index, first_time, _ = cp.utils.find_nearest(self.times, first_time)
+        if last_time is None:
+            last_time_index, last_time = self.time_steps - 1, self.times[self.time_steps - 1]
+        else:
+            last_time_index, last_time, _ = cp.utils.find_nearest(self.times, last_time)
+        points = last_time_index - first_time_index
+        frequency = nfft.fftshift(nfft.fftfreq(points, self.spec.time_step))
+        dipole_moment = nfft.fftshift(nfft.fft(self.electric_dipole_moment_vs_time[first_time_index: last_time_index], norm = 'ortho'))
 
         return frequency, dipole_moment
 
-    def plot_dipole_moment_vs_frequency(self, frequency_range = 10000 * THz, **kwargs):
-        frequency, dipole_moment = self.dipole_moment_vs_frequency()
+    def plot_dipole_moment_vs_frequency(self, frequency_range = 10000 * THz, first_time = None, last_time = None, **kwargs):
+        frequency, dipole_moment = self.dipole_moment_vs_frequency(first_time = first_time, last_time = last_time)
         # dipole_moment *= np.abs(twopi * frequency) ** 3
         cp.utils.xy_plot(frequency, np.abs(dipole_moment) ** 2,
                          x_scale = 'THz',

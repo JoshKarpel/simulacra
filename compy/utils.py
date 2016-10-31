@@ -2,6 +2,7 @@ import datetime as dt
 import functools
 import logging
 import multiprocessing as mp
+import collections
 import os
 import gzip
 import pickle
@@ -201,9 +202,15 @@ class Beet:
         return str(self)
 
 
-def index_of_closest(array, value):
-    """Returns the index of the numpy array entry closest to the given value."""
-    return np.argmin(np.abs(array - value))
+Nearest = collections.namedtuple('Nearest', ('index', 'value', 'target'))
+
+
+def find_nearest(array, target):
+    """Returns the index, value of the numpy array entry closest to the given target."""
+    index = np.argmin(np.abs(array - target))
+    value = array[index]
+
+    return Nearest(index, value, target)
 
 
 def ensure_dir_exists(path):
