@@ -131,6 +131,11 @@ class LinearRampWindow(ElectricFieldWindow):
 
         super(LinearRampWindow, self).__init__()
 
+    def __str__(self):
+        return '{}(ramp_on_time = {} as, ramp_time = {} as)'.format(self.__class__.__name__,
+                                                                    uround(self.ramp_on_time, asec, 3),
+                                                                    uround(self.ramp_time, asec, 3))
+
     def __call__(self, t):
         cond = np.greater_equal(t, self.ramp_on_time)
         on = 1
@@ -262,4 +267,4 @@ class SineWave(UniformLinearlyPolarizedElectricField):
         return self.amplitude
 
     def get_peak_power_density(self):
-        return c * epsilon_0 * (np.abs(self.amplitude) ** 2)
+        return 0.5 * c * epsilon_0 * (np.abs(self.amplitude) ** 2)  # TODO: check factor of 1/2 here

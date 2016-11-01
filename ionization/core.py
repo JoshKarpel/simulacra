@@ -881,7 +881,7 @@ class SphericalSliceSpecification(ElectricFieldSpecification):
                 '   R Points: {}'.format(self.r_points),
                 '   R Mesh Spacing: ~{} Bohr radii'.format(uround(self.r_bound / self.r_points, bohr_radius, 3)),
                 '   Theta Points: {}'.format(self.theta_points),
-                '   Theta Mesh Spacing: ~{} rad | ~{} deg'.format(uround(pi / self.theta_points, rad, 3), uround(uround(180 / self.theta_points, 3))),
+                '   Theta Mesh Spacing: ~{} rad | ~{} deg'.format(round(pi / self.theta_points, 3), round(180 / self.theta_points, 3)),
                 '   Maximum Adjacent-Point Spacing: ~{} Bohr radii'.format(uround(pi * self.r_bound / self.theta_points, bohr_radius, 3)),
                 '   Total Mesh Points: {}'.format(int(self.r_points * self.theta_points))]
 
@@ -982,6 +982,10 @@ class SphericalSliceFiniteDifferenceMesh(QuantumMesh):
     @cp.utils.memoize()
     def g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
+
+    @property
+    def dipole_moment(self):
+        return self.spec.test_charge * self.inner_product(mesh_b = self.z_mesh * self.g_mesh)
 
     @cp.utils.memoize(copy_output = True)
     def get_kinetic_energy_matrix_operators(self):
@@ -1551,9 +1555,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
             self.evictions += 1
 
         while True:
-            logger.debug('{} {} working on time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.time_index, self.time_steps - 1,
-                                                                            np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
-
             if not only_end_data or self.time_index == self.time_steps - 1:  # if last time step or taking all data
                 self.store_data(self.time_index)
 
@@ -1567,6 +1568,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 break
 
             self.mesh.evolve(self.times[self.time_index] - self.times[self.time_index - 1])  # evolve the mesh forward to the next time step
+
+            logger.debug('{} {} evolved to time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.time_index, self.time_steps - 1,
+                                                                            np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
 
             if self.spec.checkpoints:
                 if (self.time_index + 1) % self.spec.checkpoint_at == 0:
@@ -1717,10 +1721,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
     def plot_dipole_moment_vs_frequency(self, frequency_range = 10000 * THz, first_time = None, last_time = None, **kwargs):
         frequency, dipole_moment = self.dipole_moment_vs_frequency(first_time = first_time, last_time = last_time)
         # dipole_moment *= np.abs(twopi * frequency) ** 3
-        cp.utils.xy_plot(frequency, np.abs(dipole_moment) ** 2,
+        cp.utils.xy_plot(frequency, np.abs(dipole_moment) ** 2 / (atomic_electric_dipole ** 2),
                          x_scale = 'THz',
                          log_y = True,
-                         x_label = 'Frequency $f$', y_label = r'Dipole Moment $\left| d(\omega) \right|^2$ $\left( e \, a_0 \right))$',
+                         x_label = 'Frequency $f$', y_label = r'Dipole Moment $\left| d(\omega) \right|^2$ $\left( e^2 \, a_0^2 \right)$',
                          x_range = frequency_range / 2, x_center = frequency_range / 2,
                          name = self.spec.file_name + '__dipole_moment_vs_frequency',
                          **kwargs)
