@@ -332,6 +332,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  test_mass = electron_mass_reduced, test_charge = electron_charge,
                  initial_state = BoundState(1, 0),
                  test_states = tuple(BoundState(n, l) for n in range(5) for l in range(n)),
+                 dipole_gauges = tuple('length'),
                  internal_potential = potentials.NuclearPotential(charge = proton_charge) + potentials.RadialImaginaryPotential(center = 20 * bohr_radius, width = 1 * bohr_radius, amplitude = 1 * atomic_electric_potential),
                  electric_potential = None,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
@@ -350,6 +351,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.test_charge = test_charge
         self.initial_state = initial_state
         self.test_states = tuple(test_states)  # consume input iterators
+        self.dipole_gauges = tuple(dipole_gauges)
 
         self.internal_potential = internal_potential
         self.electric_potential = electric_potential
@@ -423,7 +425,7 @@ class CylindricalSliceSpecification(ElectricFieldSpecification):
                  z_bound = 20 * bohr_radius, rho_bound = 20 * bohr_radius,
                  z_points = 2 ** 9, rho_points = 2 ** 8,
                  **kwargs):
-        super(CylindricalSliceSpecification, self).__init__(name, mesh_type = CylindricalSliceFiniteDifferenceMesh, animator_type = animators.CylindricalSliceAnimator, **kwargs)
+        super(CylindricalSliceSpecification, self).__init__(name, mesh_type = CylindricalSliceMesh, animator_type = animators.CylindricalSliceAnimator, **kwargs)
 
         self.z_bound = z_bound
         self.rho_bound = rho_bound
@@ -443,9 +445,9 @@ class CylindricalSliceSpecification(ElectricFieldSpecification):
         return '\n'.join((super(CylindricalSliceSpecification, self).info(), *mesh))
 
 
-class CylindricalSliceFiniteDifferenceMesh(QuantumMesh):
+class CylindricalSliceMesh(QuantumMesh):
     def __init__(self, simulation):
-        super(CylindricalSliceFiniteDifferenceMesh, self).__init__(simulation)
+        super(CylindricalSliceMesh, self).__init__(simulation)
 
         self.z = np.linspace(-self.spec.z_bound, self.spec.z_bound, self.spec.z_points)
         self.rho = np.delete(np.linspace(0, self.spec.rho_bound, self.spec.rho_points + 1), 0)
@@ -552,9 +554,12 @@ class CylindricalSliceFiniteDifferenceMesh(QuantumMesh):
     def g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
-    @property
-    def dipole_moment(self):
-        return self.spec.test_charge * self.inner_product(mesh_b = self.z_mesh * self.g_mesh)
+    def dipole_moment(self, gauge = 'length'):
+        """Get the dipole moment in the specified gauge."""
+        if gauge == 'length':
+            return self.spec.test_charge * self.inner_product(mesh_b = self.z_mesh * self.g_mesh)
+        elif gauge == 'velocity':
+            raise NotImplementedError
 
     @cp.utils.memoize(copy_output = True)
     def get_kinetic_energy_matrix_operators(self):
@@ -868,7 +873,7 @@ class SphericalSliceSpecification(ElectricFieldSpecification):
                  r_bound = 20 * bohr_radius,
                  r_points = 2 ** 10, theta_points = 2 ** 10,
                  **kwargs):
-        super(SphericalSliceSpecification, self).__init__(name, mesh_type = SphericalSliceFiniteDifferenceMesh, animator_type = animators.SphericalSliceAnimator, **kwargs)
+        super(SphericalSliceSpecification, self).__init__(name, mesh_type = SphericalSliceMesh, animator_type = animators.SphericalSliceAnimator, **kwargs)
 
         self.r_bound = r_bound
 
@@ -888,9 +893,9 @@ class SphericalSliceSpecification(ElectricFieldSpecification):
         return '\n'.join((super(SphericalSliceSpecification, self).info(), *mesh))
 
 
-class SphericalSliceFiniteDifferenceMesh(QuantumMesh):
+class SphericalSliceMesh(QuantumMesh):
     def __init__(self, simulation):
-        super(SphericalSliceFiniteDifferenceMesh, self).__init__(simulation)
+        super(SphericalSliceMesh, self).__init__(simulation)
 
         self.r = np.linspace(0, self.spec.r_bound, self.spec.r_points)
         self.theta = np.delete(np.linspace(0, pi, self.spec.theta_points + 1), 0)
@@ -983,9 +988,12 @@ class SphericalSliceFiniteDifferenceMesh(QuantumMesh):
     def g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
-    @property
-    def dipole_moment(self):
-        return self.spec.test_charge * self.inner_product(mesh_b = self.z_mesh * self.g_mesh)
+    def dipole_moment(self, gauge = 'length'):
+        """Get the dipole moment in the specified gauge."""
+        if gauge == 'length':
+            return self.spec.test_charge * self.inner_product(mesh_b = self.z_mesh * self.g_mesh)
+        elif gauge == 'velocity':
+            raise NotImplementedError
 
     @cp.utils.memoize(copy_output = True)
     def get_kinetic_energy_matrix_operators(self):
@@ -1261,8 +1269,9 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
                  r_bound = 20 * bohr_radius,
                  r_points = 2 ** 9,
                  spherical_harmonics_max_l = 20,
+                 mesh_type = SphericalHarmonicMesh,
                  **kwargs):
-        super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = SphericalHarmonicFiniteDifferenceMesh, **kwargs)
+        super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = mesh_type, **kwargs)
 
         self.r_bound = r_bound
         self.r_points = int(r_points)
@@ -1279,9 +1288,9 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
         return '\n'.join((super(SphericalHarmonicSpecification, self).info(), *mesh))
 
 
-class SphericalHarmonicFiniteDifferenceMesh(QuantumMesh):
+class SphericalHarmonicMesh(QuantumMesh):
     def __init__(self, simulation):
-        super(SphericalHarmonicFiniteDifferenceMesh, self).__init__(simulation)
+        super(SphericalHarmonicMesh, self).__init__(simulation)
 
         self.r = np.linspace(0, self.spec.r_bound, self.spec.r_points)
         self.delta_r = self.r[1] - self.r[0]
@@ -1478,6 +1487,14 @@ class SphericalHarmonicFiniteDifferenceMesh(QuantumMesh):
         self.g_mesh = self.wrap_vector(g_vector, 'l')
 
 
+class LagrangianSphericalHarmonicMesh(SphericalHarmonicMesh):
+    def __init__(self, spec):
+        super(LagrangianSphericalHarmonicMesh, self).__init__(spec)
+
+    def evolve(self, delta_t):
+        raise NotImplementedError
+
+
 class ElectricFieldSimulation(cp.core.Simulation):
     def __init__(self, spec):
         super(ElectricFieldSimulation, self).__init__(spec)
@@ -1500,7 +1517,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.energy_expectation_value_vs_time_internal = np.zeros(self.time_steps) * np.NaN
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
-        self.electric_dipole_moment_vs_time = np.zeros(self.time_steps, dtype = np.complex128) * np.NaN
+        self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
 
         if self.spec.animated:
             self.animator = self.spec.animator_type(self)
@@ -1532,7 +1549,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
             logger.warning('Wavefunction norm ({}) has exceeded initial norm ({}) for {} {}'.format(norm, self.norm_vs_time[0], self.__class__.__name__, self.name))
         self.norm_vs_time[time_index] = norm
         self.energy_expectation_value_vs_time_internal[time_index] = self.mesh.energy_expectation_value
-        self.electric_dipole_moment_vs_time[time_index] = self.mesh.dipole_moment
+        for gauge in self.spec.dipole_gauges:
+            self.electric_dipole_moment_vs_time[gauge][time_index] = self.mesh.dipole_moment(gauge = gauge)
 
         for state in self.spec.test_states:
             self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(self.mesh.g_for_state(state))
@@ -1586,37 +1604,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.status = 'finished'
         logger.debug("Simulation status set to 'finished'")
         logger.info('Finished performing time evolution on {} ({})'.format(self.name, self.file_name))
-
-    def save(self, target_dir = None, file_extension = '.sim', save_mesh = False):
-        """
-        Atomically pickle the Simulation to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
-
-        :param target_dir: directory to save the Simulation to
-        :param file_extension: file extension to name the Simulation with
-        :param save_mesh: if True, save the mesh as well as the Simulation. If False, don't.
-        :return: None
-        """
-
-        if not save_mesh:
-            mesh = self.mesh.copy()
-            self.mesh = None
-
-        out = super(ElectricFieldSimulation, self).save(target_dir = target_dir, file_extension = file_extension)
-
-        if not save_mesh:
-            self.mesh = mesh
-
-        return out
-
-    @staticmethod
-    def load(file_path, initialize_mesh = False):
-        """Return a simulation loaded from the file_path. kwargs are for Beet.load."""
-        sim = cp.core.Simulation.load(file_path)
-
-        if initialize_mesh:
-            sim.initialize_mesh()
-
-        return sim
 
     def plot_wavefunction_vs_time(self, grayscale = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
@@ -1687,23 +1674,14 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         plt.close()
 
-    def plot_dipole_moment_vs_time(self, **kwargs):
-        cp.utils.xy_plot(self.times, np.real(self.electric_dipole_moment_vs_time),
-                         # legends = ('$\mathrm{Re} \, d(t)$', '$\mathrm{Im} \, d(t)$'),
+    def plot_dipole_moment_vs_time(self, gauge = 'length', **kwargs):
+        cp.utils.xy_plot(self.times, np.real(self.electric_dipole_moment_vs_time[gauge]),
                          x_scale = 'as', y_scale = 'atomic_electric_dipole',
                          x_label = 'Time $t$', y_label = 'Dipole Moment $d(t)$',
                          name = self.spec.file_name + '__dipole_moment_vs_time',
                          **kwargs)
 
-        # TODO: include imaginary part?
-        # cp.utils.xy_plot(self.times, np.real(self.electric_dipole_moment_vs_time), np.imag(self.electric_dipole_moment_vs_time),
-        #                  legends = ('$\mathrm{Re} \, d(t)$', '$\mathrm{Im} \, d(t)$'),
-        #                  x_scale = 'as', y_scale = 'atomic_electric_dipole',
-        #                  x_label = 'Time $t$', y_label = 'Dipole Moment $d(t)$',
-        #                  name = self.spec.file_name + '__dipole_moment_vs_time',
-        #                  **kwargs)
-
-    def dipole_moment_vs_frequency(self, first_time = None, last_time = None):
+    def dipole_moment_vs_frequency(self, gauge = 'length', first_time = None, last_time = None):
         if first_time is None:
             first_time_index, first_time = 0, self.times[0]
         else:
@@ -1714,13 +1692,12 @@ class ElectricFieldSimulation(cp.core.Simulation):
             last_time_index, last_time, _ = cp.utils.find_nearest(self.times, last_time)
         points = last_time_index - first_time_index
         frequency = nfft.fftshift(nfft.fftfreq(points, self.spec.time_step))
-        dipole_moment = nfft.fftshift(nfft.fft(self.electric_dipole_moment_vs_time[first_time_index: last_time_index], norm = 'ortho'))
+        dipole_moment = nfft.fftshift(nfft.fft(self.electric_dipole_moment_vs_time[gauge][first_time_index: last_time_index], norm = 'ortho'))
 
         return frequency, dipole_moment
 
-    def plot_dipole_moment_vs_frequency(self, frequency_range = 10000 * THz, first_time = None, last_time = None, **kwargs):
-        frequency, dipole_moment = self.dipole_moment_vs_frequency(first_time = first_time, last_time = last_time)
-        # dipole_moment *= np.abs(twopi * frequency) ** 3
+    def plot_dipole_moment_vs_frequency(self, gauge = 'length', frequency_range = 10000 * THz, first_time = None, last_time = None, **kwargs):
+        frequency, dipole_moment = self.dipole_moment_vs_frequency(gauge = gauge, first_time = first_time, last_time = last_time)
         cp.utils.xy_plot(frequency, np.abs(dipole_moment) ** 2 / (atomic_electric_dipole ** 2),
                          x_scale = 'THz',
                          log_y = True,
@@ -1728,3 +1705,34 @@ class ElectricFieldSimulation(cp.core.Simulation):
                          x_range = frequency_range / 2, x_center = frequency_range / 2,
                          name = self.spec.file_name + '__dipole_moment_vs_frequency',
                          **kwargs)
+
+    def save(self, target_dir = None, file_extension = '.sim', save_mesh = False):
+        """
+        Atomically pickle the Simulation to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
+
+        :param target_dir: directory to save the Simulation to
+        :param file_extension: file extension to name the Simulation with
+        :param save_mesh: if True, save the mesh as well as the Simulation. If False, don't.
+        :return: None
+        """
+
+        if not save_mesh:
+            mesh = self.mesh.copy()
+            self.mesh = None
+
+        out = super(ElectricFieldSimulation, self).save(target_dir = target_dir, file_extension = file_extension)
+
+        if not save_mesh:
+            self.mesh = mesh
+
+        return out
+
+    @staticmethod
+    def load(file_path, initialize_mesh = False):
+        """Return a simulation loaded from the file_path. kwargs are for Beet.load."""
+        sim = cp.core.Simulation.load(file_path)
+
+        if initialize_mesh:
+            sim.initialize_mesh()
+
+        return sim

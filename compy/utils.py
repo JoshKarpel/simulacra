@@ -391,7 +391,7 @@ def memoize(copy_output = False):
     :return: a Memoize decorator
     """
 
-    # TODO: add @functools.wraps
+    # TODO: add @functools.wraps ?
 
     class Memoize:
 
@@ -441,7 +441,7 @@ def memoize(copy_output = False):
 
 
 class Timer:
-    """A context manager that times the code in the with block. Print the Timer to see the results."""
+    """A context manager that times the code in the with block. Print the Timer after exiting the block to see the results."""
 
     __slots__ = ('time_start', 'time_end', 'time_elapsed')
 

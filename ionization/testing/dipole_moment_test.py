@@ -21,6 +21,7 @@ def run_sim(spec):
         sim.run_simulation()
 
         laser_frequency = sim.spec.electric_potential.frequency
+        laser_period = sim.spec.electric_potential.period
 
         sim.plot_wavefunction_vs_time(target_dir = OUT_DIR)
         sim.plot_dipole_moment_vs_time(target_dir = OUT_DIR)

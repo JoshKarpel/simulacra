@@ -132,9 +132,9 @@ class LinearRampWindow(ElectricFieldWindow):
         super(LinearRampWindow, self).__init__()
 
     def __str__(self):
-        return '{}(ramp_on_time = {} as, ramp_time = {} as)'.format(self.__class__.__name__,
-                                                                    uround(self.ramp_on_time, asec, 3),
-                                                                    uround(self.ramp_time, asec, 3))
+        return '{}(ramp on at = {} as, ramp time = {} as)'.format(self.__class__.__name__,
+                                                                  uround(self.ramp_on_time, asec, 3),
+                                                                  uround(self.ramp_time, asec, 3))
 
     def __call__(self, t):
         cond = np.greater_equal(t, self.ramp_on_time)
@@ -185,7 +185,7 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
         self.amplitude = amplitude
 
     def __str__(self):
-        out = '{}(start_time = {} as, end_time = {} as, amplitude = {} AEF)'.format(self.__class__.__name__,
+        out = '{}(start time = {} as, end time = {} as, amplitude = {} AEF)'.format(self.__class__.__name__,
                                                                                     uround(self.start_time, asec, 3),
                                                                                     uround(self.end_time, asec, 3),
                                                                                     uround(self.amplitude, atomic_electric_field, 3))
@@ -222,10 +222,12 @@ class SineWave(UniformLinearlyPolarizedElectricField):
         self.amplitude = amplitude
 
     def __str__(self):
-        out = '{}(omega = 2pi * {} THz, amplitude = {} AEF, phase = 2pi * {})'.format(self.__class__.__name__,
-                                                                                      uround(self.frequency, THz, 3),
-                                                                                      uround(self.amplitude, atomic_electric_field, 3),
-                                                                                      uround(self.phase, twopi, 3))
+        out = '{}(omega = 2pi * {} THz, wavelength = {} nm, photon energy = {} eV, amplitude = {} AEF, phase = 2pi * {})'.format(self.__class__.__name__,
+                                                                                                                                 uround(self.frequency, THz, 3),
+                                                                                                                                 uround(self.wavelength, nm, 3),
+                                                                                                                                 uround(self.photon_energy, eV, 3),
+                                                                                                                                 uround(self.amplitude, atomic_electric_field, 3),
+                                                                                                                                 uround(self.phase, twopi, 3))
 
         out += ' with {}'.format(self.window)
 
@@ -259,6 +261,22 @@ class SineWave(UniformLinearlyPolarizedElectricField):
     @period.setter
     def period(self, period):
         self.frequency = 1 / period
+
+    @property
+    def wavelength(self):
+        return c / self.frequency
+
+    @wavelength.setter
+    def wavelength(self, wavelength):
+        self.frequency = c / wavelength
+
+    @property
+    def photon_energy(self):
+        return hbar * self.omega
+
+    @photon_energy.setter
+    def photon_energy(self, photon_energy):
+        self.omega = photon_energy / hbar
 
     def get_amplitude(self, t):
         return self.amplitude * np.sin((self.omega * t) + self.phase) * super(SineWave, self).get_amplitude(t)
