@@ -333,7 +333,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  initial_state = BoundState(1, 0),
                  test_states = tuple(BoundState(n, l) for n in range(5) for l in range(n)),
                  dipole_gauges = tuple('length'),
-                 internal_potential = potentials.NuclearPotential(charge = proton_charge) + potentials.RadialImaginaryPotential(center = 20 * bohr_radius, width = 1 * bohr_radius, amplitude = 1 * atomic_electric_potential),
+                 internal_potential = potentials.NuclearPotential(charge = proton_charge) + potentials.RadialImaginaryPotential(center = 30 * bohr_radius, width = 1 * bohr_radius, amplitude = 1 * atomic_electric_potential),
                  electric_potential = None,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
                  extra_time = None, extra_time_step = 1 * asec,

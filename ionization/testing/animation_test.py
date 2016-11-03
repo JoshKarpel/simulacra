@@ -15,7 +15,7 @@ if __name__ == '__main__':
         initial_state = ion.BoundState(1, 0, 0)
 
         # e_field = ion.Rectangle(start_time = 20 * asec, end_time = 180 * asec, amplitude = 1 * atomic_electric_field)
-        e_field = ion.SineWave(omega = twopi / (50 * asec), amplitude = 1 * atomic_electric_field, window_time = 150 * asec, window_width = 20 * asec)
+        # e_field = ion.potentials.SineWave(omega = twopi / (50 * asec), amplitude = 1 * atomic_electric_field, window_time = 150 * asec, window_width = 20 * asec)
         # e_field = None
 
         t_init = -200 * asec
@@ -25,18 +25,18 @@ if __name__ == '__main__':
                                                  z_points = 2 ** 9, rho_points = 2 ** 8,
                                                  z_bound = 30 * bohr_radius, rho_bound = 30 * bohr_radius,
                                                  initial_state = initial_state,
-                                                 electric_potential = e_field,
+                                                 # electric_potential = e_field,
                                                  animated = True, animation_dir = OUT_DIR)
         sim = ion.ElectricFieldSimulation(spec)
 
-        # sim.run_simulation()
-
-        spec = ion.SphericalSliceSpecification('sph_slice', time_initial = t_init, time_final = t_final,
-                                               z_points = 2 ** 9, rho_points = 2 ** 8,
-                                               z_bound = 30 * bohr_radius, rho_bound = 30 * bohr_radius,
-                                               initial_state = initial_state,
-                                               electric_potential = e_field,
-                                               animated = True, animation_dir = OUT_DIR)
-        sim = ion.ElectricFieldSimulation(spec)
-
         sim.run_simulation()
+
+        # spec = ion.SphericalSliceSpecification('sph_slice', time_initial = t_init, time_final = t_final,
+        #                                        z_points = 2 ** 9, rho_points = 2 ** 8,
+        #                                        z_bound = 30 * bohr_radius, rho_bound = 30 * bohr_radius,
+        #                                        initial_state = initial_state,
+        #                                        electric_potential = e_field,
+        #                                        animated = True, animation_dir = OUT_DIR)
+        # sim = ion.ElectricFieldSimulation(spec)
+        #
+        # sim.run_simulation()
