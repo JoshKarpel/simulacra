@@ -47,38 +47,39 @@ class BoundState:
         :param l: orbital angular momentum quantum number
         :param m: quantum number for angular momentum z-component
         """
-        if any(int(x) != x for x in (n, l, m)):
-            raise IllegalQuantumState('n, l, and m must be integers')
-
-        if n > 0:
-            self._n = n
-        else:
-            raise IllegalQuantumState('n ({}) must be greater than zero'.format(n))
-
-        if 0 <= l < n:
-            self._l = l
-        else:
-            raise IllegalQuantumState('l ({}) must be less than n ({}) and greater than or equal to zero'.format(l, n))
-
-        if -l <= m <= l:
-            self._m = m
-        else:
-            raise IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
+        self.n = n
+        self.l = l
+        self.m = m
 
     @property
     def n(self):
         """Gets _n."""
         return self._n
 
+    @n.setter
+    def n(self, n):
+        if int(n) == n and n > 0:
+            self._n = n
+
     @property
     def l(self):
         """Gets _l."""
         return self._l
 
+    @l.setter
+    def l(self, l):
+        if int(l) == l and 0 <= l < self.n:
+            self._l = l
+
     @property
     def m(self):
         """Gets _m."""
         return self._m
+
+    @m.setter
+    def m(self, m):
+        if int(m) == m and -self.l <= m <= self.l:
+            self._m = m
 
     @property
     def spherical_harmonic(self):
@@ -302,28 +303,6 @@ class FreeState:
         raise NotImplementedError
 
 
-class QuantumMesh:
-    def __init__(self, simulation):
-        self.sim = simulation
-        self.spec = simulation.spec
-
-    def __str__(self):
-        return '{} for {}'.format(self.__class__.__name__, str(self.sim))
-
-    def __repr__(self):
-        return '{}(parameters = {}, simulation = {})'.format(self.__class__.__name__, repr(self.spec), repr(self.sim))
-
-    @property
-    def norm(self):
-        raise NotImplementedError
-
-    def __abs__(self):
-        return self.norm
-
-    def copy(self):
-        return deepcopy(self)
-
-
 class ElectricFieldSpecification(cp.core.Specification):
     """A base Specification for a Simulation with an electric field."""
 
@@ -418,6 +397,82 @@ class ElectricFieldSpecification(cp.core.Specification):
             potentials += ['   ' + str(potential) for potential in self.electric_potential]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials)
+
+
+class QuantumMesh:
+    def __init__(self, simulation):
+        self.sim = simulation
+        self.spec = simulation.spec
+
+    def __str__(self):
+        return '{} for {}'.format(self.__class__.__name__, str(self.sim))
+
+    def __repr__(self):
+        return '{}(parameters = {}, simulation = {})'.format(self.__class__.__name__, repr(self.spec), repr(self.sim))
+
+    @property
+    def norm(self):
+        raise NotImplementedError
+
+    def __abs__(self):
+        return self.norm
+
+    def copy(self):
+        return deepcopy(self)
+
+    def abs_g_squared(self, normalize = False, log = False):
+        out = np.abs(self.g_mesh) ** 2
+        if normalize:
+            out /= np.nanmax(out)
+        if log:
+            out = np.log10(out)
+
+        return out
+
+    def attach_g_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
+        return self.attach_mesh_to_axis(axis, self.abs_g_squared(normalize = normalize, log = log), plot_limit = plot_limit)
+
+    def update_g_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
+        new_mesh = self.abs_g_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
+
+        colormesh.set_array(new_mesh.ravel())
+
+    def plot_g(self, normalize = True, name_postfix = '', **kwargs):
+        """Plot |g|^2. kwargs are for plot_mesh."""
+        title = ''
+        if normalize:
+            title = r'Normalized '
+        title += r'$|g|^2$'
+        name = 'g' + name_postfix
+
+        self.plot_mesh(self.abs_g_squared(normalize = normalize), name = name, title = title, **kwargs)
+
+    def abs_psi_squared(self, normalize = False, log = False):
+        out = np.abs(self.psi_mesh) ** 2
+        if normalize:
+            out /= np.nanmax(out)
+        if log:
+            out = np.log10(out)
+
+        return out
+
+    def attach_psi_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
+        return self.attach_mesh_to_axis(axis, self.abs_psi_squared(normalize = normalize, log = log), plot_limit = plot_limit)
+
+    def update_psi_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
+        new_mesh = self.abs_psi_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
+
+        colormesh.set_array(new_mesh.ravel())
+
+    def plot_psi(self, normalize = True, name_postfix = '', **kwargs):
+        """Plot |psi|^2. kwargs are for plot_mesh."""
+        title = ''
+        if normalize:
+            title = r'Normalized '
+        title += r'$|\psi|^2$'
+        name = 'psi' + name_postfix
+
+        self.plot_mesh(self.abs_psi_squared(normalize = normalize), name = name, title = title, **kwargs)
 
 
 class CylindricalSliceSpecification(ElectricFieldSpecification):
@@ -751,7 +806,7 @@ class CylindricalSliceMesh(QuantumMesh):
         color_mesh = axis.pcolormesh(self.z_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                      self.rho_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                      mesh[self.get_mesh_slicer(plot_limit)],
-                                     shading = 'gouraud', cmap = plt.cm.viridis)
+                                     shading = 'gouraud')
 
         return color_mesh
 
@@ -775,10 +830,15 @@ class CylindricalSliceMesh(QuantumMesh):
 
         return quiv
 
-    def plot_mesh(self, mesh, name = '', target_dir = None, img_format = 'png', title = None, overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None, **kwargs):
+    def plot_mesh(self, mesh, name = '', target_dir = None, img_format = 'png', title = None,
+                  overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
+                  colormap = plt.cm.viridis,
+                  **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
         axis = plt.subplot(111)
+
+        plt.set_cmap(colormap)
 
         color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit)
         if overlay_probability_current:
@@ -812,60 +872,6 @@ class CylindricalSliceMesh(QuantumMesh):
         cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
 
         plt.close()
-
-    def abs_g_squared(self, normalize = False, log = False):
-        out = np.abs(self.g_mesh) ** 2
-        if normalize:
-            out /= np.nanmax(out)
-        if log:
-            out = np.log10(out)
-
-        return out
-
-    def attach_g_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
-        return self.attach_mesh_to_axis(axis, self.abs_g_squared(normalize = normalize, log = log), plot_limit = plot_limit)
-
-    def update_g_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
-        new_mesh = self.abs_g_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
-
-        colormesh.set_array(new_mesh.ravel())
-
-    def plot_g(self, normalize = True, name_postfix = '', **kwargs):
-        """Plot |g|^2. kwargs are for plot_mesh."""
-        title = ''
-        if normalize:
-            title = r'Normalized '
-        title += r'$|g|^2$'
-        name = 'g' + name_postfix
-
-        self.plot_mesh(self.abs_g_squared(normalize = normalize), name = name, title = title, **kwargs)
-
-    def abs_psi_squared(self, normalize = False, log = False):
-        out = np.abs(self.psi_mesh) ** 2
-        if normalize:
-            out /= np.nanmax(out)
-        if log:
-            out = np.log10(out)
-
-        return out
-
-    def attach_psi_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
-        return self.attach_mesh_to_axis(axis, self.abs_psi_squared(normalize = normalize, log = log), plot_limit = plot_limit)
-
-    def update_psi_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
-        new_mesh = self.abs_psi_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
-
-        colormesh.set_array(new_mesh.ravel())
-
-    def plot_psi(self, normalize = True, name_postfix = '', **kwargs):
-        """Plot |psi|^2. kwargs are for plot_mesh."""
-        title = ''
-        if normalize:
-            title = r'Normalized '
-        title += r'$|\psi|^2$'
-        name = 'psi' + name_postfix
-
-        self.plot_mesh(self.abs_psi_squared(normalize = normalize), name = name, title = title, **kwargs)
 
 
 class SphericalSliceSpecification(ElectricFieldSpecification):
@@ -1157,11 +1163,11 @@ class SphericalSliceMesh(QuantumMesh):
         color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer(plot_limit)],
                                      self.r_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                      mesh[self.get_mesh_slicer(plot_limit)],
-                                     shading = 'gouraud', cmap = plt.cm.viridis)
+                                     shading = 'gouraud')
         color_mesh_mirror = axis.pcolormesh(-self.theta_mesh[self.get_mesh_slicer(plot_limit)] + (2 * pi),
                                             self.r_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                             mesh[self.get_mesh_slicer(plot_limit)],
-                                            shading = 'gouraud', cmap = plt.cm.viridis)  # another colormesh, mirroring the first mesh onto pi to 2pi
+                                            shading = 'gouraud')  # another colormesh, mirroring the first mesh onto pi to 2pi
 
         return color_mesh, color_mesh_mirror
 
@@ -1209,60 +1215,6 @@ class SphericalSliceMesh(QuantumMesh):
 
         plt.close()
 
-    def abs_g_squared(self, normalize = False, log = False):
-        out = np.abs(self.g_mesh) ** 2
-        if normalize:
-            out /= np.nanmax(out)
-        if log:
-            out = np.log10(out)
-
-        return out
-
-    def attach_g_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
-        return self.attach_mesh_to_axis(axis, self.abs_g_squared(normalize = normalize, log = log), plot_limit = plot_limit)
-
-    def update_g_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
-        new_mesh = self.abs_g_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
-
-        colormesh.set_array(new_mesh.ravel())
-
-    def plot_g(self, normalize = True, name_postfix = '', **kwargs):
-        """Plot |g|^2. kwargs are for plot_mesh."""
-        title = ''
-        if normalize:
-            title = r'Normalized '
-        title += r'$|g|^2$'
-        name = 'g' + name_postfix
-
-        self.plot_mesh(self.abs_g_squared(normalize = normalize), name = name, title = title, **kwargs)
-
-    def abs_psi_squared(self, normalize = False, log = False):
-        out = np.abs(self.psi_mesh) ** 2
-        if normalize:
-            out /= np.nanmax(out)
-        if log:
-            out = np.log10(out)
-
-        return out
-
-    def attach_psi_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
-        return self.attach_mesh_to_axis(axis, self.abs_psi_squared(normalize = normalize, log = log), plot_limit = plot_limit)
-
-    def update_psi_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
-        new_mesh = self.abs_psi_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
-
-        colormesh.set_array(new_mesh.ravel())
-
-    def plot_psi(self, normalize = True, name_postfix = '', **kwargs):
-        """Plot |psi|^2. kwargs are for plot_mesh."""
-        title = ''
-        if normalize:
-            title = r'Normalized '
-        title += r'$|\psi|^2$'
-        name = 'psi' + name_postfix
-
-        self.plot_mesh(self.abs_psi_squared(normalize = normalize), name = name, title = title, **kwargs)
-
 
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
     def __init__(self, name,
@@ -1305,12 +1257,22 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.l_points = len(self.l)
         self.spec.l_points = self.l_points
 
-        self.l_mesh, self.r_mesh = np.meshgrid(self.l, self.r, indexing = 'ij')
+        # self.l_mesh, self.r_mesh = np.meshgrid(self.l, self.r, indexing = 'ij')
 
         self.mesh_points = len(self.r) * len(self.l)
         self.mesh_shape = np.shape(self.r_mesh)
 
         self.g_mesh = self.g_for_state(self.spec.initial_state)
+
+    @property
+    @cp.utils.memoize()
+    def r_mesh(self):
+        return np.meshgrid(self.l, self.r, indexing = 'ij')[1]
+
+    @property
+    @cp.utils.memoize()
+    def l_mesh(self):
+        return np.meshgrid(self.l, self.r, indexing = 'ij')[0]
 
     @property
     def g_factor(self):
@@ -1488,6 +1450,120 @@ class SphericalHarmonicMesh(QuantumMesh):
         g_vector = self.flatten_mesh(self.g_mesh, 'l')
         g_vector = cy.tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'l')
+
+    def get_mesh_slicer(self, distance_from_center = None):
+        """Returns a slice object that slices a mesh to the given distance of the center."""
+        if distance_from_center is None:
+            mesh_slicer = slice(None, None, 1)
+        else:
+            r_lim_points = round(distance_from_center / self.delta_r)
+            mesh_slicer = slice(0, r_lim_points + 1, 1)
+
+        return mesh_slicer
+
+    @property
+    @cp.utils.memoize()
+    def theta(self):
+        return np.linspace(0, twopi, 1000)
+
+    @property
+    @cp.utils.memoize()
+    def theta_mesh(self):
+        return np.meshgrid(self.r, self.theta, indexing = 'ij')[1]
+
+    @property
+    @cp.utils.memoize()
+    def r_theta_mesh(self):
+        return np.meshgrid(self.r, self.theta, indexing = 'ij')[0]
+
+    @property
+    def space_g(self):
+        space_g = np.zeros((len(self.r), len(self.theta)), dtype = np.complex128)
+        for radial_function, sph_harm in zip(self.g_mesh, self.spherical_harmonics):
+            space_g += np.outer(radial_function, sph_harm(self.theta))
+
+        return space_g
+
+    @property
+    def space_psi(self):
+        space_psi = np.zeros((len(self.r), len(self.theta)), dtype = np.complex128)
+        for radial_function, sph_harm in zip(self.g_mesh, self.spherical_harmonics):
+            space_psi += np.outer(radial_function / self.g_factor, sph_harm(self.theta))
+
+        return space_psi
+
+    def abs_g_squared(self, normalize = False, log = False):
+        out = np.abs(self.space_g) ** 2
+        if normalize:
+            out /= np.nanmax(out)
+        if log:
+            out = np.log10(out)
+
+        return out
+
+    def abs_psi_squared(self, normalize = False, log = False):
+        out = np.abs(self.space_psi) ** 2
+        if normalize:
+            out /= np.nanmax(out)
+        if log:
+            out = np.log10(out)
+
+        return out
+
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None):
+        color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer(plot_limit)],
+                                     self.r_theta_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
+                                     mesh[self.get_mesh_slicer(plot_limit)],
+                                     shading = 'gouraud')
+
+        return color_mesh
+
+    def attach_probability_current_to_axis(self, axis, plot_limit = None):
+        raise NotImplementedError
+
+    def plot_mesh(self, mesh,
+                  name = '', target_dir = None, img_format = 'png', title = None,
+                  overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
+                  colormap = plt.cm.viridis,
+                  **kwargs):
+        plt.close()  # close any old figures
+
+        plt.set_cmap(colormap)
+
+        fig = plt.figure(figsize = (7, 7), dpi = 600)
+        fig.set_tight_layout(True)
+        axis = plt.subplot(111, projection = 'polar')
+
+        color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit)
+        if overlay_probability_current:
+            quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit)
+
+        if title is not None:
+            title = axis.set_title(title, fontsize = 15)
+            title.set_x(.03)  # move title to the upper left corner
+            title.set_y(.97)
+
+        # make a colorbar
+        cbar_axis = fig.add_axes([1.01, .1, .04, .8])  # add a new axis for the cbar so that the old axis can stay square
+        cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
+        cbar.ax.tick_params(labelsize = 10)
+
+        axis.set_rmax((self.r_max - (self.delta_r / 2)) / bohr_radius)
+
+        axis.grid(True, color = 'pink', linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.set_thetagrids(np.arange(0, 360, 30), frac = 1.05)
+
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
+        axis.tick_params(axis = 'y', which = 'major', colors = 'pink', pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'both', which = 'both', length = 0)
+
+        axis.set_rlabel_position(10)
+        last_r_label = axis.get_yticklabels()[-1]
+        last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
+
+        cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
+
+        plt.close()
 
 
 class LagrangianSphericalHarmonicMesh(SphericalHarmonicMesh):
