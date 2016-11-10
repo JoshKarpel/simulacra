@@ -13,7 +13,7 @@ if __name__ == '__main__':
                                                  animated = True,
                                                  checkpoints = True,
                                                  extra_time = 1 * asec,
-                                                 electric_potential = hyd.Rectangle())
+                                                 electric_potential = ion.potentials.Rectangle())
         sim = ion.ElectricFieldSimulation(spec)
 
         print(spec.info())

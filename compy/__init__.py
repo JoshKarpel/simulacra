@@ -10,6 +10,8 @@ logger.addHandler(logging.NullHandler())
 import matplotlib
 matplotlib.rcParams['font.family'] = 'serif'
 
+# TODO: use latex to get siunitx for correct unit formatting (but what about cluster plotting? not that I ever actually do that...)
+
 # set up platform-independent runtime cython compilation and imports
 import numpy as np
 import pyximport

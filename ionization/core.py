@@ -1269,8 +1269,11 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
                  r_bound = 20 * bohr_radius,
                  r_points = 2 ** 9,
                  spherical_harmonics_max_l = 20,
-                 mesh_type = SphericalHarmonicMesh,
+                 mesh_type = None,
                  **kwargs):
+        if mesh_type is None:
+            mesh_type = LagrangianSphericalHarmonicMesh
+
         super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = mesh_type, **kwargs)
 
         self.r_bound = r_bound
@@ -1369,7 +1372,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     @cp.utils.memoize(copy_output = True)
     def get_kinetic_energy_matrix_operators(self):
         r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
-        l_prefactor = 1
+        l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: ???
 
         r_diagonal = r_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         r_offdiagonal = r_prefactor * np.ones(self.mesh_points - 1, dtype = np.complex128)
@@ -1450,7 +1453,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         tau = delta_t / (2 * hbar)
 
         if self.spec.electric_potential is not None:
-            electric_field_amplitude = self.spec.electric_potential.get_amplitude(self.sim.time) * self.flatten_mesh(self.r_mesh, 'l')
+            electric_field_amplitude = self.spec.electric_potential.get_amplitude(self.sim.time)
         else:
             electric_field_amplitude = 0
         l_multiplier = self.spec.test_charge * electric_field_amplitude
@@ -1491,8 +1494,54 @@ class LagrangianSphericalHarmonicMesh(SphericalHarmonicMesh):
     def __init__(self, spec):
         super(LagrangianSphericalHarmonicMesh, self).__init__(spec)
 
-    def evolve(self, delta_t):
-        raise NotImplementedError
+    @cp.utils.memoize(copy_output = True)
+    def get_kinetic_energy_matrix_operators(self):
+        r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
+        l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: ???
+
+        @cp.utils.memoize()
+        def alpha(j):
+            return (j ** 2) / ((j ** 2) - 0.25)
+            # return (j ** 2) / ((j ** 2) - j + 0.25)  # TODO: WHY
+
+        @cp.utils.memoize()
+        def beta(j):
+            return ((j ** 2) - j + 0.5) / ((j ** 2) - j + 0.25)
+
+        r_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
+        r_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
+        for r_index in range(self.mesh_points):
+            j = r_index % self.spec.r_points + 1
+            r_diagonal[r_index] = beta(j)
+
+        for r_index in range(self.mesh_points - 1):
+            if (r_index + 1) % self.spec.r_points != 0:  # TODO: should be possible to clean this if up
+                j = (r_index % self.spec.r_points) + 1
+                r_offdiagonal[r_index] = alpha(j)
+        r_diagonal *= -2 * r_prefactor
+        r_offdiagonal *= r_prefactor
+
+        @cp.utils.memoize()
+        def c(l):
+            return (l + 1) / np.sqrt(((2 * l) + 1) * ((2 * l) + 3))
+
+        l_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
+        l_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
+        for l_index in range(self.mesh_points - 1):
+            if (l_index + 1) % self.spec.l_points != 0:
+                l = (l_index % self.spec.l_points) + 1
+                l_offdiagonal[l_index] = c(l)
+        l_offdiagonal *= l_prefactor
+
+        effective_potential_mesh = ((hbar ** 2) / (2 * electron_mass_reduced)) * self.l_mesh * (self.l_mesh + 1) / (self.r_mesh ** 2)
+        r_diagonal += self.flatten_mesh(effective_potential_mesh, 'r')
+
+        r_kinetic = sparse.diags([r_offdiagonal, r_diagonal, r_offdiagonal], offsets = (-1, 0, 1))
+        l_kinetic = sparse.diags([l_offdiagonal, l_diagonal, l_offdiagonal], offsets = (-1, 0, 1))
+
+        return r_kinetic, l_kinetic
+
+        # TODO: split operator evolution
 
 
 class ElectricFieldSimulation(cp.core.Simulation):

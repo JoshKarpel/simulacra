@@ -26,7 +26,7 @@ class Logger:
     """A context manager to easily set up logging."""
 
     def __init__(self, *logger_names,
-                 manual_logger_name = None,
+                 manual_logger_name = 'compy',
                  stdout_logs = True, stdout_level = logging.DEBUG,
                  file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'a'):
         """
@@ -339,13 +339,13 @@ def xy_plot(x, *y,
     plt.close()
 
 
-def multi_map(function, targets, processes = None):
+def multi_map(function, targets, processes = None, **kwargs):
     """Map a function over a list of inputs using multiprocessing."""
     if processes is None:
         processes = mp.cpu_count() - 1
 
     with mp.Pool(processes = processes) as pool:
-        output = pool.map(function, targets)
+        output = pool.map(function, targets, **kwargs)
 
     return output
 
