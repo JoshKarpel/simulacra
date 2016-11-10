@@ -420,6 +420,19 @@ class QuantumMesh:
     def copy(self):
         return deepcopy(self)
 
+    @property
+    def psi_mesh(self):
+        raise NotImplementedError
+
+    def get_mesh_slicer(self, plot_limit):
+        raise NotImplementedError
+
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None):
+        raise NotImplementedError
+
+    def plot_mesh(self, mesh, **kwargs):
+        raise NotImplementedError
+
     def abs_g_squared(self, normalize = False, log = False):
         out = np.abs(self.g_mesh) ** 2
         if normalize:
@@ -445,7 +458,7 @@ class QuantumMesh:
         title += r'$|g|^2$'
         name = 'g' + name_postfix
 
-        self.plot_mesh(self.abs_g_squared(normalize = normalize), name = name, title = title, **kwargs)
+        self.plot_mesh(self.abs_g_squared(normalize = normalize), name = name, title = title, color_map_min = 0, **kwargs)
 
     def abs_psi_squared(self, normalize = False, log = False):
         out = np.abs(self.psi_mesh) ** 2
@@ -472,7 +485,7 @@ class QuantumMesh:
         title += r'$|\psi|^2$'
         name = 'psi' + name_postfix
 
-        self.plot_mesh(self.abs_psi_squared(normalize = normalize), name = name, title = title, **kwargs)
+        self.plot_mesh(self.abs_psi_squared(normalize = normalize), name = name, title = title, color_map_min = 0, **kwargs)
 
 
 class CylindricalSliceSpecification(ElectricFieldSpecification):
@@ -501,6 +514,8 @@ class CylindricalSliceSpecification(ElectricFieldSpecification):
 
 
 class CylindricalSliceMesh(QuantumMesh):
+    mesh_storage_method = ('z', 'rho')
+
     def __init__(self, simulation):
         super(CylindricalSliceMesh, self).__init__(simulation)
 
@@ -832,7 +847,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
     def plot_mesh(self, mesh, name = '', target_dir = None, img_format = 'png', title = None,
                   overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
-                  colormap = plt.cm.viridis,
+                  colormap = plt.cm.inferno,
                   **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
@@ -900,6 +915,8 @@ class SphericalSliceSpecification(ElectricFieldSpecification):
 
 
 class SphericalSliceMesh(QuantumMesh):
+    mesh_storage_method = ('r', 'theta')
+
     def __init__(self, simulation):
         super(SphericalSliceMesh, self).__init__(simulation)
 
@@ -1244,6 +1261,8 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
 
 
 class SphericalHarmonicMesh(QuantumMesh):
+    mesh_storage_method = ('l', 'r')
+
     def __init__(self, simulation):
         super(SphericalHarmonicMesh, self).__init__(simulation)
 
@@ -1322,6 +1341,10 @@ class SphericalHarmonicMesh(QuantumMesh):
     @property
     def norm(self):
         return np.abs(self.inner_product())
+
+    @property
+    def norm_by_l(self):
+        return np.sum(np.conj(self.g_mesh) * self.g_mesh, axis = 1) * self.delta_r
 
     @cp.utils.memoize(copy_output = True)
     def g_for_state(self, state):
@@ -1494,6 +1517,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
     def abs_g_squared(self, normalize = False, log = False):
         out = np.abs(self.space_g) ** 2
+        # out *= twopi * self.r_theta_mesh * np.sin(self.theta_mesh % pi)  # TODO: decide on this, or make optional
         if normalize:
             out /= np.nanmax(out)
         if log:
@@ -1510,11 +1534,11 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return out
 
-    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None):
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, color_map_min = 0):
         color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer(plot_limit)],
                                      self.r_theta_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                      mesh[self.get_mesh_slicer(plot_limit)],
-                                     shading = 'gouraud')
+                                     shading = 'gouraud', vmin = color_map_min)
 
         return color_mesh
 
@@ -1524,7 +1548,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     def plot_mesh(self, mesh,
                   name = '', target_dir = None, img_format = 'png', title = None,
                   overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
-                  colormap = plt.cm.viridis,
+                  colormap = plt.cm.inferno, color_map_min = 0,
                   **kwargs):
         plt.close()  # close any old figures
 
@@ -1533,8 +1557,10 @@ class SphericalHarmonicMesh(QuantumMesh):
         fig = plt.figure(figsize = (7, 7), dpi = 600)
         fig.set_tight_layout(True)
         axis = plt.subplot(111, projection = 'polar')
+        axis.set_theta_zero_location('N')
+        axis.set_theta_direction('clockwise')
 
-        color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit)
+        color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit, color_map_min = color_map_min)
         if overlay_probability_current:
             quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit)
 
@@ -1550,14 +1576,16 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         axis.set_rmax((self.r_max - (self.delta_r / 2)) / bohr_radius)
 
-        axis.grid(True, color = 'pink', linestyle = ':')  # change grid color to make it show up against the colormesh
-        axis.set_thetagrids(np.arange(0, 360, 30), frac = 1.05)
+        axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
+        angle_labels = ('{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30))  # \u00b0 is unicode degree symbol
+        axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075,
+                            labels = angle_labels)
 
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
-        axis.tick_params(axis = 'y', which = 'major', colors = 'pink', pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'y', which = 'major', colors = 'silver', pad = 3)  # make r ticks a color that shows up against the colormesh
         axis.tick_params(axis = 'both', which = 'both', length = 0)
 
-        axis.set_rlabel_position(10)
+        axis.set_rlabel_position(80)
         last_r_label = axis.get_yticklabels()[-1]
         last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
 
@@ -1643,6 +1671,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
+        self.norm_by_l_vs_time = {}
 
         if self.spec.animated:
             self.animator = self.spec.animator_type(self)
@@ -1682,6 +1711,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if self.spec.electric_potential is not None:
             self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_amplitude(t = self.times[time_index])
+
+        if 'l' in self.mesh.mesh_storage_method:
+            self.norm_by_l_vs_time[time_index] = self.mesh.norm_by_l
 
         logger.debug('{} {} stored data for time index {}'.format(self.__class__.__name__, self.name, time_index))
 
