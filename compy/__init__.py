@@ -9,6 +9,9 @@ logger.addHandler(logging.NullHandler())
 
 import matplotlib
 matplotlib.rcParams['font.family'] = 'serif'
+import matplotlib.pyplot as plt
+
+plt.set_cmap(plt.cm.inferno)
 
 # TODO: use latex to get siunitx for correct unit formatting (but what about cluster plotting? not that I ever actually do that...)
 

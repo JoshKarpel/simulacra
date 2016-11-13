@@ -1,7 +1,9 @@
 import matplotlib
+
 matplotlib.use('Agg')
 
 import os
+import logging
 
 import compy as cp
 from compy.units import *
@@ -10,33 +12,66 @@ import ionization as ion
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-if __name__ == '__main__':
-    with cp.utils.Logger() as logger:
-        initial_state = ion.BoundState(1, 0, 0)
 
-        # e_field = ion.Rectangle(start_time = 20 * asec, end_time = 180 * asec, amplitude = 1 * atomic_electric_field)
-        # e_field = ion.potentials.SineWave(omega = twopi / (50 * asec), amplitude = 1 * atomic_electric_field, window_time = 150 * asec, window_width = 20 * asec)
-        # e_field = None
-
-        t_init = -200 * asec
-        t_final = -t_init
-
-        spec = ion.CylindricalSliceSpecification('cyl_slice', time_initial = t_init, time_final = t_final,
-                                                 z_points = 2 ** 9, rho_points = 2 ** 8,
-                                                 z_bound = 30 * bohr_radius, rho_bound = 30 * bohr_radius,
-                                                 initial_state = initial_state,
-                                                 # electric_potential = e_field,
-                                                 animated = True, animation_dir = OUT_DIR)
+def make_movie(spec):
+    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
         sim = ion.ElectricFieldSimulation(spec)
 
         sim.run_simulation()
 
-        # spec = ion.SphericalSliceSpecification('sph_slice', time_initial = t_init, time_final = t_final,
-        #                                        z_points = 2 ** 9, rho_points = 2 ** 8,
-        #                                        z_bound = 30 * bohr_radius, rho_bound = 30 * bohr_radius,
-        #                                        initial_state = initial_state,
-        #                                        electric_potential = e_field,
-        #                                        animated = True, animation_dir = OUT_DIR)
-        # sim = ion.ElectricFieldSimulation(spec)
-        #
-        # sim.run_simulation()
+        sim.plot_wavefunction_vs_time(target_dir = OUT_DIR)
+
+
+if __name__ == '__main__':
+    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
+        initial_state = ion.BoundState(1, 0, 0)
+
+        bound = 30
+        points = 2 ** 8
+        angular_points = 2 ** 5
+
+        period = 50 * asec
+
+        t_init = -1 * period
+        t_final = -t_init
+
+        window = ion.potentials.LinearRampWindow(ramp_on_time = t_init + period, ramp_time = 1 * period)
+        e_field = ion.potentials.SineWave(omega = twopi / period, amplitude = 1.5 * atomic_electric_field, window = window)
+
+        specs = []
+
+        # animators = [ion.animators.CylindricalSliceAnimator(target_dir = OUT_DIR), ion.animators.CylindricalSliceAnimator(postfix = 'log', target_dir = OUT_DIR, log = True)]
+        animators = [ion.animators.CylindricalSliceAnimator(target_dir = OUT_DIR)]
+        spec = ion.CylindricalSliceSpecification('cyl_slice', time_initial = t_init, time_final = t_final,
+                                                 z_bound = bound * bohr_radius, z_points = points,
+                                                 rho_bound = bound * bohr_radius, rho_points = points / 2,
+                                                 initial_state = initial_state,
+                                                 electric_potential = e_field,
+                                                 animators = animators
+                                                 )
+        specs.append(spec)
+
+        # animators = [ion.animators.SphericalSliceAnimator(target_dir = OUT_DIR), ion.animators.SphericalSliceAnimator(postfix = 'log', target_dir = OUT_DIR, log = True)]
+        animators = [ion.animators.SphericalSliceAnimator(target_dir = OUT_DIR)]
+        spec = ion.SphericalSliceSpecification('sph_slice', time_initial = t_init, time_final = t_final,
+                                               r_bound = bound * bohr_radius, r_points = points,
+                                               theta_points = angular_points,
+                                               initial_state = initial_state,
+                                               electric_potential = e_field,
+                                               animators = animators
+                                               )
+        specs.append(spec)
+
+        # animators = [ion.animators.SphericalSliceAnimator(target_dir = OUT_DIR), ion.animators.SphericalSliceAnimator(postfix = 'log', target_dir = OUT_DIR, log = True)]
+        animators = [ion.animators.SphericalHarmonicAnimator(target_dir = OUT_DIR)]
+        spec = ion.SphericalHarmonicSpecification('sph_harm', time_initial = t_init, time_final = t_final,
+                                                  r_bound = bound * bohr_radius, r_points = points,
+                                                  spherical_harmonic_max_l = angular_points,
+                                                  initial_state = initial_state,
+                                                  electric_potential = e_field,
+                                                  animators = animators,
+                                                  dipole_gauges = []
+                                                  )
+        specs.append(spec)
+
+        cp.utils.multi_map(make_movie, specs, processes = 3)

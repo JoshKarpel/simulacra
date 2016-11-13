@@ -317,7 +317,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
                  extra_time = None, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
-                 animated = False, animation_time = 30, animation_fps = 30, animation_plot_limit = None, animation_normalize = True, animation_log_g = False, animation_overlay_probability_current = False, animation_dir = None,
+                 animators = (),
                  **kwargs):
         super(ElectricFieldSpecification, self).__init__(name, simulation_type = ElectricFieldSimulation, **kwargs)
 
@@ -346,14 +346,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.checkpoint_at = checkpoint_at
         self.checkpoint_dir = checkpoint_dir
 
-        self.animated = animated
-        self.animation_time = animation_time
-        self.animation_fps = animation_fps
-        self.animation_plot_limit = animation_plot_limit
-        self.animation_normalize = animation_normalize
-        self.animation_log_g = animation_log_g
-        self.animation_overlay_probability_current = animation_overlay_probability_current
-        self.animation_dir = animation_dir
+        self.animators = animators
 
     def info(self):
         checkpoint = ['Checkpointing: ']
@@ -367,19 +360,10 @@ class ElectricFieldSpecification(cp.core.Specification):
             checkpoint[0] += 'disabled'
 
         animation = ['Animation: ']
-        if self.animated:
-            if self.animation_dir is not None:
-                working_in = self.animation_dir
-            else:
-                working_in = os.getcwd()
-            animation[0] += 'enabled, working in {}'.format(working_in)
-
-            animation += ['   Movie Ideal FPS: {} fps'.format(self.animation_fps),
-                          '   Normalized: {}'.format(self.animation_normalize),
-                          '   Log g: {}'.format(self.animation_log_g),
-                          '   Overlay Probability Current: {}'.format(self.animation_overlay_probability_current)]
+        if len(self.animators) > 0:
+            animation += ['   ' + str(animator) for animator in self.animators]
         else:
-            animation[0] += 'disabled'
+            animation += 'disabled'
 
         time_evolution = ['Time Evolution:',
                           '   Initial State: {}'.format(self.initial_state),
@@ -871,7 +855,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         axis.axis('tight')  # removes blank space between color mesh and axes
 
-        axis.grid(True, color = 'pink', linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
 
         axis.tick_params(labelright = True, labeltop = True)  # ticks on all sides
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
@@ -1200,6 +1184,8 @@ class SphericalSliceMesh(QuantumMesh):
         fig = plt.figure(figsize = (7, 7), dpi = 600)
         fig.set_tight_layout(True)
         axis = plt.subplot(111, projection = 'polar')
+        axis.set_theta_zero_location('N')
+        axis.set_theta_direction('clockwise')
 
         color_mesh, color_mesh_mirror = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit)
         if overlay_probability_current:
@@ -1217,14 +1203,16 @@ class SphericalSliceMesh(QuantumMesh):
 
         axis.set_rmax((self.r_max - (self.delta_r / 2)) / bohr_radius)
 
-        axis.grid(True, color = 'pink', linestyle = ':')  # change grid color to make it show up against the colormesh
-        axis.set_thetagrids(np.arange(0, 360, 30), frac = 1.05)
+        axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
+        angle_labels = ['{}\u00b0'.format(s) for s in (30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
+        angle_labels = ['\u03b8=0\u00b0'] + angle_labels
+        axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
-        axis.tick_params(axis = 'y', which = 'major', colors = 'pink', pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'y', which = 'major', colors = 'silver', pad = 3)  # make r ticks a color that shows up against the colormesh
         axis.tick_params(axis = 'both', which = 'both', length = 0)
 
-        axis.set_rlabel_position(10)
+        axis.set_rlabel_position(80)
         last_r_label = axis.get_yticklabels()[-1]
         last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
 
@@ -1577,9 +1565,9 @@ class SphericalHarmonicMesh(QuantumMesh):
         axis.set_rmax((self.r_max - (self.delta_r / 2)) / bohr_radius)
 
         axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
-        angle_labels = ('{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30))  # \u00b0 is unicode degree symbol
-        axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075,
-                            labels = angle_labels)
+        angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
+        # angle_labels = ['\u03b8=0\u00b0'] + angle_labels
+        axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
         axis.tick_params(axis = 'y', which = 'major', colors = 'silver', pad = 3)  # make r ticks a color that shows up against the colormesh
@@ -1653,7 +1641,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         super(ElectricFieldSimulation, self).__init__(spec)
 
         self.mesh = None
-        self.animator = None
+        self.animators = self.spec.animators
 
         self.initialize_mesh()
 
@@ -1673,8 +1661,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
         self.norm_by_l_vs_time = {}
 
-        if self.spec.animated:
-            self.animator = self.spec.animator_type(self)
 
     @property
     def time(self):
@@ -1720,8 +1706,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
     def run_simulation(self, only_end_data = False, store_intermediate_meshes = False):
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
 
-        if self.animator is not None:
-            self.animator.initialize()
+        for animator in self.animators:
+            animator.initialize(self)
 
         self.status = 'running'
         logger.debug("{} {} status set to 'running'".format(self.__class__.__name__, self.name))
@@ -1733,10 +1719,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
             if not only_end_data or self.time_index == self.time_steps - 1:  # if last time step or taking all data
                 self.store_data(self.time_index)
 
-            if self.animator is not None and (self.time_index == 0 or self.time_index == self.time_steps or self.time_index % self.animator.animation_decimation == 0):
-                self.animator.update_frame()
-                self.animator.send_frame_to_ffmpeg()
-                logger.debug('Made animation frame for time index {} / {}'.format(self.time_index, self.time_steps - 1))
+            for animator in self.animators:
+                if self.time_index == 0 or self.time_index == self.time_steps or self.time_index % animator.decimation == 0:
+                    animator.update_frame()
+                    animator.send_frame_to_ffmpeg()
+                    # logger.debug('Made animation frame for time index {} / {}'.format(self.time_index, self.time_steps - 1))
 
             self.time_index += 1
             if self.time_index == self.time_steps:
@@ -1752,8 +1739,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
                     self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
                     logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
 
-        if self.animator is not None:
-            self.animator.cleanup()
+        for animator in self.animators:
+            animator.cleanup()
 
         self.end_time = dt.datetime.now()
         self.elapsed_time = self.end_time - self.start_time
