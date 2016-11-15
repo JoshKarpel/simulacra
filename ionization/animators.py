@@ -111,17 +111,42 @@ class CylindricalSliceAnimator(Animator):
         plt.set_cmap(self.colormap)
 
         self.fig = plt.figure(figsize = (16, 12))
-        self.fig.set_tight_layout(True)
 
-        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [3, 1])
-        self.ax_mesh = plt.subplot(grid_spec[0])
-        self.ax_time = plt.subplot(grid_spec[1])
+        self.ax_mesh = self.fig.add_axes([.06, .34, .9, .62])
+        self.ax_time = self.fig.add_axes([.06, .065, .9, .2])
 
+        self._initialize_mesh_axis()
+        self._initialize_time_axis()
+
+    def _initialize_mesh_axis(self):
         self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log, plot_limit = self.plot_limit)
 
         if self.overlay_probability_current:
             self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh, plot_limit = self.plot_limit)
 
+        self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
+        self.ax_time.grid(True)
+
+        self.ax_mesh.set_xlabel(r'$z$ (Bohr radii)', fontsize = 24)
+        self.ax_mesh.set_ylabel(r'$\rho$ (Bohr radii)', fontsize = 24)
+        self.ax_time.set_xlabel('Time $t$ (as)', fontsize = 24)
+        self.ax_time.set_ylabel('Ionization Metric', fontsize = 24)
+
+        self.ax_time.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
+        self.ax_time.set_ylim(0, 1)
+
+        self.ax_time.tick_params(labelright = True)
+        self.ax_time.tick_params(axis = 'both', which = 'major', labelsize = 14)
+        self.ax_mesh.tick_params(axis = 'both', which = 'major', labelsize = 14)
+
+        divider = make_axes_locatable(self.ax_mesh)
+        cax = divider.append_axes("right", size = "2%", pad = 0.05)
+        self.cbar = plt.colorbar(cax = cax, mappable = self.mesh)
+        self.cbar.ax.tick_params(labelsize = 14)
+
+        self.ax_mesh.axis('tight')
+
+    def _initialize_time_axis(self):
         if self.spec.electric_potential is not None:
             self.field_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
             self.electric_field_line, = self.ax_time.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
@@ -139,29 +164,6 @@ class CylindricalSliceAnimator(Animator):
 
         self.time_line, = self.ax_time.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
                                             linestyle = '-.', color = 'gray')
-
-        self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
-        self.ax_time.grid(True)
-
-        self.ax_mesh.set_xlabel(r'$z$ (Bohr radii)', fontsize = 24)
-        self.ax_mesh.set_ylabel(r'$\rho$ (Bohr radii)', fontsize = 24)
-        self.ax_time.set_xlabel('Time (as)', fontsize = 24)
-        self.ax_time.set_ylabel('Ionization Metric', fontsize = 24)
-
-        self.ax_time.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
-        self.ax_time.set_ylim(0, 1)
-
-        self.ax_time.tick_params(labelright = True)
-        self.ax_time.tick_params(axis = 'both', which = 'major', labelsize = 14)
-        self.ax_mesh.tick_params(axis = 'both', which = 'major', labelsize = 14)
-
-        divider = make_axes_locatable(self.ax_mesh)
-        cax = divider.append_axes("right", size = "2%", pad = 0.05)
-        self.cbar = plt.colorbar(cax = cax, mappable = self.mesh)
-        self.cbar.ax.tick_params(labelsize = 14)
-
-        self.ax_mesh.axis('tight')
-        # self.ax_time.axis('tight')
 
     def compute_stackplot_overlaps(self):
         initial_overlap = [self.sim.state_overlaps_vs_time[self.spec.initial_state]]
@@ -198,31 +200,37 @@ class CylindricalSliceAnimator(Animator):
 class SphericalSliceAnimator(CylindricalSliceAnimator):
     def initialize(self, simulation):
         Animator.initialize(self, simulation)
-        legend = self.ax_time.legend(bbox_to_anchor = (-.025, 1.1), loc = 'lower left', borderaxespad = 0., fontsize = 20,
+        legend = self.ax_time.legend(bbox_to_anchor = (1., 1.1), loc = 'lower right', borderaxespad = 0., fontsize = 20,
                                      fancybox = True, framealpha = 0)
         # legend must be created here so that it catches all of the lines in ax_time
 
     def _initialize_figure(self):
         plt.set_cmap(self.colormap)
 
-        self.fig = plt.figure(figsize = ((5 / 6) * 16, 16))
-        self.fig.set_tight_layout(True)
+        self.fig = plt.figure(figsize = (18, 12))
 
-        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1])
-        self.ax_mesh = plt.subplot(grid_spec[0], projection = 'polar')
-        self.ax_time = plt.subplot(grid_spec[1])
+        self.ax_mesh = self.fig.add_axes([.05, .05, 2 / 3 - 0.05, .9], projection = 'polar')
+        self.ax_time = self.fig.add_axes([.6, .075, .35, .125])
+        self.cbar_axis = self.fig.add_axes([.725, .275, .03, .675])
+
+        plt.figtext(.62, .87, r'$|g|^2$', fontsize = 50)
+
+        plt.figtext(.8, .9, r'Simulation:', fontsize = 22)
+        plt.figtext(.82, .85, self.sim.name, fontsize = 20)
+        plt.figtext(.8, .8, r'Initial State: ${}$'.format(self.spec.initial_state.tex_str), fontsize = 22)
+        # TODO: time text?
+
+        self._mesh_setup()
 
         self.ax_mesh.set_theta_zero_location('N')
         self.ax_mesh.set_theta_direction('clockwise')
-
-        self.mesh, self.mesh_mirror = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log)
 
         if self.overlay_probability_current:
             self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh)
 
         if self.spec.electric_potential is not None:
-            self.pulse_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
-            self.electric_field_line, = self.ax_time.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.pulse_max,
+            self.field_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
+            self.electric_field_line, = self.ax_time.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
                                                           label = r'$|E|/\left|E_{\mathrm{max}}\right|$', color = 'red', linewidth = 2)
 
         self.norm_line, = self.ax_time.plot(self.sim.times / asec, self.sim.norm_vs_time,
@@ -237,14 +245,16 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         self.time_line, = self.ax_time.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
                                             linestyle = '-.', color = 'gray')
 
+        self.ax_mesh.set_rmax((self.sim.mesh.r_max - (self.sim.mesh.delta_r / 2)) / bohr_radius)
         self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         # angle_labels = ['\u03b8=0\u00b0'] + angle_labels
         self.ax_mesh.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
         self.ax_time.grid()
 
-        self.ax_time.set_xlabel('Time (as)', fontsize = 24)
-        self.ax_time.set_ylabel('Ionization Metric', fontsize = 24)
+        self.ax_time.set_xlabel('Time (as)', fontsize = 22)
+        self.ax_time.set_ylabel('Ionization Metric', fontsize = 22)
+        self.ax_time.yaxis.set_label_position('right')
 
         self.ax_time.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
         self.ax_time.set_ylim(0, 1)
@@ -257,15 +267,17 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         # last_r_label = self.ax_mesh.get_yticklabels()[-1]
         # last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
 
-        self.ax_time.tick_params(labelright = True)
+        self.ax_time.tick_params(labelleft = False, labelright = True)
         self.ax_time.tick_params(axis = 'both', which = 'major', labelsize = 14)
 
-        self.cbar_axis = self.fig.add_axes([1.01, .1, .04, .8])  # add a new axis for the cbar so that the old axis can stay square
         self.cbar = plt.colorbar(mappable = self.mesh, cax = self.cbar_axis)
         self.cbar.ax.tick_params(labelsize = 14)
 
         self.ax_mesh.axis('tight')
         # self.ax_time.axis('tight')
+
+    def _mesh_setup(self):
+        self.mesh, self.mesh_mirror = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log)
 
     def update_mesh_axis(self):
         self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log)
@@ -276,70 +288,8 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
 
 
 class SphericalHarmonicAnimator(SphericalSliceAnimator):
-    def _initialize_figure(self):
-        plt.set_cmap(self.colormap)
-
-        self.fig = plt.figure(figsize = ((5 / 6) * 16, 16))
-        self.fig.set_tight_layout(True)
-
-        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1])
-        self.ax_mesh = plt.subplot(grid_spec[0], projection = 'polar')
-        self.ax_time = plt.subplot(grid_spec[1])
-
-        self.ax_mesh.set_theta_zero_location('N')
-        self.ax_mesh.set_theta_direction('clockwise')
-
+    def _mesh_setup(self):
         self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log)
-
-        if self.overlay_probability_current:
-            self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh)
-
-        if self.spec.electric_potential is not None:
-            self.pulse_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
-            self.electric_field_line, = self.ax_time.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.pulse_max,
-                                                          label = r'$|E|/\left|E_{\mathrm{max}}\right|$', color = 'red', linewidth = 2)
-
-        self.norm_line, = self.ax_time.plot(self.sim.times / asec, self.sim.norm_vs_time,
-                                            label = r'$\left\langle \psi|\psi \right\rangle$',
-                                            color = 'black', linestyle = '--', linewidth = 3)
-
-        self.overlaps_stackplot = self.ax_time.stackplot(self.sim.times / asec, *self.compute_stackplot_overlaps(),
-                                                         labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$',
-                                                                   r'$\left| \left\langle \psi|\psi_{n\leq5} \right\rangle \right|^2$'],
-                                                         colors = ['.3', '.5'])
-
-        self.time_line, = self.ax_time.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
-                                            linestyle = '-.', color = 'gray')
-
-        self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
-        angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
-        # angle_labels = ['\u03b8=0\u00b0'] + angle_labels
-        self.ax_mesh.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
-        self.ax_time.grid()
-
-        self.ax_time.set_xlabel('Time (as)', fontsize = 24)
-        self.ax_time.set_ylabel('Ionization Metric', fontsize = 24)
-
-        self.ax_time.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
-        self.ax_time.set_ylim(0, 1)
-
-        self.ax_mesh.tick_params(axis = 'both', which = 'major', labelsize = 20)  # increase size of tick labels
-        self.ax_mesh.tick_params(axis = 'y', which = 'major', colors = 'silver', pad = 3)  # make r ticks a color that shows up against the colormesh
-        self.ax_mesh.tick_params(axis = 'both', which = 'both', length = 0)
-
-        self.ax_mesh.set_rlabel_position(80)
-        # last_r_label = self.ax_mesh.get_yticklabels()[-1]
-        # last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
-
-        self.ax_time.tick_params(labelright = True)
-        self.ax_time.tick_params(axis = 'both', which = 'major', labelsize = 14)
-
-        self.cbar_axis = self.fig.add_axes([1.01, .1, .04, .8])  # add a new axis for the cbar so that the old axis can stay square
-        self.cbar = plt.colorbar(mappable = self.mesh, cax = self.cbar_axis)
-        self.cbar.ax.tick_params(labelsize = 14)
-
-        self.ax_mesh.axis('tight')
-        # self.ax_time.axis('tight')
 
     def update_mesh_axis(self):
         self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log)

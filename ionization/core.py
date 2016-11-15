@@ -1182,7 +1182,7 @@ class SphericalSliceMesh(QuantumMesh):
         plt.close()  # close any old figures
 
         fig = plt.figure(figsize = (7, 7), dpi = 600)
-        fig.set_tight_layout(True)
+
         axis = plt.subplot(111, projection = 'polar')
         axis.set_theta_zero_location('N')
         axis.set_theta_direction('clockwise')
@@ -1215,6 +1215,8 @@ class SphericalSliceMesh(QuantumMesh):
         axis.set_rlabel_position(80)
         last_r_label = axis.get_yticklabels()[-1]
         last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
+
+        fig.set_tight_layout(True)
 
         cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
 
@@ -1660,7 +1662,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
         self.norm_by_l_vs_time = {}
-
 
     @property
     def time(self):
