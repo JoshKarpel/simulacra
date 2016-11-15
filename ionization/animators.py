@@ -245,7 +245,6 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         self.time_line, = self.ax_time.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
                                             linestyle = '-.', color = 'gray')
 
-        self.ax_mesh.set_rmax((self.sim.mesh.r_max - (self.sim.mesh.delta_r / 2)) / bohr_radius)
         self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         # angle_labels = ['\u03b8=0\u00b0'] + angle_labels
@@ -275,6 +274,11 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
 
         self.ax_mesh.axis('tight')
         # self.ax_time.axis('tight')
+
+        if self.plot_limit is None:
+            self.ax_mesh.set_rmax((self.sim.mesh.r_max - (self.sim.mesh.delta_r / 2)) / bohr_radius)
+        else:
+            self.ax_mesh.set_rmax(self.plot_limit / bohr_radius)
 
     def _mesh_setup(self):
         self.mesh, self.mesh_mirror = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log)

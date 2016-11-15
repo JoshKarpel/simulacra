@@ -39,9 +39,9 @@ if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         bound = 225
         # points = 2 ** 8
-        points = bound * 20
+        points = bound * 4
         # angular_points = 2 ** 6
-        angular_points = 48
+        angular_points = 32
 
         laser_frequency = c / (1064 * nm)
         laser_period = 1 / laser_frequency
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         window = ion.potentials.LinearRampWindow(ramp_on_time = 0, ramp_time = 5 * laser_period)
 
         base_amplitude = 1.2e10 * V / m
-        amplitudes = np.sqrt(np.linspace(1, 10, 5)) * base_amplitude
+        amplitudes = np.sqrt(np.linspace(1, 10, 3)) * base_amplitude
 
         specs = []
 
@@ -69,7 +69,7 @@ if __name__ == '__main__':
                                                          time_initial = t_init, time_final = t_final, time_step = t_step,
                                                          internal_potential = internal_potential,
                                                          electric_potential = external_potential)
-            # specs.append(cyl_spec)
+            specs.append(cyl_spec)
 
             sph_spec = ion.SphericalSliceSpecification('sph_dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                        r_bound = bound * bohr_radius, r_points = points,
@@ -79,4 +79,22 @@ if __name__ == '__main__':
                                                        electric_potential = external_potential)
             specs.append(sph_spec)
 
-        cp.utils.multi_map(run_sim, specs, processes = 5)
+            sph_spec = ion.SphericalHarmonicSpecification('sph_harm_dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
+                                                          mesh_type = ion.SphericalHarmonicMesh,
+                                                          r_bound = bound * bohr_radius, r_points = points,
+                                                          theta_points = angular_points,
+                                                          time_initial = t_init, time_final = t_final, time_step = t_step,
+                                                          internal_potential = internal_potential,
+                                                          electric_potential = external_potential)
+            specs.append(sph_spec)
+
+            sph_spec = ion.SphericalHarmonicSpecification('lag_sph_harm_dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
+                                                          mesh_type = ion.LagrangianSphericalHarmonicMesh,
+                                                          r_bound = bound * bohr_radius, r_points = points,
+                                                          theta_points = angular_points,
+                                                          time_initial = t_init, time_final = t_final, time_step = t_step,
+                                                          internal_potential = internal_potential,
+                                                          electric_potential = external_potential)
+            specs.append(sph_spec)
+
+        cp.utils.multi_map(run_sim, specs, processes = 3)

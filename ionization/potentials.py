@@ -79,7 +79,7 @@ class NuclearPotential(Potential):
 
 
 class RadialImaginaryPotential(Potential):
-    def __init__(self, center = 20 * bohr_radius, width = 2 * bohr_radius, amplitude = 1 * atomic_electric_potential):
+    def __init__(self, center = 20 * bohr_radius, width = 2 * bohr_radius, decay_time = 100 * asec):
         """
         Construct a RadialImaginaryPotential. The potential is shaped like a Gaussian and has an imaginary amplitude.
 
@@ -91,18 +91,19 @@ class RadialImaginaryPotential(Potential):
         """
         self.center = center
         self.width = width
-        self.amplitude = amplitude
+        self.decay_time = decay_time
+        self.decay_rate = 1 / decay_time
 
-        self.prefactor = -1j * self.amplitude * (proton_charge ** 2)
+        self.prefactor = -1j * self.decay_rate * hbar
 
     def __repr__(self):
-        return '{}(center = {}, width = {}, amplitude = {})'.format(self.__class__.__name__, self.center, self.width, self.amplitude)
+        return '{}(center = {}, width = {}, decay_time = {})'.format(self.__class__.__name__, self.center, self.width, self.decay_time)
 
     def __str__(self):
-        return '{}(center = {} Bohr radii, width = {} Bohr radii, amplitude = {} AEP)'.format(self.__class__.__name__,
+        return '{}(center = {} Bohr radii, width = {} Bohr radii, decay time = {} as)'.format(self.__class__.__name__,
                                                                                               uround(self.center, bohr_radius, 3),
                                                                                               uround(self.width, bohr_radius, 3),
-                                                                                              uround(self.amplitude, atomic_electric_potential, 3))
+                                                                                              uround(self.decay_time, asec, 3))
 
     def __call__(self, *, r, **kwargs):
         return self.prefactor * np.exp(-(((r - self.center) / self.width) ** 2))
@@ -210,7 +211,7 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
 
         out = np.where(cond, on, off) * self.amplitude * super(Rectangle, self).get_amplitude(t)
 
-        return out * super(Rectangle, self).get_amplitude(t)
+        return out
 
 
 class SineWave(UniformLinearlyPolarizedElectricField):
@@ -243,8 +244,8 @@ class SineWave(UniformLinearlyPolarizedElectricField):
         return out
 
     @classmethod
-    def from_frequency(cls, frequency, amplitude, phase = 0, window_time = None, window_width = None):
-        return cls(frequency * twopi, amplitude, phase = phase, window_time = window_time, window_width = window_width)
+    def from_frequency(cls, frequency, amplitude = 1 * atomic_electric_field, phase = 0, **kwargs):
+        return cls(frequency * twopi, amplitude = amplitude, phase = phase, **kwargs)
 
     @property
     def frequency(self):
@@ -279,10 +280,67 @@ class SineWave(UniformLinearlyPolarizedElectricField):
         self.omega = photon_energy / hbar
 
     def get_amplitude(self, t):
-        return self.amplitude * np.sin((self.omega * t) + self.phase) * super(SineWave, self).get_amplitude(t)
+        return np.sin((self.omega * t) + self.phase) * self.amplitude * super(SineWave, self).get_amplitude(t)
 
     def get_peak_amplitude(self):
         return self.amplitude
 
     def get_peak_power_density(self):
         return 0.5 * c * epsilon_0 * (np.abs(self.amplitude) ** 2)  # TODO: check factor of 1/2 here
+
+
+class SincPulse(UniformLinearlyPolarizedElectricField):
+    def __init__(self, pulse_width, amplitude = 1 * atomic_electric_field, phase = 'cos', pulse_center = 0 * asec, **kwargs):
+        super(SincPulse, self).__init__(**kwargs)
+
+        self.pulse_width = pulse_width
+
+        if phase not in ('cos', 'sin'):
+            raise TypeError("SincPulse phase must be 'cos' or 'sin'")
+        self.phase = phase
+
+        self.amplitude = amplitude
+        self.pulse_center = pulse_center
+
+    @property
+    def bandwidth(self):
+        raise NotImplementedError
+
+    @property
+    def largest_photon_energy(self):
+        raise NotImplementedError
+
+    def __str__(self):
+        out = '{}(pulse width = {} as, pulse center = {} as, amplitude = {} AEF, phase = {})'.format(self.__class__.__name__,
+                                                                                                     uround(self.pulse_width, asec, 3),
+                                                                                                     uround(self.pulse_center, asec, 3),
+                                                                                                     uround(self.amplitude, atomic_electric_field, 3),
+                                                                                                     self.phase)
+
+        out += ' with {}'.format(self.window)
+
+        return out
+
+    def __repr__(self):
+        out = '{}(pulse width = {}, pulse center = {}, amplitude = {}, phase = {}, window_function = {})'.format(self.__class__.__name__,
+                                                                                                                 self.pulse_width,
+                                                                                                                 self.pulse_center,
+                                                                                                                 self.amplitude,
+                                                                                                                 self.phase,
+                                                                                                                 repr(self.window))
+
+        return out
+
+    def get_amplitude(self, t):
+        try:
+            if self.phase == 'cos':
+                amp = np.sin(((t - self.pulse_center) / self.pulse_width)) / (t - self.pulse_center)  # TODO: should probably use np.where here
+            elif self.phase == 'sin':
+                amp = (1 - np.cos(((t - self.pulse_center) / self.pulse_width))) / (t - self.pulse_center)
+        except ZeroDivisionError:
+            if self.phase == 'cos':
+                amp = 1
+            elif self.phase == 'sin':
+                amp = 0
+
+        return amp * self.amplitude * super(SincPulse, self).get_amplitude(t)

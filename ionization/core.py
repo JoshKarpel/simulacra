@@ -311,8 +311,8 @@ class ElectricFieldSpecification(cp.core.Specification):
                  test_mass = electron_mass_reduced, test_charge = electron_charge,
                  initial_state = BoundState(1, 0),
                  test_states = tuple(BoundState(n, l) for n in range(5) for l in range(n)),
-                 dipole_gauges = tuple('length'),
-                 internal_potential = potentials.NuclearPotential(charge = proton_charge) + potentials.RadialImaginaryPotential(center = 30 * bohr_radius, width = 1 * bohr_radius, amplitude = 1 * atomic_electric_potential),
+                 dipole_gauges = ('length',),
+                 internal_potential = potentials.NuclearPotential(charge = proton_charge) + potentials.RadialImaginaryPotential(center = 30 * bohr_radius, width = 5 * bohr_radius, decay_time = 100 * asec),
                  electric_potential = None,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
                  extra_time = None, extra_time_step = 1 * asec,
@@ -1287,6 +1287,10 @@ class SphericalHarmonicMesh(QuantumMesh):
     def g_factor(self):
         return self.r
 
+    @cp.utils.memoize()
+    def c(self, l):
+        return (l + 1) / np.sqrt(((2 * l) + 1) * ((2 * l) + 3))
+
     def flatten_mesh(self, mesh, flatten_along):
         """Return a mesh flattened along one of the mesh coordinates ('theta' or 'r')."""
         if flatten_along == 'l':
@@ -1335,6 +1339,15 @@ class SphericalHarmonicMesh(QuantumMesh):
     @property
     def norm_by_l(self):
         return np.sum(np.conj(self.g_mesh) * self.g_mesh, axis = 1) * self.delta_r
+
+    def dipole_moment(self, gauge = 'length'):
+        """Get the dipole moment in the specified gauge."""
+        if gauge == 'length':
+            _, operator = self.get_kinetic_energy_matrix_operators()
+            g = self.wrap_vector(operator.dot(self.flatten_mesh(self.g_mesh, 'l')), 'l')
+            return self.spec.test_charge * self.inner_product(mesh_b = g)
+        elif gauge == 'velocity':
+            raise NotImplementedError
 
     @cp.utils.memoize(copy_output = True)
     def g_for_state(self, state):
@@ -1615,16 +1628,12 @@ class LagrangianSphericalHarmonicMesh(SphericalHarmonicMesh):
         r_diagonal *= -2 * r_prefactor
         r_offdiagonal *= r_prefactor
 
-        @cp.utils.memoize()
-        def c(l):
-            return (l + 1) / np.sqrt(((2 * l) + 1) * ((2 * l) + 3))
-
         l_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
         l_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
         for l_index in range(self.mesh_points - 1):
             if (l_index + 1) % self.spec.l_points != 0:
                 l = (l_index % self.spec.l_points) + 1
-                l_offdiagonal[l_index] = c(l)
+                l_offdiagonal[l_index] = self.c(l)
         l_offdiagonal *= l_prefactor
 
         effective_potential_mesh = ((hbar ** 2) / (2 * electron_mass_reduced)) * self.l_mesh * (self.l_mesh + 1) / (self.r_mesh ** 2)
@@ -1661,6 +1670,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
+        print(self.spec.dipole_gauges)
         self.norm_by_l_vs_time = {}
 
     @property
@@ -1750,7 +1760,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         logger.debug("Simulation status set to 'finished'")
         logger.info('Finished performing time evolution on {} ({})'.format(self.name, self.file_name))
 
-    def plot_wavefunction_vs_time(self, grayscale = False, **kwargs):
+    def plot_wavefunction_vs_time(self, grayscale = False, log_metrics = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.04)
@@ -1776,7 +1786,12 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_overlaps.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
             ax_overlaps.stackplot(self.times / asec, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states])
 
-        ax_overlaps.set_ylim(0.0, 1.0)
+        if log_metrics:
+            ax_overlaps.set_yscale('log')
+            ax_overlaps.set_ylim(top = 1.0)
+        else:
+            ax_overlaps.set_ylim(0.0, 1.0)
+            ax_overlaps.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
         ax_overlaps.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
 
         ax_overlaps.grid()
@@ -1791,7 +1806,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         else:
             ax_overlaps.legend(bbox_to_anchor = (1.075, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10)
 
-        ax_overlaps.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
         ax_overlaps.tick_params(labelright = True)
         ax_field.tick_params(labelright = True)
         ax_overlaps.xaxis.tick_top()
