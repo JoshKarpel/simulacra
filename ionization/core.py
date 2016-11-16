@@ -1723,18 +1723,13 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.status = 'running'
         logger.debug("{} {} status set to 'running'".format(self.__class__.__name__, self.name))
 
-        if 0 < self.time_index < self.time_steps:
-            self.evictions += 1
-
         while True:
             if not only_end_data or self.time_index == self.time_steps - 1:  # if last time step or taking all data
                 self.store_data(self.time_index)
 
             for animator in self.animators:
                 if self.time_index == 0 or self.time_index == self.time_steps or self.time_index % animator.decimation == 0:
-                    animator.update_frame()
                     animator.send_frame_to_ffmpeg()
-                    # logger.debug('Made animation frame for time index {} / {}'.format(self.time_index, self.time_steps - 1))
 
             self.time_index += 1
             if self.time_index == self.time_steps:

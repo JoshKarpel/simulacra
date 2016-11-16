@@ -464,3 +464,90 @@ class Timer:
             return 'Timer started at {}, still running'.format(self.time_start)
         else:
             return 'Timer started at {}, ended at {}, elapsed time {}'.format(self.time_start, self.time_end, self.time_elapsed)
+
+
+class Descriptor:
+    """
+    A generic descriptor that implements default descriptor methods for easy overriding in subclasses.
+
+    The data is stored in the instance dictionary.
+    """
+    __slots__ = ['name']
+
+    def __init__(self, name):
+        self.name = name
+
+    def __get__(self, instance, cls):
+        if instance is None:
+            return self
+        else:
+            return instance.__dict__[self.name]
+
+    def __set__(self, instance, value):
+        instance.__dict__[self.name] = value
+
+    def __delete__(self, instance):
+        del instance.__dict__[self.name]
+
+
+class RestrictedValues(Descriptor):
+    """
+    A descriptor that forces the attribute to have a certain set of possible values.
+
+    If the value is not in the set of legal values a ValueError is raised.
+    """
+
+    __slots__ = ['name', 'legal_values']
+
+    def __init__(self, name, legal_values = set()):
+        self.legal_values = set(legal_values)
+
+        super(RestrictedValues, self).__init__(name)
+
+    def __set__(self, instance, value):
+        if value not in self.legal_values:
+            raise ValueError('Expected {} to be from {}'.format(value, self.legal_values))
+        else:
+            super(RestrictedValues, self).__set__(instance, value)
+
+
+class Typed(Descriptor):
+    """
+    A descriptor that forces the attribute to have a certain type.
+
+    If the value does not match the provided type a TypeError is raised.
+    """
+
+    __slots__ = ['name', 'legal_type']
+
+    def __init__(self, name, legal_type = str):
+        self.legal_type = legal_type
+
+        super(Typed, self).__init__(name)
+
+    def __set__(self, instance, value):
+        if not isinstance(value, self.legal_type):
+            raise TypeError('Expected {} to be a {}'.format(value, self.legal_type))
+        else:
+            super(Typed, self).__set__(instance, value)
+
+
+class Checked(Descriptor):
+    """
+    A descriptor that only allows setting with values that return True from a provided checking function.
+
+    If the value does not pass the check a ValueError is raised.
+    """
+
+    __slots__ = ['name', 'check']
+
+    def __init__(self, name, check = lambda: True):
+        self.check = check
+
+        super(Checked, self).__init__(name)
+
+    def __set__(self, instance, value):
+        if not check(value):
+            raise ValueError('Value {} did not pass the check'.format(value))
+        else:
+            super(Checked, self).__set__(instance, value)

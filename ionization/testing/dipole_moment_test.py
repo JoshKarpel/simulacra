@@ -14,7 +14,8 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 def run_sim(spec):
     with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG,
                          file_logs = True, file_name = spec.name, file_dir = OUT_DIR, file_mode = 'w') as logger:
-        sim = ion.ElectricFieldSimulation(spec)
+        # sim = ion.ElectricFieldSimulation(spec)
+        sim = spec.to_simulation()
 
         ###
         if sim.spec.do_imag_ev:

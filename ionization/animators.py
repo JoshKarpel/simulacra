@@ -15,94 +15,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class Animator:
-    def __init__(self, postfix = '', target_dir = None,
-                 length = 30, fps = 30,
-                 plot_limit = None, renormalize = True, log = False, overlay_probability_current = False,
-                 colormap = plt.cm.inferno):
-        if target_dir is None:
-            target_dir = os.getcwd()
-        self.target_dir = target_dir
-
-        postfix = cp.utils.strip_illegal_characters(postfix)
-        if postfix != '' and not postfix.startswith('_'):
-            postfix = '_' + postfix
-        self.postfix = postfix
-
-        self.length = length
-        self.fps = fps
-        self.plot_limit = plot_limit
-        self.renormalize = renormalize
-        self.log = log
-        self.overlay_probability_current = overlay_probability_current
-        self.colormap = colormap
-
-        self.sim = None
-        self.spec = None
-        self.fig = None
-
-    def initialize(self, simulation):
-        """Hook for second part of initialization, once the Simulation is known."""
-        self.sim = simulation
-        self.spec = simulation.spec
-
-        self.file_name = '{}{}.mp4'.format(self.sim.file_name, self.postfix)
-        self.file_path = os.path.join(self.target_dir, self.file_name)
-        cp.utils.ensure_dir_exists(self.file_path)
-        try:
-            os.remove(self.file_path)
-        except FileNotFoundError:
-            pass
-
-        ideal_frame_count = self.length * self.fps
-        self.decimation = int(self.sim.time_steps / ideal_frame_count)
-        if self.decimation < 1:
-            self.decimation = 1
-        self.fps = (self.sim.time_steps / self.decimation) / self.length
-
-        self._initialize_figure()
-
-        canvas_width, canvas_height = self.fig.canvas.get_width_height()
-        self.cmdstring = ("ffmpeg",
-                          '-y',
-                          '-r', '{}'.format(self.fps),  # choose fps
-                          '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
-                          '-pix_fmt', 'argb',  # format
-                          '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
-                          '-vcodec', 'mpeg4',  # output encoding
-                          '-q:v', '1',
-                          self.file_path)
-
-        self.ffmpeg = subprocess.Popen(self.cmdstring, stdin = subprocess.PIPE, bufsize = -1)
-
-        logger.info('Initialized {}'.format(self, self.sim))
-
-    def cleanup(self):
-        self.ffmpeg.communicate()
-        logger.info('Cleaned up {}'.format(self, self.sim))
-
-    def _initialize_figure(self):
-        raise NotImplementedError
-
-    def update_frame(self):
-        logger.debug('{} updated frame from {}'.format(self.__class__.__name__, self.sim.name))
-
-    def send_frame_to_ffmpeg(self):
-        self.fig.canvas.draw()
-        string = self.fig.canvas.tostring_argb()
-
-        self.ffmpeg.stdin.write(string)
-
-        logger.debug('{} sent frame to ffpmeg from {}'.format(self.__class__.__name__, self.sim.name))
-
-    def __str__(self):
-        return '{} for {}'.format(self.__class__.__name__, self.sim)
-
-    def __repr__(self):
-        return '{}(sim = {})'.format(self.__class__.__name__, self.sim)
-
-
-class CylindricalSliceAnimator(Animator):
+class CylindricalSliceAnimator(cp.core.Animator):
     def initialize(self, simulation):
         Animator.initialize(self, simulation)
         self.ax_time.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_time
@@ -177,7 +90,7 @@ class CylindricalSliceAnimator(Animator):
         plt.set_cmap(self.colormap)
         self.update_mesh_axis()
         self.update_time_axis()
-        super(CylindricalSliceAnimator, self).update_frame()
+        super(CylindricalSliceAnimator, self)._update_frame()
 
     def update_mesh_axis(self):
         self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log, plot_limit = self.plot_limit)

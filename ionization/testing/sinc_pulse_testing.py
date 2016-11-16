@@ -13,7 +13,8 @@ logger = cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG, fi
 
 def run(spec):
     with logger as log:
-        sim = ion.ElectricFieldSimulation(spec)
+        # sim = ion.ElectricFieldSimulation(spec)
+        sim = spec.to_simulation()
 
         log.info(sim.info())
         sim.run_simulation()
