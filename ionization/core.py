@@ -363,7 +363,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         if len(self.animators) > 0:
             animation += ['   ' + str(animator) for animator in self.animators]
         else:
-            animation += 'disabled'
+            animation[0] += 'disabled'
 
         time_evolution = ['Time Evolution:',
                           '   Initial State: {}'.format(self.initial_state),
@@ -406,6 +406,9 @@ class QuantumMesh:
 
     @property
     def psi_mesh(self):
+        raise NotImplementedError
+
+    def evolve(self, time_step):
         raise NotImplementedError
 
     def get_mesh_slicer(self, plot_limit):
@@ -1227,7 +1230,7 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
     def __init__(self, name,
                  r_bound = 20 * bohr_radius,
                  r_points = 2 ** 9,
-                 spherical_harmonics_max_l = 20,
+                 l_points = 2 ** 5,
                  mesh_type = None,
                  **kwargs):
         if mesh_type is None:
@@ -1237,15 +1240,15 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
 
         self.r_bound = r_bound
         self.r_points = int(r_points)
-        self.spherical_harmonics_max_l = spherical_harmonics_max_l
+        self.l_points = l_points
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
                 '   R Boundary: {} Bohr radii'.format(uround(self.r_bound, bohr_radius, 3)),
                 '   R Points: {}'.format(self.r_points),
                 '   R Mesh Spacing: ~{} Bohr radii'.format(uround(self.r_bound / self.r_points, bohr_radius, 3)),
-                '   Spherical Harmonics: {}'.format(self.spherical_harmonics_max_l + 1),
-                '   Total Mesh Points: {}'.format(self.r_points * (self.spherical_harmonics_max_l + 1))]
+                '   Spherical Harmonics: {}'.format(self.l_points),
+                '   Total Mesh Points: {}'.format(self.r_points * self.l_points)]
 
         return '\n'.join((super(SphericalHarmonicSpecification, self).info(), *mesh))
 
@@ -1261,10 +1264,8 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.r += self.delta_r / 2
         self.r_max = np.max(self.r)
 
-        self.l = np.array(range(0, self.spec.spherical_harmonics_max_l + 1))
-        self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.spec.spherical_harmonics_max_l + 1))
-        self.l_points = len(self.l)
-        self.spec.l_points = self.l_points
+        self.l = np.array(range(self.spec.l_points))
+        self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.spec.l_points))
 
         # self.l_mesh, self.r_mesh = np.meshgrid(self.l, self.r, indexing = 'ij')
 
@@ -1670,7 +1671,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
-        print(self.spec.dipole_gauges)
         self.norm_by_l_vs_time = {}
 
     @property

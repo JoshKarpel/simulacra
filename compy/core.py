@@ -22,12 +22,14 @@ class Specification(utils.Beet):
 
         :param name: the internal name of the Specification
         :param file_name: the desired external name, used for pickling. Illegal characters are stripped before use.
-        :param kwargs: extra arguments, stored in Specification.extra
+        :param kwargs: extra arguments, stored as attributes
         """
         super(Specification, self).__init__(name, file_name = file_name)
 
         self.simulation_type = simulation_type
-        self.extra_args = kwargs
+
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def save(self, target_dir = None, file_extension = '.spec'):
         """

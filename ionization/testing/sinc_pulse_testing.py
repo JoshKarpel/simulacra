@@ -27,17 +27,17 @@ if __name__ == '__main__':
         # n_max = 4
 
         bound = 50
-        points = 2 ** 10
-        angular_points = 2 ** 5
+        points = bound * 4
+        angular_points = 32
 
         pulse_width = 100 * asec
 
         t_init = -8 * pulse_width
         t_final = -t_init
 
-        window = ion.potentials.LinearRampWindow(ramp_on_time = t_init + (200 * asec), ramp_time = 4 * pulse_width)
+        window = ion.potentials.LinearRampWindow(ramp_on_time = t_init + (1 * pulse_width), ramp_time = 4 * pulse_width)
         # e_field = ion.potentials.SineWave(omega = twopi / (pulse_width), amplitude = 0.5 * atomic_electric_field, window = window)
-        e_field = ion.potentials.SincPulse(pulse_width, amplitude = .5 * atomic_electric_field)
+        e_field = ion.potentials.SincPulse(pulse_width, amplitude = .5 * atomic_electric_field, window = None)
 
         # specs = []
 

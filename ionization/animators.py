@@ -85,7 +85,7 @@ class Animator:
         raise NotImplementedError
 
     def update_frame(self):
-        logger.debug('Updated frame for {}'.format(self, self.sim))
+        logger.debug('{} updated frame from {}'.format(self.__class__.__name__, self.sim.name))
 
     def send_frame_to_ffmpeg(self):
         self.fig.canvas.draw()
@@ -93,7 +93,7 @@ class Animator:
 
         self.ffmpeg.stdin.write(string)
 
-        logger.debug('Sent frame to ffpmeg for {}'.format(self, self.sim))
+        logger.debug('{} sent frame to ffpmeg from {}'.format(self.__class__.__name__, self.sim.name))
 
     def __str__(self):
         return '{} for {}'.format(self.__class__.__name__, self.sim)
@@ -203,6 +203,7 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         legend = self.ax_time.legend(bbox_to_anchor = (1., 1.1), loc = 'lower right', borderaxespad = 0., fontsize = 20,
                                      fancybox = True, framealpha = 0)
         # legend must be created here so that it catches all of the lines in ax_time
+        # TODO: is this really still true?
 
     def _initialize_figure(self):
         plt.set_cmap(self.colormap)
@@ -219,6 +220,7 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         plt.figtext(.82, .85, self.sim.name, fontsize = 20)
         plt.figtext(.8, .8, r'Initial State: ${}$'.format(self.spec.initial_state.tex_str), fontsize = 22)
         # TODO: time text?
+        # TODO: replace with a for over a given list of strings
 
         self._mesh_setup()
 
