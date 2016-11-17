@@ -1,5 +1,7 @@
 import datetime as dt
 import logging
+import os
+import subprocess
 
 import matplotlib.pyplot as plt
 
@@ -145,7 +147,7 @@ class Animator:
             target_dir = os.getcwd()
         self.target_dir = target_dir
 
-        postfix = cp.utils.strip_illegal_characters(postfix)
+        postfix = utils.strip_illegal_characters(postfix)
         if postfix != '' and not postfix.startswith('_'):
             postfix = '_' + postfix
         self.postfix = postfix
@@ -169,7 +171,7 @@ class Animator:
 
         self.file_name = '{}{}.mp4'.format(self.sim.file_name, self.postfix)
         self.file_path = os.path.join(self.target_dir, self.file_name)
-        cp.utils.ensure_dir_exists(self.file_path)
+        utils.ensure_dir_exists(self.file_path)
         try:
             os.remove(self.file_path)
         except FileNotFoundError:

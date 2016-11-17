@@ -3,6 +3,7 @@ import numpy as np
 cimport numpy as np
 
 import scipy.interpolate as interp
+import scipy.sparse as sparse
 
 complex = np.complex128
 ctypedef np.complex128_t complex_t
@@ -94,5 +95,33 @@ def chebyshev_fit(np.ndarray[float_t, ndim = 1] rescaled_z, np.ndarray[float_t, 
 
     return c_nm
 
+@cython.boundscheck(False)
+@cython.nonecheck(False)
+def generate_split_operator_evolution_matrices(np.ndarray[complex_t, ndim = 1] a):
+    cdef np.ndarray[complex_t, ndim = 1] even_diag = np.zeros(len(a) + 1, dtype = np.complex128)
+    cdef np.ndarray[complex_t, ndim = 1] even_offdiag = np.zeros(len(a), dtype = np.complex128)
+    cdef np.ndarray[complex_t, ndim = 1] odd_diag = np.zeros(len(a) + 1, dtype = np.complex128)
+    cdef np.ndarray[complex_t, ndim = 1] odd_offdiag = np.zeros(len(a), dtype = np.complex128)
 
+    odd_diag[0] = 1
+    odd_diag[-1] = 1
 
+    cdef complex_t cosa
+    cdef complex_t sina
+
+    cdef unsigned int ii
+
+    for ii in range(len(a)):
+        cosa = np.cos(a[ii])
+        sina = -1j * np.sin(a[ii])
+
+        if ii % 2 == 0:
+            even_diag[ii] = cosa
+            even_diag[ii + 1] = cosa
+            even_offdiag[ii] = sina
+        else:
+            odd_diag[ii] = cosa
+            odd_diag[ii + 1] = cosa
+            odd_offdiag[ii] = sina
+
+    return even_diag, even_offdiag, odd_diag, odd_offdiag

@@ -17,7 +17,7 @@ logger.setLevel(logging.DEBUG)
 
 class CylindricalSliceAnimator(cp.core.Animator):
     def initialize(self, simulation):
-        Animator.initialize(self, simulation)
+        cp.core.Animator.initialize(self, simulation)
         self.ax_time.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_time
 
     def _initialize_figure(self):
@@ -112,7 +112,7 @@ class CylindricalSliceAnimator(cp.core.Animator):
 
 class SphericalSliceAnimator(CylindricalSliceAnimator):
     def initialize(self, simulation):
-        Animator.initialize(self, simulation)
+        cp.core.Animator.initialize(self, simulation)
         legend = self.ax_time.legend(bbox_to_anchor = (1., 1.1), loc = 'lower right', borderaxespad = 0., fontsize = 20,
                                      fancybox = True, framealpha = 0)
         # legend must be created here so that it catches all of the lines in ax_time

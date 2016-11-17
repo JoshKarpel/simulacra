@@ -19,7 +19,7 @@ def run_sim(spec):
 
         ###
         if sim.spec.do_imag_ev:
-            for _ in range(50):
+            for _ in range(100):
                 sim.mesh.evolve(-1j * asec)
 
             logger.info(sim.mesh.norm)
@@ -30,6 +30,9 @@ def run_sim(spec):
             logger.info(sim.mesh.state_overlap(ion.BoundState(1)))
             logger.info(sim.mesh.state_overlap(ion.BoundState(2, 0)))
             logger.info(sim.mesh.state_overlap(ion.BoundState(2, 1)))
+            logger.info(sim.mesh.state_overlap(ion.BoundState(3, 0)))
+            logger.info(sim.mesh.state_overlap(ion.BoundState(3, 1)))
+            logger.info(sim.mesh.state_overlap(ion.BoundState(3, 2)))
         ###
 
         logger.info(sim.info())
@@ -41,10 +44,16 @@ def run_sim(spec):
 
         sim.plot_wavefunction_vs_time(target_dir = OUT_DIR)
         sim.plot_dipole_moment_vs_time(target_dir = OUT_DIR)
-        sim.plot_dipole_moment_vs_frequency(target_dir = OUT_DIR,
-                                            frequency_range = laser_frequency * 40,
-                                            vlines = (laser_frequency * n for n in range(45) if n % 2 != 0),
-                                            first_time = 15 * laser_period, last_time = 20 * laser_period)
+
+        for p, q in [(10, 15), (10, 20), (10, 25), (10, 30),
+                     (15, 20), (15, 25), (15, 30),
+                     (20, 25), (20, 30),
+                     (25, 30)]:
+            sim.plot_dipole_moment_vs_frequency(target_dir = OUT_DIR,
+                                                frequency_range = laser_frequency * 40,
+                                                vlines = (laser_frequency * n for n in range(45) if n % 2 != 0),
+                                                first_time = p * laser_period, last_time = q * laser_period,
+                                                name_postfix = '__{}to{}'.format(p, q))
 
         sim.save(target_dir = OUT_DIR, save_mesh = False)
 
@@ -63,7 +72,7 @@ if __name__ == '__main__':
         laser_period = 1 / laser_frequency
 
         t_init = 0
-        t_final = 20 * laser_period
+        t_final = 30 * laser_period
         t_step = laser_period / 800
 
         # external_potential = ion.potentials.Rectangle(start_time = 40 * asec, end_time = 80 * asec, amplitude = .1 * atomic_electric_field)
@@ -77,9 +86,9 @@ if __name__ == '__main__':
         for amplitude in amplitudes:
             external_potential = ion.potentials.SineWave(twopi * laser_frequency, amplitude = amplitude,
                                                          window = window)
-            internal_potential = ion.potentials.NuclearPotential() + ion.potentials.RadialImaginaryPotential(center = bound * bohr_radius, width = 50 * bohr_radius, decay_time = 20 * asec)
+            internal_potential = ion.potentials.NuclearPotential() + ion.potentials.RadialImaginaryPotential(center = bound * bohr_radius, width = 20 * bohr_radius, decay_time = 30 * asec)
 
-            sph_spec = ion.SphericalHarmonicSpecification('dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
+            sph_spec = ion.SphericalHarmonicSpecification('__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                           r_bound = bound * bohr_radius, r_points = points,
                                                           l_points = angular_points,
                                                           time_initial = t_init, time_final = t_final, time_step = t_step,
@@ -88,7 +97,7 @@ if __name__ == '__main__':
                                                           do_imag_ev = False)
             specs.append(sph_spec)
 
-            sph_spec = ion.SphericalHarmonicSpecification('dipole__{}x{}_amp={}_i'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
+            sph_spec = ion.SphericalHarmonicSpecification('I__dipole__{}x{}_amp={}_i'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                           r_bound = bound * bohr_radius, r_points = points,
                                                           l_points = angular_points,
                                                           time_initial = t_init, time_final = t_final, time_step = t_step,
@@ -97,4 +106,24 @@ if __name__ == '__main__':
                                                           do_imag_ev = True)
             specs.append(sph_spec)
 
-        cp.utils.multi_map(run_sim, specs, processes = 4)
+            sph_spec = ion.SphericalHarmonicSpecification('SO__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
+                                                          r_bound = bound * bohr_radius, r_points = points,
+                                                          l_points = angular_points,
+                                                          time_initial = t_init, time_final = t_final, time_step = t_step,
+                                                          internal_potential = internal_potential,
+                                                          electric_potential = external_potential,
+                                                          evolution_method = 'SO',
+                                                          do_imag_ev = False)
+            specs.append(sph_spec)
+
+            sph_spec = ion.SphericalHarmonicSpecification('I_SO__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
+                                                          r_bound = bound * bohr_radius, r_points = points,
+                                                          l_points = angular_points,
+                                                          time_initial = t_init, time_final = t_final, time_step = t_step,
+                                                          internal_potential = internal_potential,
+                                                          electric_potential = external_potential,
+                                                          evolution_method = 'SO',
+                                                          do_imag_ev = True)
+            specs.append(sph_spec)
+
+        cp.utils.multi_map(run_sim, specs, processes = 2)

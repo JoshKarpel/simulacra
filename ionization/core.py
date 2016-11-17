@@ -1227,11 +1227,13 @@ class SphericalSliceMesh(QuantumMesh):
 
 
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
+    evolution_method = cp.utils.RestrictedValues('evolution_method', {'CN', 'SO'})
     def __init__(self, name,
                  r_bound = 20 * bohr_radius,
                  r_points = 2 ** 9,
                  l_points = 2 ** 5,
                  mesh_type = None,
+                 evolution_method = 'CN',
                  **kwargs):
         if mesh_type is None:
             mesh_type = LagrangianSphericalHarmonicMesh
@@ -1242,8 +1244,11 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
         self.r_points = int(r_points)
         self.l_points = l_points
 
+        self.evolution_method = evolution_method
+
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
+                '   Evolution Method: {}'.format(self.evolution_method),
                 '   R Boundary: {} Bohr radii'.format(uround(self.r_bound, bohr_radius, 3)),
                 '   R Points: {}'.format(self.r_points),
                 '   R Mesh Spacing: ~{} Bohr radii'.format(uround(self.r_bound / self.r_points, bohr_radius, 3)),
@@ -1439,6 +1444,9 @@ class SphericalHarmonicMesh(QuantumMesh):
         raise NotImplementedError
 
     def evolve(self, delta_t):
+        getattr(self, 'evolve_' + self.spec.evolution_method)(delta_t)
+
+    def evolve_CN(self, delta_t):
         tau = delta_t / (2 * hbar)
 
         if self.spec.electric_potential is not None:
@@ -1476,6 +1484,85 @@ class SphericalHarmonicMesh(QuantumMesh):
         hamiltonian.data[1] += 1  # add identity to matrix operator
         g_vector = self.flatten_mesh(self.g_mesh, 'l')
         g_vector = cy.tdma(hamiltonian, g_vector)
+        self.g_mesh = self.wrap_vector(g_vector, 'l')
+
+    def _get_split_operator_evolution_matrices(self, a):
+        # even_diag = np.zeros(len(a) + 1, dtype = np.complex128)
+        # even_offdiag = np.zeros(len(a), dtype = np.complex128)
+        # odd_diag = np.zeros(len(a) + 1, dtype = np.complex128)
+        # odd_offdiag = np.zeros(len(a), dtype = np.complex128)
+        #
+        # odd_diag[0] = 1
+        # odd_diag[-1] = 1
+        #
+        # for ii in range(0, len(a), 2):
+        #     a_ii = a[ii]
+        #     cosa = np.cos(a_ii)
+        #     sina = -1j * np.sin(a_ii)
+        #
+        #     even_diag[ii] = cosa
+        #     even_diag[ii + 1] = cosa
+        #     even_offdiag[ii] = sina
+        #
+        #     try:
+        #         a_ii = a[ii + 1]
+        #         cosa = np.cos(a_ii)
+        #         sina = -1j * np.sin(a_ii)
+        #         odd_diag[ii] = cosa
+        #         odd_diag[ii + 1] = cosa
+        #         odd_offdiag[ii] = sina
+        #     except IndexError:
+        #         pass
+
+        even_diag, even_offdiag, odd_diag, odd_offdiag = cy.generate_split_operator_evolution_matrices(a)
+
+        even = sparse.diags([even_offdiag, even_diag, even_offdiag], offsets = [-1, 0, 1])
+        odd = sparse.diags([odd_offdiag, odd_diag, odd_offdiag], offsets = [-1, 0, 1])
+
+        return even, odd
+
+    def evolve_SO(self, delta_t):
+        tau = delta_t / (2 * hbar)
+
+        if self.spec.electric_potential is not None:
+            electric_field_amplitude = self.spec.electric_potential.get_amplitude(self.sim.time)
+        else:
+            electric_field_amplitude = 0
+        l_multiplier = self.spec.test_charge * electric_field_amplitude
+
+        hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_r *= 1j * tau
+        hamiltonian_l.data[0] *= tau * l_multiplier
+        hamiltonian_l.data[2] *= tau * l_multiplier
+
+        even, odd = self._get_split_operator_evolution_matrices(hamiltonian_l.data[0][:-1])
+
+        # STEP 1
+        g_vector = self.flatten_mesh(self.g_mesh, 'l')
+        g_vector = even.dot(g_vector)
+
+        # STEP 2
+        g_vector = odd.dot(g_vector)
+        self.g_mesh = self.wrap_vector(g_vector, 'l')
+
+        # STEP 3
+        g_vector = self.flatten_mesh(self.g_mesh, 'r')
+        hamiltonian = -1 * hamiltonian_r
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        g_vector = hamiltonian.dot(g_vector)
+
+        # STEP 4
+        hamiltonian = hamiltonian_r.copy()
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        g_vector = cy.tdma(hamiltonian, g_vector)
+        self.g_mesh = self.wrap_vector(g_vector, 'r')
+
+        # STEP 5
+        g_vector = self.flatten_mesh(self.g_mesh, 'l')
+        g_vector = odd.dot(g_vector)
+
+        # STEP 6
+        g_vector = even.dot(g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'l')
 
     def get_mesh_slicer(self, distance_from_center = None):
