@@ -8,7 +8,8 @@ import ionization as ion
 from compy.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
-OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
+# OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
+OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME + '_masked')
 
 
 def run_sim(spec):
@@ -84,25 +85,30 @@ if __name__ == '__main__':
         specs = []
 
         for amplitude in amplitudes:
-            external_potential = ion.potentials.SineWave(twopi * laser_frequency, amplitude = amplitude,
-                                                         window = window)
-            internal_potential = ion.potentials.NuclearPotential() + ion.potentials.RadialImaginaryPotential(center = bound * bohr_radius, width = 20 * bohr_radius, decay_time = 30 * asec)
+            external_potential = ion.potentials.SineWave(twopi * laser_frequency, amplitude = amplitude, window = window)
+            # internal_potential = ion.potentials.NuclearPotential() + ion.potentials.RadialImaginaryPotential(center = bound * bohr_radius, width = 20 * bohr_radius, decay_time = 30 * asec)
+            internal_potential = ion.potentials.NuclearPotential()
 
-            sph_spec = ion.SphericalHarmonicSpecification('__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
+            # mask = None
+            mask = ion.potentials.RadialCosineMask(on_radius = (bound - 50 * bohr_radius), off_radius = bound * bohr_radius, smoothness = 8)
+
+            sph_spec = ion.SphericalHarmonicSpecification('CN__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                           r_bound = bound * bohr_radius, r_points = points,
                                                           l_points = angular_points,
                                                           time_initial = t_init, time_final = t_final, time_step = t_step,
                                                           internal_potential = internal_potential,
                                                           electric_potential = external_potential,
+                                                          mask = mask,
                                                           do_imag_ev = False)
             specs.append(sph_spec)
 
-            sph_spec = ion.SphericalHarmonicSpecification('I__dipole__{}x{}_amp={}_i'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
+            sph_spec = ion.SphericalHarmonicSpecification('CN_I__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                           r_bound = bound * bohr_radius, r_points = points,
                                                           l_points = angular_points,
                                                           time_initial = t_init, time_final = t_final, time_step = t_step,
                                                           internal_potential = internal_potential,
                                                           electric_potential = external_potential,
+                                                          mask = mask,
                                                           do_imag_ev = True)
             specs.append(sph_spec)
 
@@ -113,17 +119,19 @@ if __name__ == '__main__':
                                                           internal_potential = internal_potential,
                                                           electric_potential = external_potential,
                                                           evolution_method = 'SO',
+                                                          mask = mask,
                                                           do_imag_ev = False)
             specs.append(sph_spec)
 
-            sph_spec = ion.SphericalHarmonicSpecification('I_SO__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
+            sph_spec = ion.SphericalHarmonicSpecification('SO_I__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                           r_bound = bound * bohr_radius, r_points = points,
                                                           l_points = angular_points,
                                                           time_initial = t_init, time_final = t_final, time_step = t_step,
                                                           internal_potential = internal_potential,
                                                           electric_potential = external_potential,
                                                           evolution_method = 'SO',
+                                                          mask = mask,
                                                           do_imag_ev = True)
             specs.append(sph_spec)
 
-        cp.utils.multi_map(run_sim, specs, processes = 2)
+        cp.utils.multi_map(run_sim, specs, processes = 3)

@@ -312,8 +312,9 @@ class ElectricFieldSpecification(cp.core.Specification):
                  initial_state = BoundState(1, 0),
                  test_states = tuple(BoundState(n, l) for n in range(5) for l in range(n)),
                  dipole_gauges = ('length',),
-                 internal_potential = potentials.NuclearPotential(charge = proton_charge) + potentials.RadialImaginaryPotential(center = 30 * bohr_radius, width = 5 * bohr_radius, decay_time = 100 * asec),
+                 internal_potential = potentials.NuclearPotential(charge = proton_charge),
                  electric_potential = None,
+                 masks = None,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
                  extra_time = None, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
@@ -334,6 +335,7 @@ class ElectricFieldSpecification(cp.core.Specification):
 
         self.internal_potential = internal_potential
         self.electric_potential = electric_potential
+        self.masks = masks
 
         self.time_initial = time_initial
         self.time_final = time_final
@@ -792,6 +794,9 @@ class CylindricalSliceMesh(QuantumMesh):
         g_vector = cy.tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'rho')
 
+        if self.spec.mask is not None:
+            self.g_mesh *= self.spec.mask(r = self.r_mesh)
+
     @cp.utils.memoize()
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
@@ -1152,6 +1157,9 @@ class SphericalSliceMesh(QuantumMesh):
         g_vector = cy.tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'theta')
 
+        if self.spec.mask is not None:
+            self.g_mesh *= self.spec.mask(r = self.r_mesh)
+
     @cp.utils.memoize()
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
@@ -1344,7 +1352,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
     @property
     def norm_by_l(self):
-        return np.sum(np.conj(self.g_mesh) * self.g_mesh, axis = 1) * self.delta_r
+        return np.abs(np.sum(np.conj(self.g_mesh) * self.g_mesh, axis = 1) * self.delta_r)
 
     def dipole_moment(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
@@ -1486,6 +1494,9 @@ class SphericalHarmonicMesh(QuantumMesh):
         g_vector = cy.tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'l')
 
+        if self.spec.mask is not None:
+            self.g_mesh *= self.spec.mask(r = self.r_mesh)
+
     def _get_split_operator_evolution_matrices(self, a):
         # even_diag = np.zeros(len(a) + 1, dtype = np.complex128)
         # even_offdiag = np.zeros(len(a), dtype = np.complex128)
@@ -1513,6 +1524,8 @@ class SphericalHarmonicMesh(QuantumMesh):
         #         odd_offdiag[ii] = sina
         #     except IndexError:
         #         pass
+
+        # above code was moved into cp.cy, doesn't seem to have made it much faster though
 
         even_diag, even_offdiag, odd_diag, odd_offdiag = cy.generate_split_operator_evolution_matrices(a)
 
@@ -1564,6 +1577,9 @@ class SphericalHarmonicMesh(QuantumMesh):
         # STEP 6
         g_vector = even.dot(g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'l')
+
+        if self.spec.mask is not None:
+            self.g_mesh *= self.spec.mask(r = self.r_mesh)
 
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
@@ -1758,7 +1774,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
-        self.norm_by_l_vs_time = {}
+
+        if 'l' in self.mesh.mesh_storage_method:
+            self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps) * np.NaN for sph_harm in self.mesh.spherical_harmonics}
 
     @property
     def time(self):
@@ -1797,7 +1815,14 @@ class ElectricFieldSimulation(cp.core.Simulation):
             self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_amplitude(t = self.times[time_index])
 
         if 'l' in self.mesh.mesh_storage_method:
-            self.norm_by_l_vs_time[time_index] = self.mesh.norm_by_l
+            norm_by_l = self.mesh.norm_by_l
+            for sph_harm, l_norm in zip(self.mesh.spherical_harmonics, norm_by_l):
+                self.norm_by_harmonic_vs_time[sph_harm][time_index] = l_norm  # TODO: extend to non-l storage meshes
+
+            largest_l = self.mesh.spherical_harmonics[-1]
+            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.mesh.spherical_harmonics[-1]][time_index]
+            if norm_in_largest_l > 0.001:
+                logger.warning('Wavefunction norm in largest angular momentum state is large (l = {}, norm = {}), consider increasing l bound'.format(largest_l, norm_in_largest_l))
 
         logger.debug('{} {} stored data for time index {}'.format(self.__class__.__name__, self.name, time_index))
 
@@ -1845,7 +1870,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
     def plot_wavefunction_vs_time(self, grayscale = False, log_metrics = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
 
-        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.04)
+        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.04)  # TODO: switch to fixed axis construction
         ax_overlaps = plt.subplot(grid_spec[0])
         ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
 
@@ -1886,7 +1911,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if grayscale:
             ax_overlaps.legend(loc = 'lower left', fontsize = 12)
         else:
-            ax_overlaps.legend(bbox_to_anchor = (1.075, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10)
+            ax_overlaps.legend(bbox_to_anchor = (1.1, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10, ncol = 1 + (len(self.spec.test_states) // 17))
 
         ax_overlaps.tick_params(labelright = True)
         ax_field.tick_params(labelright = True)
@@ -1912,6 +1937,66 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if grayscale:
             postfix += '_GS'
         cp.utils.save_current_figure(name = self.spec.file_name + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
+
+        plt.close()
+
+    def plot_angular_momentum_vs_time(self, log_metrics = False, **kwargs):
+        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+
+        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.04)
+        ax_momentums = plt.subplot(grid_spec[0])
+        ax_field = plt.subplot(grid_spec[1], sharex = ax_momentums)
+
+        if self.spec.electric_potential is not None:
+            ax_field.plot(self.times / asec, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
+
+        # ax_momentums.plot(self.times / asec, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3, linestyle = '--')
+
+        # overlaps = [self.norm_by_l_vs_time[state] for state in self.spec.test_states]
+        overlaps = [self.norm_by_harmonic_vs_time[sph_harm] for sph_harm in self.mesh.spherical_harmonics]
+        num_colors = len(overlaps)
+        ax_momentums.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
+        ax_momentums.stackplot(self.times / asec, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(sph_harm.tex_str) for sph_harm in self.mesh.spherical_harmonics])
+
+        if log_metrics:
+            ax_momentums.set_yscale('log')
+            ax_momentums.set_ylim(top = 1.0)
+        else:
+            ax_momentums.set_ylim(0.0, 1.0)
+            ax_momentums.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+        ax_momentums.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
+
+        ax_momentums.grid()
+        ax_field.grid()
+
+        ax_field.set_xlabel('Time $t$ (as)', fontsize = 15)
+        ax_momentums.set_ylabel('Wavefunction Metric', fontsize = 15)
+        ax_field.set_ylabel('E-Field (a.u.)', fontsize = 11)
+
+        ax_momentums.legend(bbox_to_anchor = (1.1, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10, ncol = 1 + (len(self.mesh.spherical_harmonics) // 17))
+
+        ax_momentums.tick_params(labelright = True)
+        ax_field.tick_params(labelright = True)
+        ax_momentums.xaxis.tick_top()
+
+        plt.rcParams['xtick.major.pad'] = 5
+        plt.rcParams['ytick.major.pad'] = 5
+
+        # Find at most n+1 ticks on the y-axis at 'nice' locations
+        max_yticks = 6
+        yloc = plt.MaxNLocator(max_yticks, prune = 'upper')
+        ax_field.yaxis.set_major_locator(yloc)
+
+        max_xticks = 6
+        xloc = plt.MaxNLocator(max_xticks, prune = 'both')
+        ax_field.xaxis.set_major_locator(xloc)
+
+        ax_field.tick_params(axis = 'x', which = 'major', labelsize = 10)
+        ax_field.tick_params(axis = 'y', which = 'major', labelsize = 10)
+        ax_momentums.tick_params(axis = 'both', which = 'major', labelsize = 10)
+
+        postfix = ''
+        cp.utils.save_current_figure(name = self.spec.file_name + '__angular_momentum_vs_time{}'.format(postfix), **kwargs)
 
         plt.close()
 

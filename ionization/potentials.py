@@ -344,3 +344,15 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
                 amp = 0
 
         return amp * self.amplitude * super(SincPulse, self).get_amplitude(t)
+
+
+class RadialCosineMask(Potential):
+    def __init__(self, on_radius = 50 * bohr_radius, off_radius = 100 * bohr_radius, smoothness = 8):
+        self.inner_radius = on_radius
+        self.outer_radius = off_radius
+        self.smoothness = smoothness
+
+    def __call__(self, *, r, **kwargs):
+        return np.where(np.greater_equal(r, self.inner_radius) * np.less_equal(r, self.outer_radius),
+                        np.abs(np.cos(0.5 * pi * (r - self.inner_radius) / np.abs(self.outer_radius - self.inner_radius))) ** (1 / self.smoothness),
+                        np.where(np.greater_equal(r, self.outer_radius), 0, 1))

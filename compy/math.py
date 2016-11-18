@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+import numpy.fft as nfft
 import scipy.sparse as sparse
 import scipy.special as spc
 
@@ -52,7 +53,7 @@ class SphericalHarmonic:
     @property
     def tex_str(self):
         """Gets a LaTeX-formatted string for the BoundState."""
-        return r'Y_{}^{}'.format(self.m, self.l)
+        return r'Y_{{{}}}^{{{}}}'.format(self.m, self.l)
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.l == other.l and self.m == other.m
@@ -69,6 +70,14 @@ class SphericalHarmonic:
         :return: the value(s) of the spherical harmonic at (theta, phi)
         """
         return spc.sph_harm(self.m, self.l, phi, theta)
+
+
+def angular_fft(a, x):
+    return nfft.fft(a, norm = 'ortho'), (2 * np.pi) * nfft.fftfreq(len(x), x[1] - x[0])
+
+
+def angular_ifft(a):
+    return nfft.ifft(a, norm = 'ortho')
 
 
 @utils.memoize()

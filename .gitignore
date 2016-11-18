@@ -93,3 +93,4 @@ ENV/
 /compy/testing/out
 /dispersion/testing/out
 /ionization/testing/out
+/nbody/testing/out
