@@ -492,6 +492,7 @@ atomic_momentum = electron_mass * atomic_velocity
 atomic_time = hbar / hartree
 
 unit_names_to_values.update({'atomic_electric_field': atomic_electric_field,
+                             'AEF': atomic_electric_field,
                              'atomic_electric_potential': atomic_electric_potential,
                              'atomic_electric_dipole': atomic_electric_dipole,
                              'atomic_velocity': atomic_velocity,

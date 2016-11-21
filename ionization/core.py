@@ -307,14 +307,14 @@ class ElectricFieldSpecification(cp.core.Specification):
     """A base Specification for a Simulation with an electric field."""
 
     def __init__(self, name,
-                 mesh_type = None, animator_type = None,
+                 mesh_type = None,
                  test_mass = electron_mass_reduced, test_charge = electron_charge,
                  initial_state = BoundState(1, 0),
                  test_states = tuple(BoundState(n, l) for n in range(5) for l in range(n)),
                  dipole_gauges = ('length',),
                  internal_potential = potentials.NuclearPotential(charge = proton_charge),
                  electric_potential = None,
-                 masks = None,
+                 mask = None,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
                  extra_time = None, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
@@ -325,7 +325,6 @@ class ElectricFieldSpecification(cp.core.Specification):
         if mesh_type is None:
             raise ValueError('{} must have a mesh_type'.format(name))
         self.mesh_type = mesh_type
-        self.animator_type = animator_type
 
         self.test_mass = test_mass
         self.test_charge = test_charge
@@ -335,7 +334,7 @@ class ElectricFieldSpecification(cp.core.Specification):
 
         self.internal_potential = internal_potential
         self.electric_potential = electric_potential
-        self.masks = masks
+        self.mask = mask
 
         self.time_initial = time_initial
         self.time_final = time_final
@@ -1112,8 +1111,8 @@ class SphericalSliceMesh(QuantumMesh):
     def get_spline_for_mesh(self, mesh):
         return sp.interp.RectBivariateSpline(self.r, self.theta, mesh)
 
-    def evolve(self, delta_t):
-        tau = delta_t / (2 * hbar)
+    def evolve(self, time_step):
+        tau = time_step / (2 * hbar)
 
         if self.spec.electric_potential is not None:
             electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
@@ -1236,6 +1235,7 @@ class SphericalSliceMesh(QuantumMesh):
 
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
     evolution_method = cp.utils.RestrictedValues('evolution_method', {'CN', 'SO'})
+
     def __init__(self, name,
                  r_bound = 20 * bohr_radius,
                  r_points = 2 ** 9,
@@ -1451,11 +1451,11 @@ class SphericalHarmonicMesh(QuantumMesh):
     def get_probability_current_vector_field(self):
         raise NotImplementedError
 
-    def evolve(self, delta_t):
-        getattr(self, 'evolve_' + self.spec.evolution_method)(delta_t)
+    def evolve(self, time_step):
+        getattr(self, 'evolve_' + self.spec.evolution_method)(time_step)
 
-    def evolve_CN(self, delta_t):
-        tau = delta_t / (2 * hbar)
+    def evolve_CN(self, time_step):
+        tau = time_step / (2 * hbar)
 
         if self.spec.electric_potential is not None:
             electric_field_amplitude = self.spec.electric_potential.get_amplitude(self.sim.time)
@@ -1534,8 +1534,8 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return even, odd
 
-    def evolve_SO(self, delta_t):
-        tau = delta_t / (2 * hbar)
+    def evolve_SO(self, time_step):
+        tau = time_step / (2 * hbar)
 
         if self.spec.electric_potential is not None:
             electric_field_amplitude = self.spec.electric_potential.get_amplitude(self.sim.time)
@@ -1940,7 +1940,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         plt.close()
 
-    def plot_angular_momentum_vs_time(self, log_metrics = False, **kwargs):
+    def plot_angular_momentum_vs_time(self, log_metrics = False, renormalize = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.04)

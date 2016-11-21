@@ -72,14 +72,6 @@ class SphericalHarmonic:
         return spc.sph_harm(self.m, self.l, phi, theta)
 
 
-def angular_fft(a, x):
-    return nfft.fft(a, norm = 'ortho'), (2 * np.pi) * nfft.fftfreq(len(x), x[1] - x[0])
-
-
-def angular_ifft(a):
-    return nfft.ifft(a, norm = 'ortho')
-
-
 @utils.memoize()
 def fibonacci(n):
     """Return the n-th Fibonacci number, with Fibonacci(0) = Fibonacci(1) = 1."""

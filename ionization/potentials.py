@@ -120,15 +120,12 @@ class ElectricFieldWindow:
         raise NotImplementedError
 
 
-class NoWindow(ElectricFieldWindow):
-    def __call__(self, t):
-        return 1
-
-
 class LinearRampWindow(ElectricFieldWindow):
     def __init__(self, ramp_on_time = 0 * asec, ramp_time = 50 * asec):
         self.ramp_on_time = ramp_on_time
         self.ramp_time = ramp_time
+
+        # TODO: ramp_from and ramp_to
 
         super(LinearRampWindow, self).__init__()
 
@@ -153,28 +150,37 @@ class LinearRampWindow(ElectricFieldWindow):
         return out_1 * out_2
 
 
-class ExponentialWindow(ElectricFieldWindow):
-    def __init__(self, window_time = 10 * asec, window_width = 10 * asec):
+class SymmetricExponentialWindow(ElectricFieldWindow):
+    def __init__(self, window_time = 500 * asec, window_width = 10 * asec):
         self.window_time = window_time
         self.window_width = window_width
 
-        super(ExponentialWindow, self).__init__()
+        super(SymmetricExponentialWindow, self).__init__()
 
     def __call__(self, t):
-        return 1 / (1 + np.exp(-(t + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-(t - self.window_time) / self.window_width))
+        return np.abs(1 / (1 + np.exp(-(t + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-(t - self.window_time) / self.window_width)))
 
 
 class UniformLinearlyPolarizedElectricField(Potential):
-    def __init__(self, window = NoWindow()):
+    def __init__(self, window = None):
         super(UniformLinearlyPolarizedElectricField, self).__init__()
 
         self.window = window
 
     def get_amplitude(self, t):
-        return self.window(t)
+        if self.window is not None:
+            return self.window(t)
+        else:
+            return 1
 
     def __call__(self, *, t, distance_along_polarization, test_charge, **kwargs):
         return distance_along_polarization * test_charge * self.get_amplitude(t)
+
+    def get_total_electric_field(self, times):
+        raise NotImplementedError
+
+    def get_fluence(self, times):
+        raise NotImplementedError
 
 
 class Rectangle(UniformLinearlyPolarizedElectricField):
@@ -290,7 +296,7 @@ class SineWave(UniformLinearlyPolarizedElectricField):
 
 
 class SincPulse(UniformLinearlyPolarizedElectricField):
-    def __init__(self, pulse_width, amplitude = 1 * atomic_electric_field, phase = 'cos', pulse_center = 0 * asec, **kwargs):
+    def __init__(self, pulse_width = 100 * asec, fluence = 1 * J / (cm ** 2), phase = 'cos', pulse_center = 0 * asec, **kwargs):
         super(SincPulse, self).__init__(**kwargs)
 
         self.pulse_width = pulse_width
@@ -299,51 +305,50 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
             raise TypeError("SincPulse phase must be 'cos' or 'sin'")
         self.phase = phase
 
-        self.amplitude = amplitude
+        self.fluence = fluence
         self.pulse_center = pulse_center
 
-    @property
-    def bandwidth(self):
-        raise NotImplementedError
+        self.omega_cutoff = twopi / self.pulse_width
+        self.amplitude_density = np.sqrt(self.fluence / (2 * epsilon_0 * c * self.omega_cutoff))
+        self.amplitude_prefactor = np.sqrt(2 / pi) * self.amplitude_density
 
     @property
     def largest_photon_energy(self):
-        raise NotImplementedError
+        return hbar * self.omega_cutoff
 
     def __str__(self):
-        out = '{}(pulse width = {} as, pulse center = {} as, amplitude = {} AEF, phase = {})'.format(self.__class__.__name__,
-                                                                                                     uround(self.pulse_width, asec, 3),
-                                                                                                     uround(self.pulse_center, asec, 3),
-                                                                                                     uround(self.amplitude, atomic_electric_field, 3),
-                                                                                                     self.phase)
+        out = '{}(pulse width = {} as, pulse center = {} as, fluence = {} J/cm^2, phase = {}, largest photon energy = {} eV)'.format(self.__class__.__name__,
+                                                                                                                                     uround(self.pulse_width, asec, 3),
+                                                                                                                                     uround(self.pulse_center, asec, 3),
+                                                                                                                                     uround(self.fluence, J / (cm ** 2), 3),
+                                                                                                                                     self.phase,
+                                                                                                                                     uround(self.largest_photon_energy, eV, 3))
 
         out += ' with {}'.format(self.window)
 
         return out
 
     def __repr__(self):
-        out = '{}(pulse width = {}, pulse center = {}, amplitude = {}, phase = {}, window_function = {})'.format(self.__class__.__name__,
-                                                                                                                 self.pulse_width,
-                                                                                                                 self.pulse_center,
-                                                                                                                 self.amplitude,
-                                                                                                                 self.phase,
-                                                                                                                 repr(self.window))
+        out = '{}(pulse width = {}, pulse center = {}, fluence = {}, phase = {}, window_function = {})'.format(self.__class__.__name__,
+                                                                                                               self.pulse_width,
+                                                                                                               self.pulse_center,
+                                                                                                               self.amplitude_prefactor,
+                                                                                                               self.phase,
+                                                                                                               repr(self.window))
 
         return out
 
     def get_amplitude(self, t):
-        try:
-            if self.phase == 'cos':
-                amp = np.sin(((t - self.pulse_center) / self.pulse_width)) / (t - self.pulse_center)  # TODO: should probably use np.where here
-            elif self.phase == 'sin':
-                amp = (1 - np.cos(((t - self.pulse_center) / self.pulse_width))) / (t - self.pulse_center)
-        except ZeroDivisionError:
-            if self.phase == 'cos':
-                amp = 1
-            elif self.phase == 'sin':
-                amp = 0
+        if self.phase == 'cos':
+            amp = np.where(np.not_equal(t, 0),
+                           np.sin(self.omega_cutoff * (t - self.pulse_center)) / (t - self.pulse_center),
+                           self.omega_cutoff)
+        elif self.phase == 'sin':
+            amp = np.where(np.not_equal(t, 0),
+                           (np.cos(self.omega_cutoff * (t - self.pulse_center)) - 1) / (t - self.pulse_center),
+                           0)
 
-        return amp * self.amplitude * super(SincPulse, self).get_amplitude(t)
+        return amp * self.amplitude_prefactor * super(SincPulse, self).get_amplitude(t)
 
 
 class RadialCosineMask(Potential):
