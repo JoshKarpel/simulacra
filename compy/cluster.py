@@ -3,6 +3,11 @@ import datetime as dt
 import json
 import logging
 import os
+import sys
+import posixpath
+import stat
+import subprocess
+import time
 
 import paramiko
 
@@ -103,7 +108,7 @@ class ClusterInterface:
         return os.path.join(self.local_mirror_root, *remote_path.split(self.remote_sep))
 
     def get_file(self, remote_path, local_path, remote_stat = None, preserve_timestamps = True):
-        ensure_dir_exists(local_path)
+        utils.ensure_dir_exists(local_path)
 
         self.ftp.get(remote_path, local_path)
 
@@ -112,7 +117,7 @@ class ClusterInterface:
                 remote_stat = self.ftp.lstat(remote_path)
             os.utime(local_path, (remote_stat.st_atime, remote_stat.st_mtime))
 
-        self.logger.debug('{}   <--   {}'.format(local_path, remote_path))
+        logger.debug('{}   <--   {}'.format(local_path, remote_path))
 
     def is_file_synced(self, remote_stat, local_path):
         if os.path.exists(local_path):
@@ -154,7 +159,7 @@ class ClusterInterface:
             for remote_stat in self.ftp.listdir_attr(remote_path):
                 full_remote_path = posixpath.join(remote_path, remote_stat.filename)
 
-                self.logger.debug('Checking remote path {}'.format(full_remote_path))
+                logger.debug('Checking remote path {}'.format(full_remote_path))
 
                 nonlocal path_count
                 path_count += 1
@@ -167,7 +172,7 @@ class ClusterInterface:
                     if stat.S_ISDIR(remote_stat.st_mode) and remote_stat.filename not in blacklist_dir_names:
                         func_on_dirs(full_remote_path, remote_stat)
 
-                        self.logger.debug('Walking remote dir {}'.format(full_remote_path))
+                        logger.debug('Walking remote dir {}'.format(full_remote_path))
                         walk(full_remote_path)
 
                     elif stat.S_ISREG(remote_stat.st_mode) and full_remote_path.endswith(whitelist_file_ext):
@@ -178,18 +183,19 @@ class ClusterInterface:
 
     def mirror_remote_home_dir(self, blacklist_dir_names = ('python', 'build_python', 'ionization'), whitelist_file_ext = ('.txt', '.log', '.par', '.sim')):
         start_time = dt.datetime.now()
-        self.logger.info('Mirroring remote home directory')
+        logger.info('Mirroring remote home directory')
 
         self.walk_remote_path(self.remote_home_dir, func_on_files = self.mirror_file, blacklist_dir_names = blacklist_dir_names, whitelist_file_ext = whitelist_file_ext)
 
         end_time = dt.datetime.now()
-        self.logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))
+        logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))
 
     @property
     def local_job_names(self):
         return (job_dir for job_dir in os.listdir(os.path.join(self.local_home_dir, 'jobs')))
 
-    def process_job(self, job_dir_path, individual_processing = False):
+    def process_job(self, job_name, individual_processing = False):
+        job_dir_path = os.path.join(self.local_home_dir, 'jobs', job_name)
         try:
             jp = JobProcessor.load(os.path.join(job_dir_path, '{}.job'.format(job_name)))
         except (FileNotFoundError, EOFError, ImportError):
@@ -202,14 +208,13 @@ class ClusterInterface:
 
     def process_jobs(self, individual_processing = False):
         start_time = dt.datetime.now()
-        self.logger.info('Processing jobs')
+        logger.info('Processing jobs')
 
         for job_name in self.local_job_names:
-            job_dir_path = os.path.join(self.local_home_dir, 'jobs', job_name)
-            self.process_job(job_dir_path, individual_processing = individual_processing)
+            self.process_job(job_name = job_name, individual_processing = individual_processing)
 
         end_time = dt.datetime.now()
-        self.logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
+        logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
 
     def sync_process_loop(self, wait_after_success = dt.timedelta(hours = 1), wait_after_failure = dt.timedelta(minutes = 1)):
         latest_sync_time = None
@@ -217,21 +222,21 @@ class ClusterInterface:
             if latest_sync_time is None or dt.datetime.now() - latest_sync_time > wait_after_success:
                 try:
                     start_time = dt.datetime.now()
-                    self.logger.info('Beginning automatic synchronization and processing')
+                    logger.info('Beginning automatic synchronization and processing')
 
-                    self.logger.info(self.job_status)
+                    logger.info(self.job_status)
 
                     self.mirror_remote_home_dir()
                     self.process_jobs()
 
                     end_time = dt.datetime.now()
-                    self.logger.info('Synchronization and processing complete. Elapsed time: {}'.format(end_time - start_time))
+                    logger.info('Synchronization and processing complete. Elapsed time: {}'.format(end_time - start_time))
 
                     latest_sync_time = end_time
-                    self.logger.info('Next automatic synchronization attempt after {}'.format(latest_sync_time + wait_after_success))
+                    logger.info('Next automatic synchronization attempt after {}'.format(latest_sync_time + wait_after_success))
                 except (FileNotFoundError, PermissionError, TimeoutError) as e:
-                    self.logger.exception('Exception encountered')
-                    self.logger.warning('Automatic synchronization attempt failed')
+                    logger.exception('Exception encountered')
+                    logger.warning('Automatic synchronization attempt failed')
 
             time.sleep(wait_after_failure.total_seconds())
 
@@ -363,9 +368,9 @@ class JobProcessor(utils.Beet):
     def save(self, target_dir = None, file_extension = '.job'):
         return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
 
-    @staticmethod
-    def load(file_path):
-        return super(JobProcessor, self).load(file_path)
+    @classmethod
+    def load(cls, file_path):
+        return super(JobProcessor, cls).load(file_path)
 
     def __str__(self):
         return '{}: {} ({}) [{}]'.format(self.__class__.__name__, self.name, self.file_name, self.uid)

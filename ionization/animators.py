@@ -83,17 +83,17 @@ class Animator:
 
         self.ffmpeg = subprocess.Popen(self.cmdstring, stdin = subprocess.PIPE, bufsize = -1)
 
-        logger.info('Initialized {}'.format(self, self.sim))
+        logger.info('Initialized {}'.format(self))
 
     def cleanup(self):
         self.ffmpeg.communicate()
-        logger.info('Cleaned up {}'.format(self, self.sim))
+        logger.info('Cleaned up {}'.format(self))
 
     def _initialize_figure(self):
         logger.debug('Initialized figure for {}'.format(self))
 
     def _update_frame(self):
-        logger.debug('{} updated frame from {}'.format(self.__class__.__name__, self.sim.name))
+        logger.debug('{} updated frame from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
     def send_frame_to_ffmpeg(self):
         self._update_frame()
@@ -103,7 +103,7 @@ class Animator:
 
         self.ffmpeg.stdin.write(string)
 
-        logger.debug('{} sent frame to ffpmeg from {}'.format(self.__class__.__name__, self.sim.name))
+        logger.debug('{} sent frame to ffpmeg from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
     def __str__(self):
         try:
@@ -111,28 +111,30 @@ class Animator:
         except TypeError:
             lim = None
 
-        return '{}(plot limit = {}, renormalize = {}, log = {}, probability current = {})'.format(self.__class__.__name__,
-                                                                                                  lim,
-                                                                                                  self.renormalize,
-                                                                                                  self.log,
-                                                                                                  self.overlay_probability_current,
-                                                                                                  self.sim)
+        return '{}(postfix = {}, plot limit = {}, renormalize = {}, log = {}, probability current = {})'.format(self.__class__.__name__,
+                                                                                                                self.postfix,
+                                                                                                                lim,
+                                                                                                                self.renormalize,
+                                                                                                                self.log,
+                                                                                                                self.overlay_probability_current,
+                                                                                                                self.sim)
 
     def __repr__(self):
-        return '{}(length = {}, fps = [}, plot_limit = {}, renormalize = {}, log = {}, overlay_probability_current = {})'.format(self.__class__.__name__,
-                                                                                                                                 self.length,
-                                                                                                                                 self.fps,
-                                                                                                                                 self.plot_limit,
-                                                                                                                                 self.renormalize,
-                                                                                                                                 self.log,
-                                                                                                                                 self.overlay_probability_current,
-                                                                                                                                 self.sim)
+        return '{}(postfix = {}, length = {}, fps = [}, plot_limit = {}, renormalize = {}, log = {}, overlay_probability_current = {})'.format(self.__class__.__name__,
+                                                                                                                                               self.postfix,
+                                                                                                                                               self.length,
+                                                                                                                                               self.fps,
+                                                                                                                                               self.plot_limit,
+                                                                                                                                               self.renormalize,
+                                                                                                                                               self.log,
+                                                                                                                                               self.overlay_probability_current,
+                                                                                                                                               self.sim)
 
 
 class CylindricalSliceAnimator(Animator):
     def initialize(self, simulation):
         Animator.initialize(self, simulation)
-        self.ax_time.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_time
+        self.ax_metrics.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_time
 
     def _initialize_figure(self):
         plt.set_cmap(self.colormap)
@@ -140,7 +142,7 @@ class CylindricalSliceAnimator(Animator):
         self.fig = plt.figure(figsize = (16, 12))
 
         self.ax_mesh = self.fig.add_axes([.06, .34, .9, .62])
-        self.ax_time = self.fig.add_axes([.06, .065, .9, .2])
+        self.ax_metrics = self.fig.add_axes([.06, .065, .9, .2])
 
         self._initialize_mesh_axis()
         self._initialize_time_axis()
@@ -152,18 +154,18 @@ class CylindricalSliceAnimator(Animator):
             self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh, plot_limit = self.plot_limit)
 
         self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
-        self.ax_time.grid(True)
+        self.ax_metrics.grid(True)
 
         self.ax_mesh.set_xlabel(r'$z$ (Bohr radii)', fontsize = 24)
         self.ax_mesh.set_ylabel(r'$\rho$ (Bohr radii)', fontsize = 24)
-        self.ax_time.set_xlabel('Time $t$ (as)', fontsize = 24)
-        self.ax_time.set_ylabel('Ionization Metric', fontsize = 24)
+        self.ax_metrics.set_xlabel('Time $t$ (as)', fontsize = 24)
+        self.ax_metrics.set_ylabel('Ionization Metric', fontsize = 24)
 
-        self.ax_time.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
-        self.ax_time.set_ylim(0, 1)
+        self.ax_metrics.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
+        self.ax_metrics.set_ylim(0, 1)
 
-        self.ax_time.tick_params(labelright = True)
-        self.ax_time.tick_params(axis = 'both', which = 'major', labelsize = 14)
+        self.ax_metrics.tick_params(labelright = True)
+        self.ax_metrics.tick_params(axis = 'both', which = 'major', labelsize = 14)
         self.ax_mesh.tick_params(axis = 'both', which = 'major', labelsize = 14)
 
         divider = make_axes_locatable(self.ax_mesh)
@@ -176,21 +178,21 @@ class CylindricalSliceAnimator(Animator):
     def _initialize_time_axis(self):
         if self.spec.electric_potential is not None:
             self.field_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
-            self.electric_field_line, = self.ax_time.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
-                                                          label = r'$|E|/\left|E_{\mathrm{max}}\right|$',
-                                                          color = 'red', linewidth = 2)
+            self.electric_field_line, = self.ax_metrics.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
+                                                             label = r'$|E|/\left|E_{\mathrm{max}}\right|$',
+                                                             color = 'red', linewidth = 2)
 
-        self.norm_line, = self.ax_time.plot(self.sim.times / asec, self.sim.norm_vs_time,
-                                            label = r'$\left\langle \psi|\psi \right\rangle$',
-                                            color = 'black', linestyle = '--', linewidth = 3)
+        self.norm_line, = self.ax_metrics.plot(self.sim.times / asec, self.sim.norm_vs_time,
+                                               label = r'$\left\langle \psi|\psi \right\rangle$',
+                                               color = 'black', linestyle = '--', linewidth = 3)
 
-        self.overlaps_stackplot = self.ax_time.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
-                                                         labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$',
-                                                                   r'$\left| \left\langle \psi|\psi_{n\leq5} \right\rangle \right|^2$'],
-                                                         colors = ['.3', '.5'])
+        self.overlaps_stackplot = self.ax_metrics.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
+                                                            labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$',
+                                                                      r'$\left| \left\langle \psi|\psi_{{n \leq {}}} \right\rangle \right|^2$'.format(max(self.sim.spec.test_states, key = lambda s: s.n).n)],
+                                                            colors = ['.3', '.5'])
 
-        self.time_line, = self.ax_time.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
-                                            linestyle = '-.', color = 'gray')
+        self.time_line, = self.ax_metrics.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
+                                               linestyle = '-.', color = 'gray')
 
     def _compute_stackplot_overlaps(self):
         initial_overlap = [self.sim.state_overlaps_vs_time[self.spec.initial_state]]
@@ -219,16 +221,16 @@ class CylindricalSliceAnimator(Animator):
             pass
 
         self.norm_line.set_ydata(self.sim.norm_vs_time)
-        self.overlaps_stackplot = self.ax_time.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
-                                                         labels = ['Initial State Overlap', r'Overlap with $n \leq 5$'], colors = ['.3', '.5'])
+        self.overlaps_stackplot = self.ax_metrics.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
+                                                            labels = ['Initial State Overlap', r'Overlap with $n \leq 5$'], colors = ['.3', '.5'])
         self.time_line.set_xdata([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec])
 
 
 class SphericalSliceAnimator(CylindricalSliceAnimator):
     def initialize(self, simulation):
         Animator.initialize(self, simulation)
-        legend = self.ax_time.legend(bbox_to_anchor = (1., 1.1), loc = 'lower right', borderaxespad = 0., fontsize = 20,
-                                     fancybox = True, framealpha = 0)
+        legend = self.ax_metrics.legend(bbox_to_anchor = (1., 1.1), loc = 'lower right', borderaxespad = 0., fontsize = 20,
+                                        fancybox = True, framealpha = 0)
         # legend must be created here so that it catches all of the lines in ax_time
         # TODO: is this really still true?
 
@@ -238,14 +240,17 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         self.fig = plt.figure(figsize = (18, 12))
 
         self.ax_mesh = self.fig.add_axes([.05, .05, 2 / 3 - 0.05, .9], projection = 'polar')
-        self.ax_time = self.fig.add_axes([.6, .075, .35, .125])
-        self.cbar_axis = self.fig.add_axes([.725, .275, .03, .675])
+        self.ax_metrics = self.fig.add_axes([.6, .075, .35, .125])
+        # self.cbar_axis = self.fig.add_axes([.725, .275, .03, .675])
+        self.cbar_axis = self.fig.add_axes([.725, .275, .03, .45])
 
-        plt.figtext(.62, .87, r'$|g|^2$', fontsize = 50)
+        # plt.figtext(.62, .87, r'$|g|^2$', fontsize = 50)
+        plt.figtext(.85, .7, r'$|g|^2$', fontsize = 50)
 
-        plt.figtext(.8, .9, r'Simulation:', fontsize = 22)
-        plt.figtext(.82, .85, self.sim.name, fontsize = 20)
-        plt.figtext(.8, .8, r'Initial State: ${}$'.format(self.spec.initial_state.tex_str), fontsize = 22)
+        # plt.figtext(.8, .9, r'Simulation:', fontsize = 22)
+        # plt.figtext(.82, .85, self.sim.name, fontsize = 20)
+        plt.figtext(.8, .6, r'Initial State: ${}$'.format(self.spec.initial_state.tex_str), fontsize = 22)
+        self.time_text = plt.figtext(.8, .5, r'$t = {}$ as'.format(uround(self.sim.time, asec, 3)), fontsize = 30)
         # TODO: time text?
         # TODO: replace with a for over a given list of strings
 
@@ -259,33 +264,33 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
 
         if self.spec.electric_potential is not None:
             self.field_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
-            self.electric_field_line, = self.ax_time.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
-                                                          label = r'$|E|/\left|E_{\mathrm{max}}\right|$', color = 'red', linewidth = 2)
+            self.electric_field_line, = self.ax_metrics.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
+                                                             label = r'$|E|/\left|E_{\mathrm{max}}\right|$', color = 'red', linewidth = 2)
 
-        self.norm_line, = self.ax_time.plot(self.sim.times / asec, self.sim.norm_vs_time,
-                                            label = r'$\left\langle \psi|\psi \right\rangle$',
-                                            color = 'black', linestyle = '--', linewidth = 3)
+        self.norm_line, = self.ax_metrics.plot(self.sim.times / asec, self.sim.norm_vs_time,
+                                               label = r'$\left\langle \psi|\psi \right\rangle$',
+                                               color = 'black', linestyle = '--', linewidth = 3)
 
-        self.overlaps_stackplot = self.ax_time.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
-                                                         labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$',
-                                                                   r'$\left| \left\langle \psi|\psi_{n\leq5} \right\rangle \right|^2$'],
-                                                         colors = ['.3', '.5'])
+        self.overlaps_stackplot = self.ax_metrics.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
+                                                            labels = [r'$\left| \left\langle \psi|\psi_{\mathrm{init}} \right\rangle \right|^2$',
+                                                                      r'$\left| \left\langle \psi|\psi_{{n \leq {}}} \right\rangle \right|^2$'.format(max(self.sim.spec.test_states, key = lambda s: s.n).n)],
+                                                            colors = ['.3', '.5'])
 
-        self.time_line, = self.ax_time.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
-                                            linestyle = '-.', color = 'gray')
+        self.time_line, = self.ax_metrics.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
+                                               linestyle = '-.', color = 'gray')
 
         self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         # angle_labels = ['\u03b8=0\u00b0'] + angle_labels
         self.ax_mesh.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
-        self.ax_time.grid()
+        self.ax_metrics.grid()
 
-        self.ax_time.set_xlabel('Time (as)', fontsize = 22)
-        self.ax_time.set_ylabel('Ionization Metric', fontsize = 22)
-        self.ax_time.yaxis.set_label_position('right')
+        self.ax_metrics.set_xlabel('Time (as)', fontsize = 22)
+        self.ax_metrics.set_ylabel('Ionization Metric', fontsize = 22)
+        self.ax_metrics.yaxis.set_label_position('right')
 
-        self.ax_time.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
-        self.ax_time.set_ylim(0, 1)
+        self.ax_metrics.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
+        self.ax_metrics.set_ylim(0, 1)
 
         self.ax_mesh.tick_params(axis = 'both', which = 'major', labelsize = 20)  # increase size of tick labels
         self.ax_mesh.tick_params(axis = 'y', which = 'major', colors = 'silver', pad = 3)  # make r ticks a color that shows up against the colormesh
@@ -295,8 +300,8 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         # last_r_label = self.ax_mesh.get_yticklabels()[-1]
         # last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
 
-        self.ax_time.tick_params(labelleft = False, labelright = True)
-        self.ax_time.tick_params(axis = 'both', which = 'major', labelsize = 14)
+        self.ax_metrics.tick_params(labelleft = False, labelright = True)
+        self.ax_metrics.tick_params(axis = 'both', which = 'major', labelsize = 14)
 
         self.cbar = plt.colorbar(mappable = self.mesh, cax = self.cbar_axis)
         self.cbar.ax.tick_params(labelsize = 14)
@@ -321,6 +326,26 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
 
 
 class SphericalHarmonicAnimator(SphericalSliceAnimator):
+    def _initialize_figure(self):
+        super(SphericalHarmonicAnimator, self)._initialize_figure()
+
+        self.ax_ang_mom = self.fig.add_axes([.6, .85, .345, .125])  # TODO: break all inits into separate functions, standardize the way they're called
+
+        self.ang_mom_bar = self.ax_ang_mom.bar(self.sim.mesh.l, self.sim.mesh.norm_by_l,
+                                               align = 'center', color = '.5')
+
+        self.ax_ang_mom.yaxis.grid(True)
+
+        self.ax_ang_mom.set_xlabel(r'Orbital Angular Momentum $l$', fontsize = 22)  # TODO: change all angular momentum l to \ell?
+        self.ax_ang_mom.set_ylabel(r'$\left| \left\langle \psi | Y^l_0 \right\rangle \right|^2$', fontsize = 22)  # TODO: change all angular momentum l to \ell?
+        self.ax_ang_mom.yaxis.set_label_position('right')
+
+        self.ax_ang_mom.set_ylim(0, 1)
+        self.ax_ang_mom.set_xlim(np.min(self.sim.mesh.l) - 0.5, np.max(self.sim.mesh.l) + 0.5)
+
+        self.ax_ang_mom.tick_params(labelleft = False, labelright = True)
+        self.ax_ang_mom.tick_params(axis = 'both', which = 'major', labelsize = 14)
+
     def _mesh_setup(self):
         self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log)
 
@@ -329,3 +354,14 @@ class SphericalHarmonicAnimator(SphericalSliceAnimator):
 
         if self.overlay_probability_current:
             self.sim.mesh.update_probability_current_quiver(self.quiver)
+
+    def _update_time_axis(self):
+        super(SphericalHarmonicAnimator, self)._update_time_axis()
+
+        print(self.sim.mesh.norm)
+        print(np.sum(self.sim.mesh.norm_by_l))
+
+        for bar, height in zip(self.ang_mom_bar, self.sim.mesh.norm_by_l):
+            bar.set_height(height)
+
+        self.time_text.set_text(r'$t =$ {} as'.format(uround(self.sim.time, asec, 3)))

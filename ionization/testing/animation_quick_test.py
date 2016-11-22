@@ -1,0 +1,31 @@
+import matplotlib
+
+matplotlib.use('Agg')
+
+import os
+import logging
+
+import compy as cp
+from compy.units import *
+import ionization as ion
+
+FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
+OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
+
+if __name__ == '__main__':
+    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
+        animators = [
+            ion.animators.SphericalHarmonicAnimator(target_dir = OUT_DIR, postfix = 'full'),
+            # ion.animators.SphericalHarmonicAnimator(target_dir = OUT_DIR, postfix = '30', plot_limit = 30 * bohr_radius)
+        ]
+
+        e_pot = ion.potentials.Rectangle(amplitude = 3 * atomic_electric_field, window = ion.potentials.LinearRampWindow(ramp_on_time = 10 * asec, ramp_time = 10 * asec))
+
+        sim = ion.SphericalHarmonicSpecification('test',
+                                                 time_initial = 0 * asec, time_final = 50 * asec, time_step = 1 * asec,
+                                                 r_bound = 50 * bohr_radius, r_points = 200, l_points = 30,
+                                                 electric_potential = e_pot,
+                                                 animators = animators
+                                                 ).to_simulation()
+
+        sim.run_simulation()

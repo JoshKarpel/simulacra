@@ -1796,7 +1796,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if not (.99 < self.mesh.norm < 1.01):
             logger.warning('Initial wavefunction for {} {} may not be normalized (norm = {})'.format(self.__class__.__name__, self.name, self.mesh.norm))
 
-        logger.debug('Initialized mesh for simulation {}'.format(self.name))
+        logger.debug('Initialized mesh for {} {}'.format(self.__class__.__name__, self.name))
 
     def store_data(self, time_index):
         """Update the time-indexed data arrays with the current values."""
