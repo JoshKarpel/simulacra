@@ -242,7 +242,6 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
 
         self.ax_mesh = self.fig.add_axes([.05, .05, 2 / 3 - 0.05, .9], projection = 'polar')
         self.ax_metrics = self.fig.add_axes([.6, .075, .35, .125])
-        # self.cbar_axis = self.fig.add_axes([.725, .275, .03, .675])
         self.cbar_axis = self.fig.add_axes([.725, .275, .03, .45])
 
         # plt.figtext(.62, .87, r'$|g|^2$', fontsize = 50)
@@ -282,7 +281,6 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
 
         self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
-        # angle_labels = ['\u03b8=0\u00b0'] + angle_labels
         self.ax_mesh.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
         self.ax_metrics.grid(True)
 
@@ -298,8 +296,6 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         self.ax_mesh.tick_params(axis = 'both', which = 'both', length = 0)
 
         self.ax_mesh.set_rlabel_position(80)
-        # last_r_label = self.ax_mesh.get_yticklabels()[-1]
-        # last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
 
         self.ax_metrics.tick_params(labelleft = False, labelright = True)
         self.ax_metrics.tick_params(axis = 'both', which = 'major', labelsize = 14)
