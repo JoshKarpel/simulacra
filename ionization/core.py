@@ -1980,7 +1980,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_field.grid(True)
 
         ax_field.set_xlabel('Time $t$ (as)', fontsize = 15)
-        ax_momentums.set_ylabel('Wavefunction Metric', fontsize = 15)
+        y_label = r'$\left| \left\langle \psi | Y^l_0 \right\rangle \right|^2$'
+        if self.renormalize_l_decomposition:
+            y_label += r'$/\left\langle\psi|\psi\right\rangle$'
+        ax_momentums.set_ylabel(y_label, fontsize = 15)
         ax_field.set_ylabel('E-Field (a.u.)', fontsize = 11)
 
         ax_momentums.legend(bbox_to_anchor = (1.1, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10, ncol = 1 + (len(self.mesh.spherical_harmonics) // 17))

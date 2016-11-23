@@ -12,7 +12,7 @@ log = cp.utils.Logger('compy', 'ionization', stdout_level = logging.INFO, file_l
 
 
 def run(spec):
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.INFO,
+    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG,
                          file_logs = True, file_dir = spec.out_dir_mod, file_name = spec.name, file_level = logging.DEBUG, file_mode = 'w') as logger:
         sim = spec.to_simulation()
 
@@ -36,10 +36,11 @@ if __name__ == '__main__':
         l_points = 100
         dt = 1
 
-        initial_states = [ion.BoundState(1, 0), ion.BoundState(2, 0), ion.BoundState(2, 1)]
+        initial_states = [ion.BoundState(1, 0)]
+        # initial_states = [ion.BoundState(1, 0), ion.BoundState(2, 0), ion.BoundState(2, 1)]
 
         pulse_widths = [10, 50, 100, 250, 500, 1000, 1500, 2000]
-        fluences = [1, 10, 20]
+        fluences = [1, 20]
 
         specs = []
         for initial_state in initial_states:
