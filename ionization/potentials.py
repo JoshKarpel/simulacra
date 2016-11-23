@@ -366,6 +366,52 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
         return amp * self.amplitude_prefactor * super(SincPulse, self).get_amplitude(t)
 
 
+class RandomizedSincPulse(UniformLinearlyPolarizedElectricField):
+    def __init__(self, pulse_width = 100 * asec, fluence = 1 * J / (cm ** 2), divisions = 100, **kwargs):
+        super(RandomizedSincPulse, self).__init__(**kwargs)
+
+        self.pulse_width = pulse_width
+
+        self.fluence = fluence
+        self.divisions = divisions
+        self.phases = twopi * np.random.rand(divisions)
+
+        self.omega_cutoff = twopi / self.pulse_width
+        self.amplitude_density = np.sqrt(self.fluence / (2 * epsilon_0 * c * self.omega_cutoff))
+        self.amplitude_prefactor = np.sqrt(2 / pi) * self.amplitude_density
+
+    @property
+    def largest_photon_energy(self):
+        return hbar * self.omega_cutoff
+
+    def __str__(self):
+        out = '{}(pulse width = {} as, pulse center = {} as, fluence = {} J/cm^2, phase = {}, largest photon energy = {} eV)'.format(self.__class__.__name__,
+                                                                                                                                     uround(self.pulse_width, asec, 3),
+                                                                                                                                     uround(self.pulse_center, asec, 3),
+                                                                                                                                     uround(self.fluence, J / (cm ** 2), 3),
+                                                                                                                                     self.phase,
+                                                                                                                                     uround(self.largest_photon_energy, eV, 3))
+
+        out += ' with {}'.format(self.window)
+
+        return out
+
+    def __repr__(self):
+        out = '{}(pulse width = {}, pulse center = {}, fluence = {}, phase = {}, window_function = {})'.format(self.__class__.__name__,
+                                                                                                               self.pulse_width,
+                                                                                                               self.pulse_center,
+                                                                                                               self.amplitude_prefactor,
+                                                                                                               self.phase,
+                                                                                                               repr(self.window))
+
+        return out
+
+    def get_amplitude(self, t):
+        raise NotImplementedError
+
+        return amp * self.amplitude_prefactor * super(RandomizedSincPulse, self).get_amplitude(t)
+
+
 class RadialCosineMask(Potential):
     def __init__(self, inner_radius = 50 * bohr_radius, outer_radius = 100 * bohr_radius, smoothness = 8):
         self.inner_radius = inner_radius

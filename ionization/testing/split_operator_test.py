@@ -38,11 +38,11 @@ def run_sim(spec):
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
-        bound = 150
+        bound = 1
         # points = 2 ** 8
-        points = bound * 4
+        points = bound * 3
         # angular_points = 2 ** 6
-        angular_points = 30
+        angular_points = 4
 
         laser_frequency = c / (1064 * nm)
         laser_period = 1 / laser_frequency
