@@ -1550,7 +1550,6 @@ class SphericalHarmonicMesh(QuantumMesh):
         hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
         hamiltonian_r *= 1j * tau
         hamiltonian_l.data[0] *= tau * l_multiplier
-        hamiltonian_l.data[2] *= tau * l_multiplier
 
         even, odd = self._get_split_operator_evolution_matrices(hamiltonian_l.data[0][:-1])
 
