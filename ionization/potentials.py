@@ -109,7 +109,7 @@ class RadialImaginaryPotential(Potential):
         return self.prefactor * np.exp(-(((r - self.center) / self.width) ** 2))
 
 
-class ElectricFieldWindow:
+class ElectricFieldWindow(Potential):
     def __init__(self):
         pass
 
@@ -134,6 +134,11 @@ class LinearRampWindow(ElectricFieldWindow):
                                                                   uround(self.ramp_on_time, asec, 3),
                                                                   uround(self.ramp_time, asec, 3))
 
+    def __repr__(self):
+        return '{}(ramp_on_time = {}, ramp_time = {})'.format(self.__class__.__name__,
+                                                              self.ramp_on_time,
+                                                              self.ramp_time)
+
     def __call__(self, t):
         cond = np.greater_equal(t, self.ramp_on_time)
         on = 1
@@ -156,6 +161,16 @@ class SymmetricExponentialWindow(ElectricFieldWindow):
         self.window_width = window_width
 
         super(SymmetricExponentialWindow, self).__init__()
+
+    def __str__(self):
+        return '{}(window time = {} as, window width = {} as)'.format(self.__class__.__name__,
+                                                                      uround(self.window_time, asec, 3),
+                                                                      uround(self.window_width, asec, 3))
+
+    def __repr__(self):
+        return '{}(window_time = {}, window_width = {})'.format(self.__class__.__name__,
+                                                                self.window_time,
+                                                                self.window_width)
 
     def __call__(self, t):
         return np.abs(1 / (1 + np.exp(-(t + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-(t - self.window_time) / self.window_width)))
@@ -352,10 +367,22 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
 
 
 class RadialCosineMask(Potential):
-    def __init__(self, on_radius = 50 * bohr_radius, off_radius = 100 * bohr_radius, smoothness = 8):
-        self.inner_radius = on_radius
-        self.outer_radius = off_radius
+    def __init__(self, inner_radius = 50 * bohr_radius, outer_radius = 100 * bohr_radius, smoothness = 8):
+        self.inner_radius = inner_radius
+        self.outer_radius = outer_radius
         self.smoothness = smoothness
+
+    def __str__(self):
+        return '{}(inner radius = {} Bohr radii, outer radius = {} Bohr radii, smoothness = {})'.format(self.__class__.__name__,
+                                                                                                        uround(self.inner_radius, bohr_radius, 3),
+                                                                                                        uround(self.outer_radius, bohr_radius, 3),
+                                                                                                        self.smoothness)
+
+    def __repr__(self):
+        return '{}(inner_radius = {}, outer_radius = {}, smoothness = {})'.format(self.__class__.__name__,
+                                                                                  self.inner_radius,
+                                                                                  self.outer_radius,
+                                                                                  self.smoothness)
 
     def __call__(self, *, r, **kwargs):
         return np.where(np.greater_equal(r, self.inner_radius) * np.less_equal(r, self.outer_radius),

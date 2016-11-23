@@ -90,7 +90,7 @@ if __name__ == '__main__':
             internal_potential = ion.potentials.NuclearPotential()
 
             # mask = None
-            mask = ion.potentials.RadialCosineMask(on_radius = (bound - 50 * bohr_radius), off_radius = bound * bohr_radius, smoothness = 8)
+            mask = ion.potentials.RadialCosineMask(inner_radius = (bound - 50 * bohr_radius), outer_radius = bound * bohr_radius, smoothness = 8)
 
             sph_spec = ion.SphericalHarmonicSpecification('CN__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                           r_bound = bound * bohr_radius, r_points = points,

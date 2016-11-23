@@ -380,6 +380,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         potentials += ['   ' + str(potential) for potential in self.internal_potential]
         if self.electric_potential is not None:
             potentials += ['   ' + str(potential) for potential in self.electric_potential]
+        potentials += ['   ' + str(mask) for mask in self.mask]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials)
 
@@ -795,6 +796,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         if self.spec.mask is not None:
             self.g_mesh *= self.spec.mask(r = self.r_mesh)
+            logger.debug('Applied mask {} to g_mesh for {} {}'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name))
 
     @cp.utils.memoize()
     def get_mesh_slicer(self, distance_from_center = None):
@@ -1158,6 +1160,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         if self.spec.mask is not None:
             self.g_mesh *= self.spec.mask(r = self.r_mesh)
+            logger.debug('Applied mask {} to g_mesh for {} {}'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name))
 
     @cp.utils.memoize()
     def get_mesh_slicer(self, distance_from_center = None):
@@ -1454,6 +1457,10 @@ class SphericalHarmonicMesh(QuantumMesh):
     def evolve(self, time_step):
         getattr(self, 'evolve_' + self.spec.evolution_method)(time_step)
 
+        if self.spec.mask is not None:
+            self.g_mesh *= self.spec.mask(r = self.r_mesh)
+            logger.debug('Applied mask {} to g_mesh for {} {}'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name))
+
     def evolve_CN(self, time_step):
         tau = time_step / (2 * hbar)
 
@@ -1493,9 +1500,6 @@ class SphericalHarmonicMesh(QuantumMesh):
         g_vector = self.flatten_mesh(self.g_mesh, 'l')
         g_vector = cy.tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'l')
-
-        if self.spec.mask is not None:
-            self.g_mesh *= self.spec.mask(r = self.r_mesh)
 
     def _get_split_operator_evolution_matrices(self, a):
         # even_diag = np.zeros(len(a) + 1, dtype = np.complex128)
@@ -1577,9 +1581,6 @@ class SphericalHarmonicMesh(QuantumMesh):
         # STEP 6
         g_vector = even.dot(g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'l')
-
-        if self.spec.mask is not None:
-            self.g_mesh *= self.spec.mask(r = self.r_mesh)
 
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
@@ -1801,10 +1802,17 @@ class ElectricFieldSimulation(cp.core.Simulation):
     def store_data(self, time_index):
         """Update the time-indexed data arrays with the current values."""
         norm = self.mesh.norm
-        if norm > self.norm_vs_time[0]:
-            logger.warning('Wavefunction norm ({}) has exceeded initial norm ({}) for {} {}'.format(norm, self.norm_vs_time[0], self.__class__.__name__, self.name))
         self.norm_vs_time[time_index] = norm
+        if norm > 1.001 * self.norm_vs_time[0]:
+            logger.warning('Wavefunction norm ({}) has exceeded initial norm ({}) by more than .1% for {} {}'.format(norm, self.norm_vs_time[0], self.__class__.__name__, self.name))
+        try:
+            if norm > 1.001 * self.norm_vs_time[time_index - 1]:
+                logger.warning('Wavefunction norm ({}) at time_index = {} has exceeded norm from previous time step ({}) by more than .1% for {} {}'.format(norm, time_index, self.norm_vs_time[time_index - 1], self.__class__.__name__, self.name))
+        except IndexError:
+            pass
+
         self.energy_expectation_value_vs_time_internal[time_index] = self.mesh.energy_expectation_value
+
         for gauge in self.spec.dipole_gauges:
             self.electric_dipole_moment_vs_time[gauge][time_index] = self.mesh.dipole_moment(gauge = gauge)
 
@@ -1867,10 +1875,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
         logger.debug("Simulation status set to 'finished'")
         logger.info('Finished performing time evolution on {} ({})'.format(self.name, self.file_name))
 
-    def plot_wavefunction_vs_time(self, grayscale = False, log_metrics = False, **kwargs):
+    def plot_wavefunction_vs_time(self, grayscale = False, log = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
 
-        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.04)  # TODO: switch to fixed axis construction
+        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.06)  # TODO: switch to fixed axis construction
         ax_overlaps = plt.subplot(grid_spec[0])
         ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
 
@@ -1893,7 +1901,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_overlaps.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
             ax_overlaps.stackplot(self.times / asec, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states])
 
-        if log_metrics:
+        if log:
             ax_overlaps.set_yscale('log')
             ax_overlaps.set_ylim(top = 1.0)
         else:
@@ -1901,8 +1909,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_overlaps.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
         ax_overlaps.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
 
-        ax_overlaps.grid()
-        ax_field.grid()
+        ax_overlaps.grid(True)
+        ax_field.grid(True)
 
         ax_field.set_xlabel('Time $t$ (as)', fontsize = 15)
         ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 15)
@@ -1940,25 +1948,27 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         plt.close()
 
-    def plot_angular_momentum_vs_time(self, log_metrics = False, renormalize = False, **kwargs):
+    def plot_angular_momentum_vs_time(self, log = False, renormalize = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
 
-        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.04)
+        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.06)
         ax_momentums = plt.subplot(grid_spec[0])
         ax_field = plt.subplot(grid_spec[1], sharex = ax_momentums)
 
         if self.spec.electric_potential is not None:
             ax_field.plot(self.times / asec, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
 
-        # ax_momentums.plot(self.times / asec, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3, linestyle = '--')
-
-        # overlaps = [self.norm_by_l_vs_time[state] for state in self.spec.test_states]
-        overlaps = [self.norm_by_harmonic_vs_time[sph_harm] for sph_harm in self.mesh.spherical_harmonics]
+        if renormalize:
+            overlaps = [self.norm_by_harmonic_vs_time[sph_harm] / self.norm_vs_time for sph_harm in self.mesh.spherical_harmonics]
+            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2 / \left\langle \psi| \psi \right\rangle$'.format(sph_harm.tex_str) for sph_harm in self.mesh.spherical_harmonics]
+        else:
+            overlaps = [self.norm_by_harmonic_vs_time[sph_harm] for sph_harm in self.mesh.spherical_harmonics]
+            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(sph_harm.tex_str) for sph_harm in self.mesh.spherical_harmonics]
         num_colors = len(overlaps)
         ax_momentums.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
-        ax_momentums.stackplot(self.times / asec, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(sph_harm.tex_str) for sph_harm in self.mesh.spherical_harmonics])
+        ax_momentums.stackplot(self.times / asec, *overlaps, alpha = 1, labels = l_labels)
 
-        if log_metrics:
+        if log:
             ax_momentums.set_yscale('log')
             ax_momentums.set_ylim(top = 1.0)
         else:
@@ -1966,8 +1976,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_momentums.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
         ax_momentums.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
 
-        ax_momentums.grid()
-        ax_field.grid()
+        ax_momentums.grid(True)
+        ax_field.grid(True)
 
         ax_field.set_xlabel('Time $t$ (as)', fontsize = 15)
         ax_momentums.set_ylabel('Wavefunction Metric', fontsize = 15)

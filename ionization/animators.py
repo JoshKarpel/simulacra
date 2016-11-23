@@ -26,7 +26,7 @@ class Animator:
 
     def __init__(self, postfix = '', target_dir = None,
                  length = 30, fps = 30,
-                 plot_limit = None, renormalize = True, log = False, overlay_probability_current = False,
+                 plot_limit = None, renormalize = True, log_g = False, log_metrics = False, overlay_probability_current = False,
                  colormap = plt.cm.inferno):
         if target_dir is None:
             target_dir = os.getcwd()
@@ -41,7 +41,8 @@ class Animator:
         self.fps = fps
         self.plot_limit = plot_limit
         self.renormalize = renormalize
-        self.log = log
+        self.log_g = log_g
+        self.log_metrics = log_metrics
         self.overlay_probability_current = overlay_probability_current
         self.colormap = colormap
 
@@ -111,13 +112,13 @@ class Animator:
         except TypeError:
             lim = None
 
-        return '{}(postfix = {}, plot limit = {}, renormalize = {}, log = {}, probability current = {})'.format(self.__class__.__name__,
-                                                                                                                self.postfix,
-                                                                                                                lim,
-                                                                                                                self.renormalize,
-                                                                                                                self.log,
-                                                                                                                self.overlay_probability_current,
-                                                                                                                self.sim)
+        return '{}(postfix = "{}", plot limit = {}, renormalize = {}, log = {}, probability current = {})'.format(self.__class__.__name__,
+                                                                                                                  self.postfix,
+                                                                                                                  lim,
+                                                                                                                  self.renormalize,
+                                                                                                                  self.log_g,
+                                                                                                                  self.overlay_probability_current,
+                                                                                                                  self.sim)
 
     def __repr__(self):
         return '{}(postfix = {}, length = {}, fps = [}, plot_limit = {}, renormalize = {}, log = {}, overlay_probability_current = {})'.format(self.__class__.__name__,
@@ -126,7 +127,7 @@ class Animator:
                                                                                                                                                self.fps,
                                                                                                                                                self.plot_limit,
                                                                                                                                                self.renormalize,
-                                                                                                                                               self.log,
+                                                                                                                                               self.log_g,
                                                                                                                                                self.overlay_probability_current,
                                                                                                                                                self.sim)
 
@@ -148,7 +149,7 @@ class CylindricalSliceAnimator(Animator):
         self._initialize_time_axis()
 
     def _initialize_mesh_axis(self):
-        self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log, plot_limit = self.plot_limit)
+        self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
 
         if self.overlay_probability_current:
             self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh, plot_limit = self.plot_limit)
@@ -209,7 +210,7 @@ class CylindricalSliceAnimator(Animator):
         super(CylindricalSliceAnimator, self)._update_frame()
 
     def _update_mesh_axis(self):
-        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log, plot_limit = self.plot_limit)
+        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
 
         if self.overlay_probability_current:
             self.sim.mesh.update_probability_current_quiver(self.quiver, plot_limit = self.plot_limit)
@@ -283,7 +284,7 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         # angle_labels = ['\u03b8=0\u00b0'] + angle_labels
         self.ax_mesh.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
-        self.ax_metrics.grid()
+        self.ax_metrics.grid(True)
 
         self.ax_metrics.set_xlabel('Time (as)', fontsize = 22)
         self.ax_metrics.set_ylabel('Ionization Metric', fontsize = 22)
@@ -315,29 +316,40 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
             self.ax_mesh.set_rmax(self.plot_limit / bohr_radius)
 
     def _mesh_setup(self):
-        self.mesh, self.mesh_mirror = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log)
+        self.mesh, self.mesh_mirror = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g)
 
     def _update_mesh_axis(self):
-        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log)
-        self.sim.mesh.update_g_mesh(self.mesh_mirror, normalize = self.renormalize, log = self.log)
+        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g)
+        self.sim.mesh.update_g_mesh(self.mesh_mirror, normalize = self.renormalize, log = self.log_g)
 
         if self.overlay_probability_current:
             self.sim.mesh.update_probability_current_quiver(self.quiver)
 
 
 class SphericalHarmonicAnimator(SphericalSliceAnimator):
+    def __init__(self, renormalize_l_decomposition = True, **kwargs):
+        super(SphericalHarmonicAnimator, self).__init__(**kwargs)
+
+        self.renormalize_l_decomposition = renormalize_l_decomposition
+
     def _initialize_figure(self):
         super(SphericalHarmonicAnimator, self)._initialize_figure()
 
         self.ax_ang_mom = self.fig.add_axes([.6, .85, .345, .125])  # TODO: break all inits into separate functions, standardize the way they're called
 
-        self.ang_mom_bar = self.ax_ang_mom.bar(self.sim.mesh.l, self.sim.mesh.norm_by_l,
+        l_plot = self.sim.mesh.norm_by_l
+        if self.renormalize_l_decomposition:
+            l_plot /= self.sim.mesh.norm
+        self.ang_mom_bar = self.ax_ang_mom.bar(self.sim.mesh.l, l_plot,
                                                align = 'center', color = '.5')
 
         self.ax_ang_mom.yaxis.grid(True)
 
         self.ax_ang_mom.set_xlabel(r'Orbital Angular Momentum $l$', fontsize = 22)  # TODO: change all angular momentum l to \ell?
-        self.ax_ang_mom.set_ylabel(r'$\left| \left\langle \psi | Y^l_0 \right\rangle \right|^2$', fontsize = 22)  # TODO: change all angular momentum l to \ell?
+        l_label = r'$\left| \left\langle \psi | Y^l_0 \right\rangle \right|^2$'
+        if self.renormalize_l_decomposition:
+            l_label += r'$/\left\langle\psi|\psi\right\rangle$'
+        self.ax_ang_mom.set_ylabel(l_label, fontsize = 22)  # TODO: change all angular momentum l to \ell?
         self.ax_ang_mom.yaxis.set_label_position('right')
 
         self.ax_ang_mom.set_ylim(0, 1)
@@ -347,10 +359,10 @@ class SphericalHarmonicAnimator(SphericalSliceAnimator):
         self.ax_ang_mom.tick_params(axis = 'both', which = 'major', labelsize = 14)
 
     def _mesh_setup(self):
-        self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log)
+        self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g)
 
     def _update_mesh_axis(self):
-        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log)
+        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g)
 
         if self.overlay_probability_current:
             self.sim.mesh.update_probability_current_quiver(self.quiver)
@@ -358,10 +370,10 @@ class SphericalHarmonicAnimator(SphericalSliceAnimator):
     def _update_time_axis(self):
         super(SphericalHarmonicAnimator, self)._update_time_axis()
 
-        print(self.sim.mesh.norm)
-        print(np.sum(self.sim.mesh.norm_by_l))
-
-        for bar, height in zip(self.ang_mom_bar, self.sim.mesh.norm_by_l):
+        l_plot = self.sim.mesh.norm_by_l
+        if self.renormalize_l_decomposition:
+            l_plot /= self.sim.mesh.norm
+        for bar, height in zip(self.ang_mom_bar, l_plot):
             bar.set_height(height)
 
-        self.time_text.set_text(r'$t =$ {} as'.format(uround(self.sim.time, asec, 3)))
+        self.time_text.set_text(r'$t = {} \, \mathrm{{as}}$'.format(uround(self.sim.time, asec, 3)))

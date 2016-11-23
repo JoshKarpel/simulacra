@@ -14,8 +14,8 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def make_movie(spec):
-    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG,
-                         file_logs = True, file_name = spec.name, file_dir = OUT_DIR, file_mode = 'w') as logger:
+    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO,
+                         file_logs = True, file_name = spec.name, file_dir = OUT_DIR, file_mode = 'w', file_level = logging.INFO) as logger:
         sim = ion.ElectricFieldSimulation(spec)
 
         logger.info(sim.info())
@@ -45,7 +45,7 @@ if __name__ == '__main__':
                     window = ion.potentials.LinearRampWindow(ramp_on_time = t_init + period * asec, ramp_time = 5 * period * asec)
                     e_field = ion.potentials.SineWave(omega = twopi / (period * asec), amplitude = amp * atomic_electric_field, window = window)
                     internal_potential = ion.potentials.NuclearPotential()
-                    mask = ion.potentials.RadialCosineMask(on_radius = (bound - 50) * bohr_radius, off_radius = bound * bohr_radius)
+                    mask = ion.potentials.RadialCosineMask(inner_radius = (bound - 50) * bohr_radius, outer_radius = bound * bohr_radius)
 
                     # animators = [ion.animators.CylindricalSliceAnimator(target_dir = OUT_DIR),
                     #              ion.animators.CylindricalSliceAnimator(postfix = 'log', target_dir = OUT_DIR, log = True, renormalize = False),

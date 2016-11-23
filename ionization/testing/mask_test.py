@@ -12,7 +12,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
-        mask = ion.potentials.RadialCosineMask(on_radius = 40 * bohr_radius, off_radius = 49 * bohr_radius)
+        mask = ion.potentials.RadialCosineMask(inner_radius = 40 * bohr_radius, outer_radius = 49 * bohr_radius)
         sim = ion.SphericalHarmonicSpecification('mask',
                                                  r_bound = 50 * bohr_radius, r_points = 900,
                                                  l_points = 50,
