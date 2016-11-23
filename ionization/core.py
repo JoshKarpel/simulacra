@@ -1550,7 +1550,6 @@ class SphericalHarmonicMesh(QuantumMesh):
         hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
         hamiltonian_r *= 1j * tau
         hamiltonian_l.data[0] *= tau * l_multiplier
-        hamiltonian_l.data[2] *= tau * l_multiplier
 
         even, odd = self._get_split_operator_evolution_matrices(hamiltonian_l.data[0][:-1])
 
@@ -1981,7 +1980,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         ax_field.set_xlabel('Time $t$ (as)', fontsize = 15)
         y_label = r'$\left| \left\langle \psi | Y^l_0 \right\rangle \right|^2$'
-        if self.renormalize_l_decomposition:
+        if renormalize:
             y_label += r'$/\left\langle\psi|\psi\right\rangle$'
         ax_momentums.set_ylabel(y_label, fontsize = 15)
         ax_field.set_ylabel('E-Field (a.u.)', fontsize = 11)
