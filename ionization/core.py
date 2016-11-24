@@ -418,7 +418,7 @@ class QuantumMesh:
     def get_mesh_slicer(self, plot_limit):
         raise NotImplementedError
 
-    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None):
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
         raise NotImplementedError
 
     def plot_mesh(self, mesh, **kwargs):
@@ -433,11 +433,11 @@ class QuantumMesh:
 
         return out
 
-    def attach_g_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
-        return self.attach_mesh_to_axis(axis, self.abs_g_squared(normalize = normalize, log = log), plot_limit = plot_limit)
+    def attach_g_to_axis(self, axis, normalize = False, log = False, plot_limit = None, **kwargs):
+        return self.attach_mesh_to_axis(axis, self.abs_g_squared(normalize = normalize, log = log), plot_limit = plot_limit, **kwargs)
 
-    def update_g_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
-        new_mesh = self.abs_g_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
+    def update_g_mesh(self, colormesh, normalize = False, log = False, plot_limit = None, slicer = 'get_mesh_slicer'):
+        new_mesh = self.abs_g_squared(normalize = normalize, log = log)[getattr(self, slicer)(plot_limit)]
 
         colormesh.set_array(new_mesh.ravel())
 
@@ -460,8 +460,8 @@ class QuantumMesh:
 
         return out
 
-    def attach_psi_to_axis(self, axis, normalize = False, log = False, plot_limit = None):
-        return self.attach_mesh_to_axis(axis, self.abs_psi_squared(normalize = normalize, log = log), plot_limit = plot_limit)
+    def attach_psi_to_axis(self, axis, normalize = False, log = False, plot_limit = None, **kwargs):
+        return self.attach_mesh_to_axis(axis, self.abs_psi_squared(normalize = normalize, log = log), plot_limit = plot_limit, **kwargs)
 
     def update_psi_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
         new_mesh = self.abs_psi_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
@@ -812,11 +812,12 @@ class CylindricalSliceMesh(QuantumMesh):
 
         return mesh_slicer
 
-    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None):
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
         color_mesh = axis.pcolormesh(self.z_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                      self.rho_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                      mesh[self.get_mesh_slicer(plot_limit)],
-                                     shading = 'gouraud')
+                                     shading = 'gouraud',
+                                     **kwargs)
 
         return color_mesh
 
@@ -1175,15 +1176,17 @@ class SphericalSliceMesh(QuantumMesh):
 
         return mesh_slicer
 
-    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None):
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
         color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer(plot_limit)],
                                      self.r_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                      mesh[self.get_mesh_slicer(plot_limit)],
-                                     shading = 'gouraud')
+                                     shading = 'gouraud',
+                                     **kwargs)
         color_mesh_mirror = axis.pcolormesh(-self.theta_mesh[self.get_mesh_slicer(plot_limit)] + (2 * pi),
                                             self.r_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                             mesh[self.get_mesh_slicer(plot_limit)],
-                                            shading = 'gouraud')  # another colormesh, mirroring the first mesh onto pi to 2pi
+                                            shading = 'gouraud',
+                                            **kwargs)  # another colormesh, mirroring the first mesh onto pi to 2pi
 
         return color_mesh, color_mesh_mirror
 
@@ -1585,12 +1588,24 @@ class SphericalHarmonicMesh(QuantumMesh):
         g_vector = even.dot(g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'l')
 
+    @cp.utils.memoize()
     def get_mesh_slicer(self, distance_from_center = None):
+        """Returns a slice object that slices a mesh to the given distance of the center."""
+        if distance_from_center is None:
+            mesh_slicer = (slice(None, None, 1), slice(None, None, 1))
+        else:
+            r_lim_points = int(distance_from_center / self.delta_r)
+            mesh_slicer = (slice(None, None, 1), slice(0, r_lim_points + 1, 1))
+
+        return mesh_slicer
+
+    @cp.utils.memoize()
+    def get_mesh_slicer_spatial(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
         if distance_from_center is None:
             mesh_slicer = slice(None, None, 1)
         else:
-            r_lim_points = round(distance_from_center / self.delta_r)
+            r_lim_points = int(distance_from_center / self.delta_r)
             mesh_slicer = slice(0, r_lim_points + 1, 1)
 
         return mesh_slicer
@@ -1625,10 +1640,12 @@ class SphericalHarmonicMesh(QuantumMesh):
         return np.sum(np.tile(mesh, (self.theta_points, 1, 1)) * self._sph_harm_l_theta_mesh, axis = 1).T
 
     @property
+    @cp.utils.watcher(lambda s: s.sim.time)
     def space_g(self):
         return self._reconstruct_spatial_mesh(self.g_mesh)
 
     @property
+    @cp.utils.watcher(lambda s: s.sim.time)
     def space_psi(self):
         return self._reconstruct_spatial_mesh(self.psi_mesh)
 
@@ -1651,11 +1668,12 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return out
 
-    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, color_map_min = 0):
-        color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer(plot_limit)],
-                                     self.r_theta_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
-                                     mesh[self.get_mesh_slicer(plot_limit)],
-                                     shading = 'gouraud', vmin = color_map_min)
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, color_map_min = 0, **kwargs):
+        color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer_spatial(plot_limit)],
+                                     self.r_theta_mesh[self.get_mesh_slicer_spatial(plot_limit)] / bohr_radius,
+                                     mesh[self.get_mesh_slicer_spatial(plot_limit)],
+                                     shading = 'gouraud', vmin = color_map_min,
+                                     **kwargs)
 
         return color_mesh
 

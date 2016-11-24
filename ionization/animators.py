@@ -1,6 +1,7 @@
 import functools
 import logging
 import os
+import itertools as it
 import subprocess
 
 import matplotlib
@@ -71,6 +72,8 @@ class Animator:
 
         self._initialize_figure()
 
+        self.fig.canvas.draw()
+        self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
         canvas_width, canvas_height = self.fig.canvas.get_width_height()
         self.cmdstring = ("ffmpeg",
                           '-y',
@@ -97,12 +100,13 @@ class Animator:
         logger.debug('{} updated frame from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
     def send_frame_to_ffmpeg(self):
+        self.fig.canvas.restore_region(self.background)
+
         self._update_frame()
 
-        self.fig.canvas.draw()
-        string = self.fig.canvas.tostring_argb()
+        self.fig.canvas.blit(self.fig.bbox)
 
-        self.ffmpeg.stdin.write(string)
+        self.ffmpeg.stdin.write(self.fig.canvas.tostring_argb())
 
         logger.debug('{} sent frame to ffpmeg from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
@@ -135,7 +139,7 @@ class Animator:
 class CylindricalSliceAnimator(Animator):
     def initialize(self, simulation):
         Animator.initialize(self, simulation)
-        self.ax_metrics.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_time
+        self.ax_metrics.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_metrics
 
     def _initialize_figure(self):
         plt.set_cmap(self.colormap)
@@ -149,10 +153,10 @@ class CylindricalSliceAnimator(Animator):
         self._initialize_time_axis()
 
     def _initialize_mesh_axis(self):
-        self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
+        self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
 
         if self.overlay_probability_current:
-            self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh, plot_limit = self.plot_limit)
+            self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh, plot_limit = self.plot_limit, animated = True)
 
         self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
         self.ax_metrics.grid(True)
@@ -181,19 +185,23 @@ class CylindricalSliceAnimator(Animator):
             self.field_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
             self.electric_field_line, = self.ax_metrics.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
                                                              label = r'$|E|/\left|E_{\mathrm{max}}\right|$',
-                                                             color = 'red', linewidth = 2)
+                                                             color = 'red', linewidth = 2,
+                                                             animated = True)
 
         self.norm_line, = self.ax_metrics.plot(self.sim.times / asec, self.sim.norm_vs_time,
                                                label = r'$\left\langle \psi|\psi \right\rangle$',
-                                               color = 'black', linestyle = '--', linewidth = 3)
+                                               color = 'black', linestyle = '--', linewidth = 3,
+                                               animated = True)
 
         self.overlaps_stackplot = self.ax_metrics.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
                                                             labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$',
                                                                       r'$\left| \left\langle \psi|\psi_{{n \leq {}}} \right\rangle \right|^2$'.format(max(self.sim.spec.test_states, key = lambda s: s.n).n)],
-                                                            colors = ['.3', '.5'])
+                                                            colors = ['.3', '.5'],
+                                                            animated = True)
 
         self.time_line, = self.ax_metrics.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
-                                               linestyle = '-.', color = 'gray')
+                                               linestyle = '-.', color = 'gray',
+                                               animated = True)
 
     def _compute_stackplot_overlaps(self):
         initial_overlap = [self.sim.state_overlaps_vs_time[self.spec.initial_state]]
@@ -211,20 +219,29 @@ class CylindricalSliceAnimator(Animator):
 
     def _update_mesh_axis(self):
         self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
+        self.ax_mesh.draw_artist(self.mesh)
 
         if self.overlay_probability_current:
             self.sim.mesh.update_probability_current_quiver(self.quiver, plot_limit = self.plot_limit)
+            self.ax_mesh.draw_artist(self.quiver)
 
     def _update_time_axis(self):
+        self.overlaps_stackplot = self.ax_metrics.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
+                                                            labels = ['Initial State Overlap', r'Overlap with $n \leq 5$'], colors = ['.3', '.5'])
+        self.time_line.set_xdata([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec])
+
+        for line in self.overlaps_stackplot:
+            self.ax_metrics.draw_artist(line)
+        self.ax_metrics.draw_artist(self.time_line)
+
         try:
             self.electric_field_line.set_ydata(np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max)
+            self.ax_metrics.draw_artist(self.electric_field_line)
         except AttributeError:
             pass
 
         self.norm_line.set_ydata(self.sim.norm_vs_time)
-        self.overlaps_stackplot = self.ax_metrics.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
-                                                            labels = ['Initial State Overlap', r'Overlap with $n \leq 5$'], colors = ['.3', '.5'])
-        self.time_line.set_xdata([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec])
+        self.ax_metrics.draw_artist(self.norm_line)
 
 
 class SphericalSliceAnimator(CylindricalSliceAnimator):
@@ -232,7 +249,7 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         Animator.initialize(self, simulation)
         legend = self.ax_metrics.legend(bbox_to_anchor = (1., 1.1), loc = 'lower right', borderaxespad = 0., fontsize = 20,
                                         fancybox = True, framealpha = 0)
-        # legend must be created here so that it catches all of the lines in ax_time
+        # legend must be created here so that it catches all of the lines in ax_metrics
         # TODO: is this really still true?
 
     def _initialize_figure(self):
@@ -250,7 +267,7 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         # plt.figtext(.8, .9, r'Simulation:', fontsize = 22)
         # plt.figtext(.82, .85, self.sim.name, fontsize = 20)
         plt.figtext(.8, .6, r'Initial State: ${}$'.format(self.spec.initial_state.tex_str), fontsize = 22)
-        self.time_text = plt.figtext(.8, .5, r'$t = {}$ as'.format(uround(self.sim.time, asec, 3)), fontsize = 30)
+        self.time_text = plt.figtext(.8, .5, r'$t = {}$ as'.format(uround(self.sim.time, asec, 3)), fontsize = 30, animated = True)
         # TODO: time text?
         # TODO: replace with a for over a given list of strings
 
@@ -260,24 +277,30 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         self.ax_mesh.set_theta_direction('clockwise')
 
         if self.overlay_probability_current:
-            self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh)
-
-        if self.spec.electric_potential is not None:
-            self.field_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
-            self.electric_field_line, = self.ax_metrics.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
-                                                             label = r'$|E|/\left|E_{\mathrm{max}}\right|$', color = 'red', linewidth = 2)
+            self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh, animated = True)
 
         self.norm_line, = self.ax_metrics.plot(self.sim.times / asec, self.sim.norm_vs_time,
                                                label = r'$\left\langle \psi|\psi \right\rangle$',
-                                               color = 'black', linestyle = '--', linewidth = 3)
+                                               color = 'black', linestyle = '--', linewidth = 3,
+                                               animated = True)
 
         self.overlaps_stackplot = self.ax_metrics.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
                                                             labels = [r'$\left| \left\langle \psi|\psi_{\mathrm{init}} \right\rangle \right|^2$',
                                                                       r'$\left| \left\langle \psi|\psi_{{n \leq {}}} \right\rangle \right|^2$'.format(max(self.sim.spec.test_states, key = lambda s: s.n).n)],
-                                                            colors = ['.3', '.5'])
+                                                            colors = ['.3', '.5'],
+                                                            animated = True)
 
         self.time_line, = self.ax_metrics.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
-                                               linestyle = '-.', color = 'gray')
+                                               linestyle = '-', color = 'gray',
+                                               zorder = 5,
+                                               animated = True)
+
+        if self.spec.electric_potential is not None:
+            self.field_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
+            self.electric_field_line, = self.ax_metrics.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
+                                                             label = r'$|E|/\left|E_{\mathrm{max}}\right|$', color = 'red', linewidth = 2,
+                                                             zorder = -1,
+                                                             animated = True)
 
         self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
@@ -304,7 +327,7 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
         self.cbar.ax.tick_params(labelsize = 14)
 
         self.ax_mesh.axis('tight')
-        # self.ax_time.axis('tight')
+        # self.ax_metrics.axis('tight')
 
         if self.plot_limit is None:
             self.ax_mesh.set_rmax((self.sim.mesh.r_max - (self.sim.mesh.delta_r / 2)) / bohr_radius)
@@ -312,14 +335,19 @@ class SphericalSliceAnimator(CylindricalSliceAnimator):
             self.ax_mesh.set_rmax(self.plot_limit / bohr_radius)
 
     def _mesh_setup(self):
-        self.mesh, self.mesh_mirror = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g)
+        self.mesh, self.mesh_mirror = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit,
+                                                                     animated = True)
 
     def _update_mesh_axis(self):
-        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g)
-        self.sim.mesh.update_g_mesh(self.mesh_mirror, normalize = self.renormalize, log = self.log_g)
+        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
+        self.sim.mesh.update_g_mesh(self.mesh_mirror, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
+
+        self.ax_mesh.draw_artist(self.mesh)
+        self.ax_mesh.draw_artist(self.mesh_mirror)
 
         if self.overlay_probability_current:
             self.sim.mesh.update_probability_current_quiver(self.quiver)
+            self.ax_mesh.draw_artist(self.quiver)
 
 
 class SphericalHarmonicAnimator(SphericalSliceAnimator):
@@ -337,9 +365,10 @@ class SphericalHarmonicAnimator(SphericalSliceAnimator):
         if self.renormalize_l_decomposition:
             l_plot /= self.sim.mesh.norm
         self.ang_mom_bar = self.ax_ang_mom.bar(self.sim.mesh.l, l_plot,
-                                               align = 'center', color = '.5')
+                                               align = 'center', color = '.5',
+                                               animated = True)
 
-        self.ax_ang_mom.yaxis.grid(True)
+        self.ax_ang_mom.yaxis.grid(True, zorder = 10)
 
         self.ax_ang_mom.set_xlabel(r'Orbital Angular Momentum $l$', fontsize = 22)  # TODO: change all angular momentum l to \ell?
         l_label = r'$\left| \left\langle \psi | Y^l_0 \right\rangle \right|^2$'
@@ -355,13 +384,21 @@ class SphericalHarmonicAnimator(SphericalSliceAnimator):
         self.ax_ang_mom.tick_params(axis = 'both', which = 'major', labelsize = 14)
 
     def _mesh_setup(self):
-        self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g)
+        self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
 
     def _update_mesh_axis(self):
-        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g)
+        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, slicer = 'get_mesh_slicer_spatial')
+        self.ax_mesh.draw_artist(self.mesh)
 
         if self.overlay_probability_current:
             self.sim.mesh.update_probability_current_quiver(self.quiver)
+            self.ax_mesh.draw_artist(self.quiver)
+
+        for line in it.chain(self.ax_mesh.yaxis.get_gridlines(), self.ax_mesh.xaxis.get_gridlines()):
+            self.ax_mesh.draw_artist(line)
+
+        for text in self.ax_mesh.yaxis.get_ticklabels():
+            self.ax_mesh.draw_artist(text)
 
     def _update_time_axis(self):
         super(SphericalHarmonicAnimator, self)._update_time_axis()
@@ -371,5 +408,7 @@ class SphericalHarmonicAnimator(SphericalSliceAnimator):
             l_plot /= self.sim.mesh.norm
         for bar, height in zip(self.ang_mom_bar, l_plot):
             bar.set_height(height)
+            self.ax_ang_mom.draw_artist(bar)
 
         self.time_text.set_text(r'$t = {} \, \mathrm{{as}}$'.format(uround(self.sim.time, asec, 3)))
+        self.ax_metrics.draw_artist(self.time_text)
