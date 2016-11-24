@@ -377,10 +377,12 @@ class ElectricFieldSpecification(cp.core.Specification):
                                '   Extra Time Step: {} as'.format(uround(self.extra_time, asec, 3))]
 
         potentials = ['Potentials:']
-        potentials += ['   ' + str(potential) for potential in self.internal_potential]
+        if self.internal_potential is not None:
+            potentials += ['   ' + str(potential) for potential in self.internal_potential]
         if self.electric_potential is not None:
             potentials += ['   ' + str(potential) for potential in self.electric_potential]
-        potentials += ['   ' + str(mask) for mask in self.mask]
+        if self.mask is not None:
+            potentials += ['   ' + str(mask) for mask in self.mask]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials)
 
@@ -1282,7 +1284,8 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         self.l = np.array(range(self.spec.l_points))
         self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.spec.l_points))
-        self.theta_points = self.spec.l_points * 10
+        self.theta_points = self.spec.l_points * 5
+        self.phi_points = self.theta_points
 
         # self.l_mesh, self.r_mesh = np.meshgrid(self.l, self.r, indexing = 'ij')
 
