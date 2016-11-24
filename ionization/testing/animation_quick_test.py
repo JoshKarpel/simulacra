@@ -29,5 +29,5 @@ if __name__ == '__main__':
                                                  animators = animators
                                                  ).to_simulation()
 
-        sim.run_simulation()
+        # sim.run_simulation()
         logger.info(sim.info())

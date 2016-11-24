@@ -379,7 +379,12 @@ class ElectricFieldSpecification(cp.core.Specification):
                                '   Extra Time Step: {} as'.format(uround(self.extra_time, asec, 3))]
 
         potentials = ['Potentials:']
-        potentials += ['   ' + str(x) for x in it.chain(self.internal_potential, self.electric_potential, self.mask)]
+        if self.internal_potential is not None:
+            potentials += ['   ' + str(potential) for potential in self.internal_potential]
+        if self.electric_potential is not None:
+            potentials += ['   ' + str(potential) for potential in self.electric_potential]
+        if self.mask is not None:
+            potentials += ['   ' + str(mask) for mask in self.mask]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials)
 
