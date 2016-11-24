@@ -30,7 +30,7 @@ def run(spec):
 
 if __name__ == '__main__':
     with log as logger:
-        bound = 200
+        bound = 250
         points_per_r = 4
         r_points = bound * points_per_r
         l_points = 100
@@ -62,7 +62,7 @@ if __name__ == '__main__':
                     e_field_sin = ion.potentials.SincPulse(pulse_width = pw, fluence = flu, phase = 'sin', window = window)
                     e_field_cos = ion.potentials.SincPulse(pulse_width = pw, fluence = flu, phase = 'cos', window = window)
 
-                    mask = ion.potentials.RadialCosineMask(inner_radius = (bound - 25) * bohr_radius, outer_radius = bound * bohr_radius)
+                    mask = ion.potentials.RadialCosineMask(inner_radius = (bound - 50) * bohr_radius, outer_radius = bound * bohr_radius)
 
                     out_dir_add = 'r={}at{}_l={}__n={}_l={}__flu={}'.format(bound, points_per_r, l_points, initial_state.n, initial_state.l, fluence)
                     out_dir_mod = os.path.join(OUT_DIR, out_dir_add)

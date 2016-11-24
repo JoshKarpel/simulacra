@@ -1282,6 +1282,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         self.l = np.array(range(self.spec.l_points))
         self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.spec.l_points))
+        self.theta_points = self.spec.l_points * 10
 
         # self.l_mesh, self.r_mesh = np.meshgrid(self.l, self.r, indexing = 'ij')
 
@@ -1594,7 +1595,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     @property
     @cp.utils.memoize()
     def theta(self):
-        return np.linspace(0, twopi, 1000)
+        return np.linspace(0, twopi, self.theta_points)
 
     @property
     @cp.utils.memoize()
@@ -1607,20 +1608,26 @@ class SphericalHarmonicMesh(QuantumMesh):
         return np.meshgrid(self.r, self.theta, indexing = 'ij')[0]
 
     @property
-    def space_g(self):
-        space_g = np.zeros((len(self.r), len(self.theta)), dtype = np.complex128)
-        for radial_function, sph_harm in zip(self.g_mesh, self.spherical_harmonics):
-            space_g += np.outer(radial_function, sph_harm(self.theta))
+    # @cp.utils.memoize()
+    def theta_l_r_meshes(self):
+        return np.meshgrid(self.theta, self.l, self.r, indexing = 'ij')
 
-        return space_g
+    @property
+    @cp.utils.memoize()
+    def _sph_harm_l_theta_mesh(self):
+        theta_mesh, l_mesh, _ = self.theta_l_r_meshes
+        return special.sph_harm(0, l_mesh, 0, theta_mesh)
+
+    def _reconstruct_spatial_mesh(self, mesh):
+        return np.sum(np.tile(mesh, (self.theta_points, 1, 1)) * self._sph_harm_l_theta_mesh, axis = 1).T
+
+    @property
+    def space_g(self):
+        return self._reconstruct_spatial_mesh(self.g_mesh)
 
     @property
     def space_psi(self):
-        space_psi = np.zeros((len(self.r), len(self.theta)), dtype = np.complex128)
-        for radial_function, sph_harm in zip(self.g_mesh, self.spherical_harmonics):
-            space_psi += np.outer(radial_function / self.g_factor, sph_harm(self.theta))
-
-        return space_psi
+        return self._reconstruct_spatial_mesh(self.psi_mesh)
 
     def abs_g_squared(self, normalize = False, log = False):
         out = np.abs(self.space_g) ** 2
@@ -1840,7 +1847,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             animator.initialize(self)
 
         self.status = 'running'
-        logger.debug("{} {} status set to 'running'".format(self.__class__.__name__, self.name))
+        logger.debug("{} {} ({}) status set to 'running'".format(self.__class__.__name__, self.name, self.file_name))
 
         while True:
             if not only_end_data or self.time_index == self.time_steps - 1:  # if last time step or taking all data
@@ -1856,23 +1863,23 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
             self.mesh.evolve(self.times[self.time_index] - self.times[self.time_index - 1])  # evolve the mesh forward to the next time step
 
-            logger.debug('{} {} evolved to time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.time_index, self.time_steps - 1,
-                                                                            np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
+            logger.debug('{} {} ({}) evolved to time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.file_name, self.time_index, self.time_steps - 1,
+                                                                                 np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
 
             if self.spec.checkpoints:
                 if (self.time_index + 1) % self.spec.checkpoint_at == 0:
                     self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
                     logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
 
-        for animator in self.animators:
-            animator.cleanup()
-
         self.end_time = dt.datetime.now()
         self.elapsed_time = self.end_time - self.start_time
 
         self.status = 'finished'
-        logger.debug("Simulation status set to 'finished'")
-        logger.info('Finished performing time evolution on {} ({})'.format(self.name, self.file_name))
+        logger.debug("{} {} ({}) status set to 'finished'".format(self.__class__.__name__, self.name, self.file_name))
+        logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
+
+        for animator in self.animators:
+            animator.cleanup()
 
     def plot_wavefunction_vs_time(self, grayscale = False, log = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
@@ -1884,7 +1891,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if self.spec.electric_potential is not None:
             ax_field.plot(self.times / asec, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
 
-        ax_overlaps.plot(self.times / asec, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3, linestyle = '--')
+        ax_overlaps.plot(self.times / asec, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3)
 
         if grayscale:  # stackplot with two lines in grayscale (initial and non-initial)
             initial_overlap = [self.state_overlaps_vs_time[self.spec.initial_state]]
