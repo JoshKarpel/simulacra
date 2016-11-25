@@ -318,7 +318,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
                  extra_time = None, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
-                 animators = (),
+                 animators = tuple(),
                  **kwargs):
         super(ElectricFieldSpecification, self).__init__(name, simulation_type = ElectricFieldSimulation, **kwargs)
 
@@ -347,7 +347,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.checkpoint_at = checkpoint_at
         self.checkpoint_dir = checkpoint_dir
 
-        self.animators = animators
+        self.animators = tuple(animators)
 
     def info(self):
         checkpoint = ['Checkpointing: ']
@@ -1932,7 +1932,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_overlaps.set_yscale('log')
             ax_overlaps.set_ylim(top = 1.0)
         else:
-            ax_overlaps.set_ylim(0.0, 1.0)
+            ax_overlaps.set_ylim(-0.01, 1.01)
             ax_overlaps.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
         ax_overlaps.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
 
@@ -1999,7 +1999,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_momentums.set_yscale('log')
             ax_momentums.set_ylim(top = 1.0)
         else:
-            ax_momentums.set_ylim(0.0, 1.0)
+            ax_momentums.set_ylim(0.01, 1.01)
             ax_momentums.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
         ax_momentums.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
 

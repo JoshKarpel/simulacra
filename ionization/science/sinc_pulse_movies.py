@@ -12,20 +12,24 @@ log = cp.utils.Logger('compy', 'ionization', stdout_level = logging.INFO, file_l
 
 
 def run(spec):
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG,
+    with cp.utils.Logger('compy', 'ionization',
+                         stdout_logs = True, stdout_level = logging.DEBUG,
                          file_logs = True, file_dir = spec.out_dir_mod, file_name = spec.name, file_level = logging.DEBUG, file_mode = 'w') as logger:
-        sim = spec.to_simulation()
+        try:
+            sim = spec.to_simulation()
 
-        logger.info(sim.info())
-        sim.run_simulation()
-        logger.info(sim.info())
+            logger.info(sim.info())
+            sim.run_simulation()
+            logger.info(sim.info())
 
-        sim.plot_wavefunction_vs_time(target_dir = spec.out_dir_mod)
-        sim.plot_wavefunction_vs_time(target_dir = spec.out_dir_mod, log = True, name_postfix = '_log')
-        sim.plot_angular_momentum_vs_time(target_dir = spec.out_dir_mod)
-        sim.plot_angular_momentum_vs_time(target_dir = spec.out_dir_mod, log = True, name_postfix = '_log')
-        sim.plot_angular_momentum_vs_time(target_dir = spec.out_dir_mod, renormalize = True, name_postfix = '_renorm')
-        sim.plot_angular_momentum_vs_time(target_dir = spec.out_dir_mod, renormalize = True, log = True, name_postfix = '_log_renorm')
+            sim.plot_wavefunction_vs_time(target_dir = spec.out_dir_mod)
+            sim.plot_wavefunction_vs_time(target_dir = spec.out_dir_mod, log = True, name_postfix = '_log')
+            sim.plot_angular_momentum_vs_time(target_dir = spec.out_dir_mod)
+            sim.plot_angular_momentum_vs_time(target_dir = spec.out_dir_mod, log = True, name_postfix = '_log')
+            sim.plot_angular_momentum_vs_time(target_dir = spec.out_dir_mod, renormalize = True, name_postfix = '_renorm')
+            sim.plot_angular_momentum_vs_time(target_dir = spec.out_dir_mod, renormalize = True, log = True, name_postfix = '_log_renorm')
+        except Exception as e:
+            logger.exception(e)
 
 
 if __name__ == '__main__':
@@ -39,7 +43,8 @@ if __name__ == '__main__':
         initial_states = [ion.BoundState(1, 0)]
         # initial_states = [ion.BoundState(1, 0), ion.BoundState(2, 0), ion.BoundState(2, 1)]
 
-        pulse_widths = [10, 50, 100, 250, 500, 1000, 1500, 2000]
+        # pulse_widths = [10, 50, 100, 250, 500, 1000, 1500, 2000]
+        pulse_widths = [10, 25, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
         fluences = [1, 20]
 
         specs = []
@@ -47,10 +52,10 @@ if __name__ == '__main__':
             for pulse_width in pulse_widths:
                 for fluence in fluences:
                     t_step = dt * asec
-                    if pulse_width < 60:
-                        t_step /= 10
-                    if pulse_width > 550:
-                        t_step *= 2.5
+                    if pulse_width < 40:
+                        t_step *= .2
+                    if pulse_width > 350:
+                        t_step *= 5
 
                     pw = pulse_width * asec
                     flu = fluence * J / (cm ** 2)
@@ -98,4 +103,4 @@ if __name__ == '__main__':
                                                               out_dir_mod = out_dir_mod)
                     specs.append(spec)
 
-        cp.utils.multi_map(run, specs, processes = 6)
+        cp.utils.multi_map(run, specs, processes = 2)

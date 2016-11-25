@@ -16,99 +16,15 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class Animator:
-    """
-    A class that handles sending frames to ffmpeg to create animations.
+class QuantumMeshAnimator(cp.Animator):
+    def __init__(self, plot_limit = None, renormalize = True, log_g = False, log_metrics = False, overlay_probability_current = False, **kwargs):
+        super(QuantumMeshAnimator, self).__init__(**kwargs)
 
-    Should be subclassed and the hook methods _initialize_figure and update_frame should be overridden/extended.
-
-    ffmpeg must be visible on the system path.
-    """
-
-    def __init__(self, postfix = '', target_dir = None,
-                 length = 30, fps = 30,
-                 plot_limit = None, renormalize = True, log_g = False, log_metrics = False, overlay_probability_current = False,
-                 colormap = plt.cm.inferno):
-        if target_dir is None:
-            target_dir = os.getcwd()
-        self.target_dir = target_dir
-
-        postfix = cp.utils.strip_illegal_characters(postfix)
-        if postfix != '' and not postfix.startswith('_'):
-            postfix = '_' + postfix
-        self.postfix = postfix
-
-        self.length = length
-        self.fps = fps
         self.plot_limit = plot_limit
         self.renormalize = renormalize
         self.log_g = log_g
         self.log_metrics = log_metrics
         self.overlay_probability_current = overlay_probability_current
-        self.colormap = colormap
-
-        self.sim = None
-        self.spec = None
-        self.fig = None
-
-    def initialize(self, simulation):
-        """Hook for second part of initialization, once the Simulation is known."""
-        self.sim = simulation
-        self.spec = simulation.spec
-
-        self.file_name = '{}{}.mp4'.format(self.sim.file_name, self.postfix)
-        self.file_path = os.path.join(self.target_dir, self.file_name)
-        cp.utils.ensure_dir_exists(self.file_path)
-        try:
-            os.remove(self.file_path)
-        except FileNotFoundError:
-            pass
-
-        ideal_frame_count = self.length * self.fps
-        self.decimation = int(self.sim.time_steps / ideal_frame_count)
-        if self.decimation < 1:
-            self.decimation = 1
-        self.fps = (self.sim.time_steps / self.decimation) / self.length
-
-        self._initialize_figure()
-
-        self.fig.canvas.draw()
-        self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
-        canvas_width, canvas_height = self.fig.canvas.get_width_height()
-        self.cmdstring = ("ffmpeg",
-                          '-y',
-                          '-r', '{}'.format(self.fps),  # choose fps
-                          '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
-                          '-pix_fmt', 'argb',  # format
-                          '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
-                          '-vcodec', 'mpeg4',  # output encoding
-                          '-q:v', '1',
-                          self.file_path)
-
-        self.ffmpeg = subprocess.Popen(self.cmdstring, stdin = subprocess.PIPE, bufsize = -1)
-
-        logger.info('Initialized {}'.format(self))
-
-    def cleanup(self):
-        self.ffmpeg.communicate()
-        logger.info('Cleaned up {}'.format(self))
-
-    def _initialize_figure(self):
-        logger.debug('Initialized figure for {}'.format(self))
-
-    def _update_frame(self):
-        logger.debug('{} updated frame from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
-
-    def send_frame_to_ffmpeg(self):
-        self.fig.canvas.restore_region(self.background)
-
-        self._update_frame()
-
-        self.fig.canvas.blit(self.fig.bbox)
-
-        self.ffmpeg.stdin.write(self.fig.canvas.tostring_argb())
-
-        logger.debug('{} sent frame to ffpmeg from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
     def __str__(self):
         try:
@@ -135,73 +51,68 @@ class Animator:
                                                                                                                                                self.overlay_probability_current,
                                                                                                                                                self.sim)
 
-
-class CylindricalSliceAnimator(Animator):
     def initialize(self, simulation):
-        Animator.initialize(self, simulation)
-        self.ax_metrics.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_metrics
+        super(QuantumMeshAnimator, self).initialize(simulation)
 
-    def _initialize_figure(self):
-        plt.set_cmap(self.colormap)
+    def _update_data(self):
+        self._update_metric_axis()
+        self._update_mesh_axis()
 
-        self.fig = plt.figure(figsize = (16, 12))
+        super(QuantumMeshAnimator, self)._update_data()
 
-        self.ax_mesh = self.fig.add_axes([.06, .34, .9, .62])
-        self.ax_metrics = self.fig.add_axes([.06, .065, .9, .2])
+    def _make_metrics_axis(self, axis, label_right = False, left_ticks = True, right_ticks = True):
+        self.overlaps_stackplot = axis.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
+                                                 labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$',
+                                                           r'$\left| \left\langle \psi|\psi_{{n \leq {}}} \right\rangle \right|^2$'.format(max(self.sim.spec.test_states, key = lambda s: s.n).n)],
+                                                 colors = ['.3', '.5'],
+                                                 animated = True)
 
-        self._initialize_mesh_axis()
-        self._initialize_time_axis()
+        self.norm_line, = axis.plot(self.sim.times / asec, self.sim.norm_vs_time,
+                                    label = r'$\left\langle \psi|\psi \right\rangle$',
+                                    color = 'black', linewidth = 3,
+                                    animated = True)
 
-    def _initialize_mesh_axis(self):
-        self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
-
-        if self.overlay_probability_current:
-            self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh, plot_limit = self.plot_limit, animated = True)
-
-        self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
-        self.ax_metrics.grid(True)
-
-        self.ax_mesh.set_xlabel(r'$z$ (Bohr radii)', fontsize = 24)
-        self.ax_mesh.set_ylabel(r'$\rho$ (Bohr radii)', fontsize = 24)
-        self.ax_metrics.set_xlabel('Time $t$ (as)', fontsize = 24)
-        self.ax_metrics.set_ylabel('Ionization Metric', fontsize = 24)
-
-        self.ax_metrics.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
-        self.ax_metrics.set_ylim(0, 1)
-
-        self.ax_metrics.tick_params(labelright = True)
-        self.ax_metrics.tick_params(axis = 'both', which = 'major', labelsize = 14)
-        self.ax_mesh.tick_params(axis = 'both', which = 'major', labelsize = 14)
-
-        divider = make_axes_locatable(self.ax_mesh)
-        cax = divider.append_axes("right", size = "2%", pad = 0.05)
-        self.cbar = plt.colorbar(cax = cax, mappable = self.mesh)
-        self.cbar.ax.tick_params(labelsize = 14)
-
-        self.ax_mesh.axis('tight')
-
-    def _initialize_time_axis(self):
         if self.spec.electric_potential is not None:
             self.field_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
-            self.electric_field_line, = self.ax_metrics.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
-                                                             label = r'$|E|/\left|E_{\mathrm{max}}\right|$',
-                                                             color = 'red', linewidth = 2,
-                                                             animated = True)
+            self.electric_field_line, = axis.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
+                                                  label = r'$|E|/\left|E_{\mathrm{max}}\right|$',
+                                                  color = 'red', linewidth = 2,
+                                                  animated = True)
 
-        self.norm_line, = self.ax_metrics.plot(self.sim.times / asec, self.sim.norm_vs_time,
-                                               label = r'$\left\langle \psi|\psi \right\rangle$',
-                                               color = 'black', linestyle = '--', linewidth = 3,
-                                               animated = True)
+        self.time_line, = axis.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
+                                    color = 'gray',
+                                    animated = True)
 
+        self.redraw += [*self.overlaps_stackplot, self.norm_line, self.electric_field_line, self.time_line]
+
+        axis.grid(True)
+
+        axis.set_xlabel('Time $t$ (as)', fontsize = 24)
+        axis.set_ylabel('Ionization Metric', fontsize = 24)
+
+        axis.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
+        axis.set_ylim(-.01, 1.01)
+
+        axis.tick_params(labelleft = left_ticks, labelright = right_ticks)
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
+
+        if label_right:
+            axis.yaxis.set_label_position('right')
+
+    def _update_metric_axis(self):
+        self.redraw = [rd for rd in self.redraw if rd not in self.overlaps_stackplot]
         self.overlaps_stackplot = self.ax_metrics.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
-                                                            labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$',
-                                                                      r'$\left| \left\langle \psi|\psi_{{n \leq {}}} \right\rangle \right|^2$'.format(max(self.sim.spec.test_states, key = lambda s: s.n).n)],
-                                                            colors = ['.3', '.5'],
-                                                            animated = True)
+                                                            labels = ['Initial State Overlap', r'Overlap with $n \leq 5$'], colors = ['.3', '.5'])
+        self.redraw = [*self.overlaps_stackplot] + self.redraw  # this hack is awful, but keeps the new stackplot artists always as the first thing redrawn
 
-        self.time_line, = self.ax_metrics.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
-                                               linestyle = '-.', color = 'gray',
-                                               animated = True)
+        self.norm_line.set_ydata(self.sim.norm_vs_time)
+
+        try:
+            self.electric_field_line.set_ydata(np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max)
+        except AttributeError:
+            pass
+
+        self.time_line.set_xdata([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec])
 
     def _compute_stackplot_overlaps(self):
         initial_overlap = [self.sim.state_overlaps_vs_time[self.spec.initial_state]]
@@ -211,146 +122,129 @@ class CylindricalSliceAnimator(Animator):
 
         return overlaps
 
-    def _update_frame(self):
-        plt.set_cmap(self.colormap)
-        self._update_mesh_axis()
-        self._update_time_axis()
-        super(CylindricalSliceAnimator, self)._update_frame()
+    def _make_mesh_axis(self, axis):
+        raise NotImplementedError
+
+    def _update_mesh_axis(self):
+        raise NotImplementedError
+
+
+class CylindricalSliceAnimator(QuantumMeshAnimator):
+    def _initialize_figure(self):
+        self.fig = plt.figure(figsize = (16, 12))
+
+        self.ax_mesh = self.fig.add_axes([.06, .34, .9, .62])
+        self.ax_metrics = self.fig.add_axes([.06, .065, .9, .2])
+
+        self._make_mesh_axis(self.ax_mesh)
+        self._make_metrics_axis(self.ax_metrics)
+
+        self.ax_metrics.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_metrics
+
+        super(CylindricalSliceAnimator, self)._initialize_figure()
+
+    def _make_mesh_axis(self, axis):
+        self.mesh = self.sim.mesh.attach_g_to_axis(axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
+
+        if self.overlay_probability_current:
+            self.quiver = self.sim.mesh.attach_probability_current_quiver(axis, plot_limit = self.plot_limit, animated = True)
+
+        self.redraw += [self.mesh, self.quiver]
+
+        axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
+
+        axis.set_xlabel(r'$z$ (Bohr radii)', fontsize = 24)
+        axis.set_ylabel(r'$\rho$ (Bohr radii)', fontsize = 24)
+
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
+
+        divider = make_axes_locatable(self.ax_mesh)
+        cax = divider.append_axes("right", size = "2%", pad = 0.05)
+        self.cbar = plt.colorbar(cax = cax, mappable = self.mesh)
+        self.cbar.ax.tick_params(labelsize = 14)
+
+        axis.axis('tight')
+
+        self.redraw += [*axis.xaxis.get_gridlines(), *axis.yaxis.get_gridlines()]
 
     def _update_mesh_axis(self):
         self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
-        self.ax_mesh.draw_artist(self.mesh)
-
-        if self.overlay_probability_current:
-            self.sim.mesh.update_probability_current_quiver(self.quiver, plot_limit = self.plot_limit)
-            self.ax_mesh.draw_artist(self.quiver)
-
-    def _update_time_axis(self):
-        self.overlaps_stackplot = self.ax_metrics.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
-                                                            labels = ['Initial State Overlap', r'Overlap with $n \leq 5$'], colors = ['.3', '.5'])
-        self.time_line.set_xdata([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec])
-
-        for line in self.overlaps_stackplot:
-            self.ax_metrics.draw_artist(line)
-        self.ax_metrics.draw_artist(self.time_line)
 
         try:
-            self.electric_field_line.set_ydata(np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max)
-            self.ax_metrics.draw_artist(self.electric_field_line)
+            self.sim.mesh.update_probability_current_quiver(self.quiver, plot_limit = self.plot_limit)
         except AttributeError:
             pass
 
-        self.norm_line.set_ydata(self.sim.norm_vs_time)
-        self.ax_metrics.draw_artist(self.norm_line)
 
-
-class SphericalSliceAnimator(CylindricalSliceAnimator):
-    def initialize(self, simulation):
-        Animator.initialize(self, simulation)
-        legend = self.ax_metrics.legend(bbox_to_anchor = (1., 1.1), loc = 'lower right', borderaxespad = 0., fontsize = 20,
-                                        fancybox = True, framealpha = 0)
-        # legend must be created here so that it catches all of the lines in ax_metrics
-        # TODO: is this really still true?
-
+class PolarAnimator(QuantumMeshAnimator):
     def _initialize_figure(self):
-        plt.set_cmap(self.colormap)
-
         self.fig = plt.figure(figsize = (18, 12))
 
         self.ax_mesh = self.fig.add_axes([.05, .05, 2 / 3 - 0.05, .9], projection = 'polar')
         self.ax_metrics = self.fig.add_axes([.6, .075, .35, .125])
         self.cbar_axis = self.fig.add_axes([.725, .275, .03, .45])
 
-        # plt.figtext(.62, .87, r'$|g|^2$', fontsize = 50)
+        self._make_mesh_axis(self.ax_mesh)
+        self._make_metrics_axis(self.ax_metrics, label_right = True, left_ticks = False)
+        self._make_cbar_axis(self.cbar_axis)
+
+        self.ax_metrics.legend(bbox_to_anchor = (1., 1.1), loc = 'lower right', borderaxespad = 0., fontsize = 20,
+                               fancybox = True, framealpha = .1)
+
         plt.figtext(.85, .7, r'$|g|^2$', fontsize = 50)
 
-        # plt.figtext(.8, .9, r'Simulation:', fontsize = 22)
-        # plt.figtext(.82, .85, self.sim.name, fontsize = 20)
         plt.figtext(.8, .6, r'Initial State: ${}$'.format(self.spec.initial_state.tex_str), fontsize = 22)
-        self.time_text = plt.figtext(.8, .5, r'$t = {}$ as'.format(uround(self.sim.time, asec, 3)), fontsize = 30, animated = True)
-        # TODO: time text?
-        # TODO: replace with a for over a given list of strings
 
-        self._mesh_setup()
+        self.time_text = plt.figtext(.8, .49, r'$t = {}$ as'.format(uround(self.sim.time, asec, 3)), fontsize = 30, animated = True)
+        self.redraw += [self.time_text]
 
-        self.ax_mesh.set_theta_zero_location('N')
-        self.ax_mesh.set_theta_direction('clockwise')
+    def _update_data(self):
+        super(PolarAnimator, self)._update_data()
 
-        if self.overlay_probability_current:
-            self.quiver = self.sim.mesh.attach_probability_current_quiver(self.ax_mesh, animated = True)
+        self.time_text.set_text(r'$t = {}$ as'.format(uround(self.sim.time, asec, 3)))
 
-        self.norm_line, = self.ax_metrics.plot(self.sim.times / asec, self.sim.norm_vs_time,
-                                               label = r'$\left\langle \psi|\psi \right\rangle$',
-                                               color = 'black', linestyle = '--', linewidth = 3,
-                                               animated = True)
+    def _make_mesh_axis(self, axis):
+        self._make_meshes(axis)
 
-        self.overlaps_stackplot = self.ax_metrics.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
-                                                            labels = [r'$\left| \left\langle \psi|\psi_{\mathrm{init}} \right\rangle \right|^2$',
-                                                                      r'$\left| \left\langle \psi|\psi_{{n \leq {}}} \right\rangle \right|^2$'.format(max(self.sim.spec.test_states, key = lambda s: s.n).n)],
-                                                            colors = ['.3', '.5'],
-                                                            animated = True)
+        axis.set_theta_zero_location('N')
+        axis.set_theta_direction('clockwise')
+        axis.set_rlabel_position(80)
 
-        self.time_line, = self.ax_metrics.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
-                                               linestyle = '-', color = 'gray',
-                                               zorder = 5,
-                                               animated = True)
+        axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
 
-        if self.spec.electric_potential is not None:
-            self.field_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
-            self.electric_field_line, = self.ax_metrics.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
-                                                             label = r'$|E|/\left|E_{\mathrm{max}}\right|$', color = 'red', linewidth = 2,
-                                                             zorder = -1,
-                                                             animated = True)
-
-        self.ax_mesh.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
-        self.ax_mesh.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
-        self.ax_metrics.grid(True)
+        axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
-        self.ax_metrics.set_xlabel('Time (as)', fontsize = 22)
-        self.ax_metrics.set_ylabel('Ionization Metric', fontsize = 22)
-        self.ax_metrics.yaxis.set_label_position('right')
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 20)  # increase size of tick labels
+        axis.tick_params(axis = 'y', which = 'major', colors = 'silver', pad = 3)  # make r ticks a color that shows up against the colormesh
 
-        self.ax_metrics.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
-        self.ax_metrics.set_ylim(0, 1)
+        axis.axis('tight')
 
-        self.ax_mesh.tick_params(axis = 'both', which = 'major', labelsize = 20)  # increase size of tick labels
-        self.ax_mesh.tick_params(axis = 'y', which = 'major', colors = 'silver', pad = 3)  # make r ticks a color that shows up against the colormesh
-        self.ax_mesh.tick_params(axis = 'both', which = 'both', length = 0)
+        self.redraw += [*axis.xaxis.get_gridlines(), *axis.yaxis.get_gridlines(), *axis.yaxis.get_ticklabels()]
 
-        self.ax_mesh.set_rlabel_position(80)
-
-        self.ax_metrics.tick_params(labelleft = False, labelright = True)
-        self.ax_metrics.tick_params(axis = 'both', which = 'major', labelsize = 14)
-
-        self.cbar = plt.colorbar(mappable = self.mesh, cax = self.cbar_axis)
+    def _make_cbar_axis(self, axis):
+        self.cbar = plt.colorbar(mappable = self.mesh, cax = axis)
         self.cbar.ax.tick_params(labelsize = 14)
 
-        self.ax_mesh.axis('tight')
-        # self.ax_metrics.axis('tight')
 
-        if self.plot_limit is None:
-            self.ax_mesh.set_rmax((self.sim.mesh.r_max - (self.sim.mesh.delta_r / 2)) / bohr_radius)
-        else:
-            self.ax_mesh.set_rmax(self.plot_limit / bohr_radius)
-
-    def _mesh_setup(self):
-        self.mesh, self.mesh_mirror = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit,
+class SphericalSliceAnimator(PolarAnimator):
+    def _make_meshes(self, axis):
+        self.mesh, self.mesh_mirror = self.sim.mesh.attach_g_to_axis(axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit,
                                                                      animated = True)
+
+        self.redraw += [self.mesh, self.mesh_mirror]
 
     def _update_mesh_axis(self):
         self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
         self.sim.mesh.update_g_mesh(self.mesh_mirror, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
 
-        self.ax_mesh.draw_artist(self.mesh)
-        self.ax_mesh.draw_artist(self.mesh_mirror)
-
-        if self.overlay_probability_current:
+        try:
             self.sim.mesh.update_probability_current_quiver(self.quiver)
-            self.ax_mesh.draw_artist(self.quiver)
+        except AttributeError:
+            pass
 
 
-class SphericalHarmonicAnimator(SphericalSliceAnimator):
+class SphericalHarmonicAnimator(PolarAnimator):
     def __init__(self, renormalize_l_decomposition = True, **kwargs):
         super(SphericalHarmonicAnimator, self).__init__(**kwargs)
 
@@ -359,56 +253,56 @@ class SphericalHarmonicAnimator(SphericalSliceAnimator):
     def _initialize_figure(self):
         super(SphericalHarmonicAnimator, self)._initialize_figure()
 
-        self.ax_ang_mom = self.fig.add_axes([.6, .85, .345, .125])  # TODO: break all inits into separate functions, standardize the way they're called
+        self.ax_ang_mom = self.fig.add_axes([.6, .84, .345, .125])
 
-        l_plot = self.sim.mesh.norm_by_l
-        if self.renormalize_l_decomposition:
-            l_plot /= self.sim.mesh.norm
-        self.ang_mom_bar = self.ax_ang_mom.bar(self.sim.mesh.l, l_plot,
-                                               align = 'center', color = '.5',
-                                               animated = True)
+        self._make_ang_mom_axis(self.ax_ang_mom)
 
-        self.ax_ang_mom.yaxis.grid(True, zorder = 10)
+    def _update_data(self):
+        super(SphericalHarmonicAnimator, self)._update_data()
 
-        self.ax_ang_mom.set_xlabel(r'Orbital Angular Momentum $l$', fontsize = 22)  # TODO: change all angular momentum l to \ell?
-        l_label = r'$\left| \left\langle \psi | Y^l_0 \right\rangle \right|^2$'
-        if self.renormalize_l_decomposition:
-            l_label += r'$/\left\langle\psi|\psi\right\rangle$'
-        self.ax_ang_mom.set_ylabel(l_label, fontsize = 22)  # TODO: change all angular momentum l to \ell?
-        self.ax_ang_mom.yaxis.set_label_position('right')
+        self._update_ang_mom_axis()
 
-        self.ax_ang_mom.set_ylim(0, 1)
-        self.ax_ang_mom.set_xlim(np.min(self.sim.mesh.l) - 0.5, np.max(self.sim.mesh.l) + 0.5)
+    def _make_meshes(self, axis):
+        self.mesh = self.sim.mesh.attach_g_to_axis(axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
 
-        self.ax_ang_mom.tick_params(labelleft = False, labelright = True)
-        self.ax_ang_mom.tick_params(axis = 'both', which = 'major', labelsize = 14)
-
-    def _mesh_setup(self):
-        self.mesh = self.sim.mesh.attach_g_to_axis(self.ax_mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
+        self.redraw += [self.mesh]
 
     def _update_mesh_axis(self):
         self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, slicer = 'get_mesh_slicer_spatial')
-        self.ax_mesh.draw_artist(self.mesh)
 
-        if self.overlay_probability_current:
+        try:
             self.sim.mesh.update_probability_current_quiver(self.quiver)
-            self.ax_mesh.draw_artist(self.quiver)
+        except AttributeError:
+            pass
 
-        for line in it.chain(self.ax_mesh.yaxis.get_gridlines(), self.ax_mesh.xaxis.get_gridlines()):
-            self.ax_mesh.draw_artist(line)
+    def _make_ang_mom_axis(self, axis):
+        l_plot = self.sim.mesh.norm_by_l
+        if self.renormalize_l_decomposition:
+            l_plot /= self.sim.mesh.norm
+        self.ang_mom_bar = axis.bar(self.sim.mesh.l, l_plot,
+                                    align = 'center', color = '.5',
+                                    animated = True)
 
-        for text in self.ax_mesh.yaxis.get_ticklabels():
-            self.ax_mesh.draw_artist(text)
+        self.redraw += [*self.ang_mom_bar]
 
-    def _update_time_axis(self):
-        super(SphericalHarmonicAnimator, self)._update_time_axis()
+        axis.yaxis.grid(True, zorder = 10)
 
+        axis.set_xlabel(r'Orbital Angular Momentum $\ell$', fontsize = 22)
+        l_label = r'$\left| \left\langle \psi | Y^{\ell}_0 \right\rangle \right|^2$'
+        if self.renormalize_l_decomposition:
+            l_label += r'$/\left\langle\psi|\psi\right\rangle$'
+        axis.set_ylabel(l_label, fontsize = 22)
+        axis.yaxis.set_label_position('right')
+
+        axis.set_ylim(0, 1)
+        axis.set_xlim(np.min(self.sim.mesh.l) - 0.4, np.max(self.sim.mesh.l) + 0.4)
+
+        axis.tick_params(labelleft = False, labelright = True)
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
+
+    def _update_ang_mom_axis(self):
         l_plot = self.sim.mesh.norm_by_l
         if self.renormalize_l_decomposition:
             l_plot /= self.sim.mesh.norm
         for bar, height in zip(self.ang_mom_bar, l_plot):
             bar.set_height(height)
-            self.ax_ang_mom.draw_artist(bar)
-
-        self.time_text.set_text(r'$t = {} \, \mathrm{{as}}$'.format(uround(self.sim.time, asec, 3)))
-        self.ax_metrics.draw_artist(self.time_text)

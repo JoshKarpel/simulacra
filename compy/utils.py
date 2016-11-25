@@ -19,8 +19,7 @@ from compy.units import *
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-
-LOG_FORMATTER = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
+LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] ~ %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
 
 class Logger:
@@ -223,7 +222,7 @@ def ensure_dir_exists(path):
         make_path = split_path[0]
     os.makedirs(make_path, exist_ok = True)
 
-    logger.debug('Ensured path exists: {}'.format(make_path))
+    logger.debug('Ensured dir exists ({})'.format(make_path))
 
 
 def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'png', img_scale = 1, transparent = True, **kwargs):

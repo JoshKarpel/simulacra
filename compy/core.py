@@ -125,3 +125,106 @@ class Simulation(utils.Beet):
                 '   Run Time: {}'.format(self.run_time)]
 
         return '\n'.join((str(self), *diag, self.spec.info()))
+
+
+class Animator:
+    """
+    A class that handles sending frames to ffmpeg to create animations.
+
+    ffmpeg must be visible on the system path.
+    """
+
+    def __init__(self, postfix = '', target_dir = None,
+                 length = 30, fps = 30,
+                 colormap = plt.cm.inferno):
+        if target_dir is None:
+            target_dir = os.getcwd()
+        self.target_dir = target_dir
+
+        postfix = cp.utils.strip_illegal_characters(postfix)
+        if postfix != '' and not postfix.startswith('_'):
+            postfix = '_' + postfix
+        self.postfix = postfix
+
+        self.length = length
+        self.fps = fps
+        self.colormap = colormap
+
+        self.redraw = []
+
+        self.sim = None
+        self.spec = None
+        self.fig = None
+
+    def __str__(self):
+        return '{}(postfix = "{}")'.format(self.__class__.__name__, self.postfix)
+
+    def __repr__(self):
+        return '{}(postfix = {})'.format(self.__class__.__name__, self.postfix)
+
+    def initialize(self, simulation):
+        """Hook for second part of initialization, once the Simulation is known."""
+        self.sim = simulation
+        self.spec = simulation.spec
+
+        self.file_name = '{}{}.mp4'.format(self.sim.file_name, self.postfix)
+        self.file_path = os.path.join(self.target_dir, self.file_name)
+        cp.utils.ensure_dir_exists(self.file_path)
+        try:
+            os.remove(self.file_path)
+        except FileNotFoundError:
+            pass
+
+        ideal_frame_count = self.length * self.fps
+        self.decimation = int(self.sim.time_steps / ideal_frame_count)
+        if self.decimation < 1:
+            self.decimation = 1
+        self.fps = (self.sim.time_steps / self.decimation) / self.length
+
+        self._initialize_figure()
+
+        self.fig.canvas.draw()
+        self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
+        canvas_width, canvas_height = self.fig.canvas.get_width_height()
+        self.cmdstring = ("ffmpeg",
+                          '-y',
+                          '-r', '{}'.format(self.fps),  # choose fps
+                          '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
+                          '-pix_fmt', 'argb',  # format
+                          '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
+                          '-vcodec', 'mpeg4',  # output encoding
+                          '-q:v', '1',
+                          self.file_path)
+
+        self.ffmpeg = subprocess.Popen(self.cmdstring, stdin = subprocess.PIPE, bufsize = -1)
+
+        logger.info('Initialized {}'.format(self))
+
+    def cleanup(self):
+        self.ffmpeg.communicate()
+        logger.info('Cleaned up {}'.format(self))
+
+    def _initialize_figure(self):
+        logger.debug('Initialized figure for {}'.format(self))
+
+    def _update_data(self):
+        logger.debug('{} updated data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
+
+    def _redraw_frame(self):
+        plt.set_cmap(self.colormap)
+
+        self.fig.canvas.restore_region(self.background)
+
+        self._update_data()
+        for rd in self.redraw:
+            self.fig.draw_artist(rd)
+
+        self.fig.canvas.blit(self.fig.bbox)
+
+        logger.debug('Redrew frame for {}'.format(self))
+
+    def send_frame_to_ffmpeg(self):
+        self._redraw_frame()
+        self.ffmpeg.stdin.write(self.fig.canvas.tostring_argb())
+
+        logger.debug('{} sent frame to ffpmeg from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
