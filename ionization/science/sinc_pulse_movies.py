@@ -30,6 +30,7 @@ def run(spec):
             sim.plot_angular_momentum_vs_time(target_dir = spec.out_dir_mod, renormalize = True, log = True, name_postfix = '_log_renorm')
         except Exception as e:
             logger.exception(e)
+            raise e
 
 
 if __name__ == '__main__':
