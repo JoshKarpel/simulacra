@@ -303,6 +303,6 @@ class SphericalHarmonicAnimator(PolarAnimator):
     def _update_ang_mom_axis(self):
         l_plot = self.sim.mesh.norm_by_l
         if self.renormalize_l_decomposition:
-            l_plot /= self.sim.mesh.norm
+            l_plot /= self.sim.norm_vs_time[self.sim.time_index]
         for bar, height in zip(self.ang_mom_bar, l_plot):
             bar.set_height(height)

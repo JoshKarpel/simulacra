@@ -1287,7 +1287,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         self.l = np.array(range(self.spec.l_points))
         self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.spec.l_points))
-        self.theta_points = self.spec.l_points * 5
+        self.theta_points = min(self.spec.l_points * 5, 360)
         self.phi_points = self.theta_points
 
         # self.l_mesh, self.r_mesh = np.meshgrid(self.l, self.r, indexing = 'ij')
@@ -1462,11 +1462,18 @@ class SphericalHarmonicMesh(QuantumMesh):
         raise NotImplementedError
 
     def evolve(self, time_step):
+        pre_evolve_norm = self.norm
         getattr(self, 'evolve_' + self.spec.evolution_method)(time_step)
+        norm_diff_evolve = pre_evolve_norm - self.norm
+        if norm_diff_evolve / pre_evolve_norm > .001:
+            logger.warning('Evolution may be dangerously non-unitary, norm decreased by {} ({} %) during evolution step'.format(norm_diff_evolve, norm_diff_evolve / pre_evolve_norm))
 
         if self.spec.mask is not None:
+            pre_mask_norm = self.norm
             self.g_mesh *= self.spec.mask(r = self.r_mesh)
-            logger.debug('Applied mask {} to g_mesh for {} {}'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name))
+            norm_diff_mask = pre_mask_norm - self.norm
+            logger.debug('Applied mask {} to g_mesh for {} {}, removing {} norm'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name, norm_diff_mask))
+            return norm_diff_mask
 
     def evolve_CN(self, time_step):
         tau = time_step / (2 * hbar)
@@ -1509,35 +1516,6 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.g_mesh = self.wrap_vector(g_vector, 'l')
 
     def _get_split_operator_evolution_matrices(self, a):
-        # even_diag = np.zeros(len(a) + 1, dtype = np.complex128)
-        # even_offdiag = np.zeros(len(a), dtype = np.complex128)
-        # odd_diag = np.zeros(len(a) + 1, dtype = np.complex128)
-        # odd_offdiag = np.zeros(len(a), dtype = np.complex128)
-        #
-        # odd_diag[0] = 1
-        # odd_diag[-1] = 1
-        #
-        # for ii in range(0, len(a), 2):
-        #     a_ii = a[ii]
-        #     cosa = np.cos(a_ii)
-        #     sina = -1j * np.sin(a_ii)
-        #
-        #     even_diag[ii] = cosa
-        #     even_diag[ii + 1] = cosa
-        #     even_offdiag[ii] = sina
-        #
-        #     try:
-        #         a_ii = a[ii + 1]
-        #         cosa = np.cos(a_ii)
-        #         sina = -1j * np.sin(a_ii)
-        #         odd_diag[ii] = cosa
-        #         odd_diag[ii + 1] = cosa
-        #         odd_offdiag[ii] = sina
-        #     except IndexError:
-        #         pass
-
-        # above code was moved into cp.cy, doesn't seem to have made it much faster though
-
         even_diag, even_offdiag, odd_diag, odd_offdiag = cy.generate_split_operator_evolution_matrices(a)
 
         even = sparse.diags([even_offdiag, even_diag, even_offdiag], offsets = [-1, 0, 1])
@@ -1637,6 +1615,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         return special.sph_harm(0, l_mesh, 0, theta_mesh)
 
     def _reconstruct_spatial_mesh(self, mesh):
+        """Reconstruct the spatial (r, theta) representation of a mesh from the (r, l) representation."""
         return np.sum(np.tile(mesh, (self.theta_points, 1, 1)) * self._sph_harm_l_theta_mesh, axis = 1).T
 
     @property
@@ -1647,7 +1626,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     @property
     @cp.utils.watcher(lambda s: s.sim.time)
     def space_psi(self):
-        return self._reconstruct_spatial_mesh(self.psi_mesh)
+        return self._reconstruct_spatial_mesh(self.psi_mesh)  # TODO: should reference space_g, remove watcher
 
     def abs_g_squared(self, normalize = False, log = False):
         out = np.abs(self.space_g) ** 2
@@ -1798,6 +1777,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         # simulation data storage
         self.norm_vs_time = np.zeros(self.time_steps) * np.NaN
+        self.norm_diff_mask_vs_time = np.zeros(self.time_steps) * np.NaN
         self.energy_expectation_value_vs_time_internal = np.zeros(self.time_steps) * np.NaN
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
@@ -1856,7 +1836,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
             largest_l = self.mesh.spherical_harmonics[-1]
             norm_in_largest_l = self.norm_by_harmonic_vs_time[self.mesh.spherical_harmonics[-1]][time_index]
-            if norm_in_largest_l > 0.001:
+            if norm_in_largest_l > self.norm_vs_time[self.time_index] / 1000:
                 logger.warning('Wavefunction norm in largest angular momentum state is large (l = {}, norm = {}), consider increasing l bound'.format(largest_l, norm_in_largest_l))
 
         logger.debug('{} {} stored data for time index {}'.format(self.__class__.__name__, self.name, time_index))
@@ -1882,7 +1862,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
             if self.time_index == self.time_steps:
                 break
 
-            self.mesh.evolve(self.times[self.time_index] - self.times[self.time_index - 1])  # evolve the mesh forward to the next time step
+            norm_diff_mask = self.mesh.evolve(self.times[self.time_index] - self.times[self.time_index - 1])  # evolve the mesh forward to the next time step
+            self.norm_diff_mask_vs_time[self.time_index] = norm_diff_mask  # move to store data so it has the right index?
 
             logger.debug('{} {} ({}) evolved to time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.file_name, self.time_index, self.time_steps - 1,
                                                                                  np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
@@ -1932,7 +1913,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_overlaps.set_yscale('log')
             ax_overlaps.set_ylim(top = 1.0)
         else:
-            ax_overlaps.set_ylim(-0.01, 1.01)
+            ax_overlaps.set_ylim(0, 1.0)
             ax_overlaps.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
         ax_overlaps.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
 
@@ -1999,7 +1980,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_momentums.set_yscale('log')
             ax_momentums.set_ylim(top = 1.0)
         else:
-            ax_momentums.set_ylim(0.01, 1.01)
+            ax_momentums.set_ylim(0, 1.0)
             ax_momentums.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
         ax_momentums.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
 

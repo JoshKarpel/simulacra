@@ -48,6 +48,9 @@ class Specification(utils.Beet):
     def to_simulation(self):
         return self.simulation_type(self)
 
+    def info(self):
+        return ''
+
 
 class Simulation(utils.Beet):
     """
@@ -117,9 +120,11 @@ class Simulation(utils.Beet):
         return '{}(spec = {}, uid = {})'.format(self.__class__.__name__, repr(self.spec), self.uid)
 
     def run_simulation(self):
+        """Hook method for running the simulation."""
         raise NotImplementedError
 
     def info(self):
+        """Return a nicely-formatted string containing information about the Simulation."""
         diag = ['Status: {}'.format(self.status),
                 '   Start Time: {}'.format(self.start_time),
                 '   Latest Load Time: {}'.format(self.latest_load_time),
@@ -140,6 +145,16 @@ class Animator:
     def __init__(self, postfix = '', target_dir = None,
                  length = 30, fps = 30,
                  colormap = plt.cm.inferno):
+        """
+        Construct an Animator instance.
+
+        The animation should have a single figure, with the reference stored in self.fig
+        :param postfix:
+        :param target_dir:
+        :param length:
+        :param fps:
+        :param colormap:
+        """
         if target_dir is None:
             target_dir = os.getcwd()
         self.target_dir = target_dir
@@ -166,7 +181,11 @@ class Animator:
         return '{}(postfix = {})'.format(self.__class__.__name__, self.postfix)
 
     def initialize(self, simulation):
-        """Hook for second part of initialization, once the Simulation is known."""
+        """
+        Initialize the Animation by setting the Simulation and Specification, determining the target path for output, determining fps and decimation, and setting up the ffmpeg subprocess.
+
+        self._initialize_figure() during the execution of this method.
+        """
         self.sim = simulation
         self.spec = simulation.spec
 
@@ -208,9 +227,11 @@ class Animator:
         logger.info('Cleaned up {}'.format(self))
 
     def _initialize_figure(self):
+        """Hook for a method to initialize the animation's figure."""
         logger.debug('Initialized figure for {}'.format(self))
 
     def _update_data(self):
+        """Hook for a method to update the data for each animated figure element."""
         logger.debug('{} updated data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
     def _redraw_frame(self):
@@ -228,6 +249,7 @@ class Animator:
 
     def send_frame_to_ffmpeg(self):
         self._redraw_frame()
+
         self.ffmpeg.stdin.write(self.fig.canvas.tostring_argb())
 
         logger.debug('{} sent frame to ffpmeg from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
