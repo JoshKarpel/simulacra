@@ -5,5 +5,4 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.NullHandler())
 
 from .core import *
-from ionization import potentials
 

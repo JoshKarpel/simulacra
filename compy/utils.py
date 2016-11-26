@@ -1,5 +1,6 @@
 import datetime as dt
-import functools
+import functools as ft
+import itertools as it
 import logging
 import multiprocessing as mp
 import collections
@@ -18,8 +19,7 @@ from compy.units import *
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-
-LOG_FORMATTER = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
+LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] ~ %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
 
 class Logger:
@@ -222,7 +222,7 @@ def ensure_dir_exists(path):
         make_path = split_path[0]
     os.makedirs(make_path, exist_ok = True)
 
-    logger.debug('Ensured path exists: {}'.format(make_path))
+    logger.debug('Ensured dir exists ({})'.format(make_path))
 
 
 def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'png', img_scale = 1, transparent = True, **kwargs):
@@ -371,14 +371,14 @@ class cached_property:
 
 
 def method_dispatch(func):
-    """Works the same as functools.singledispatch, but uses the second argument instead of the first so that it can be used for instance methods."""
-    dispatcher = functools.singledispatch(func)
+    """Works the same as ft.singledispatch, but uses the second argument instead of the first so that it can be used for instance methods."""
+    dispatcher = ft.singledispatch(func)
 
     def wrapper(*args, **kw):
         return dispatcher.dispatch(args[1].__class__)(*args, **kw)
 
     wrapper.register = dispatcher.register
-    functools.update_wrapper(wrapper, func)
+    ft.update_wrapper(wrapper, func)
 
     return wrapper
 
@@ -391,10 +391,9 @@ def memoize(copy_output = False):
     :return: a Memoize decorator
     """
 
-    # TODO: add @functools.wraps ?
+    # TODO: add @ft.wraps ?
 
     class Memoize:
-
         __slots__ = ('func', 'memo', '__doc__')
 
         def __init__(self, func):
@@ -433,11 +432,62 @@ def memoize(copy_output = False):
 
             return value
 
-        def __get__(self, obj, objtype):
+        def __get__(self, instance, cls):
             # support instance methods
-            return functools.partial(self.__call__, obj)
+            return ft.partial(self.__call__, instance)
 
     return Memoize
+
+
+def watcher(watcher, copy_output = False):
+    """
+    Returns a decorator that memoizes the result of a method call until the watcher function returns a different value.
+
+    The watcher function is passed the instance that the original method is bound to.
+
+    :param watcher: a function which is called to check whether to recompute the wrapped function
+    :param copy_output: if True, the output of the memo will be deepcopied before returning. Defaults to False.
+    :return: a Watcher decorator
+    """
+
+    class Watcher:
+        __slots__ = ('func', 'cached', 'watched', '__doc__')
+
+        def __init__(self, func):
+            self.func = func
+            self.cached = None
+            self.watched = None
+
+            self.__doc__ = func.__doc__
+
+        def __str__(self):
+            return 'Watcher wrapper over {}'.format(self.func.__name__)
+
+        def __repr__(self):
+            return 'watcher(copy_output = {})({})'.format(copy_output, repr(self.func))
+
+        def __call__(self, instance, *args, **kwargs):
+            check = watcher(instance)
+
+            if self.watched != check:
+                self.cached = self.func(instance, *args, **kwargs)
+                self.watched = check
+
+            value = self.cached
+
+            if copy_output:
+                try:
+                    value = value.copy()
+                except AttributeError:
+                    value = deepcopy(value)
+
+            return value
+
+        def __get__(self, instance, cls):
+            # support instance methods
+            return ft.partial(self.__call__, instance)
+
+    return Watcher
 
 
 class Timer:

@@ -13,11 +13,11 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
-        bound = 150
+        bound = 50
         # points = 2 ** 8
         points = bound * 4
         # angular_points = 2 ** 6
-        angular_points = 50
+        angular_points = 25
 
         laser_frequency = c / (1064 * nm)
         laser_period = 1 / laser_frequency
