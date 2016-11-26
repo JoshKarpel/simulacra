@@ -72,7 +72,7 @@ class SphericalHarmonic:
         return spc.sph_harm(self.m, self.l, phi, theta)
 
 
-@utils.memoize()
+@utils.memoize
 def fibonacci(n):
     """Return the n-th Fibonacci number, with Fibonacci(0) = Fibonacci(1) = 1."""
     if 0 <= n == int(n):

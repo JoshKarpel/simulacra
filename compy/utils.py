@@ -19,7 +19,7 @@ from compy.units import *
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] ~ %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
+LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] > %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
 
 class Logger:
@@ -28,7 +28,8 @@ class Logger:
     def __init__(self, *logger_names,
                  manual_logger_name = 'compy',
                  stdout_logs = True, stdout_level = logging.DEBUG,
-                 file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'a'):
+                 file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'a',
+                 disable_level = logging.NOTSET):
         """
         Initialize a Logger context manager.
 
@@ -41,6 +42,7 @@ class Logger:
         :param file_name: the filename for the log file, defaults to 'log__{timestamp}'
         :param file_dir: the director for the log file, defaults to the current working directory
         :param file_mode: the file mode to open the log file with, defaults to 'a' (append)
+        :param disable_level: log level to disable, short-circuits propagation of logs <= this level
         """
         self.logger_names = list(logger_names)
         if manual_logger_name is not None and manual_logger_name not in self.logger_names:
@@ -62,10 +64,14 @@ class Logger:
 
         self.file_mode = file_mode
 
+        self.disable_level = disable_level
+
         self.logger = None
 
     def __enter__(self):
         """Enter special method. Gets a logger with the specified name, replace it's handlers with, and returns itself."""
+        logging.disable(self.disable_level)
+
         self.loggers = {name: logging.getLogger(name) for name in self.logger_names}
 
         new_handlers = [logging.NullHandler()]
@@ -99,6 +105,8 @@ class Logger:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit special method. Restores the logger to it's pre-context state."""
+        logging.disable(logging.NOTSET)
+
         for name, logger in self.loggers.items():
             logger.level = self.old_levels[name]
             logger.handlers = self.old_handlers[name]
@@ -383,60 +391,17 @@ def method_dispatch(func):
     return wrapper
 
 
-def memoize(copy_output = False):
-    """
-    Returns a decorator that memoizes the result of a function call.
+def memoize(func):
+    func.memo = {}
 
-    :param copy_output: if True, the output of the memo will be deepcopied before returning. Defaults to False.
-    :return: a Memoize decorator
-    """
+    @ft.wraps(func)
+    def memoizer(*args, **kwargs):
+        key = str(args) + str(kwargs)
+        if key not in func.memo:
+            func.memo[key] = func(*args, **kwargs)
+        return func.memo[key]
 
-    # TODO: add @ft.wraps ?
-
-    class Memoize:
-        __slots__ = ('func', 'memo', '__doc__')
-
-        def __init__(self, func):
-            self.func = func
-            self.memo = {}
-
-            self.__doc__ = func.__doc__
-
-        def __str__(self):
-            return 'Memoized wrapper over {}'.format(self.func.__name__)
-
-        def __repr__(self):
-            return 'memoize(copy_output = {})({})'.format(copy_output, repr(self.func))
-
-        def __call__(self, *args, **kwargs):
-            key = args
-            for k, v in kwargs.items():
-                try:
-                    key += (k, tuple(v))
-                except TypeError:
-                    key += (k, v)
-
-            try:
-                value = self.memo[key]
-                # logger.debug('Hit on memo for {}, key = {}'.format(repr(self.func), key))
-            except (KeyError, TypeError):
-                value = self.func(*args, **kwargs)
-                self.memo[key] = value
-                # logger.debug('Miss on memo for {}, key = {}'.format(repr(self.func), key))
-
-            if copy_output:
-                try:
-                    value = value.copy()
-                except AttributeError:
-                    value = deepcopy(value)
-
-            return value
-
-        def __get__(self, instance, cls):
-            # support instance methods
-            return ft.partial(self.__call__, instance)
-
-    return Memoize
+    return memoizer
 
 
 def watcher(watcher, copy_output = False):

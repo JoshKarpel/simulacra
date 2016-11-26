@@ -532,12 +532,12 @@ class CylindricalSliceMesh(QuantumMesh):
         self.mesh_shape = np.shape(self.r_mesh)
 
     @property
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def z_mesh(self):
         return np.meshgrid(self.z, self.rho, indexing = 'ij')[0]
 
     @property
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def rho_mesh(self):
         return np.meshgrid(self.z, self.rho, indexing = 'ij')[1]
 
@@ -613,7 +613,7 @@ class CylindricalSliceMesh(QuantumMesh):
     def norm(self):
         return np.abs(self.inner_product())
 
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
@@ -624,7 +624,7 @@ class CylindricalSliceMesh(QuantumMesh):
         elif gauge == 'velocity':
             raise NotImplementedError
 
-    @cp.utils.memoize(copy_output = True)
+    @cp.utils.memoize
     def get_kinetic_energy_matrix_operators(self):
         """Get the mesh kinetic energy operator matrices for z and rho."""
         z_prefactor = -(hbar ** 2) / (2 * self.spec.test_mass * (self.delta_z ** 2))
@@ -633,7 +633,7 @@ class CylindricalSliceMesh(QuantumMesh):
         z_diagonal = z_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         z_offdiagonal = z_prefactor * np.array([1 if (z_index + 1) % self.spec.z_points != 0 else 0 for z_index in range(self.mesh_points - 1)], dtype = np.complex128)
 
-        @cp.utils.memoize()
+        @cp.utils.memoize
         def c(j):
             return j / np.sqrt((j ** 2) - 0.25)
 
@@ -650,7 +650,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         return z_kinetic, rho_kinetic
 
-    @cp.utils.memoize(copy_output = True)
+    @cp.utils.memoize
     def get_internal_hamiltonian_matrix_operators(self):
         """Get the mesh internal Hamiltonian matrix operators for z and rho."""
         z_kinetic, rho_kinetic = self.get_kinetic_energy_matrix_operators()
@@ -696,7 +696,7 @@ class CylindricalSliceMesh(QuantumMesh):
     def energy_expectation_value(self):
         return np.real(self.inner_product(mesh_b = self.hg_mesh()))
 
-    @cp.utils.memoize(copy_output = True)
+    @cp.utils.memoize
     def get_probability_current_matrix_operators(self):
         """Get the mesh probability current operators for z and rho."""
         z_prefactor = hbar / (4 * pi * self.spec.test_mass * self.delta_rho * self.delta_z)
@@ -712,7 +712,7 @@ class CylindricalSliceMesh(QuantumMesh):
                 z_offdiagonal[z_index] = 1 / (j + 0.5)
         z_offdiagonal *= z_prefactor
 
-        @cp.utils.memoize()
+        @cp.utils.memoize
         def d(j):
             return 1 / np.sqrt((j ** 2) - 0.25)
 
@@ -765,6 +765,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         # add the external potential to the Hamiltonian matrices and multiply them by i * tau to get them ready for the next steps
         hamiltonian_z, hamiltonian_rho = self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_z, hamiltonian_rho = hamiltonian_z.copy(), hamiltonian_rho.copy()
 
         hamiltonian_z.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'z')
         hamiltonian_z *= 1j * tau
@@ -802,7 +803,7 @@ class CylindricalSliceMesh(QuantumMesh):
             self.g_mesh *= self.spec.mask(r = self.r_mesh)
             logger.debug('Applied mask {} to g_mesh for {} {}'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name))
 
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
         if distance_from_center is None:
@@ -937,12 +938,12 @@ class SphericalSliceMesh(QuantumMesh):
         self.mesh_shape = np.shape(self.r_mesh)
 
     @property
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def r_mesh(self):
         return np.meshgrid(self.r, self.theta, indexing = 'ij')[0]
 
     @property
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def theta_mesh(self):
         return np.meshgrid(self.r, self.theta, indexing = 'ij')[1]
 
@@ -1005,7 +1006,7 @@ class SphericalSliceMesh(QuantumMesh):
     def norm(self):
         return np.abs(self.inner_product())
 
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
@@ -1016,7 +1017,7 @@ class SphericalSliceMesh(QuantumMesh):
         elif gauge == 'velocity':
             raise NotImplementedError
 
-    @cp.utils.memoize(copy_output = True)
+    @cp.utils.memoize
     def get_kinetic_energy_matrix_operators(self):
         r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
         theta_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * ((self.delta_r * self.delta_theta) ** 2))
@@ -1024,19 +1025,19 @@ class SphericalSliceMesh(QuantumMesh):
         r_diagonal = r_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         r_offdiagonal = r_prefactor * np.array([1 if (z_index + 1) % self.spec.r_points != 0 else 0 for z_index in range(self.mesh_points - 1)], dtype = np.complex128)
 
-        @cp.utils.memoize()
+        @cp.utils.memoize
         def theta_j_prefactor(x):
             return 1 / (x + 0.5) ** 2
 
-        @cp.utils.memoize()
+        @cp.utils.memoize
         def sink(x):
             return np.sin(x * self.delta_theta)
 
-        @cp.utils.memoize()
+        @cp.utils.memoize
         def sqrt_sink_ratio(x_num, x_den):
             return np.sqrt(sink(x_num) / sink(x_den))
 
-        @cp.utils.memoize()
+        @cp.utils.memoize
         def cotank(x):
             return 1 / np.tan(x * self.delta_theta)
 
@@ -1063,7 +1064,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         return r_kinetic, theta_kinetic
 
-    @cp.utils.memoize(copy_output = True)
+    @cp.utils.memoize
     def get_internal_hamiltonian_matrix_operators(self):
         r_kinetic, theta_kinetic = self.get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
@@ -1108,7 +1109,7 @@ class SphericalSliceMesh(QuantumMesh):
     def energy_expectation_value(self):
         return np.real(self.inner_product(mesh_b = self.hg_mesh()))
 
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def get_probability_current_matrix_operators(self):
         raise NotImplementedError
 
@@ -1128,8 +1129,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         # add the external potential to the Hamiltonian matrices and multiply them by i * tau to get them ready for the next steps
         hamiltonian_r, hamiltonian_theta = self.get_internal_hamiltonian_matrix_operators()
-        hamiltonian_r = hamiltonian_r.copy()
-        hamiltonian_theta = hamiltonian_theta.copy()
+        hamiltonian_r, hamiltonian_theta = hamiltonian_r.copy(), hamiltonian_theta.copy()
 
         hamiltonian_r.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'r')
         hamiltonian_r *= 1j * tau
@@ -1167,7 +1167,7 @@ class SphericalSliceMesh(QuantumMesh):
             self.g_mesh *= self.spec.mask(r = self.r_mesh)
             logger.debug('Applied mask {} to g_mesh for {} {}'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name))
 
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
         if distance_from_center is None:
@@ -1300,12 +1300,12 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.g_mesh = self.g_for_state(self.spec.initial_state)
 
     @property
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def r_mesh(self):
         return np.meshgrid(self.l, self.r, indexing = 'ij')[1]
 
     @property
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def l_mesh(self):
         return np.meshgrid(self.l, self.r, indexing = 'ij')[0]
 
@@ -1313,7 +1313,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     def g_factor(self):
         return self.r
 
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def c(self, l):
         return (l + 1) / np.sqrt(((2 * l) + 1) * ((2 * l) + 3))
 
@@ -1375,7 +1375,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         elif gauge == 'velocity':
             raise NotImplementedError
 
-    @cp.utils.memoize(copy_output = True)
+    @cp.utils.memoize
     def g_for_state(self, state):
         g = np.zeros(self.mesh_shape)
 
@@ -1383,7 +1383,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return g
 
-    @cp.utils.memoize(copy_output = True)
+    @cp.utils.memoize
     def get_kinetic_energy_matrix_operators(self):
         r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
         l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: ???
@@ -1391,7 +1391,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         r_diagonal = r_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         r_offdiagonal = r_prefactor * np.ones(self.mesh_points - 1, dtype = np.complex128)
 
-        @cp.utils.memoize()
+        @cp.utils.memoize
         def a(l):
             return l * np.sqrt(1 / (4 * (l ** 2) - 1))
 
@@ -1411,7 +1411,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return r_kinetic, l_kinetic
 
-    @cp.utils.memoize(copy_output = True)
+    @cp.utils.memoize
     def get_internal_hamiltonian_matrix_operators(self):
         r_kinetic, l_kinetic = self.get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
@@ -1456,7 +1456,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     def energy_expectation_value(self):
         return np.real(self.inner_product(mesh_b = self.hg_mesh()))
 
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def get_probability_current_matrix_operators(self):
         raise NotImplementedError
 
@@ -1487,6 +1487,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         l_multiplier = self.spec.test_charge * electric_field_amplitude
 
         hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_r, hamiltonian_l = hamiltonian_r.copy(), hamiltonian_l.copy()
         hamiltonian_r *= 1j * tau
         hamiltonian_l.data[0] *= 1j * tau * l_multiplier
         hamiltonian_l.data[2] *= 1j * tau * l_multiplier
@@ -1535,6 +1536,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         l_multiplier = self.spec.test_charge * electric_field_amplitude
 
         hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_r, hamiltonian_l = hamiltonian_r.copy(), hamiltonian_l.copy()
         hamiltonian_r *= 1j * tau
         hamiltonian_l.data[0] *= tau * l_multiplier
 
@@ -1568,7 +1570,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         g_vector = even.dot(g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'l')
 
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
         if distance_from_center is None:
@@ -1579,7 +1581,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return mesh_slicer
 
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def get_mesh_slicer_spatial(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
         if distance_from_center is None:
@@ -1591,27 +1593,27 @@ class SphericalHarmonicMesh(QuantumMesh):
         return mesh_slicer
 
     @property
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def theta(self):
         return np.linspace(0, twopi, self.theta_points)
 
     @property
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def theta_mesh(self):
         return np.meshgrid(self.r, self.theta, indexing = 'ij')[1]
 
     @property
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def r_theta_mesh(self):
         return np.meshgrid(self.r, self.theta, indexing = 'ij')[0]
 
     @property
-    # @cp.utils.memoize()
+    # @cp.utils.memoize
     def theta_l_r_meshes(self):
         return np.meshgrid(self.theta, self.l, self.r, indexing = 'ij')
 
     @property
-    @cp.utils.memoize()
+    @cp.utils.memoize
     def _sph_harm_l_theta_mesh(self):
         theta_mesh, l_mesh, _ = self.theta_l_r_meshes
         return special.sph_harm(0, l_mesh, 0, theta_mesh)
@@ -1714,17 +1716,17 @@ class LagrangianSphericalHarmonicMesh(SphericalHarmonicMesh):
     def __init__(self, spec):
         super(LagrangianSphericalHarmonicMesh, self).__init__(spec)
 
-    @cp.utils.memoize(copy_output = True)
+    @cp.utils.memoize
     def get_kinetic_energy_matrix_operators(self):
         r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
         l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: ???
 
-        @cp.utils.memoize()
+        @cp.utils.memoize
         def alpha(j):
             return (j ** 2) / ((j ** 2) - 0.25)
             # return (j ** 2) / ((j ** 2) - j + 0.25)  # TODO: WHY
 
-        @cp.utils.memoize()
+        @cp.utils.memoize
         def beta(j):
             return ((j ** 2) - j + 0.5) / ((j ** 2) - j + 0.25)
 
