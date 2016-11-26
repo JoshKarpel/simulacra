@@ -23,6 +23,7 @@ if __name__ == '__main__':
         e_pot = ion.potentials.Rectangle(amplitude = 3 * atomic_electric_field, window = ion.potentials.LinearRampWindow(ramp_on_time = 10 * asec, ramp_time = 10 * asec))
 
         sim = ion.SphericalHarmonicSpecification('test',
+                                                 evolution_method = 'SO',
                                                  time_initial = 0 * asec, time_final = 50 * asec, time_step = 1 * asec,
                                                  r_bound = 50 * bohr_radius, r_points = 200, l_points = 30,
                                                  electric_potential = e_pot,

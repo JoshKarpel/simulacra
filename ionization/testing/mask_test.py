@@ -11,7 +11,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = True) as logger:
+    with cp.utils.Logger('compy', 'ionization', stdout_logs = False, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
         mask = ion.potentials.RadialCosineMask(inner_radius = 40 * bohr_radius, outer_radius = 49 * bohr_radius)
         sim = ion.SphericalHarmonicSpecification('mask',
                                                  evolution_method = 'SO',
@@ -22,5 +22,6 @@ if __name__ == '__main__':
 
         sim.run_simulation()
         logger.info(sim.info())
+        print(sim.info())
 
         # sim.plot_wavefunction_vs_time(target_dir = OUT_DIR)

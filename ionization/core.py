@@ -1519,7 +1519,20 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.g_mesh = self.wrap_vector(g_vector, 'l')
 
     def _get_split_operator_evolution_matrices(self, a):
-        even_diag, even_offdiag, odd_diag, odd_offdiag = cy.generate_split_operator_evolution_matrices(a)
+        a_even, a_odd = a[::2], a[1::2]
+
+        even_diag = np.zeros(len(a) + 1, dtype = np.complex128)
+        even_diag[:] = np.cos(a_even).repeat(2)
+
+        even_offdiag = np.zeros(len(a), dtype = np.complex128)
+        even_offdiag[0::2] = -1j * np.sin(a_even)
+
+        odd_diag = np.zeros(len(a) + 1, dtype = np.complex128)
+        odd_diag[0] = odd_diag[-1] = 1
+        odd_diag[1:-1] = np.cos(a_odd).repeat(2)
+
+        odd_offdiag = np.zeros(len(a), dtype = np.complex128)
+        odd_offdiag[1::2] = -1j * np.sin(a_odd)
 
         even = sparse.diags([even_offdiag, even_diag, even_offdiag], offsets = [-1, 0, 1])
         odd = sparse.diags([odd_offdiag, odd_diag, odd_offdiag], offsets = [-1, 0, 1])
