@@ -90,7 +90,7 @@ if __name__ == '__main__':
                 'specification': spec.__class__.__name__,
                 'external_potential': external_potential.__class__.__name__,
                 'job_processor': job_processor}  # set at top of if-name-main
-    with open('job.info', mode = 'w') as f:
+    with open('{}_info.json'.format(args.job_name), mode = 'w') as f:
         json.dump(job_info, f)
 
     cluster.create_job_dirs(args.job_name)

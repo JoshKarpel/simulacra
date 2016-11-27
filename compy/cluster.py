@@ -200,56 +200,6 @@ class ClusterInterface:
         end_time = dt.datetime.now()
         logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))
 
-        # @property
-        # def local_job_names(self):
-        #     return (job_dir for job_dir in os.listdir(os.path.join(self.local_home_dir, 'jobs')))
-        #
-        # def process_job(self, job_name, individual_processing = False):
-        #     job_dir_path = os.path.join(self.local_home_dir, 'jobs', job_name)
-        #     try:
-        #         jp = JobProcessor.load(os.path.join(job_dir_path, '{}.job'.format(job_name)))
-        #     except (FileNotFoundError, EOFError, ImportError):
-        #         job_info_path = os.path.join(job_dir_path, 'info.json')
-        #         with open(job_info_path, mode = 'r') as f:
-        #             job_info = json.load(f)
-        #         jp = job_info['job_processor'](job_dir_path)
-        #
-        #     jp.process_job(individual_processing = individual_processing)
-        #
-        # def process_jobs(self, individual_processing = False):
-        #     start_time = dt.datetime.now()
-        #     logger.info('Processing jobs')
-        #
-        #     for job_name in self.local_job_names:
-        #         self.process_job(job_name = job_name, individual_processing = individual_processing)
-        #
-        #     end_time = dt.datetime.now()
-        #     logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
-        #
-        # def sync_process_loop(self, wait_after_success = dt.timedelta(hours = 1), wait_after_failure = dt.timedelta(minutes = 1)):
-        #     latest_sync_time = None
-        #     while True:
-        #         if latest_sync_time is None or dt.datetime.now() - latest_sync_time > wait_after_success:
-        #             try:
-        #                 start_time = dt.datetime.now()
-        #                 logger.info('Beginning automatic synchronization and processing')
-        #
-        #                 logger.info(self.job_status)
-        #
-        #                 self.mirror_remote_home_dir()
-        #                 self.process_jobs()
-        #
-        #                 end_time = dt.datetime.now()
-        #                 logger.info('Synchronization and processing complete. Elapsed time: {}'.format(end_time - start_time))
-        #
-        #                 latest_sync_time = end_time
-        #                 logger.info('Next automatic synchronization attempt after {}'.format(latest_sync_time + wait_after_success))
-        #             except (FileNotFoundError, PermissionError, TimeoutError) as e:
-        #                 logger.exception('Exception encountered')
-        #                 logger.warning('Automatic synchronization attempt failed')
-        #
-        #         time.sleep(wait_after_failure.total_seconds())
-
 
 def ask_for_input(question, default = None, cast_to = str):
     """Ask for input from the user, with a default value, and call cast_to on it before returning it."""
@@ -371,16 +321,49 @@ def submit_job():
     subprocess.run(['condor_submit', 'submit_job.sub'])
 
 
+class JobProcessorManager:
+    def __init__(self, jobs_dir):
+        self.jobs_dir = os.path.abspath(jobs_dir)
+
+    @property
+    def job_dir_names(self):
+        return (name for name in sorted(os.listdir(self.jobs_dir)) if os.path.isdir(os.path.join(self.jobs_dir, name)))
+
+    @property
+    def job_dir_paths(self):
+        return (os.path.abspath(os.path.join(self.jobs_dir, name)) for name in self.job_dir_names)
+
+    def process_job(self, job_name, job_dir_path, individual_processing = False):
+        try:
+            jp = JobProcessor.load(os.path.join(job_dir_path, '{}.job'.format(job_name)))
+        except (FileNotFoundError, EOFError, ImportError):
+            job_info_path = os.path.join(job_dir_path, '{}_info.json'.format(job_name))
+            with open(job_info_path, mode = 'r') as f:
+                job_info = json.load(f)
+            jp = job_info['job_processor'](job_name, job_dir_path)  # TODO: this won't work
+
+        jp.process_job(individual_processing = individual_processing)  # try to detect if jp is from previous version and won't work, maybe catch attribute access exceptions?
+
+    def process_jobs(self, individual_processing = False):
+        start_time = dt.datetime.now()
+        logger.info('Processing jobs')
+
+        for job_name, job_dir_path in zip(self.job_dir_names, self.job_dir_paths):
+            self.process_job(job_dir, job_name, individual_processing = individual_processing)
+
+        end_time = dt.datetime.now()
+        logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
+
+
 class JobProcessor(utils.Beet):
-    def __init__(self, job_name):
+    def __init__(self, job_name, job_dir_path):
         super(JobProcessor, self).__init__(job_name)
+        self.job_dir_path = job_dir_path
 
     def save(self, target_dir = None, file_extension = '.job'):
+        if target_dir is None:
+            target_dir = self.job_dir_path
         return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
-
-    @classmethod
-    def load(cls, file_path):
-        return super(JobProcessor, cls).load(file_path)
 
     def load_sim(self):
         raise NotImplementedError
