@@ -150,12 +150,11 @@ class Animator:
         """
         Construct an Animator instance.
 
-        The animation should have a single figure, with the reference stored in self.fig
-        :param postfix:
-        :param target_dir:
-        :param length:
-        :param fps:
-        :param colormap:
+        :param postfix: postfix for the file name of the resulting animation
+        :param target_dir: directory to place the output (and work in)
+        :param length: the length of the animation
+        :param fps: the desired frames-per-seconds for the animation (may not be actual fps if not enough/too many available frames)
+        :param colormap: the colormap to use in the animation
         """
         if target_dir is None:
             target_dir = os.getcwd()
@@ -186,7 +185,9 @@ class Animator:
         """
         Initialize the Animation by setting the Simulation and Specification, determining the target path for output, determining fps and decimation, and setting up the ffmpeg subprocess.
 
-        self._initialize_figure() during the execution of this method.
+        _initialize_figure() is called during the execution of this method. It should assign a matplotlib figure object to self.fig.
+
+        The simulation should have an attribute available_animation_frames that returns an int describing how many raw frames might be available for use by the animation.
         """
         self.sim = simulation
         self.spec = simulation.spec

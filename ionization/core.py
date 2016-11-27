@@ -111,6 +111,8 @@ class BoundState:
         """Gets a LaTeX-formatted string for the BoundState."""
         return r'\psi_{{{},{},{}}}'.format(self.n, self.l, self.m)
 
+    # TODO: switch to simple checking of (n, l, m) tuple
+
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.n == other.n and self.l == other.l and self.m == other.m
 
