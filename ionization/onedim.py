@@ -16,7 +16,7 @@ from cycler import cycler
 import compy as cp
 import compy.cy as cy
 from compy.units import *
-from ionization import core, potentials
+from . import core, potentials
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

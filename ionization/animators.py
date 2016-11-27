@@ -51,16 +51,22 @@ class QuantumMeshAnimator(cp.Animator):
                                                                                                                                                self.overlay_probability_current,
                                                                                                                                                self.sim)
 
-    def initialize(self, simulation):
-        super(QuantumMeshAnimator, self).initialize(simulation)
-
     def _update_data(self):
         self._update_metric_axis()
         self._update_mesh_axis()
 
         super(QuantumMeshAnimator, self)._update_data()
 
-    def _make_metrics_axis(self, axis, label_right = False, left_ticks = True, right_ticks = True):
+    def _make_metrics_axis(self, axis, label_right = False, left_tick_labels = True, right_tick_labels = True):
+        """
+        Make the given axis an axis that shows wavefunction metrics vs. time as the animation proceeds.
+
+        :param axis: the axis to make into a metrics plot
+        :param label_right: if False, y-axis label will be on the left. If True, on the right. Defaults to False.
+        :param left_tick_labels: draw tick labels on the left (defaults to True)
+        :param right_tick_labels: draw tick labels on the right (defaults to True)
+        :return: the axis
+        """
         self.overlaps_stackplot = axis.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
                                                  labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$',
                                                            r'$\left| \left\langle \psi|\psi_{{n \leq {}}} \right\rangle \right|^2$'.format(max(self.sim.spec.test_states, key = lambda s: s.n).n)],
@@ -93,13 +99,16 @@ class QuantumMeshAnimator(cp.Animator):
         axis.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
         axis.set_ylim(-.01, 1.01)
 
-        axis.tick_params(labelleft = left_ticks, labelright = right_ticks)
+        axis.tick_params(labelleft = left_tick_labels, labelright = right_tick_labels)
         axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
 
         if label_right:
             axis.yaxis.set_label_position('right')
 
+        return axis
+
     def _update_metric_axis(self):
+        # redrawing the stackplot is a huge disaster, because it needs to be fully recreated, so all the reference in self.redraw need to be removed and then added back in
         self.redraw = [rd for rd in self.redraw if rd not in self.overlaps_stackplot]
         self.overlaps_stackplot = self.ax_metrics.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
                                                             labels = ['Initial State Overlap', r'Overlap with $n \leq 5$'], colors = ['.3', '.5'])
@@ -144,6 +153,12 @@ class CylindricalSliceAnimator(QuantumMeshAnimator):
         super(CylindricalSliceAnimator, self)._initialize_figure()
 
     def _make_mesh_axis(self, axis):
+        """
+        Make the given axis an axis that shows the wavefunction on the mesh as the animation proceeds.
+
+        :param axis: the axis to make into a mesh display
+        :return: the axis
+        """
         self.mesh = self.sim.mesh.attach_g_to_axis(axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
 
         if self.overlay_probability_current:
@@ -165,7 +180,9 @@ class CylindricalSliceAnimator(QuantumMeshAnimator):
 
         axis.axis('tight')
 
-        self.redraw += [*axis.xaxis.get_gridlines(), *axis.yaxis.get_gridlines()]
+        self.redraw += [*axis.xaxis.get_gridlines(), *axis.yaxis.get_gridlines()]  # gridlines must be redrawn over the mesh (it's important that they're AFTER the mesh itself in self.redraw)
+
+        return axis
 
     def _update_mesh_axis(self):
         self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
@@ -185,7 +202,7 @@ class PolarAnimator(QuantumMeshAnimator):
         self.cbar_axis = self.fig.add_axes([.725, .275, .03, .45])
 
         self._make_mesh_axis(self.ax_mesh)
-        self._make_metrics_axis(self.ax_metrics, label_right = True, left_ticks = False)
+        self._make_metrics_axis(self.ax_metrics, label_right = True, left_tick_labels = False)
         self._make_cbar_axis(self.cbar_axis)
 
         self.ax_metrics.legend(bbox_to_anchor = (1., 1.1), loc = 'lower right', borderaxespad = 0., fontsize = 20,
@@ -220,7 +237,7 @@ class PolarAnimator(QuantumMeshAnimator):
 
         axis.axis('tight')
 
-        self.redraw += [*axis.xaxis.get_gridlines(), *axis.yaxis.get_gridlines(), *axis.yaxis.get_ticklabels()]
+        self.redraw += [*axis.xaxis.get_gridlines(), *axis.yaxis.get_gridlines(), *axis.yaxis.get_ticklabels()]  # gridlines must be redrawn over the mesh (it's important that they're AFTER the mesh itself in self.redraw)
 
     def _make_cbar_axis(self, axis):
         self.cbar = plt.colorbar(mappable = self.mesh, cax = axis)
@@ -276,6 +293,12 @@ class SphericalHarmonicAnimator(PolarAnimator):
             pass
 
     def _make_ang_mom_axis(self, axis):
+        """
+        Make the given axis an axis that shows the probability to be in each angular momentum state as the animation proceeds.
+
+        :param axis: the axis to make into an angular momentum display
+        :return: the axis
+        """
         l_plot = self.sim.mesh.norm_by_l
         if self.renormalize_l_decomposition:
             l_plot /= self.sim.mesh.norm
@@ -299,6 +322,8 @@ class SphericalHarmonicAnimator(PolarAnimator):
 
         axis.tick_params(labelleft = False, labelright = True)
         axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
+
+        return axis
 
     def _update_ang_mom_axis(self):
         l_plot = self.sim.mesh.norm_by_l

@@ -11,7 +11,7 @@ import time
 
 import paramiko
 
-from compy import utils
+from . import utils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

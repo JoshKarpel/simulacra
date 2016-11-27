@@ -14,7 +14,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 
-from compy.units import *
+from .units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -157,7 +157,7 @@ class Beet:
         return '{}(name = {}, file_name = {}, uid = {})'.format(self.__class__.__name__, self.name, self.file_name, self.uid)
 
     def __eq__(self, other):
-        return self.uid == other.uid
+        return isinstance(other, self.__class__) and self.uid == other.uid
 
     def __hash__(self):
         return hash(self.uid)

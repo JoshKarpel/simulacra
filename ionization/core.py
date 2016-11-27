@@ -18,7 +18,7 @@ from cycler import cycler
 import compy as cp
 import compy.cy as cy
 from compy.units import *
-from ionization import animators, potentials
+from . import animators, potentials
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -625,7 +625,7 @@ class CylindricalSliceMesh(QuantumMesh):
             raise NotImplementedError
 
     @cp.utils.memoize
-    def get_kinetic_energy_matrix_operators(self):
+    def _get_kinetic_energy_matrix_operators(self):
         """Get the mesh kinetic energy operator matrices for z and rho."""
         z_prefactor = -(hbar ** 2) / (2 * self.spec.test_mass * (self.delta_z ** 2))
         rho_prefactor = -(hbar ** 2) / (2 * self.spec.test_mass * (self.delta_rho ** 2))
@@ -651,9 +651,9 @@ class CylindricalSliceMesh(QuantumMesh):
         return z_kinetic, rho_kinetic
 
     @cp.utils.memoize
-    def get_internal_hamiltonian_matrix_operators(self):
+    def _get_internal_hamiltonian_matrix_operators(self):
         """Get the mesh internal Hamiltonian matrix operators for z and rho."""
-        z_kinetic, rho_kinetic = self.get_kinetic_energy_matrix_operators()
+        z_kinetic, rho_kinetic = self._get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
 
         z_kinetic.data[1] += 0.5 * self.flatten_mesh(potential_mesh, 'z')
@@ -662,7 +662,7 @@ class CylindricalSliceMesh(QuantumMesh):
         return z_kinetic, rho_kinetic
 
     def tg_mesh(self, use_abs_g = False):
-        hamiltonian_z, hamiltonian_rho = self.get_kinetic_energy_matrix_operators()
+        hamiltonian_z, hamiltonian_rho = self._get_kinetic_energy_matrix_operators()
 
         if use_abs_g:
             g_mesh = np.abs(self.g_mesh)
@@ -680,7 +680,7 @@ class CylindricalSliceMesh(QuantumMesh):
         return hg_mesh_z + hg_mesh_rho
 
     def hg_mesh(self):
-        hamiltonian_z, hamiltonian_rho = self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_z, hamiltonian_rho = self._get_internal_hamiltonian_matrix_operators()
 
         g_vector_z = self.flatten_mesh(self.g_mesh, 'z')
         hg_vector_z = hamiltonian_z.dot(g_vector_z)
@@ -697,7 +697,7 @@ class CylindricalSliceMesh(QuantumMesh):
         return np.real(self.inner_product(mesh_b = self.hg_mesh()))
 
     @cp.utils.memoize
-    def get_probability_current_matrix_operators(self):
+    def _get_probability_current_matrix_operators(self):
         """Get the mesh probability current operators for z and rho."""
         z_prefactor = hbar / (4 * pi * self.spec.test_mass * self.delta_rho * self.delta_z)
         rho_prefactor = hbar / (4 * pi * self.spec.test_mass * (self.delta_rho ** 2))
@@ -732,7 +732,7 @@ class CylindricalSliceMesh(QuantumMesh):
         return z_current, rho_current
 
     def get_probability_current_vector_field(self):
-        z_current, rho_current = self.get_probability_current_matrix_operators()
+        z_current, rho_current = self._get_probability_current_matrix_operators()
 
         g_vector_z = self.flatten_mesh(self.g_mesh, 'z')
         current_vector_z = z_current.dot(g_vector_z)
@@ -764,7 +764,7 @@ class CylindricalSliceMesh(QuantumMesh):
             electric_potential_energy_mesh = np.zeros(self.mesh_shape)
 
         # add the external potential to the Hamiltonian matrices and multiply them by i * tau to get them ready for the next steps
-        hamiltonian_z, hamiltonian_rho = self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_z, hamiltonian_rho = self._get_internal_hamiltonian_matrix_operators()
         hamiltonian_z, hamiltonian_rho = hamiltonian_z.copy(), hamiltonian_rho.copy()
 
         hamiltonian_z.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'z')
@@ -1018,7 +1018,7 @@ class SphericalSliceMesh(QuantumMesh):
             raise NotImplementedError
 
     @cp.utils.memoize
-    def get_kinetic_energy_matrix_operators(self):
+    def _get_kinetic_energy_matrix_operators(self):
         r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
         theta_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * ((self.delta_r * self.delta_theta) ** 2))
 
@@ -1066,7 +1066,7 @@ class SphericalSliceMesh(QuantumMesh):
 
     @cp.utils.memoize
     def get_internal_hamiltonian_matrix_operators(self):
-        r_kinetic, theta_kinetic = self.get_kinetic_energy_matrix_operators()
+        r_kinetic, theta_kinetic = self._get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
 
         r_kinetic.data[1] += 0.5 * self.flatten_mesh(potential_mesh, 'r')
@@ -1075,7 +1075,7 @@ class SphericalSliceMesh(QuantumMesh):
         return r_kinetic, theta_kinetic
 
     def tg_mesh(self, use_abs_g = False):
-        hamiltonian_r, hamiltonian_theta = self.get_kinetic_energy_matrix_operators()
+        hamiltonian_r, hamiltonian_theta = self._get_kinetic_energy_matrix_operators()
 
         if use_abs_g:
             g_mesh = np.abs(self.g_mesh)
@@ -1244,24 +1244,34 @@ class SphericalSliceMesh(QuantumMesh):
 
 
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
+    evolution_equations = cp.utils.RestrictedValues('evolution_equations', {'L', 'H'})
     evolution_method = cp.utils.RestrictedValues('evolution_method', {'CN', 'SO'})
 
     def __init__(self, name,
                  r_bound = 20 * bohr_radius,
                  r_points = 2 ** 9,
                  l_points = 2 ** 5,
-                 mesh_type = None,
-                 evolution_method = 'CN',
+                 evolution_equations = 'L',
+                 evolution_method = 'SO',
                  **kwargs):
-        if mesh_type is None:
-            mesh_type = LagrangianSphericalHarmonicMesh
+        """
+        Specification for an ElectricFieldSimulation using a SphericalHarmonicMesh.
 
-        super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = mesh_type, **kwargs)
+        :param name:
+        :param r_bound:
+        :param r_points:
+        :param l_points:
+        :param evolution_equations: 'L' (recommended) or 'H'
+        :param evolution_method: 'SO' (recommended) or 'CN'
+        :param kwargs:
+        """
+        super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = SphericalHarmonicMesh, **kwargs)
 
         self.r_bound = r_bound
         self.r_points = int(r_points)
         self.l_points = l_points
 
+        self.evolution_equations = evolution_equations
         self.evolution_method = evolution_method
 
     def info(self):
@@ -1291,8 +1301,6 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.spec.l_points))
         self.theta_points = min(self.spec.l_points * 5, 360)
         self.phi_points = self.theta_points
-
-        # self.l_mesh, self.r_mesh = np.meshgrid(self.l, self.r, indexing = 'ij')
 
         self.mesh_points = len(self.r) * len(self.l)
         self.mesh_shape = np.shape(self.r_mesh)
@@ -1369,7 +1377,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     def dipole_moment(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
         if gauge == 'length':
-            _, operator = self.get_kinetic_energy_matrix_operators()
+            _, operator = self._get_kinetic_energy_matrix_operators()
             g = self.wrap_vector(operator.dot(self.flatten_mesh(self.g_mesh, 'l')), 'l')
             return self.spec.test_charge * self.inner_product(mesh_b = g)
         elif gauge == 'velocity':
@@ -1384,7 +1392,10 @@ class SphericalHarmonicMesh(QuantumMesh):
         return g
 
     @cp.utils.memoize
-    def get_kinetic_energy_matrix_operators(self):
+    def _get_kinetic_energy_matrix_operators(self):
+        return getattr(self, '_get_kinetic_energy_matrix_operators_' + self.spec.evolution_equations)()
+
+    def _get_kinetic_energy_matrix_operators_H(self):
         r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
         l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: ???
 
@@ -1411,9 +1422,51 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return r_kinetic, l_kinetic
 
+    def _get_kinetic_energy_matrix_operators_L(self):
+        r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
+        l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: ???
+
+        @cp.utils.memoize
+        def alpha(j):
+            return (j ** 2) / ((j ** 2) - 0.25)
+            # return (j ** 2) / ((j ** 2) - j + 0.25)  # TODO: WHY
+
+        @cp.utils.memoize
+        def beta(j):
+            return ((j ** 2) - j + 0.5) / ((j ** 2) - j + 0.25)
+
+        r_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
+        r_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
+        for r_index in range(self.mesh_points):
+            j = r_index % self.spec.r_points + 1
+            r_diagonal[r_index] = beta(j)
+
+        for r_index in range(self.mesh_points - 1):
+            if (r_index + 1) % self.spec.r_points != 0:  # TODO: should be possible to clean this if up
+                j = (r_index % self.spec.r_points) + 1
+                r_offdiagonal[r_index] = alpha(j)
+        r_diagonal *= -2 * r_prefactor
+        r_offdiagonal *= r_prefactor
+
+        l_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
+        l_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
+        for l_index in range(self.mesh_points - 1):
+            if (l_index + 1) % self.spec.l_points != 0:
+                l = (l_index % self.spec.l_points) + 1
+                l_offdiagonal[l_index] = self.c(l)
+        l_offdiagonal *= l_prefactor
+
+        effective_potential_mesh = ((hbar ** 2) / (2 * electron_mass_reduced)) * self.l_mesh * (self.l_mesh + 1) / (self.r_mesh ** 2)
+        r_diagonal += self.flatten_mesh(effective_potential_mesh, 'r')
+
+        r_kinetic = sparse.diags([r_offdiagonal, r_diagonal, r_offdiagonal], offsets = (-1, 0, 1))
+        l_kinetic = sparse.diags([l_offdiagonal, l_diagonal, l_offdiagonal], offsets = (-1, 0, 1))
+
+        return r_kinetic, l_kinetic
+
     @cp.utils.memoize
-    def get_internal_hamiltonian_matrix_operators(self):
-        r_kinetic, l_kinetic = self.get_kinetic_energy_matrix_operators()
+    def _get_internal_hamiltonian_matrix_operators(self):
+        r_kinetic, l_kinetic = self._get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
 
         r_kinetic.data[1] += self.flatten_mesh(potential_mesh, 'r')
@@ -1421,7 +1474,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         return r_kinetic, l_kinetic
 
     def tg_mesh(self, use_abs_g = False):
-        hamiltonian_r, hamiltonian_l = self.get_kinetic_energy_matrix_operators()
+        hamiltonian_r, hamiltonian_l = self._get_kinetic_energy_matrix_operators()
 
         if use_abs_g:
             g_mesh = np.abs(self.g_mesh)
@@ -1439,7 +1492,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         return hg_mesh_r + hg_mesh_l
 
     def hg_mesh(self):
-        hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_r, hamiltonian_l = self._get_internal_hamiltonian_matrix_operators()
 
         g_vector_r = self.flatten_mesh(self.g_mesh, 'r')
         hg_vector_r = hamiltonian_r.dot(g_vector_r)
@@ -1465,7 +1518,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
     def evolve(self, time_step):
         pre_evolve_norm = self.norm
-        getattr(self, 'evolve_' + self.spec.evolution_method)(time_step)
+        getattr(self, '_evolve_' + self.spec.evolution_method)(time_step)
         norm_diff_evolve = pre_evolve_norm - self.norm
         if norm_diff_evolve / pre_evolve_norm > .001:
             logger.warning('Evolution may be dangerously non-unitary, norm decreased by {} ({} %) during evolution step'.format(norm_diff_evolve, norm_diff_evolve / pre_evolve_norm))
@@ -1477,7 +1530,7 @@ class SphericalHarmonicMesh(QuantumMesh):
             logger.debug('Applied mask {} to g_mesh for {} {}, removing {} norm'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name, norm_diff_mask))
             return norm_diff_mask
 
-    def evolve_CN(self, time_step):
+    def _evolve_CN(self, time_step):
         tau = time_step / (2 * hbar)
 
         if self.spec.electric_potential is not None:
@@ -1486,7 +1539,7 @@ class SphericalHarmonicMesh(QuantumMesh):
             electric_field_amplitude = 0
         l_multiplier = self.spec.test_charge * electric_field_amplitude
 
-        hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_r, hamiltonian_l = self._get_internal_hamiltonian_matrix_operators()
         hamiltonian_r, hamiltonian_l = hamiltonian_r.copy(), hamiltonian_l.copy()
         hamiltonian_r *= 1j * tau
         hamiltonian_l.data[0] *= 1j * tau * l_multiplier
@@ -1539,7 +1592,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return even, odd
 
-    def evolve_SO(self, time_step):
+    def _evolve_SO(self, time_step):
         tau = time_step / (2 * hbar)
 
         if self.spec.electric_potential is not None:
@@ -1548,7 +1601,7 @@ class SphericalHarmonicMesh(QuantumMesh):
             electric_field_amplitude = 0
         l_multiplier = self.spec.test_charge * electric_field_amplitude
 
-        hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_r, hamiltonian_l = self._get_internal_hamiltonian_matrix_operators()
         hamiltonian_r, hamiltonian_l = hamiltonian_r.copy(), hamiltonian_l.copy()
         hamiltonian_r *= 1j * tau
         hamiltonian_l.data[0] *= tau * l_multiplier
@@ -1725,56 +1778,6 @@ class SphericalHarmonicMesh(QuantumMesh):
         plt.close()
 
 
-class LagrangianSphericalHarmonicMesh(SphericalHarmonicMesh):
-    def __init__(self, spec):
-        super(LagrangianSphericalHarmonicMesh, self).__init__(spec)
-
-    @cp.utils.memoize
-    def get_kinetic_energy_matrix_operators(self):
-        r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
-        l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: ???
-
-        @cp.utils.memoize
-        def alpha(j):
-            return (j ** 2) / ((j ** 2) - 0.25)
-            # return (j ** 2) / ((j ** 2) - j + 0.25)  # TODO: WHY
-
-        @cp.utils.memoize
-        def beta(j):
-            return ((j ** 2) - j + 0.5) / ((j ** 2) - j + 0.25)
-
-        r_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
-        r_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
-        for r_index in range(self.mesh_points):
-            j = r_index % self.spec.r_points + 1
-            r_diagonal[r_index] = beta(j)
-
-        for r_index in range(self.mesh_points - 1):
-            if (r_index + 1) % self.spec.r_points != 0:  # TODO: should be possible to clean this if up
-                j = (r_index % self.spec.r_points) + 1
-                r_offdiagonal[r_index] = alpha(j)
-        r_diagonal *= -2 * r_prefactor
-        r_offdiagonal *= r_prefactor
-
-        l_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
-        l_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
-        for l_index in range(self.mesh_points - 1):
-            if (l_index + 1) % self.spec.l_points != 0:
-                l = (l_index % self.spec.l_points) + 1
-                l_offdiagonal[l_index] = self.c(l)
-        l_offdiagonal *= l_prefactor
-
-        effective_potential_mesh = ((hbar ** 2) / (2 * electron_mass_reduced)) * self.l_mesh * (self.l_mesh + 1) / (self.r_mesh ** 2)
-        r_diagonal += self.flatten_mesh(effective_potential_mesh, 'r')
-
-        r_kinetic = sparse.diags([r_offdiagonal, r_diagonal, r_offdiagonal], offsets = (-1, 0, 1))
-        l_kinetic = sparse.diags([l_offdiagonal, l_diagonal, l_offdiagonal], offsets = (-1, 0, 1))
-
-        return r_kinetic, l_kinetic
-
-        # TODO: split operator evolution
-
-
 class ElectricFieldSimulation(cp.core.Simulation):
     def __init__(self, spec):
         super(ElectricFieldSimulation, self).__init__(spec)
@@ -1802,6 +1805,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if 'l' in self.mesh.mesh_storage_method:
             self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps) * np.NaN for sph_harm in self.mesh.spherical_harmonics}
+
+    @property
+    def available_animation_frames(self):
+        return self.time_steps
 
     @property
     def time(self):
@@ -1860,45 +1867,47 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
     def run_simulation(self, only_end_data = False, store_intermediate_meshes = False):
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
-
-        for animator in self.animators:
-            animator.initialize(self)
-
-        self.status = 'running'
-        logger.debug("{} {} ({}) status set to 'running'".format(self.__class__.__name__, self.name, self.file_name))
-
-        while True:
-            if not only_end_data or self.time_index == self.time_steps - 1:  # if last time step or taking all data
-                self.store_data(self.time_index)
-
+        try:
             for animator in self.animators:
-                if self.time_index == 0 or self.time_index == self.time_steps or self.time_index % animator.decimation == 0:
-                    animator.send_frame_to_ffmpeg()
+                animator.initialize(self)
 
-            self.time_index += 1
-            if self.time_index == self.time_steps:
-                break
+            self.status = 'running'
+            logger.debug("{} {} ({}) status set to 'running'".format(self.__class__.__name__, self.name, self.file_name))
 
-            norm_diff_mask = self.mesh.evolve(self.times[self.time_index] - self.times[self.time_index - 1])  # evolve the mesh forward to the next time step
-            self.norm_diff_mask_vs_time[self.time_index] = norm_diff_mask  # move to store data so it has the right index?
+            while True:
+                if not only_end_data or self.time_index == self.time_steps - 1:  # if last time step or taking all data
+                    self.store_data(self.time_index)
 
-            logger.debug('{} {} ({}) evolved to time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.file_name, self.time_index, self.time_steps - 1,
-                                                                                 np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
+                for animator in self.animators:
+                    if self.time_index == 0 or self.time_index == self.time_steps or self.time_index % animator.decimation == 0:
+                        animator.send_frame_to_ffmpeg()
 
-            if self.spec.checkpoints:
-                if (self.time_index + 1) % self.spec.checkpoint_at == 0:
-                    self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
-                    logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
+                self.time_index += 1
+                if self.time_index == self.time_steps:
+                    break
 
-        self.end_time = dt.datetime.now()
-        self.elapsed_time = self.end_time - self.start_time
+                norm_diff_mask = self.mesh.evolve(self.times[self.time_index] - self.times[self.time_index - 1])  # evolve the mesh forward to the next time step
+                self.norm_diff_mask_vs_time[self.time_index] = norm_diff_mask  # move to store data so it has the right index?
 
-        self.status = 'finished'
-        logger.debug("{} {} ({}) status set to 'finished'".format(self.__class__.__name__, self.name, self.file_name))
-        logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
+                logger.debug('{} {} ({}) evolved to time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.file_name, self.time_index, self.time_steps - 1,
+                                                                                     np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
 
-        for animator in self.animators:
-            animator.cleanup()
+                if self.spec.checkpoints:
+                    if (self.time_index + 1) % self.spec.checkpoint_at == 0:
+                        self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
+                        logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
+
+            self.end_time = dt.datetime.now()
+            self.elapsed_time = self.end_time - self.start_time
+
+            self.status = 'finished'
+            logger.debug("{} {} ({}) status set to 'finished'".format(self.__class__.__name__, self.name, self.file_name))
+            logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
+        except Exception as e:
+            raise e
+        finally:
+            for animator in self.animators:
+                animator.cleanup()
 
     def plot_wavefunction_vs_time(self, grayscale = False, log = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
@@ -1928,13 +1937,15 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if log:
             ax_overlaps.set_yscale('log')
-            ax_overlaps.set_ylim(top = 1.0)
+            min_overlap = np.min(self.state_overlaps_vs_time[self.spec.initial_state])
+            ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
+            ax_overlaps.grid(True, which = 'both')
         else:
             ax_overlaps.set_ylim(0, 1.0)
             ax_overlaps.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+            ax_overlaps.grid(True)
         ax_overlaps.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
 
-        ax_overlaps.grid(True)
         ax_field.grid(True)
 
         ax_field.set_xlabel('Time $t$ (as)', fontsize = 15)
@@ -1996,12 +2007,13 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if log:
             ax_momentums.set_yscale('log')
             ax_momentums.set_ylim(top = 1.0)
+            ax_momentums.grid(True, which = 'both')
         else:
             ax_momentums.set_ylim(0, 1.0)
             ax_momentums.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+            ax_momentums.grid(True)
         ax_momentums.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
 
-        ax_momentums.grid(True)
         ax_field.grid(True)
 
         ax_field.set_xlabel('Time $t$ (as)', fontsize = 15)

@@ -29,12 +29,12 @@ if __name__ == '__main__':
         t_final = 5 * laser_period
         t_step = laser_period / 800
 
-        # external_potential = ion.potentials.Rectangle(start_time = 40 * asec, end_time = 80 * asec, amplitude = .1 * atomic_electric_field)
-        window = ion.potentials.LinearRampWindow(ramp_on_time = 0, ramp_time = 1 * laser_period)
+        # external_potential = ion.Rectangle(start_time = 40 * asec, end_time = 80 * asec, amplitude = .1 * atomic_electric_field)
+        window = ion.LinearRampWindow(ramp_on_time = 0, ramp_time = 1 * laser_period)
         amplitude = 1 * atomic_electric_field
-        external_potential = ion.potentials.SineWave(twopi * laser_frequency, amplitude = amplitude,
-                                                     window = window)
-        internal_potential = ion.potentials.NuclearPotential() + ion.potentials.RadialImaginaryPotential(center = bound * bohr_radius, width = 20 * bohr_radius, decay_time = 30 * asec)
+        external_potential = ion.SineWave(twopi * laser_frequency, amplitude = amplitude,
+                                          window = window)
+        internal_potential = ion.NuclearPotential() + ion.RadialImaginaryPotential(center = bound * bohr_radius, width = 20 * bohr_radius, decay_time = 30 * asec)
 
         sph_spec = ion.SphericalHarmonicSpecification('test',
                                                       r_bound = bound * bohr_radius, r_points = points,

@@ -76,8 +76,8 @@ if __name__ == '__main__':
         t_final = 30 * laser_period
         t_step = laser_period / 800
 
-        # external_potential = ion.potentials.Rectangle(start_time = 40 * asec, end_time = 80 * asec, amplitude = .1 * atomic_electric_field)
-        window = ion.potentials.LinearRampWindow(ramp_on_time = 0, ramp_time = 5 * laser_period)
+        # external_potential = ion.Rectangle(start_time = 40 * asec, end_time = 80 * asec, amplitude = .1 * atomic_electric_field)
+        window = ion.LinearRampWindow(ramp_on_time = 0, ramp_time = 5 * laser_period)
 
         base_amplitude = 1.2e10 * V / m
         amplitudes = np.sqrt(np.linspace(1, 10, 2)) * base_amplitude
@@ -85,12 +85,12 @@ if __name__ == '__main__':
         specs = []
 
         for amplitude in amplitudes:
-            external_potential = ion.potentials.SineWave(twopi * laser_frequency, amplitude = amplitude, window = window)
-            # internal_potential = ion.potentials.NuclearPotential() + ion.potentials.RadialImaginaryPotential(center = bound * bohr_radius, width = 20 * bohr_radius, decay_time = 30 * asec)
-            internal_potential = ion.potentials.NuclearPotential()
+            external_potential = ion.SineWave(twopi * laser_frequency, amplitude = amplitude, window = window)
+            # internal_potential = ion.NuclearPotential() + ion.RadialImaginaryPotential(center = bound * bohr_radius, width = 20 * bohr_radius, decay_time = 30 * asec)
+            internal_potential = ion.NuclearPotential()
 
             # mask = None
-            mask = ion.potentials.RadialCosineMask(inner_radius = (bound - 50 * bohr_radius), outer_radius = bound * bohr_radius, smoothness = 8)
+            mask = ion.RadialCosineMask(inner_radius = (bound - 50 * bohr_radius), outer_radius = bound * bohr_radius, smoothness = 8)
 
             sph_spec = ion.SphericalHarmonicSpecification('CN__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                           r_bound = bound * bohr_radius, r_points = points,

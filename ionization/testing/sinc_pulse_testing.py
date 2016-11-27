@@ -52,11 +52,11 @@ if __name__ == '__main__':
                     t_init = -20 * pw
                     t_final = -t_init
 
-                    window = ion.potentials.SymmetricExponentialWindow(window_time = t_init + (2 * pw), window_width = pw / 3)
-                    e_field_sin = ion.potentials.SincPulse(pulse_width = pw, fluence = flu, phase = 'sin', window = window)
-                    e_field_cos = ion.potentials.SincPulse(pulse_width = pw, fluence = flu, phase = 'cos', window = window)
+                    window = ion.SymmetricExponentialWindow(window_time = t_init + (2 * pw), window_width = pw / 3)
+                    e_field_sin = ion.SincPulse(pulse_width = pw, fluence = flu, phase = 'sin', window = window)
+                    e_field_cos = ion.SincPulse(pulse_width = pw, fluence = flu, phase = 'cos', window = window)
 
-                    mask = ion.potentials.RadialCosineMask(inner_radius = (bound - 25) * bohr_radius, outer_radius = bound * bohr_radius)
+                    mask = ion.RadialCosineMask(inner_radius = (bound - 25) * bohr_radius, outer_radius = bound * bohr_radius)
 
                     out_dir_add = 'bounds_r={}_l={}__n={}_l={}__flu={}'.format(bound, l_points, initial_state.n, initial_state.l, fluence)
                     out_dir_mod = os.path.join(OUT_DIR, out_dir_add)

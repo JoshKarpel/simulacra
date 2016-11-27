@@ -15,8 +15,8 @@ log = cp.utils.Logger('compy', 'ionization', stdout_level = logging.INFO, file_l
 
 def run(spec):
     with cp.utils.Logger('compy', 'ionization',
-                         stdout_logs = True, stdout_level = logging.DEBUG,
-                         file_logs = True, file_dir = spec.out_dir_mod, file_name = spec.name, file_level = logging.DEBUG, file_mode = 'w') as logger:
+                         stdout_logs = False, stdout_level = logging.DEBUG,
+                         file_logs = True, file_dir = spec.out_dir_mod, file_name = spec.name, file_level = logging.INFO, file_mode = 'w') as logger:
         try:
             sim = spec.to_simulation()
 
@@ -53,12 +53,15 @@ if __name__ == '__main__':
         initial_states = [ion.BoundState(1, 0)]
         # initial_states = [ion.BoundState(1, 0), ion.BoundState(2, 0), ion.BoundState(2, 1)]
 
-        # pulse_widths = [10, 50, 100, 250, 500, 1000, 1500, 2000]
-        pulse_widths = [10, 25, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-        fluences = [1, 20]
+        # pulse_widths = [10, 25, 50, 100, 200]
+        # pulse_widths = [300, 400, 500]
+        pulse_widths = [600, 700, 800]
+        # pulse_widths = [900, 1000, 1100]
+        # pulse_widths = [1200, 1300, 1400]
+        # pulse_widths = [1500, 1600, 1700]
+        # pulse_widths = [1800, 1900, 2000]
 
-        # pulse_widths = [200]
-        # fluences = [20]
+        fluences = [1, 20]
 
         specs = []
         for initial_state in initial_states:
@@ -68,7 +71,7 @@ if __name__ == '__main__':
                     if pulse_width < 40:
                         t_step *= .2
                     if pulse_width > 350:
-                        t_step *= 5
+                        t_step *= 4
 
                     pw = pulse_width * asec
                     flu = fluence * J / (cm ** 2)
@@ -115,6 +118,6 @@ if __name__ == '__main__':
                                                               mask = mask,
                                                               animators = animators,
                                                               out_dir_mod = out_dir_mod)
-                    # specs.append(spec)
+                    specs.append(spec)
 
-        cp.utils.multi_map(run, specs, processes = 6)
+        cp.utils.multi_map(run, specs, processes = 4)

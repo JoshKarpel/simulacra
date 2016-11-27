@@ -20,7 +20,7 @@ if __name__ == '__main__':
         logger.info('hi')
 
         # e_field = ion.Rectangle(start_time = 20 * asec, end_time = 180 * asec, amplitude = 1 * atomic_electric_field)
-        e_field = ion.potentials.SineWave(omega = twopi / (50 * asec), amplitude = 1 * atomic_electric_field, window_time = 100 * asec, window_width = 10 * asec)
+        e_field = ion.SineWave(omega = twopi / (50 * asec), amplitude = 1 * atomic_electric_field, window_time = 100 * asec, window_width = 10 * asec)
         # e_field = None
 
         initial_state = ion.BoundState(1, 0, 0)
@@ -80,12 +80,12 @@ if __name__ == '__main__':
         cyl_sim.save(target_dir = OUT_DIR, save_mesh = False)
 
         with cp.utils.Timer() as t:
-            cyl_sim.mesh.get_kinetic_energy_matrix_operators()
+            cyl_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 
         with cp.utils.Timer() as t:
-            cyl_sim.mesh.get_kinetic_energy_matrix_operators()
+            cyl_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 
@@ -97,12 +97,12 @@ if __name__ == '__main__':
         #     print(k, '  :  ', v)
 
         with cp.utils.Timer() as t:
-            test_sim.mesh.get_kinetic_energy_matrix_operators()
+            test_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 
         with cp.utils.Timer() as t:
-            test_sim.mesh.get_kinetic_energy_matrix_operators()
+            test_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 
@@ -173,12 +173,12 @@ if __name__ == '__main__':
         sph_sim.save(target_dir = OUT_DIR, save_mesh = False)
 
         with cp.utils.Timer() as t:
-            sph_sim.mesh.get_kinetic_energy_matrix_operators()
+            sph_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 
         with cp.utils.Timer() as t:
-            sph_sim.mesh.get_kinetic_energy_matrix_operators()
+            sph_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 
@@ -190,12 +190,12 @@ if __name__ == '__main__':
         #     print(k, '  :  ', v)
 
         with cp.utils.Timer() as t:
-            test_sim.mesh.get_kinetic_energy_matrix_operators()
+            test_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 
         with cp.utils.Timer() as t:
-            test_sim.mesh.get_kinetic_energy_matrix_operators()
+            test_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 

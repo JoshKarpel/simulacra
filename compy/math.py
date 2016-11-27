@@ -6,8 +6,8 @@ import scipy.sparse as sparse
 import scipy.special as spc
 
 import math
-from compy import utils
-from compy.units import *
+from . import utils
+from .units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

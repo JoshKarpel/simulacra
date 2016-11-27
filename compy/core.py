@@ -5,7 +5,7 @@ import subprocess
 
 import matplotlib.pyplot as plt
 
-from compy import utils
+from . import utils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -137,7 +137,9 @@ class Simulation(utils.Beet):
 
 class Animator:
     """
-    A class that handles sending frames to ffmpeg to create animations.
+    A superclass that handles sending frames to ffmpeg to create animations.
+
+    To actually make an animation there are three hook methods that need to be overwritten: _initialize_figure, _update_data, and _redraw_frame.
 
     ffmpeg must be visible on the system path.
     """
@@ -193,17 +195,17 @@ class Animator:
         self.file_path = os.path.join(self.target_dir, self.file_name)
         utils.ensure_dir_exists(self.file_path)
         try:
-            os.remove(self.file_path)
+            os.remove(self.file_path)  # ffmpeg complains if you try to overwrite an existing file, so remove it first
         except FileNotFoundError:
             pass
 
         ideal_frame_count = self.length * self.fps
-        self.decimation = int(self.sim.time_steps / ideal_frame_count)
+        self.decimation = int(self.sim.available_animation_frames / ideal_frame_count)  # determine ideal decimation from number of available frames in the simulation
         if self.decimation < 1:
-            self.decimation = 1
-        self.fps = (self.sim.time_steps / self.decimation) / self.length
+            self.decimation = 1  # if there aren't enough frames available
+        self.fps = (self.sim.available_animation_frames / self.decimation) / self.length
 
-        self._initialize_figure()
+        self._initialize_figure()  # call figure initialization hook
 
         self.fig.canvas.draw()
         self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
@@ -212,10 +214,10 @@ class Animator:
                           '-y',
                           '-r', '{}'.format(self.fps),  # choose fps
                           '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
-                          '-pix_fmt', 'argb',  # format
+                          '-pix_fmt', 'argb',  # pixel format
                           '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
                           '-vcodec', 'mpeg4',  # output encoding
-                          '-q:v', '1',
+                          '-q:v', '1',  # maximum quality
                           self.file_path)
 
         self.ffmpeg = subprocess.Popen(self.cmdstring, stdin = subprocess.PIPE, bufsize = -1)
@@ -223,11 +225,20 @@ class Animator:
         logger.info('Initialized {}'.format(self))
 
     def cleanup(self):
+        """
+        Cleanup method for the Animator's ffmpeg subprocess.
+
+        Should always be called via a try...finally clause in run_simulation.
+        """
         self.ffmpeg.communicate()
         logger.info('Cleaned up {}'.format(self))
 
     def _initialize_figure(self):
-        """Hook for a method to initialize the animation's figure."""
+        """
+        Hook for a method to initialize the Animator's figure.
+
+        Make sure that any plot element that will be mutated during the animation is created using the animation = True keyword argument and has a reference in self.redraw.
+        """
         logger.debug('Initialized figure for {}'.format(self))
 
     def _update_data(self):
@@ -235,19 +246,23 @@ class Animator:
         logger.debug('{} updated data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
     def _redraw_frame(self):
-        plt.set_cmap(self.colormap)
+        """Redraw the figure frame."""
+        plt.set_cmap(self.colormap)  # make sure the colormap is correct, in case other figures have been created somewhere
 
-        self.fig.canvas.restore_region(self.background)
+        self.fig.canvas.restore_region(self.background)  # copy the static background back onto the figure
 
-        self._update_data()
+        self._update_data()  # get data from the Simulation and update any plot elements that need to be redrawn
+
+        # draw everything that needs to be redrawn (any plot elements that will be mutated during the animation should be added to self.redraw)
         for rd in self.redraw:
             self.fig.draw_artist(rd)
 
-        self.fig.canvas.blit(self.fig.bbox)
+        self.fig.canvas.blit(self.fig.bbox)  # blit the canvas, finalizing all of the draw_artists
 
         logger.debug('Redrew frame for {}'.format(self))
 
     def send_frame_to_ffmpeg(self):
+        """Redraw anything that needs to be redrawn, then write the figure to an RGB string and sending it to ffmpeg."""
         self._redraw_frame()
 
         self.ffmpeg.stdin.write(self.fig.canvas.tostring_argb())
