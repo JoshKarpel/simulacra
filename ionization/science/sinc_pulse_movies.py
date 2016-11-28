@@ -53,11 +53,11 @@ if __name__ == '__main__':
         initial_states = [ion.BoundState(1, 0)]
         # initial_states = [ion.BoundState(1, 0), ion.BoundState(2, 0), ion.BoundState(2, 1)]
 
-        # pulse_widths = [10, 25, 50, 100, 200]
-        # pulse_widths = [300, 400, 500]
-        pulse_widths = [600, 700, 800]
-        # pulse_widths = [900, 1000, 1100]
-        # pulse_widths = [1200, 1300, 1400]
+        # pulse_widths = [10, 25, 50, 100, 200]  # done
+        # pulse_widths = [300, 400, 500]  # done
+        # pulse_widths = [600, 700, 800]  # running
+        # pulse_widths = [900, 1000, 1100]  # running
+        pulse_widths = [1200, 1300, 1400]
         # pulse_widths = [1500, 1600, 1700]
         # pulse_widths = [1800, 1900, 2000]
 

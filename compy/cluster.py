@@ -8,6 +8,7 @@ import posixpath
 import stat
 import subprocess
 import time
+import itertools as it
 
 import paramiko
 
@@ -201,6 +202,99 @@ class ClusterInterface:
         logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))
 
 
+class JobProcessorManager:
+    def __init__(self, jobs_dir):
+        self.jobs_dir = os.path.abspath(jobs_dir)
+
+    @property
+    def job_dir_names(self):
+        return (name for name in sorted(os.listdir(self.jobs_dir)) if os.path.isdir(os.path.join(self.jobs_dir, name)))
+
+    @property
+    def job_dir_paths(self):
+        return (os.path.abspath(os.path.join(self.jobs_dir, name)) for name in self.job_dir_names)
+
+    def process_job(self, job_name, job_dir_path, individual_processing = False, force_reprocess = False):
+        # try to find an existing job processor for the job
+        try:
+            try:
+                if force_reprocess:
+                    raise FileNotFoundError  # if force reprocessing, pretend like we haven't found the job
+                jp = JobProcessor.load(os.path.join(job_dir_path, '{}.job'.format(job_name)))
+            except (AttributeError, TypeError):
+                raise FileNotFoundError  # if something goes wrong, pretend like we haven't found it
+        except (FileNotFoundError, EOFError, ImportError):
+            job_info_path = os.path.join(job_dir_path, '{}_info.json'.format(job_name))
+            with open(job_info_path, mode = 'r') as f:
+                job_info = json.load(f)
+            jp = job_info['job_processor'](job_name, job_dir_path)  # TODO: this won't work
+
+        jp.process_job(individual_processing = individual_processing)  # try to detect if jp is from previous version and won't work, maybe catch attribute access exceptions?
+
+    def process_jobs(self, individual_processing = False):
+        start_time = dt.datetime.now()
+        logger.info('Processing jobs')
+
+        for job_name, job_dir_path in zip(self.job_dir_names, self.job_dir_paths):
+            self.process_job(job_dir, job_name, individual_processing = individual_processing)
+
+        end_time = dt.datetime.now()
+        logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
+
+
+class JobProcessor(utils.Beet):
+    def __init__(self, job_name, job_dir_path):
+        super(JobProcessor, self).__init__(job_name)
+        self.job_dir_path = job_dir_path
+
+    def save(self, target_dir = None, file_extension = '.job'):
+        if target_dir is None:
+            target_dir = self.job_dir_path
+        return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
+
+    def load_sim(self):
+        raise NotImplementedError
+
+    def process_job(self, individual_processing = False):
+        raise NotImplementedError
+
+    def write_to_csv(self):
+        raise NotImplementedError
+
+
+class JobParameter:
+    name = utils.Typed('name', legal_type = str)
+
+    def __init__(self, name):
+        self.name = name
+        self.value = None
+
+    def get_from_input(self):
+        raise NotImplementedError
+
+    def get_from_dict(self):
+        raise NotImplementedError
+
+
+class BooleanParameter(JobParameter):
+    value = utils.Typed('value', legal_type = bool)
+
+
+def make_specification_kwarg_dicts(job_parameters):
+    kwarg_dicts = [{}]
+
+    for par in job_parameters:
+        if hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):  # make sure the value is an iterable that isn't a string and has a length
+            kwarg_dicts = [copy(d) for d in kwarg_dicts for _ in range(len(par.value))]
+            for d, v in zip(kwarg_dicts, it.cycle(par.value)):
+                d[par.name] = v
+        else:
+            for d in kwarg_dicts:
+                d[par.name] = par.value
+
+    return kwarg_dicts
+
+
 def ask_for_input(question, default = None, cast_to = str):
     """Ask for input from the user, with a default value, and call cast_to on it before returning it."""
     input_str = input(question + ' [Default: {}]: '.format(default))
@@ -319,57 +413,3 @@ def submit_job():
     print('Submitting job...')
 
     subprocess.run(['condor_submit', 'submit_job.sub'])
-
-
-class JobProcessorManager:
-    def __init__(self, jobs_dir):
-        self.jobs_dir = os.path.abspath(jobs_dir)
-
-    @property
-    def job_dir_names(self):
-        return (name for name in sorted(os.listdir(self.jobs_dir)) if os.path.isdir(os.path.join(self.jobs_dir, name)))
-
-    @property
-    def job_dir_paths(self):
-        return (os.path.abspath(os.path.join(self.jobs_dir, name)) for name in self.job_dir_names)
-
-    def process_job(self, job_name, job_dir_path, individual_processing = False):
-        try:
-            jp = JobProcessor.load(os.path.join(job_dir_path, '{}.job'.format(job_name)))
-        except (FileNotFoundError, EOFError, ImportError):
-            job_info_path = os.path.join(job_dir_path, '{}_info.json'.format(job_name))
-            with open(job_info_path, mode = 'r') as f:
-                job_info = json.load(f)
-            jp = job_info['job_processor'](job_name, job_dir_path)  # TODO: this won't work
-
-        jp.process_job(individual_processing = individual_processing)  # try to detect if jp is from previous version and won't work, maybe catch attribute access exceptions?
-
-    def process_jobs(self, individual_processing = False):
-        start_time = dt.datetime.now()
-        logger.info('Processing jobs')
-
-        for job_name, job_dir_path in zip(self.job_dir_names, self.job_dir_paths):
-            self.process_job(job_dir, job_name, individual_processing = individual_processing)
-
-        end_time = dt.datetime.now()
-        logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
-
-
-class JobProcessor(utils.Beet):
-    def __init__(self, job_name, job_dir_path):
-        super(JobProcessor, self).__init__(job_name)
-        self.job_dir_path = job_dir_path
-
-    def save(self, target_dir = None, file_extension = '.job'):
-        if target_dir is None:
-            target_dir = self.job_dir_path
-        return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
-
-    def load_sim(self):
-        raise NotImplementedError
-
-    def process_job(self, individual_processing = False):
-        raise NotImplementedError
-
-    def write_to_csv(self):
-        raise NotImplementedError
