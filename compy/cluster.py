@@ -9,6 +9,7 @@ import stat
 import subprocess
 import time
 import itertools as it
+import configparser as cfg
 
 import paramiko
 
@@ -262,28 +263,21 @@ class JobProcessor(utils.Beet):
         raise NotImplementedError
 
 
-class JobParameter:
+class Parameter:
     name = utils.Typed('name', legal_type = str)
 
     def __init__(self, name):
         self.name = name
         self.value = None
 
-    def get_from_input(self):
-        raise NotImplementedError
-
-    def get_from_dict(self):
-        raise NotImplementedError
+    def __str__(self):
+        return '{}(name = {}, value = {})'.format(self.__class__.__name__, self.name, self.value)
 
 
-class BooleanParameter(JobParameter):
-    value = utils.Typed('value', legal_type = bool)
-
-
-def make_specification_kwarg_dicts(job_parameters):
+def make_specification_kwarg_dicts(parameters):
     kwarg_dicts = [{}]
 
-    for par in job_parameters:
+    for par in parameters:
         if hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):  # make sure the value is an iterable that isn't a string and has a length
             kwarg_dicts = [copy(d) for d in kwarg_dicts for _ in range(len(par.value))]
             for d, v in zip(kwarg_dicts, it.cycle(par.value)):
