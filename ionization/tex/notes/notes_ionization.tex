@@ -1,27 +1,18 @@
-\documentclass[12pt]{article}          
-%\usepackage[parfill]{parskip}  
+\documentclass[12pt]{article}
+
+% package imports
 \usepackage{graphicx}
 \usepackage{amsmath,amssymb}
-%\usepackage{bm}
-%\usepackage{epstopdf}
 \usepackage{hyperref}
-\usepackage{listings}
 \usepackage{nicefrac}
-%\usepackage{braket}
 \usepackage{physics}
-\usepackage[americanvoltages]{circuitikz}
 \usepackage{siunitx}
 \usepackage[yyyymmdd]{datetime}
 \renewcommand{\dateseparator}{--}
-
 \usepackage[margin=.5in, headsep=0.25in, includefoot, heightrounded]{geometry}
 
-\usepackage{siunitx}
-\DeclareSIUnit\micron{\micro\metre}
-\DeclareSIUnit\cm{\centi\metre}
-\DeclareSIUnit\nm{\nano\metre}
-\DeclareSIUnit\mrad{\milli\rad}
 
+% custom commands
 \newcommand{\re}{\mathrm{Re} \;}
 \newcommand{\im}{\mathrm{Im} \;}
 
@@ -33,8 +24,8 @@
 \newcommand{\Tn}[2]{T_{#1}\left(#2\right)}
 \newcommand{\Un}[2]{U_{#1}\left(#2\right)}
 
-%\lstset{basicstyle=\ttfamily,breaklines=true,breakatwhitespace=true,frame=l,columns=flexible}
 
+% number equations by section
 \numberwithin{equation}{section}
 
 \begin{document}
@@ -152,7 +143,7 @@ I &= \frac{2}{\delta} \, c \, \epsilon_0 |E_0|^2 \left[2 \sum_{k=0}^{N-1} \sum_{
 \end{align*}
 The remaining integral is actually easy to evaluate. Note that the $T_j$ involved in the sum over integrals are either $j=0$ or even. When $j=0$,
 \begin{align*}
-\int_{-\pi/2}^{\pi/2} T_0(\cos x) \dd{x} = \int_{-\pi/2}^{\pi/2} 1 \dd{x} = \pi. 
+\int_{-\pi/2}^{\pi/2} T_0(\cos x) \dd{x} = \int_{-\pi/2}^{\pi/2} 1 \dd{x} = \pi.
 \end{align*}
 There are exactly $N$ such terms. All of the other terms have $j$ even, and
 \begin{align*}
@@ -204,7 +195,7 @@ Since the left and right hand sides of this equation depend separately on $r$ an
 \label{eqn:schro_radial}
 \frac{1}{R} \dv{r} \left(r^2 \, \dv{R}{r}\right) - \frac{2\mu \, r^2}{\hbar^2} \left[V(r) - E\right] &= l(l+1) \\
 \label{eqn:schro_angular}
-\frac{1}{\sin{\theta}} \pdv{\theta} \left(\sin{\theta} \pdv{Y}{\theta}\right) + \frac{1}{\sin^2{\theta}} \pdv[2]{Y}{\phi} &= -l(l+1) \, Y. 
+\frac{1}{\sin{\theta}} \pdv{\theta} \left(\sin{\theta} \pdv{Y}{\theta}\right) + \frac{1}{\sin^2{\theta}} \pdv[2]{Y}{\phi} &= -l(l+1) \, Y.
 \end{align}
 
 We will find that for the hydrogen bound states that every label $n$ will actually consist of a set of three integers, so the stationary bound states will be labeled $\psi_{nlm}$. The positive energy ``Coulomb'' states are labeled by their wavenumber $k$ and an integer $l$, $\psi_{kl}$.
@@ -602,10 +593,10 @@ We will now replace all of the derivatives in \eqref{eqn:sph_laplacian_g} with f
 \begin{align}\label{eqn:sph_finite_differences}
 \pdv[2]{g}{r} &\rightarrow \frac{g_{j+1, k} + g_{j-1, k} - 2g_{j,k}}{\left(\Delta r\right)^2} \\
 %
-\frac{\cot{\theta} \sqrt{\sin{\theta}}}{r^2}\pdv{}{\theta}\left(\frac{g}{\sqrt{\sin{\theta}}}\right) &\rightarrow 
+\frac{\cot{\theta} \sqrt{\sin{\theta}}}{r^2}\pdv{}{\theta}\left(\frac{g}{\sqrt{\sin{\theta}}}\right) &\rightarrow
 \frac{\cot((k+\frac{1}{2}) \Delta \theta) \sqrt{\sin((k+\frac{1}{2}) \Delta \theta)}}{2 \, \Delta \theta \, \left[\left(j+\frac{1}{2}\right) \Delta r\right]^2} \left[  \frac{g_{j, k+1}}{\sqrt{\sin((k+\frac{3}{2}) \Delta \theta)}} - \frac{g_{j, k-1}}{\sqrt{\sin((k-\frac{1}{2}) \Delta \theta)}}   \right] \nonumber \\
 %
-\frac{\sqrt{\sin{\theta}}}{r^2}\pdv[2]{}{\theta}\left(\frac{g}{\sqrt{\sin{\theta}}}\right) &\rightarrow  
+\frac{\sqrt{\sin{\theta}}}{r^2}\pdv[2]{}{\theta}\left(\frac{g}{\sqrt{\sin{\theta}}}\right) &\rightarrow
 \frac{\sqrt{\sin((k+\frac{1}{2}) \Delta \theta)}}{\left[\left(j+\frac{1}{2}\right) \Delta r \, \Delta \theta\right]^2} \left[  \frac{g_{j, k+1}}{\sqrt{\sin((k+\frac{3}{2}) \Delta \theta)}} + \frac{g_{j, k-1}}{\sqrt{\sin((k-\frac{1}{2}) \Delta \theta)}} - \frac{2g_{j, k}}{\sqrt{\sin((k+\frac{1}{2}) \Delta \theta)}}  \right] \nonumber
 \end{align}
 Apply the replacements \eqref{eqn:sph_finite_differences} to \eqref{eqn:sph_laplacian_g}:
@@ -719,4 +710,4 @@ Alternatively, it turns out that this expression is also equivalent to \eqref{eq
 \bibliographystyle{unsrt}
 \bibliography{../library}
 
-\end{document} 
+\end{document}
