@@ -2,6 +2,7 @@
 
 # untar my Python installation and simulation package
 tar -xzf python.tar.gz
+tar -xzf compy.tar.gz
 tar -xzf ionization.tar.gz
 
 # make sure the script will use my Python installation

@@ -28,7 +28,7 @@ if __name__ == '__main__':
                          file_logs = True, file_level = logging.DEBUG, file_name = '{}'.format(args.sim_name)) as logger:
         try:
             logger.info('Loaded onto execute node {} at {}.'.format(socket.gethostname(), dt.datetime.now()))
-            logger.info('Local directory contents: {}'.format(os.listdir(os.getcwd())))
+            logger.debug('Local directory contents: {}'.format(os.listdir(os.getcwd())))
 
             # try to find existing checkpoint, and start from scratch if that fails
             try:
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                 logger.debug('Checkpoint size is {}'.format(cp.utils.file_size(sim_path)))
             except (FileNotFoundError, EOFError):
                 sim = cp.Specification.load(os.path.join(os.getcwd(), '{}.spec'.format(args.sim_name))).to_simulation()
-                logger.info('Checkpoint not found, beginning simulation {}'.format(sim))
+                logger.info('Checkpoint not found, started simulation {}'.format(sim))
 
             # run the simulation and save it
             logger.info(sim.info())
