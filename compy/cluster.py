@@ -7,10 +7,11 @@ import sys
 import posixpath
 import stat
 import subprocess
-import time
 import itertools as it
-import configparser as cfg
+from copy import copy, deepcopy
+from collections import OrderedDict
 
+import numpy as np
 import paramiko
 
 from . import utils
@@ -228,7 +229,7 @@ class JobProcessorManager:
             job_info_path = os.path.join(job_dir_path, '{}_info.json'.format(job_name))
             with open(job_info_path, mode = 'r') as f:
                 job_info = json.load(f)
-            jp = job_info['job_processor'](job_name, job_dir_path)  # TODO: this won't work
+            jp = job_info['job_processor'](job_name, job_dir_path)  # TODO: this won't work maybe?
 
         jp.process_job(individual_processing = individual_processing)  # try to detect if jp is from previous version and won't work, maybe catch attribute access exceptions?
 
@@ -237,7 +238,7 @@ class JobProcessorManager:
         logger.info('Processing jobs')
 
         for job_name, job_dir_path in zip(self.job_dir_names, self.job_dir_paths):
-            self.process_job(job_dir, job_name, individual_processing = individual_processing)
+            self.process_job(job_name, job_dir_path, individual_processing = individual_processing)
 
         end_time = dt.datetime.now()
         logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
@@ -253,6 +254,10 @@ class JobProcessor(utils.Beet):
             target_dir = self.job_dir_path
         return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
 
+    def collect_data(self, simulation):
+        """Hook method to collect summary data from a single Simulation."""
+        raise NotImplementedError
+
     def load_sim(self):
         raise NotImplementedError
 
@@ -265,72 +270,151 @@ class JobProcessor(utils.Beet):
 
 class Parameter:
     name = utils.Typed('name', legal_type = str)
+    expandable = utils.Typed('expandable', legal_type = bool)
 
-    def __init__(self, name):
+    def __init__(self, name, value = None, expandable = False):
         self.name = name
-        self.value = None
+        self.value = value
+        self.expandable = expandable
 
     def __str__(self):
+        return '{} {} = {}'.format(self.__class__.__name__, self.name, self.value)
+
+    def __repr__(self):
         return '{}(name = {}, value = {})'.format(self.__class__.__name__, self.name, self.value)
 
 
-def make_specification_kwarg_dicts(parameters):
-    kwarg_dicts = [{}]
+def expand_parameters_to_dicts(parameters):
+    dicts = [OrderedDict()]
 
     for par in parameters:
-        if hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):  # make sure the value is an iterable that isn't a string and has a length
-            kwarg_dicts = [copy(d) for d in kwarg_dicts for _ in range(len(par.value))]
-            for d, v in zip(kwarg_dicts, it.cycle(par.value)):
+        if par.expandable and hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):  # make sure the value is an iterable that isn't a string and has a length
+            dicts = [deepcopy(d) for d in dicts for _ in range(len(par.value))]
+            for d, v in zip(dicts, it.cycle(par.value)):
                 d[par.name] = v
         else:
-            for d in kwarg_dicts:
+            for d in dicts:
                 d[par.name] = par.value
 
-    return kwarg_dicts
+    return dicts
 
 
 def ask_for_input(question, default = None, cast_to = str):
     """Ask for input from the user, with a default value, and call cast_to on it before returning it."""
-    input_str = input(question + ' [Default: {}]: '.format(default))
+    try:
+        input_str = input(question + ' [Default: {}] > '.format(default))
+
+        trimmed = input_str.replace(' ', '')
+        if trimmed == '':
+            out = cast_to(default)
+        else:
+            out = cast_to(trimmed)
+
+        logger.debug('Got input from stdin for question "{}": {}'.format(question, out))
+
+        return out
+    except Exception as e:
+        print(e)
+        ask_for_input(question, default = default, cast_to = cast_to)
+
+
+def ask_for_bool(question, default = False):
+    """
+
+    Synonyms for True: 'true', 't', 'yes', 'y', '1', 'on'
+    Synonyms for False: 'false', 'f', 'no', 'n', '0', 'off'
+    :param question:
+    :param default:
+    :return:
+    """
+    try:
+        input_str = input(question + ' [Default: {}] > '.format(default))
+
+        trimmed = input_str.replace(' ', '')
+        if trimmed == '':
+            input_str = str(default)
+
+        logger.debug('Got input from stdin for question "{}": {}'.format(question, input_str))
+
+        input_str_lower = input_str.lower()
+        if input_str_lower in ('true', 't', 'yes', 'y', '1', 'on'):
+            return True
+        elif input_str_lower in ('false', 'f', 'no', 'n', '0', 'off'):
+            return False
+        else:
+            raise ValueError('Invalid answer to question "{}"'.format(question))
+    except Exception as e:
+        print(e)
+        ask_for_bool(question, default = default)
+
+
+def ask_for_eval(question, default = 'None'):
+    input_str = input(question + ' [Default: {}] (eval) > '.format(default))
 
     trimmed = input_str.replace(' ', '')
     if trimmed == '':
-        out = cast_to(default)
-    else:
-        out = cast_to(trimmed)
+        input_str = str(default)
 
-    logger.debug('Got input from cmd line: {} [type: {}]'.format(out, type(out)))
+    logger.debug('Got input from stdin for question "{}": {}'.format(question, input_str))
 
-    # input_str = input(question + ' [Default: {}]: '.format(default))
-    #
-    # trimmed = (s.strip() for s in input_str.split(','))
+    try:
+        return eval(input_str)
+    except NameError as e:
+        did_you_mean = ask_for_bool("Did you mean '{}'?".format(input_str), default = 'yes')
+        if did_you_mean:
+            return eval("'{}'".format(input_str))
+        else:
+            raise e
+    except Exception as e:
+        print(e)
+        ask_for_eval(question, default = default)
 
-    return out
+
+def abort_job_creation():
+    print('Aborting job creation...')
+    logger.critical('Aborted job creation')
+    sys.exit(0)
 
 
-def create_job_dirs(job_name):
+def create_job_dirs(job_dir):
     print('Creating job directory and subdirectories...')
 
-    os.makedirs(job_name, exist_ok = True)
-    os.chdir(job_name)
-    os.makedirs('inputs/', exist_ok = True)
-    os.makedirs('outputs/', exist_ok = True)
-    os.makedirs('logs/', exist_ok = True)
+    utils.ensure_dir_exists(job_dir)
+    utils.ensure_dir_exists(os.path.join(job_dir, 'inputs'))
+    utils.ensure_dir_exists(os.path.join(job_dir, 'outputs'))
+    utils.ensure_dir_exists(os.path.join(job_dir, 'logs'))
 
 
-def save_parameters(parameters):
+def save_specifications(specifications, job_dir):
     print('Saving Parameters...')
 
-    for parameter in parameters:
-        parameter.save(target_dir = 'inputs/')
+    for spec in specifications:
+        spec.save(target_dir = os.path.join(job_dir, 'inputs/'))
+
+    logger.info('Saved Specifications')
 
 
-def write_parameter_info_to_file(parameters):
+def write_specifications_info_to_file(specifications, job_dir):
+    print('Writing Specification info to file...')
+
+    with open(os.path.join(job_dir, 'specifications.txt'), 'w') as file:
+        for spec in specifications:
+            file.write(str(spec))
+            file.write(spec.info())
+            file.write('\n')  # blank line between specs
+
+    logger.info('Saved Specification information')
+
+
+def write_parameters_info_to_file(parameters, job_dir):
     print('Writing Parameters info to file...')
-    with open('parameters.txt', 'w') as file:
-        for parameter in parameters:
-            file.write(parameter.info())
-            file.write('\n' + ('-' * 10) + '\n')  # line between Parameters
+
+    with open(os.path.join(job_dir, 'parameters.txt'), 'w') as file:
+        for param in parameters:
+            file.write(repr(param))
+            file.write('\n')  # blank line between specs
+
+    logger.info('Saved Parameter information')
 
 
 CHTC_SUBMIT_STRING = """universe = vanilla
@@ -370,18 +454,17 @@ def format_chtc_submit_string(job_name, parameter_count, memory = 4, disk = 4, c
     return submit_string
 
 
-def specification_check(parameters):
-    print('Generated {} Parameters'.format(len(parameters)))
+def specification_check(specifications):
+    print('Generated {} Specifications'.format(len(specifications)))
 
     print('-' * 20)
-    print(parameters[0].info())
+    print(specifications[0])
+    print(specifications[0].info())
     print('-' * 20)
 
-    parameter_check = input('Does the first Specification look correct? (y/[n]) ')
-    parameter_check = parameter_check.strip(' ')
-    if parameter_check != 'y':
-        print('Aborting job creation...')
-        sys.exit(0)
+    check = ask_for_bool('Does the first Specification look correct?', default = 'No')
+    if not check:
+        abort_job_creation()
 
 
 def submit_check(submit_string):
@@ -389,18 +472,23 @@ def submit_check(submit_string):
     print(submit_string)
     print('-' * 20)
 
-    submit_check = input('Does the submit file look correct? (y/[n]) ')
-    submit_check = submit_check.strip(' ')
-    if submit_check != 'y':
-        print('Aborting job creation...')
-        sys.exit(0)
+    check = ask_for_bool('Does the submit file look correct?', default = 'No')
+    if not check:
+        abort_job_creation()
 
 
-def write_submit_file(submit_string):
+def write_submit_file(submit_string, job_dir):
     print('Saving submit file...')
 
-    with open('submit_job.sub', mode = 'w') as file:
+    with open(os.path.join(job_dir, 'submit_job.sub'), mode = 'w') as file:
         file.write(submit_string)
+
+    logger.debug('Saved submit file')
+
+
+def write_job_info(job_info, job_dir):
+    with open(os.path.join(job_dir, 'info.json'), mode = 'w') as f:
+        json.dump(job_info, f)
 
 
 def submit_job():

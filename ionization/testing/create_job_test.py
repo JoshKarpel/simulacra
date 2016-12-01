@@ -1,0 +1,140 @@
+# create an Ionization vs Pulse Width job
+
+import sys
+
+sys.path.append('../..')
+
+import os
+import logging
+import argparse
+import json
+
+import numpy as np
+
+import compy as cp
+import ionization as ion
+import ionization.cluster as clu
+from compy.units import *
+
+if __name__ == '__main__':
+    with cp.utils.Logger('compy', 'ionization') as logger:
+        # job type options
+        job_processor = ion.cluster.IonizationJobProcessor
+
+        # get command line arguments
+        parser = argparse.ArgumentParser(description = 'Create an Ionization vs Pulse Width job.')
+        parser.add_argument('job_name',
+                            type = str,
+                            help = 'the name of the job')
+        parser.add_argument('--dir', '-d',
+                            action = 'store',
+                            help = 'directory to put the job directory in')
+        parser.add_argument('--overwrite', '-o',
+                            action = 'store_true',
+                            help = 'force overwrite existing job directory if there is a name collision')
+
+        args = parser.parse_args()
+
+        try:
+            job_dir = os.path.join(args.d, args.job_name)
+        except AttributeError:
+            job_dir = os.path.join(os.getcwd(), args.job_name)
+
+        if os.path.exists(args.job_name) and not args.overwrite:
+            if not clu.ask_for_bool('A job with that name already exists. Overwrite?', default = 'No'):
+                clu.abort_job_creation()
+
+        parameters = []
+
+        # get input from the user to define the job
+        spec_type, mesh_kwargs = clu.ask_mesh_type()
+
+        parameters.append(clu.Parameter(name = 'initial_state',
+                                        value = ion.BoundState(clu.ask_for_input('Initial State n?', default = 1, cast_to = int),
+                                                               clu.ask_for_input('Initial State l?', default = 0, cast_to = int))))
+
+        largest_n = clu.ask_for_input('Largest Bound State n to Overlap With?', default = 5, cast_to = int)
+        parameters.append(clu.Parameter(name = 'test_states',
+                                        value = tuple(ion.BoundState(n, l) for n in range(largest_n + 1) for l in range(n))))
+
+        parameters.append(clu.Parameter(name = 'time_step',
+                                        value = asec * clu.ask_for_input('Time Step (in as)?', default = 1, cast_to = float)))
+
+        minimum_time_final = clu.Parameter(name = 'minimum_time_final',
+                                           value = asec * clu.ask_for_input('Minimum Final Time (in as)?', default = 0, cast_to = float))
+        parameters.append(minimum_time_final)
+        if minimum_time_final.value > 0:
+            parameters.append(clu.Parameter(name = 'extra_time_step',
+                                            value = asec * clu.ask_for_input('Extra Time Step (in as)?', default = 1, cast_to = float)))
+
+        checkpoints = clu.ask_for_bool('Checkpoints?', default = True)
+        parameters.append(clu.Parameter(name = 'checkpoints',
+                                        value = checkpoints))
+        if checkpoints:
+            parameters.append(clu.Parameter(name = 'checkpoint_every',
+                                            value = clu.ask_for_input('How many time steps per checkpoint?', default = 50, cast_to = int)))
+
+        outer_radius_default = mesh_kwargs['outer_radius'] / bohr_radius
+        mask = ion.RadialCosineMask(inner_radius = bohr_radius * clu.ask_for_input('Mask Inner Radius (in Bohr radii)?', default = outer_radius_default - 50, cast_to = float),
+                                    outer_radius = bohr_radius * clu.ask_for_input('Mask Outer Radius (in Bohr radii)?', default = outer_radius_default, cast_to = float),
+                                    smoothness = clu.ask_for_input('Mask Smoothness?', default = 8, cast_to = int))
+        parameters.append(clu.Parameter(name = 'mask',
+                                        value = mask))
+
+        # pulse parameters
+        pulse_parameters = []
+
+        pulse_width = clu.Parameter(name = 'pulse_width',
+                                    value = asec * clu.ask_for_eval('Pulse Widths (in as)?', default = 'np.linspace(1, 1000, 200)'),
+                                    expandable = True)
+        pulse_parameters.append(pulse_width)
+
+        phase = clu.Parameter(name = 'phase',
+                              value = clu.ask_for_input('Sinc Pulse Phase? (cos/sin)', default = 'cos', cast_to = str),
+                              expandable = True)
+        pulse_parameters.append(phase)
+
+        fluence = clu.Parameter(name = 'fluence',
+                                value = (J / (cm ** 2)) * clu.ask_for_eval('Pulse Fluence (in J/cm^2)?', default = 1),
+                                expandable = True)
+        pulse_parameters.append(fluence)
+
+        parameters.append(clu.Parameter(name = 'electric_potential',
+                                        value = tuple(ion.SincPulse(**d) for d in clu.expand_parameters_to_dicts(pulse_parameters)),
+                                        expandable = True))
+
+        print('Generating parameters...')
+
+        spec_kwargs_list = clu.expand_parameters_to_dicts(parameters)
+        print(spec_kwargs_list[0])
+        specs = []
+
+        for ii, spec_kwargs in enumerate(spec_kwargs_list):
+            spec = spec_type('flu={}jcm2_pw={}as'.format(uround(spec_kwargs['electric_potential'].fluence, (J / cm ** 2), 3),
+                                                         uround(spec_kwargs['electric_potential'].pulse_width, asec, 3)),
+                             file_name = str(ii),
+                             **mesh_kwargs, **spec_kwargs)
+
+            specs.append(spec)
+
+        clu.specification_check(specs)
+
+        submit_string = clu.format_chtc_submit_string(args.job_name, len(specs), checkpoints = checkpoints)
+        clu.submit_check(submit_string)
+
+        clu.create_job_dirs(job_dir)
+        clu.save_specifications(specs, job_dir)
+        clu.write_specifications_info_to_file(specs, job_dir)
+        clu.write_parameters_info_to_file(parameters + pulse_parameters, job_dir)
+
+        job_info = {'name': args.job_name,
+                    'number_of_sims': len(specs),
+                    'specification': specs[0].__class__.__name__,
+                    'external_potential': specs[0].electric_potential.__class__.__name__,
+                    'job_processor': job_processor.__class__.__name__,  # set at top of if-name-main
+                    }
+        clu.write_job_info(job_info, job_dir)
+
+        clu.write_submit_file(submit_string, job_dir)
+
+        # clu.submit_job()

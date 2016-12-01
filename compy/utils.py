@@ -19,7 +19,7 @@ from .units import *
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] > %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
+LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
 
 class Logger:
@@ -136,11 +136,11 @@ class Beet:
         :param name: the internal name of the Beet
         :param file_name: the desired external name, used for pickling. Illegal characters are stripped before use.
         """
-        self.name = name
+        self.name = str(name)
         if file_name is None:
-            file_name = name
+            file_name = self.name
 
-        file_name_stripped = strip_illegal_characters(file_name)
+        file_name_stripped = strip_illegal_characters(str(file_name))
         if file_name_stripped != file_name:
             logger.warning('Using file name {} instead of {} for {}'.format(file_name_stripped, file_name, self.name))
         self.file_name = file_name_stripped
@@ -562,7 +562,26 @@ class Checked(Descriptor):
         super(Checked, self).__init__(name)
 
     def __set__(self, instance, value):
-        if not check(value):
+        if not self.check(value):
             raise ValueError('Value {} did not pass the check'.format(value))
         else:
             super(Checked, self).__set__(instance, value)
+
+
+def convert_bytes(num):
+    """
+    this function will convert bytes to MB.... GB... etc
+    """
+    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
+        if num < 1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
+
+
+def file_size(file_path):
+    """
+    this function will return the file size
+    """
+    if os.path.isfile(file_path):
+        file_info = os.stat(file_path)
+        return convert_bytes(file_info.st_size)

@@ -320,8 +320,8 @@ class ElectricFieldSpecification(cp.core.Specification):
                  electric_potential = None,
                  mask = None,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
-                 extra_time = None, extra_time_step = 1 * asec,
-                 checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
+                 minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
+                 checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
                  **kwargs):
         super(ElectricFieldSpecification, self).__init__(name, simulation_type = ElectricFieldSimulation, **kwargs)
@@ -344,11 +344,11 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.time_final = time_final
         self.time_step = time_step
 
-        self.extra_time = extra_time
+        self.extra_time = minimum_time_final
         self.extra_time_step = extra_time_step
 
         self.checkpoints = checkpoints
-        self.checkpoint_at = checkpoint_at
+        self.checkpoint_every = checkpoint_every
         self.checkpoint_dir = checkpoint_dir
 
         self.animators = tuple(animators)
@@ -356,11 +356,11 @@ class ElectricFieldSpecification(cp.core.Specification):
     def info(self):
         checkpoint = ['Checkpointing: ']
         if self.checkpoints:
-            if self.animation_dir is not None:
+            if self.checkpoint_dir is not None:
                 working_in = self.checkpoint_dir
             else:
-                working_in = os.getcwd()
-            checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_at, working_in)
+                working_in = 'cwd'
+            checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_every, working_in)
         else:
             checkpoint[0] += 'disabled'
 
@@ -1791,8 +1791,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         total_time = self.spec.time_final - self.spec.time_initial
         self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
-        if self.spec.extra_time is not None:
-            extra_times = np.delete(np.linspace(self.spec.time_final, self.spec.time_final + self.spec.extra_time, (self.spec.extra_time / self.spec.extra_time_step) + 1), 0)
+        if self.spec.time_final < self.spec.minimum_time_final:
+            extra_times = np.delete(np.linspace(self.spec.time_final, self.spec.minimum_time_final, ((self.spec.minimum_time_final - self.spec.time_final) / self.spec.extra_time_step) + 1), 0)
             self.times = np.concatenate((self.times, extra_times))
         self.time_index = 0
         self.time_steps = len(self.times)

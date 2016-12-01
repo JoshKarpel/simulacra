@@ -7,6 +7,7 @@ import argparse
 import logging
 import datetime as dt
 import socket
+import json
 
 import compy as cp
 
@@ -23,15 +24,18 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     with cp.utils.Logger('__main__', 'compy', 'ionization',
-                         stdout_logs = False, file_logs = True, file_level = logging.INFO, file_name = '{}'.format(args.sim_name)) as logger:
+                         stdout_logs = False,
+                         file_logs = True, file_level = logging.DEBUG, file_name = '{}'.format(args.sim_name)) as logger:
         try:
             logger.info('Loaded onto execute node {} at {}.'.format(socket.gethostname(), dt.datetime.now()))
             logger.info('Local directory contents: {}'.format(os.listdir(os.getcwd())))
 
             # try to find existing checkpoint, and start from scratch if that fails
             try:
-                sim = cp.Simulation.load(os.path.join(os.getcwd(), '{}.sim'.format(args.sim_name)))
-                logger.info('Checkpoint found, recovering simulation {}'.format(sim))
+                sim_path = os.path.join(os.getcwd(), '{}.sim'.format(args.sim_name))
+                sim = cp.Simulation.load(sim_path)
+                logger.info('Checkpoint found at {}, recovered simulation {}'.format(sim_path, sim))
+                logger.debug('Checkpoint size is {}'.format(cp.utils.file_size(sim_path)))
             except (FileNotFoundError, EOFError):
                 sim = cp.Specification.load(os.path.join(os.getcwd(), '{}.spec'.format(args.sim_name))).to_simulation()
                 logger.info('Checkpoint not found, beginning simulation {}'.format(sim))
