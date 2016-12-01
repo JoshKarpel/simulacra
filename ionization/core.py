@@ -1278,7 +1278,7 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
-                '   Evolution Method: {}'.format(self.evolution_method),
+                '   Evolution: {} equations, {} method'.format(self.evolution_equations, self.evolution_method),
                 '   R Boundary: {} Bohr radii'.format(uround(self.r_bound, bohr_radius, 3)),
                 '   R Points: {}'.format(self.r_points),
                 '   R Mesh Spacing: ~{} Bohr radii'.format(uround(self.r_bound / self.r_points, bohr_radius, 3)),

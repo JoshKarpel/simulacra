@@ -18,7 +18,8 @@ if __name__ == '__main__':
         shutil.make_archive(d, format = 'gztar', base_dir = d)
 
     os.chdir('..')
-    shutil.copy('ionization/scripts/run_sim.py', 'deploy')
-    shutil.copy('ionization/scripts/run_sim.sh', 'deploy')
-    shutil.copy('ionization/scripts/middleman.py', 'deploy')
-    shutil.copy('compy/scripts/tar.py', 'deploy')
+    shutil.copy2('ionization/scripts/run_sim.py', 'deploy')
+    shutil.copy2('ionization/scripts/run_sim.sh', 'deploy')
+    shutil.copy2('ionization/scripts/middleman.py', 'deploy')
+    shutil.copy2('ionization/scripts/create_job_sinc.py', 'deploy')
+    shutil.copy2('compy/scripts/tar.py', 'deploy')

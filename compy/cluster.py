@@ -425,7 +425,7 @@ arguments = $(Process)
 #
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT_OR_EVICT
-transfer_input_files = /home/karpel/backend/compy.tar.gz, /home/karpel/backend/run_sim.py, inputs/$(Process).par, http://proxy.chtc.wisc.edu/SQUID/karpel/python.tar.gz
+transfer_input_files = /home/karpel/backend/compy.tar.gz, /home/karpel/backend/ionization.tar.gz, /home/karpel/backend/run_sim.py, inputs/$(Process).spec, http://proxy.chtc.wisc.edu/SQUID/karpel/python.tar.gz
 transfer_output_remaps = "$(Process).sim = outputs/$(Process).sim ; $(Process).log = logs/$(Process).log ; $(Process).mp4 = outputs/$(Process).mp4"
 #
 +JobBatchName = "{}"
@@ -491,7 +491,10 @@ def write_job_info(job_info, job_dir):
         json.dump(job_info, f)
 
 
-def submit_job():
+def submit_job(job_dir):
     print('Submitting job...')
+
+    # TODO: temp chdir context manager
+    os.chdir(job_dir)
 
     subprocess.run(['condor_submit', 'submit_job.sub'])

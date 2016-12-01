@@ -8,6 +8,9 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.NullHandler())
 
 import matplotlib
+
+matplotlib.use('agg')
+
 matplotlib.rcParams['font.family'] = 'serif'
 import matplotlib.pyplot as plt
 

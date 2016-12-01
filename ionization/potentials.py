@@ -184,9 +184,9 @@ class UniformLinearlyPolarizedElectricField(Potential):
 
     def __str__(self):
         if self.window:
-            return 'with {}'.format(self.window)
+            return ' with {}'.format(self.window)
         else:
-            return 'with no window'
+            return ' with no window'
 
     def get_amplitude(self, t):
         if self.window is not None:

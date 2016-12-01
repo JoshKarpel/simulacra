@@ -1,9 +1,6 @@
 # create an Ionization vs Pulse Width job
 
 import sys
-
-sys.path.append('../..')
-
 import os
 import shutil
 import logging
@@ -137,7 +134,6 @@ if __name__ == '__main__':
         clu.submit_check(submit_string)
 
         # point of no return
-
         shutil.rmtree(job_dir, ignore_errors = True)
 
         clu.create_job_dirs(job_dir)
@@ -155,4 +151,4 @@ if __name__ == '__main__':
 
         clu.write_submit_file(submit_string, job_dir)
 
-        # clu.submit_job()
+        clu.submit_job(job_dir)
