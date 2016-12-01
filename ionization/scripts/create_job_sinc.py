@@ -90,7 +90,7 @@ if __name__ == '__main__':
         pulse_parameters.append(pulse_width)
 
         phase = clu.Parameter(name = 'phase',
-                              value = clu.ask_for_input('Sinc Pulse Phase? (cos/sin)', default = 'cos', cast_to = str),
+                              value = clu.ask_for_eval('Sinc Pulse Phase? (cos/sin)', default = "'cos'"),
                               expandable = True)
         pulse_parameters.append(phase)
 
@@ -120,8 +120,9 @@ if __name__ == '__main__':
 
         for ii, spec_kwargs in enumerate(spec_kwargs_list):
             time_bound = spec_kwargs['time_bound_in_pw'] * spec_kwargs['electric_potential'].pulse_width
-            spec = spec_type('flu={}jcm2_pw={}as'.format(uround(spec_kwargs['electric_potential'].fluence, (J / cm ** 2), 3),
-                                                         uround(spec_kwargs['electric_potential'].pulse_width, asec, 3)),
+            spec = spec_type('flu={}jcm2_pw={}as_phase={}'.format(uround(spec_kwargs['electric_potential'].fluence, (J / cm ** 2), 3),
+                                                                  uround(spec_kwargs['electric_potential'].pulse_width, asec, 3),
+                                                                  spec_kwargs['electric_potential'].phase),
                              file_name = str(ii),
                              time_initial = -time_bound, time_final = time_bound,
                              **mesh_kwargs, **spec_kwargs)

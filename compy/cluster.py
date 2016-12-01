@@ -73,7 +73,7 @@ class ClusterInterface:
     def __repr__(self):
         return '{}(hostname = {}, username = {})'.format(self.__class__.__name__, self.remote_host, self.username)
 
-    @utils.cached_property
+    @property
     def local_home_dir(self):
         local_home = os.path.join(self.local_mirror_root, *self.remote_home_dir.split(self.remote_sep))
 
@@ -87,8 +87,7 @@ class ClusterInterface:
 
         return CmdOutput(stdin, stdout, stderr)
 
-    @utils.cached_property
-    def remote_home_dir(self):
+    def get_remote_home_dir(self):
         cmd_output = self.cmd(['pwd'])  # print name of home dir to stdout
 
         home_path = str(cmd_output.stdout.readline()).strip('\n')  # extract path of home dir from stdout
@@ -97,8 +96,7 @@ class ClusterInterface:
 
         return home_path
 
-    @property
-    def job_status(self):
+    def get_job_status(self):
         cmd_output = self.cmd(['condor_q'])
 
         status = cmd_output.stdout.readlines()
@@ -141,7 +139,7 @@ class ClusterInterface:
         return False
 
     def mirror_file(self, remote_path, remote_stat):
-        local_path = self.remote_path_to_local_path(remote_path)
+        local_path = self.remote_path_to_local(remote_path)
         if not self.is_file_synced(remote_stat, local_path):
             self.get_file(remote_path, local_path, remote_stat = remote_stat, preserve_timestamps = True)
 
@@ -198,7 +196,7 @@ class ClusterInterface:
         start_time = dt.datetime.now()
         logger.info('Mirroring remote home directory')
 
-        self.walk_remote_path(self.remote_home_dir, func_on_files = self.mirror_file, blacklist_dir_names = blacklist_dir_names, whitelist_file_ext = whitelist_file_ext)
+        self.walk_remote_path(self.get_remote_home_dir(), func_on_files = self.mirror_file, blacklist_dir_names = blacklist_dir_names, whitelist_file_ext = whitelist_file_ext)
 
         end_time = dt.datetime.now()
         logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))

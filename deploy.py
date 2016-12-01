@@ -7,7 +7,7 @@ def blacklist(directory, contents):
 
 
 if __name__ == '__main__':
-    shutil.rmtree('deploy')
+    shutil.rmtree('deploy', ignore_errors = True)
 
     for d in (d for d in os.listdir(os.getcwd()) if not d.startswith('.') and not d == 'deploy' and os.path.isdir(d)):
         t = os.path.join('deploy', d)

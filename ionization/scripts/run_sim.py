@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     with cp.utils.Logger('__main__', 'compy', 'ionization',
                          stdout_logs = False,
-                         file_logs = True, file_level = logging.DEBUG, file_name = '{}'.format(args.sim_name)) as logger:
+                         file_logs = True, file_level = logging.INFO, file_name = '{}'.format(args.sim_name)) as logger:
         try:
             logger.info('Loaded onto execute node {} at {}.'.format(socket.gethostname(), dt.datetime.now()))
             logger.debug('Local directory contents: {}'.format(os.listdir(os.getcwd())))
