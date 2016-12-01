@@ -391,7 +391,7 @@ def save_specifications(specifications, job_dir):
     for spec in specifications:
         spec.save(target_dir = os.path.join(job_dir, 'inputs/'))
 
-    logger.info('Saved Specifications')
+    logger.debug('Saved Specifications')
 
 
 def write_specifications_info_to_file(specifications, job_dir):
@@ -401,9 +401,9 @@ def write_specifications_info_to_file(specifications, job_dir):
         for spec in specifications:
             file.write(str(spec))
             file.write(spec.info())
-            file.write('\n')  # blank line between specs
+            file.write('\n\n')  # blank line between specs
 
-    logger.info('Saved Specification information')
+    logger.debug('Saved Specification information')
 
 
 def write_parameters_info_to_file(parameters, job_dir):
@@ -414,7 +414,7 @@ def write_parameters_info_to_file(parameters, job_dir):
             file.write(repr(param))
             file.write('\n')  # blank line between specs
 
-    logger.info('Saved Parameter information')
+    logger.debug('Saved Parameter information')
 
 
 CHTC_SUBMIT_STRING = """universe = vanilla

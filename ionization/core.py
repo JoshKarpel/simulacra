@@ -344,7 +344,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.time_final = time_final
         self.time_step = time_step
 
-        self.extra_time = minimum_time_final
+        self.minimum_time_final = minimum_time_final
         self.extra_time_step = extra_time_step
 
         self.checkpoints = checkpoints
@@ -376,9 +376,9 @@ class ElectricFieldSpecification(cp.core.Specification):
                           '   Final Time: {} as'.format(uround(self.time_final, asec, 3)),
                           '   Time Step: {} as'.format(uround(self.time_step, asec, 3))]
 
-        if self.extra_time is not None:
-            time_evolution += ['   Extra Time: {} as'.format(uround(self.extra_time, asec, 3)),
-                               '   Extra Time Step: {} as'.format(uround(self.extra_time, asec, 3))]
+        if self.minimum_time_final is not None:
+            time_evolution += ['   Extra Time: {} as'.format(uround(self.minimum_time_final, asec, 3)),
+                               '   Extra Time Step: {} as'.format(uround(self.minimum_time_final, asec, 3))]
 
         potentials = ['Potentials:']
         if self.internal_potential is not None:
@@ -1895,7 +1895,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
                                                                                      np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
 
                 if self.spec.checkpoints:
-                    if (self.time_index + 1) % self.spec.checkpoint_at == 0:
+                    if (self.time_index + 1) % self.spec.checkpoint_every == 0:
                         self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
                         logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
 

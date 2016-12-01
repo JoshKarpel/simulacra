@@ -5,6 +5,7 @@ import sys
 sys.path.append('../..')
 
 import os
+import shutil
 import logging
 import argparse
 import json
@@ -17,31 +18,33 @@ import ionization.cluster as clu
 from compy.units import *
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization') as logger:
+    # get command line arguments
+    parser = argparse.ArgumentParser(description = 'Create an Ionization vs Pulse Width job.')
+    parser.add_argument('job_name',
+                        type = str,
+                        help = 'the name of the job')
+    parser.add_argument('--dir', '-d',
+                        action = 'store',
+                        help = 'directory to put the job directory in')
+    parser.add_argument('--overwrite', '-o',
+                        action = 'store_true',
+                        help = 'force overwrite existing job directory if there is a name collision')
+    parser.add_argument('--verbosity', '-v',
+                        action = 'count', default = 0)
+
+    args = parser.parse_args()
+
+    with cp.utils.Logger('compy', 'ionization', stdout_level = 31 - ((args.verbosity + 1) * 10)) as logger:
         # job type options
         job_processor = ion.cluster.IonizationJobProcessor
 
-        # get command line arguments
-        parser = argparse.ArgumentParser(description = 'Create an Ionization vs Pulse Width job.')
-        parser.add_argument('job_name',
-                            type = str,
-                            help = 'the name of the job')
-        parser.add_argument('--dir', '-d',
-                            action = 'store',
-                            help = 'directory to put the job directory in')
-        parser.add_argument('--overwrite', '-o',
-                            action = 'store_true',
-                            help = 'force overwrite existing job directory if there is a name collision')
-
-        args = parser.parse_args()
-
         try:
-            job_dir = os.path.join(args.d, args.job_name)
+            job_dir = os.path.join(args.dir, args.job_name)
         except AttributeError:
             job_dir = os.path.join(os.getcwd(), args.job_name)
 
-        if os.path.exists(args.job_name) and not args.overwrite:
-            if not clu.ask_for_bool('A job with that name already exists. Overwrite?', default = 'No'):
+        if os.path.exists(job_dir):
+            if not args.overwrite and not clu.ask_for_bool('A job with that name already exists. Overwrite?', default = 'No'):
                 clu.abort_job_creation()
 
         parameters = []
@@ -59,6 +62,9 @@ if __name__ == '__main__':
 
         parameters.append(clu.Parameter(name = 'time_step',
                                         value = asec * clu.ask_for_input('Time Step (in as)?', default = 1, cast_to = float)))
+
+        parameters.append(clu.Parameter(name = 'number_of_pulse_widths',
+                                        value = clu.ask_for_input('Time Bound (in pulse widths)?', default = 20, cast_to = float)))
 
         minimum_time_final = clu.Parameter(name = 'minimum_time_final',
                                            value = asec * clu.ask_for_input('Minimum Final Time (in as)?', default = 0, cast_to = float))
@@ -110,9 +116,11 @@ if __name__ == '__main__':
         specs = []
 
         for ii, spec_kwargs in enumerate(spec_kwargs_list):
+            time_bound = spec_kwargs['number_of_pulse_widths'] * spec_kwargs['electric_potential'].pulse_width
             spec = spec_type('flu={}jcm2_pw={}as'.format(uround(spec_kwargs['electric_potential'].fluence, (J / cm ** 2), 3),
                                                          uround(spec_kwargs['electric_potential'].pulse_width, asec, 3)),
                              file_name = str(ii),
+                             time_initial = -time_bound, time_final = time_bound,
                              **mesh_kwargs, **spec_kwargs)
 
             specs.append(spec)
@@ -122,16 +130,20 @@ if __name__ == '__main__':
         submit_string = clu.format_chtc_submit_string(args.job_name, len(specs), checkpoints = checkpoints)
         clu.submit_check(submit_string)
 
+        # point of no return
+
+        shutil.rmtree(job_dir, ignore_errors = True)
+
         clu.create_job_dirs(job_dir)
         clu.save_specifications(specs, job_dir)
         clu.write_specifications_info_to_file(specs, job_dir)
         clu.write_parameters_info_to_file(parameters + pulse_parameters, job_dir)
 
         job_info = {'name': args.job_name,
+                    'job_processor_type': job_processor.__class__.__name__,  # set at top of if-name-main
                     'number_of_sims': len(specs),
-                    'specification': specs[0].__class__.__name__,
-                    'external_potential': specs[0].electric_potential.__class__.__name__,
-                    'job_processor': job_processor.__class__.__name__,  # set at top of if-name-main
+                    'specification_type': specs[0].__class__.__name__,
+                    'external_potential_type': specs[0].electric_potential.__class__.__name__,
                     }
         clu.write_job_info(job_info, job_dir)
 
