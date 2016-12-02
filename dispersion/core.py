@@ -364,14 +364,19 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
 
         taus = np.linspace(-tau_range, tau_range, tau_points)
         michelson = np.zeros(len(taus))
+        michelson_env = np.zeros(len(taus))
         intensity = np.zeros(len(taus))
+        intensity_env = np.zeros(len(taus))
         interferometric = np.zeros(len(taus))
+        interferometric_env = np.zeros(len(taus))
 
         for ii, tau in enumerate(taus):
             _, electric_field_shifted = self.fft(amplitudes = self.amplitudes * np.exp(-1j * twopi * tau * self.frequencies))
             electric_field_shifted_real = np.real(electric_field_shifted)
             integrand = np.abs(electric_field_real + electric_field_shifted_real) ** 2
+            integrand_env = np.abs(electric_field + electric_field_shifted) ** 2
             michelson[ii] = integ.simps(integrand, dx = t[1] - t[0])
+            michelson_env[ii] = integ.simps(integrand_env, dx = t[1] - t[0])
             logger.debug('Calculated Michelson Intensity for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
 
             integrand = (np.abs(electric_field) ** 2) * (np.abs(electric_field_shifted) ** 2)
@@ -379,7 +384,17 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
             logger.debug('Calculated Intensity Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
 
             integrand = np.abs((electric_field_real + electric_field_shifted_real) ** 2) ** 2
+            integrand_env = np.abs((np.abs(electric_field) + np.abs(electric_field_shifted)) ** 2) ** 2
+            # integrand_env = np.abs(np.abs(electric_field + electric_field_shifted) ** 2) ** 2
+            # integrand_env = np.abs(electric_field + electric_field_shifted) ** 4
+            print('tau', tau / fsec)
+            print('int', np.sum(integrand))
+            print('env', np.sum(integrand_env))
             interferometric[ii] = integ.simps(integrand, dx = t[1] - t[0])
+            interferometric_env[ii] = integ.simps(integrand_env, dx = t[1] - t[0])
+            print('int2', interferometric[ii])
+            print('env2', interferometric_env[ii])
+            print()
             logger.debug('Calculated Interferometric Autocorrelation for tau = {} fs, {}/{}'.format(uround(tau, fsec, 3), ii + 1, len(taus)))
 
         michelson_plot_options = {'title': 'Michelson Autocorrelation',
@@ -390,7 +405,7 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
                                   'y_center': 0.5,
                                   'y_range': 0.5}
         michelson_plot_options.update(kwargs)
-        cp.utils.xy_plot(taus, michelson / np.nanmax(michelson),
+        cp.utils.xy_plot(taus, michelson / np.nanmax(michelson), michelson_env / np.nanmax(michelson),
                          **michelson_plot_options)
 
         intensity_plot_options = {'title': 'Intensity Autocorrelation',
@@ -412,7 +427,7 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
                                         'y_center': 0.5,
                                         'y_range': 0.5}
         interferometric_plot_options.update(kwargs)
-        cp.utils.xy_plot(taus, interferometric / np.nanmax(interferometric),
+        cp.utils.xy_plot(taus, interferometric / np.nanmax(interferometric), interferometric_env / np.nanmax(interferometric_env),
                          **interferometric_plot_options)
 
     def fit_pulse(self):
@@ -502,59 +517,6 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
         plt.close()
 
         return fit_result
-
-    def plot_autocorrelation(self, x_scale = 'fs', y_scale = None, **kwargs):
-        t, autocorrelation = self.autocorrelation()
-        fit_result, fft_result = self.fit_pulse()
-
-        t_center, sigma, prefactor, cov = fit_result
-
-        t_center = t[np.argmax(autocorrelation)]
-
-        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
-        fig.set_tight_layout(True)
-        axis = plt.subplot(111)
-
-        if x_scale is not None:
-            scaled_t = t / unit_names_to_values[x_scale]
-        else:
-            scaled_t = t
-
-        if y_scale is not None:
-            e_scale = unit_names_to_values[y_scale]
-        else:
-            e_scale = 1
-
-        # axis.plot(scaled_t, autocorrelation / e_scale, label = r'$E(t)$', color = 'blue')
-        axis.plot(scaled_t, np.real(autocorrelation) / e_scale, label = r'$AC$', color = 'blue')
-        # axis.plot(scaled_t, np.abs(autocorrelation) / e_scale, label = r'$\left| AC \right|$', color = 'green')
-        # axis.plot(scaled_t, -np.abs(autocorrelation) / e_scale, color = 'green')
-
-        title = axis.set_title(r'Autocorrelation', fontsize = 15)
-        title.set_y(1.05)
-
-        x_label = r'Time Delay $\tau$'
-        x_label += r' ({})'.format(unit_names_to_tex_strings[x_scale])
-        axis.set_xlabel(r'{}'.format(x_label), fontsize = 15)
-
-        y_label = r'Autocorrelation'
-        if y_scale is not None:
-            y_label += r' ({})'.format(unit_names_to_tex_strings[y_scale])
-        axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
-
-        x_range = 5 * sigma
-        lower_limit_x = t_center - x_range
-        upper_limit_x = t_center + x_range
-        axis.set_xlim(lower_limit_x / unit_names_to_values[x_scale], upper_limit_x / unit_names_to_values[x_scale])
-
-        axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
-        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
-
-        axis.legend(loc = 'best', fontsize = 12)
-
-        cp.utils.save_current_figure(name = '{}__autocorrelation'.format(self.name), **kwargs)
-
-        plt.close()
 
     def plot_gdd_vs_wavelength(self, x_lower_lim = 500 * nm, x_upper_lim = 1200 * nm,
                                overlay_power_spectrum = False,
