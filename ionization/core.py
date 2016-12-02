@@ -1272,6 +1272,7 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
         self.r_bound = r_bound
         self.r_points = int(r_points)
         self.l_points = l_points
+        self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.l_points))
 
         self.evolution_equations = evolution_equations
         self.evolution_method = evolution_method
@@ -1300,7 +1301,6 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.r_max = np.max(self.r)
 
         self.l = np.array(range(self.spec.l_points))
-        self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.spec.l_points))
         self.theta_points = min(self.spec.l_points * 5, 360)
         self.phi_points = self.theta_points
 
@@ -1806,7 +1806,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
 
         if 'l' in self.mesh.mesh_storage_method:
-            self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps) * np.NaN for sph_harm in self.mesh.spherical_harmonics}
+            self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps) * np.NaN for sph_harm in self.spec.spherical_harmonics}
 
     @property
     def available_animation_frames(self):
@@ -1857,11 +1857,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if 'l' in self.mesh.mesh_storage_method:
             norm_by_l = self.mesh.norm_by_l
-            for sph_harm, l_norm in zip(self.mesh.spherical_harmonics, norm_by_l):
+            for sph_harm, l_norm in zip(self.spec.spherical_harmonics, norm_by_l):
                 self.norm_by_harmonic_vs_time[sph_harm][time_index] = l_norm  # TODO: extend to non-l storage meshes
 
-            largest_l = self.mesh.spherical_harmonics[-1]
-            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.mesh.spherical_harmonics[-1]][time_index]
+            largest_l = self.spec.spherical_harmonics[-1]
+            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][time_index]
             if norm_in_largest_l > self.norm_vs_time[self.time_index] / 1000:
                 logger.warning('Wavefunction norm in largest angular momentum state is large (l = {}, norm = {}), consider increasing l bound'.format(largest_l, norm_in_largest_l))
 
@@ -1997,11 +1997,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_field.plot(self.times / asec, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
 
         if renormalize:
-            overlaps = [self.norm_by_harmonic_vs_time[sph_harm] / self.norm_vs_time for sph_harm in self.mesh.spherical_harmonics]
-            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2 / \left\langle \psi| \psi \right\rangle$'.format(sph_harm.tex_str) for sph_harm in self.mesh.spherical_harmonics]
+            overlaps = [self.norm_by_harmonic_vs_time[sph_harm] / self.norm_vs_time for sph_harm in self.spec.spherical_harmonics]
+            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2 / \left\langle \psi| \psi \right\rangle$'.format(sph_harm.tex_str) for sph_harm in self.spec.spherical_harmonics]
         else:
-            overlaps = [self.norm_by_harmonic_vs_time[sph_harm] for sph_harm in self.mesh.spherical_harmonics]
-            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(sph_harm.tex_str) for sph_harm in self.mesh.spherical_harmonics]
+            overlaps = [self.norm_by_harmonic_vs_time[sph_harm] for sph_harm in self.spec.spherical_harmonics]
+            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(sph_harm.tex_str) for sph_harm in self.spec.spherical_harmonics]
         num_colors = len(overlaps)
         ax_momentums.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
         ax_momentums.stackplot(self.times / asec, *overlaps, alpha = 1, labels = l_labels)
@@ -2025,7 +2025,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_momentums.set_ylabel(y_label, fontsize = 15)
         ax_field.set_ylabel('E-Field (a.u.)', fontsize = 11)
 
-        ax_momentums.legend(bbox_to_anchor = (1.1, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10, ncol = 1 + (len(self.mesh.spherical_harmonics) // 17))
+        ax_momentums.legend(bbox_to_anchor = (1.1, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10, ncol = 1 + (len(self.spec.spherical_harmonics) // 17))
 
         ax_momentums.tick_params(labelright = True)
         ax_field.tick_params(labelright = True)
@@ -2048,6 +2048,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_momentums.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
         postfix = ''
+        if renormalize:
+            postfix += '_renorm'
         cp.utils.save_current_figure(name = self.spec.file_name + '__angular_momentum_vs_time{}'.format(postfix), **kwargs)
 
         plt.close()

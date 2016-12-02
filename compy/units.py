@@ -98,10 +98,10 @@ psec = 1e-12 * s
 fsec = 1e-15 * s
 asec = 1e-18 * s
 minute = 60 * s
-hour = 60 * minute
-day = 24 * hour
-week = 7 * day
-year = 365 * day
+hours = hour = 60 * minute
+days = day = 24 * hour
+weeks = week = 7 * day
+years = year = 365 * day
 
 unit_names_to_values.update({'ms': msec,
                              'msec': msec,
@@ -115,10 +115,15 @@ unit_names_to_values.update({'ms': msec,
                              'fsec': fsec,
                              'as': asec,
                              'asec': asec,
+                             'minute': minute,
                              'minutes': minute,
+                             'hour': hour,
                              'hours': hour,
+                             'day': day,
                              'days': day,
+                             'week': week,
                              'weeks': week,
+                             'year': year,
                              'years': year})
 unit_names_to_tex_strings.update({'ms': r'$\mathrm{ms}$',
                                   'msec': r'$\mathrm{ms}$',
@@ -132,10 +137,15 @@ unit_names_to_tex_strings.update({'ms': r'$\mathrm{ms}$',
                                   'fsec': r'$\mathrm{fs}$',
                                   'as': r'$\mathrm{as}$',
                                   'asec': r'$\mathrm{as}$',
+                                  'minute': '$\mathrm{minutes}$',
                                   'minutes': '$\mathrm{minutes}$',
+                                  'hour': '$\mathrm{hours}$',
                                   'hours': '$\mathrm{hours}$',
+                                  'day': '$\mathrm{days}$',
                                   'days': '$\mathrm{days}$',
+                                  'week': '$\mathrm{weeks}$',
                                   'weeks': '$\mathrm{weeks}$',
+                                  'year': '$\mathrm{years}$',
                                   'years': '$\mathrm{years}$'})
 
 # mass

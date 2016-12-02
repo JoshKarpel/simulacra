@@ -307,8 +307,8 @@ def xy_plot(x, *y,
 
     # set x axis limits
     if x_range is None:
-        lower_limit_x = np.min(scaled_x)
-        upper_limit_x = np.max(scaled_x)
+        lower_limit_x = np.nanmin(scaled_x)
+        upper_limit_x = np.nanmax(scaled_x)
     else:
         lower_limit_x = (x_center - x_range) / unit_names_to_values[x_scale]
         upper_limit_x = (x_center + x_range) / unit_names_to_values[x_scale]

@@ -194,7 +194,7 @@ class ClusterInterface:
         walk(remote_path)
         print()
 
-    def mirror_remote_home_dir(self, blacklist_dir_names = ('python', 'build_python', 'ionization'), whitelist_file_ext = ('.txt', '.log', '.par', '.sim')):
+    def mirror_remote_home_dir(self, blacklist_dir_names = ('python', 'build_python', 'ionization'), whitelist_file_ext = ('.txt', '.log', '.spec', '.sim')):
         start_time = dt.datetime.now()
         logger.info('Mirroring remote home directory')
 
@@ -253,7 +253,7 @@ class JobProcessor(utils.Beet):
         self.plots_dir = os.path.join(self.job_dir_path, 'plots')
         self.movies_dir = os.path.join(self.job_dir_path, 'movies')
 
-        sim_names = [f.strip('.par') for f in os.listdir(self.input_dir)]
+        sim_names = [f.strip('.spec') for f in os.listdir(self.input_dir)]
         self.sim_names = sorted(sim_names, key = int)
         self.sim_count = len(self.sim_names)
         self.unprocessed_sims = set(self.sim_names)
@@ -262,6 +262,9 @@ class JobProcessor(utils.Beet):
 
         self.simulation_type = simulation_type
 
+    def __str__(self):
+        return '{} for job {}, processed {}/{} Simulations'.format(self.__class__.__name__, self.name, self.sim_count - len(self.unprocessed_sims), self.sim_count)
+
     def save(self, target_dir = None, file_extension = '.job'):
         return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
 
@@ -269,11 +272,11 @@ class JobProcessor(utils.Beet):
         """Hook method to collect summary data from a single Simulation."""
         self.data[sim_name].update({
             'name': sim.name,
-            'file_name': sim.file_name,
+            'file_name': int(sim.file_name),
             'start_time': sim.start_time,
             'end_time': sim.end_time,
-            'elapsed_time': sim.elapsed_time,
-            'run_time': sim.run_time,
+            'elapsed_time': sim.elapsed_time.total_seconds(),
+            'run_time': sim.run_time.total_seconds(),
         })
 
     def process_sim(self, sim_name, sim):
@@ -298,7 +301,7 @@ class JobProcessor(utils.Beet):
         start_time = dt.datetime.now()
         logger.info('Loading simulations from job {}'.format(self.name))
 
-        for sim_name in self.unprocessed_sims:
+        for sim_name in tqdm(copy(self.unprocessed_sims)):
             sim = self.load_sim(sim_name)
             if sim is not None:
                 self.collect_data_from_sim(sim_name, sim)
@@ -311,6 +314,14 @@ class JobProcessor(utils.Beet):
 
     def write_to_csv(self):
         raise NotImplementedError
+
+    def make_plot(self, x_key, *y_keys, filter = lambda x: True, **kwargs):
+        data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and filter(v))
+
+        x_array = np.array(list(v[x_key] for v in data.values()))
+        y_arrays = [np.array(list(v[y_key] for v in data.values())) for y_key in y_keys]
+
+        utils.xy_plot(x_array, *y_arrays, **kwargs)
 
 
 class Parameter:

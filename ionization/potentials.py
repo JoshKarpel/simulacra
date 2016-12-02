@@ -221,11 +221,11 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
         return out + super(Rectangle, self).__str__()
 
     def __repr__(self):
-        out = '{}(start_time = {}, end_time = {}, amplitude = {}, window_function = {})'.format(self.__class__.__name__,
-                                                                                                self.start_time,
-                                                                                                self.end_time,
-                                                                                                self.amplitude,
-                                                                                                repr(self.window))
+        out = '{}(start_time = {}, end_time = {}, amplitude = {}, window = {})'.format(self.__class__.__name__,
+                                                                                       self.start_time,
+                                                                                       self.end_time,
+                                                                                       self.amplitude,
+                                                                                       repr(self.window))
 
         return out
 
@@ -258,13 +258,13 @@ class SineWave(UniformLinearlyPolarizedElectricField):
         return out + super(SineWave, self).__str__()
 
     def __repr__(self):
-        out = '{}(omega = {}, amplitude = {}, phase = {}, window_function = {})'.format(self.__class__.__name__,
-                                                                                        self.omega,
-                                                                                        self.amplitude,
-                                                                                        self.phase,
-                                                                                        repr(self.window))
+        out = '{}(omega = {}, amplitude = {}, phase = {}, window = {})'.format(self.__class__.__name__,
+                                                                               self.omega,
+                                                                               self.amplitude,
+                                                                               self.phase,
+                                                                               repr(self.window))
 
-        return out + super(SineWave, self).__repr__()
+        return out
 
     @classmethod
     def from_frequency(cls, frequency, amplitude = 1 * atomic_electric_field, phase = 0, **kwargs):
@@ -344,14 +344,14 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
         return out + super(SincPulse, self).__str__()
 
     def __repr__(self):
-        out = '{}(pulse width = {}, pulse center = {}, fluence = {}, phase = {}, window_function = {})'.format(self.__class__.__name__,
-                                                                                                               self.pulse_width,
-                                                                                                               self.pulse_center,
-                                                                                                               self.fluence,
-                                                                                                               self.phase,
-                                                                                                               repr(self.window))
+        out = '{}(pulse width = {}, pulse center = {}, fluence = {}, phase = {}, window = {})'.format(self.__class__.__name__,
+                                                                                                      self.pulse_width,
+                                                                                                      self.pulse_center,
+                                                                                                      self.fluence,
+                                                                                                      self.phase,
+                                                                                                      repr(self.window))
 
-        return out + super(SincPulse, self).__repr__()
+        return out
 
     def get_amplitude(self, t):
         if self.phase == 'cos':
@@ -395,14 +395,14 @@ class RandomizedSincPulse(UniformLinearlyPolarizedElectricField):
         return out + super(RandomizedSincPulse, self).__str__()
 
     def __repr__(self):
-        out = '{}(pulse width = {}, pulse center = {}, fluence = {}, phase = {}, window_function = {})'.format(self.__class__.__name__,
-                                                                                                               self.pulse_width,
-                                                                                                               self.pulse_center,
-                                                                                                               self.fluence,
-                                                                                                               self.phase,
-                                                                                                               repr(self.window))
+        out = '{}(pulse width = {}, pulse center = {}, fluence = {}, phase = {}, window = {})'.format(self.__class__.__name__,
+                                                                                                      self.pulse_width,
+                                                                                                      self.pulse_center,
+                                                                                                      self.fluence,
+                                                                                                      self.phase,
+                                                                                                      repr(self.window))
 
-        return out + super(RandomizedSincPulse, self).__repr__()
+        return out
 
     def get_amplitude(self, t):
         raise NotImplementedError
