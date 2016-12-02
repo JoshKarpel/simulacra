@@ -7,10 +7,15 @@ import sys
 import posixpath
 import stat
 import subprocess
-import time
+import itertools as it
+from copy import copy, deepcopy
+from collections import OrderedDict
 
+from tqdm import tqdm
+import numpy as np
 import paramiko
 
+from . import core
 from . import utils
 
 logger = logging.getLogger(__name__)
@@ -70,7 +75,7 @@ class ClusterInterface:
     def __repr__(self):
         return '{}(hostname = {}, username = {})'.format(self.__class__.__name__, self.remote_host, self.username)
 
-    @utils.cached_property
+    @property
     def local_home_dir(self):
         local_home = os.path.join(self.local_mirror_root, *self.remote_home_dir.split(self.remote_sep))
 
@@ -84,8 +89,7 @@ class ClusterInterface:
 
         return CmdOutput(stdin, stdout, stderr)
 
-    @utils.cached_property
-    def remote_home_dir(self):
+    def get_remote_home_dir(self):
         cmd_output = self.cmd(['pwd'])  # print name of home dir to stdout
 
         home_path = str(cmd_output.stdout.readline()).strip('\n')  # extract path of home dir from stdout
@@ -94,8 +98,7 @@ class ClusterInterface:
 
         return home_path
 
-    @property
-    def job_status(self):
+    def get_job_status(self):
         cmd_output = self.cmd(['condor_q'])
 
         status = cmd_output.stdout.readlines()
@@ -138,7 +141,7 @@ class ClusterInterface:
         return False
 
     def mirror_file(self, remote_path, remote_stat):
-        local_path = self.remote_path_to_local_path(remote_path)
+        local_path = self.remote_path_to_local(remote_path)
         if not self.is_file_synced(remote_stat, local_path):
             self.get_file(remote_path, local_path, remote_stat = remote_stat, preserve_timestamps = True)
 
@@ -191,108 +194,292 @@ class ClusterInterface:
         walk(remote_path)
         print()
 
-    def mirror_remote_home_dir(self, blacklist_dir_names = ('python', 'build_python', 'ionization'), whitelist_file_ext = ('.txt', '.log', '.par', '.sim')):
+    def mirror_remote_home_dir(self, blacklist_dir_names = ('python', 'build_python', 'ionization'), whitelist_file_ext = ('.txt', '.log', '.spec', '.sim')):
         start_time = dt.datetime.now()
         logger.info('Mirroring remote home directory')
 
-        self.walk_remote_path(self.remote_home_dir, func_on_files = self.mirror_file, blacklist_dir_names = blacklist_dir_names, whitelist_file_ext = whitelist_file_ext)
+        self.walk_remote_path(self.get_remote_home_dir(), func_on_files = self.mirror_file, blacklist_dir_names = blacklist_dir_names, whitelist_file_ext = whitelist_file_ext)
 
         end_time = dt.datetime.now()
         logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))
 
-        # @property
-        # def local_job_names(self):
-        #     return (job_dir for job_dir in os.listdir(os.path.join(self.local_home_dir, 'jobs')))
-        #
-        # def process_job(self, job_name, individual_processing = False):
-        #     job_dir_path = os.path.join(self.local_home_dir, 'jobs', job_name)
-        #     try:
-        #         jp = JobProcessor.load(os.path.join(job_dir_path, '{}.job'.format(job_name)))
-        #     except (FileNotFoundError, EOFError, ImportError):
-        #         job_info_path = os.path.join(job_dir_path, 'info.json')
-        #         with open(job_info_path, mode = 'r') as f:
-        #             job_info = json.load(f)
-        #         jp = job_info['job_processor'](job_dir_path)
-        #
-        #     jp.process_job(individual_processing = individual_processing)
-        #
-        # def process_jobs(self, individual_processing = False):
-        #     start_time = dt.datetime.now()
-        #     logger.info('Processing jobs')
-        #
-        #     for job_name in self.local_job_names:
-        #         self.process_job(job_name = job_name, individual_processing = individual_processing)
-        #
-        #     end_time = dt.datetime.now()
-        #     logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
-        #
-        # def sync_process_loop(self, wait_after_success = dt.timedelta(hours = 1), wait_after_failure = dt.timedelta(minutes = 1)):
-        #     latest_sync_time = None
-        #     while True:
-        #         if latest_sync_time is None or dt.datetime.now() - latest_sync_time > wait_after_success:
-        #             try:
-        #                 start_time = dt.datetime.now()
-        #                 logger.info('Beginning automatic synchronization and processing')
-        #
-        #                 logger.info(self.job_status)
-        #
-        #                 self.mirror_remote_home_dir()
-        #                 self.process_jobs()
-        #
-        #                 end_time = dt.datetime.now()
-        #                 logger.info('Synchronization and processing complete. Elapsed time: {}'.format(end_time - start_time))
-        #
-        #                 latest_sync_time = end_time
-        #                 logger.info('Next automatic synchronization attempt after {}'.format(latest_sync_time + wait_after_success))
-        #             except (FileNotFoundError, PermissionError, TimeoutError) as e:
-        #                 logger.exception('Exception encountered')
-        #                 logger.warning('Automatic synchronization attempt failed')
-        #
-        #         time.sleep(wait_after_failure.total_seconds())
+
+class JobProcessorManager:
+    def __init__(self, jobs_dir):
+        self.jobs_dir = os.path.abspath(jobs_dir)
+
+    @property
+    def job_dir_names(self):
+        return (name for name in sorted(os.listdir(self.jobs_dir)) if os.path.isdir(os.path.join(self.jobs_dir, name)))
+
+    @property
+    def job_dir_paths(self):
+        return (os.path.abspath(os.path.join(self.jobs_dir, name)) for name in self.job_dir_names)
+
+    def process_job(self, job_name, job_dir_path, individual_processing = False, force_reprocess = False):
+        # try to find an existing job processor for the job
+        try:
+            try:
+                if force_reprocess:
+                    raise FileNotFoundError  # if force reprocessing, pretend like we haven't found the job
+                jp = JobProcessor.load(os.path.join(job_dir_path, '{}.job'.format(job_name)))
+            except (AttributeError, TypeError):
+                raise FileNotFoundError  # if something goes wrong, pretend like we haven't found it
+        except (FileNotFoundError, EOFError, ImportError):
+            job_info_path = os.path.join(job_dir_path, '{}_info.json'.format(job_name))
+            with open(job_info_path, mode = 'r') as f:
+                job_info = json.load(f)
+            jp = job_info['job_processor'](job_name, job_dir_path)  # TODO: this won't work maybe?
+
+        jp.process_job(individual_processing = individual_processing)  # try to detect if jp is from previous version and won't work, maybe catch attribute access exceptions?
+
+    def process_jobs(self, individual_processing = False):
+        start_time = dt.datetime.now()
+        logger.info('Processing jobs')
+
+        for job_name, job_dir_path in zip(self.job_dir_names, self.job_dir_paths):
+            self.process_job(job_name, job_dir_path, individual_processing = individual_processing)
+
+        end_time = dt.datetime.now()
+        logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
+
+
+class JobProcessor(utils.Beet):
+    def __init__(self, job_name, job_dir_path, simulation_type):
+        super(JobProcessor, self).__init__(job_name)
+        self.job_dir_path = job_dir_path
+        self.input_dir = os.path.join(self.job_dir_path, 'inputs')
+        self.output_dir = os.path.join(self.job_dir_path, 'outputs')
+        self.plots_dir = os.path.join(self.job_dir_path, 'plots')
+        self.movies_dir = os.path.join(self.job_dir_path, 'movies')
+
+        sim_names = [f.strip('.spec') for f in os.listdir(self.input_dir)]
+        self.sim_names = sorted(sim_names, key = int)
+        self.sim_count = len(self.sim_names)
+        self.unprocessed_sims = set(self.sim_names)
+
+        self.data = OrderedDict((sim_name, {}) for sim_name in self.sim_names)
+
+        self.simulation_type = simulation_type
+
+    def __str__(self):
+        return '{} for job {}, processed {}/{} Simulations'.format(self.__class__.__name__, self.name, self.sim_count - len(self.unprocessed_sims), self.sim_count)
+
+    def save(self, target_dir = None, file_extension = '.job'):
+        return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
+
+    def collect_data_from_sim(self, sim_name, sim):
+        """Hook method to collect summary data from a single Simulation."""
+        self.data[sim_name].update({
+            'name': sim.name,
+            'file_name': int(sim.file_name),
+            'start_time': sim.start_time,
+            'end_time': sim.end_time,
+            'elapsed_time': sim.elapsed_time.total_seconds(),
+            'run_time': sim.run_time.total_seconds(),
+        })
+
+    def process_sim(self, sim_name, sim):
+        raise NotImplementedError
+
+    def load_sim(self, sim_name, **load_kwargs):
+        try:
+            sim = self.simulation_type.load(os.path.join(self.output_dir, '{}.sim'.format(sim_name)), **load_kwargs)
+
+            if sim.status != 'finished':
+                raise FileNotFoundError
+
+            logger.debug('Loaded {}.sim from job {}'.format(sim_name, self.name))
+        except (FileNotFoundError, EOFError):
+            sim = None  # return None when sim is not found/not finished
+
+            logger.debug('Failed to find completed {}.sim from job {}'.format(sim_name, self.name))
+
+        return sim
+
+    def process_job(self, individual_processing = False):
+        start_time = dt.datetime.now()
+        logger.info('Loading simulations from job {}'.format(self.name))
+
+        for sim_name in tqdm(copy(self.unprocessed_sims)):
+            sim = self.load_sim(sim_name)
+            if sim is not None:
+                self.collect_data_from_sim(sim_name, sim)
+                if individual_processing:
+                    self.process_sim(sim_name, sim)
+                self.unprocessed_sims.remove(sim_name)
+
+        end_time = dt.datetime.now()
+        logger.info('Finished loading simulations from job {}. Failed to find {} / {} sims. Elapsed time: {}'.format(self.name, len(self.unprocessed_sims), self.sim_count, end_time - start_time))
+
+    def write_to_csv(self):
+        raise NotImplementedError
+
+    def make_plot(self, x_key, *y_keys, filter = lambda x: True, **kwargs):
+        if len(y_keys) == 1 and hasattr(filter, '__iter__'):
+            data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and filter[0](v))
+            x_array = np.array(list(v[x_key] for v in data.values()))
+
+            y_arrays = []
+            for f in filter:
+                data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and f(v))
+                y_arrays.append(np.array(list(v[y_keys[0]] for v in data.values())))
+        else:
+            data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and filter(v))
+
+            x_array = np.array(list(v[x_key] for v in data.values()))
+            y_arrays = [np.array(list(v[y_key] for v in data.values())) for y_key in y_keys]
+
+        utils.xy_plot(x_array, *y_arrays, **kwargs)
+
+
+class Parameter:
+    name = utils.Typed('name', legal_type = str)
+    expandable = utils.Typed('expandable', legal_type = bool)
+
+    def __init__(self, name, value = None, expandable = False):
+        self.name = name
+        self.value = value
+        self.expandable = expandable
+
+    def __str__(self):
+        return '{} {} = {}'.format(self.__class__.__name__, self.name, self.value)
+
+    def __repr__(self):
+        return '{}(name = {}, value = {})'.format(self.__class__.__name__, self.name, self.value)
+
+
+def expand_parameters_to_dicts(parameters):
+    dicts = [OrderedDict()]
+
+    for par in parameters:
+        if par.expandable and hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):  # make sure the value is an iterable that isn't a string and has a length
+            dicts = [deepcopy(d) for d in dicts for _ in range(len(par.value))]
+            for d, v in zip(dicts, it.cycle(par.value)):
+                d[par.name] = v
+        else:
+            for d in dicts:
+                d[par.name] = par.value
+
+    return dicts
 
 
 def ask_for_input(question, default = None, cast_to = str):
     """Ask for input from the user, with a default value, and call cast_to on it before returning it."""
-    input_str = input(question + ' [Default: {}]: '.format(default))
+    try:
+        input_str = input(question + ' [Default: {}] > '.format(default))
+
+        trimmed = input_str.replace(' ', '')
+        if trimmed == '':
+            out = cast_to(default)
+        else:
+            out = cast_to(trimmed)
+
+        logger.debug('Got input from stdin for question "{}": {}'.format(question, out))
+
+        return out
+    except Exception as e:
+        print(e)
+        ask_for_input(question, default = default, cast_to = cast_to)
+
+
+def ask_for_bool(question, default = False):
+    """
+
+    Synonyms for True: 'true', 't', 'yes', 'y', '1', 'on'
+    Synonyms for False: 'false', 'f', 'no', 'n', '0', 'off'
+    :param question:
+    :param default:
+    :return:
+    """
+    try:
+        input_str = input(question + ' [Default: {}] > '.format(default))
+
+        trimmed = input_str.replace(' ', '')
+        if trimmed == '':
+            input_str = str(default)
+
+        logger.debug('Got input from stdin for question "{}": {}'.format(question, input_str))
+
+        input_str_lower = input_str.lower()
+        if input_str_lower in ('true', 't', 'yes', 'y', '1', 'on'):
+            return True
+        elif input_str_lower in ('false', 'f', 'no', 'n', '0', 'off'):
+            return False
+        else:
+            raise ValueError('Invalid answer to question "{}"'.format(question))
+    except Exception as e:
+        print(e)
+        ask_for_bool(question, default = default)
+
+
+def ask_for_eval(question, default = 'None'):
+    input_str = input(question + ' [Default: {}] (eval) > '.format(default))
 
     trimmed = input_str.replace(' ', '')
     if trimmed == '':
-        out = cast_to(default)
-    else:
-        out = cast_to(trimmed)
+        input_str = str(default)
 
-    logger.debug('Got input from cmd line: {} [type: {}]'.format(out, type(out)))
+    logger.debug('Got input from stdin for question "{}": {}'.format(question, input_str))
 
-    # input_str = input(question + ' [Default: {}]: '.format(default))
-    #
-    # trimmed = (s.strip() for s in input_str.split(','))
+    try:
+        return eval(input_str)
+    except NameError as e:
+        did_you_mean = ask_for_bool("Did you mean '{}'?".format(input_str), default = 'yes')
+        if did_you_mean:
+            return eval("'{}'".format(input_str))
+        else:
+            raise e
+    except Exception as e:
+        print(e)
+        ask_for_eval(question, default = default)
 
-    return out
+
+def abort_job_creation():
+    print('Aborting job creation...')
+    logger.critical('Aborted job creation')
+    sys.exit(0)
 
 
-def create_job_dirs(job_name):
+def create_job_dirs(job_dir):
     print('Creating job directory and subdirectories...')
 
-    os.makedirs(job_name, exist_ok = True)
-    os.chdir(job_name)
-    os.makedirs('inputs/', exist_ok = True)
-    os.makedirs('outputs/', exist_ok = True)
-    os.makedirs('logs/', exist_ok = True)
+    utils.ensure_dir_exists(job_dir)
+    utils.ensure_dir_exists(os.path.join(job_dir, 'inputs'))
+    utils.ensure_dir_exists(os.path.join(job_dir, 'outputs'))
+    utils.ensure_dir_exists(os.path.join(job_dir, 'logs'))
 
 
-def save_parameters(parameters):
+def save_specifications(specifications, job_dir):
     print('Saving Parameters...')
 
-    for parameter in parameters:
-        parameter.save(target_dir = 'inputs/')
+    for spec in specifications:
+        spec.save(target_dir = os.path.join(job_dir, 'inputs/'))
+
+    logger.debug('Saved Specifications')
 
 
-def write_parameter_info_to_file(parameters):
+def write_specifications_info_to_file(specifications, job_dir):
+    print('Writing Specification info to file...')
+
+    with open(os.path.join(job_dir, 'specifications.txt'), 'w') as file:
+        for spec in specifications:
+            file.write(str(spec))
+            file.write(spec.info())
+            file.write('\n\n')  # blank line between specs
+
+    logger.debug('Saved Specification information')
+
+
+def write_parameters_info_to_file(parameters, job_dir):
     print('Writing Parameters info to file...')
-    with open('parameters.txt', 'w') as file:
-        for parameter in parameters:
-            file.write(parameter.info())
-            file.write('\n' + ('-' * 10) + '\n')  # line between Parameters
+
+    with open(os.path.join(job_dir, 'parameters.txt'), 'w') as file:
+        for param in parameters:
+            file.write(repr(param))
+            file.write('\n')  # blank line between specs
+
+    logger.debug('Saved Parameter information')
 
 
 CHTC_SUBMIT_STRING = """universe = vanilla
@@ -303,7 +490,7 @@ arguments = $(Process)
 #
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT_OR_EVICT
-transfer_input_files = /home/karpel/backend/compy.tar.gz, /home/karpel/backend/run_sim.py, inputs/$(Process).par, http://proxy.chtc.wisc.edu/SQUID/karpel/python.tar.gz
+transfer_input_files = /home/karpel/backend/compy.tar.gz, /home/karpel/backend/ionization.tar.gz, /home/karpel/backend/run_sim.py, inputs/$(Process).spec, http://proxy.chtc.wisc.edu/SQUID/karpel/python.tar.gz
 transfer_output_remaps = "$(Process).sim = outputs/$(Process).sim ; $(Process).log = logs/$(Process).log ; $(Process).mp4 = outputs/$(Process).mp4"
 #
 +JobBatchName = "{}"
@@ -332,18 +519,17 @@ def format_chtc_submit_string(job_name, parameter_count, memory = 4, disk = 4, c
     return submit_string
 
 
-def specification_check(parameters):
-    print('Generated {} Parameters'.format(len(parameters)))
+def specification_check(specifications):
+    print('Generated {} Specifications'.format(len(specifications)))
 
     print('-' * 20)
-    print(parameters[0].info())
+    print(specifications[0])
+    print(specifications[0].info())
     print('-' * 20)
 
-    parameter_check = input('Does the first Specification look correct? (y/[n]) ')
-    parameter_check = parameter_check.strip(' ')
-    if parameter_check != 'y':
-        print('Aborting job creation...')
-        sys.exit(0)
+    check = ask_for_bool('Does the first Specification look correct?', default = 'No')
+    if not check:
+        abort_job_creation()
 
 
 def submit_check(submit_string):
@@ -351,42 +537,29 @@ def submit_check(submit_string):
     print(submit_string)
     print('-' * 20)
 
-    submit_check = input('Does the submit file look correct? (y/[n]) ')
-    submit_check = submit_check.strip(' ')
-    if submit_check != 'y':
-        print('Aborting job creation...')
-        sys.exit(0)
+    check = ask_for_bool('Does the submit file look correct?', default = 'No')
+    if not check:
+        abort_job_creation()
 
 
-def write_submit_file(submit_string):
+def write_submit_file(submit_string, job_dir):
     print('Saving submit file...')
 
-    with open('submit_job.sub', mode = 'w') as file:
+    with open(os.path.join(job_dir, 'submit_job.sub'), mode = 'w') as file:
         file.write(submit_string)
 
+    logger.debug('Saved submit file')
 
-def submit_job():
+
+def write_job_info(job_info, job_dir):
+    with open(os.path.join(job_dir, 'info.json'), mode = 'w') as f:
+        json.dump(job_info, f)
+
+
+def submit_job(job_dir):
     print('Submitting job...')
 
+    # TODO: temp chdir context manager
+    os.chdir(job_dir)
+
     subprocess.run(['condor_submit', 'submit_job.sub'])
-
-
-class JobProcessor(utils.Beet):
-    def __init__(self, job_name):
-        super(JobProcessor, self).__init__(job_name)
-
-    def save(self, target_dir = None, file_extension = '.job'):
-        return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
-
-    @classmethod
-    def load(cls, file_path):
-        return super(JobProcessor, cls).load(file_path)
-
-    def load_sim(self):
-        raise NotImplementedError
-
-    def process_job(self, individual_processing = False):
-        raise NotImplementedError
-
-    def write_to_csv(self):
-        raise NotImplementedError

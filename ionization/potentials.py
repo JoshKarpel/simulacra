@@ -182,6 +182,12 @@ class UniformLinearlyPolarizedElectricField(Potential):
 
         self.window = window
 
+    def __str__(self):
+        if self.window:
+            return ' with {}'.format(self.window)
+        else:
+            return ' with no window'
+
     def get_amplitude(self, t):
         if self.window is not None:
             return self.window(t)
@@ -212,16 +218,14 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
                                                                                     uround(self.end_time, asec, 3),
                                                                                     uround(self.amplitude, atomic_electric_field, 3))
 
-        out += ' with {}'.format(self.window)
-
-        return out
+        return out + super(Rectangle, self).__str__()
 
     def __repr__(self):
-        out = '{}(start_time = {}, end_time = {}, amplitude = {}, window_function = {})'.format(self.__class__.__name__,
-                                                                                                self.start_time,
-                                                                                                self.end_time,
-                                                                                                self.amplitude,
-                                                                                                repr(self.window))
+        out = '{}(start_time = {}, end_time = {}, amplitude = {}, window = {})'.format(self.__class__.__name__,
+                                                                                       self.start_time,
+                                                                                       self.end_time,
+                                                                                       self.amplitude,
+                                                                                       repr(self.window))
 
         return out
 
@@ -251,16 +255,14 @@ class SineWave(UniformLinearlyPolarizedElectricField):
                                                                                                                                  uround(self.amplitude, atomic_electric_field, 3),
                                                                                                                                  uround(self.phase, twopi, 3))
 
-        out += ' with {}'.format(self.window)
-
-        return out
+        return out + super(SineWave, self).__str__()
 
     def __repr__(self):
-        out = '{}(omega = {}, amplitude = {}, phase = {}, window_function = {})'.format(self.__class__.__name__,
-                                                                                        self.omega,
-                                                                                        self.amplitude,
-                                                                                        self.phase,
-                                                                                        repr(self.window))
+        out = '{}(omega = {}, amplitude = {}, phase = {}, window = {})'.format(self.__class__.__name__,
+                                                                               self.omega,
+                                                                               self.amplitude,
+                                                                               self.phase,
+                                                                               repr(self.window))
 
         return out
 
@@ -339,17 +341,15 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
                                                                                                                                      self.phase,
                                                                                                                                      uround(self.largest_photon_energy, eV, 3))
 
-        out += ' with {}'.format(self.window)
-
-        return out
+        return out + super(SincPulse, self).__str__()
 
     def __repr__(self):
-        out = '{}(pulse width = {}, pulse center = {}, fluence = {}, phase = {}, window_function = {})'.format(self.__class__.__name__,
-                                                                                                               self.pulse_width,
-                                                                                                               self.pulse_center,
-                                                                                                               self.amplitude_prefactor,
-                                                                                                               self.phase,
-                                                                                                               repr(self.window))
+        out = '{}(pulse width = {}, pulse center = {}, fluence = {}, phase = {}, window = {})'.format(self.__class__.__name__,
+                                                                                                      self.pulse_width,
+                                                                                                      self.pulse_center,
+                                                                                                      self.fluence,
+                                                                                                      self.phase,
+                                                                                                      repr(self.window))
 
         return out
 
@@ -392,17 +392,15 @@ class RandomizedSincPulse(UniformLinearlyPolarizedElectricField):
                                                                                                                                      self.phase,
                                                                                                                                      uround(self.largest_photon_energy, eV, 3))
 
-        out += ' with {}'.format(self.window)
-
-        return out
+        return out + super(RandomizedSincPulse, self).__str__()
 
     def __repr__(self):
-        out = '{}(pulse width = {}, pulse center = {}, fluence = {}, phase = {}, window_function = {})'.format(self.__class__.__name__,
-                                                                                                               self.pulse_width,
-                                                                                                               self.pulse_center,
-                                                                                                               self.amplitude_prefactor,
-                                                                                                               self.phase,
-                                                                                                               repr(self.window))
+        out = '{}(pulse width = {}, pulse center = {}, fluence = {}, phase = {}, window = {})'.format(self.__class__.__name__,
+                                                                                                      self.pulse_width,
+                                                                                                      self.pulse_center,
+                                                                                                      self.fluence,
+                                                                                                      self.phase,
+                                                                                                      repr(self.window))
 
         return out
 

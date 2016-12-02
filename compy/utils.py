@@ -19,7 +19,7 @@ from .units import *
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] > %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
+LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
 
 class Logger:
@@ -39,7 +39,7 @@ class Logger:
         :param stdout_level: the lowest level for stdout log messages
         :param file_logs: whether to print log messages to a file
         :param file_level: the lowest level for file log messages
-        :param file_name: the filename for the log file, defaults to 'log__{timestamp}'
+        :param file_name: the filename for the log file, defaults to 'log__{timestamp}'. If file_name does not end with '.log', it will be appended.
         :param file_dir: the director for the log file, defaults to the current working directory
         :param file_mode: the file mode to open the log file with, defaults to 'a' (append)
         :param disable_level: log level to disable, short-circuits propagation of logs <= this level
@@ -57,6 +57,8 @@ class Logger:
         if file_name is None:
             file_name = '{}__{}'.format('log', dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
         self.file_name = file_name
+        if not self.file_name.endswith('.log'):
+            self.file_name += '.log'
 
         if file_dir is None:
             file_dir = os.getcwd()
@@ -84,7 +86,7 @@ class Logger:
             new_handlers.append(stdout_handler)
 
         if self.file_logs:
-            log_file_path = os.path.join(self.file_dir, '{}.log'.format(self.file_name))
+            log_file_path = os.path.join(self.file_dir, self.file_name)
 
             ensure_dir_exists(log_file_path)  # the log message emitted here will not be included in the logger being created by this context manager
 
@@ -136,11 +138,11 @@ class Beet:
         :param name: the internal name of the Beet
         :param file_name: the desired external name, used for pickling. Illegal characters are stripped before use.
         """
-        self.name = name
+        self.name = str(name)
         if file_name is None:
-            file_name = name
+            file_name = self.name
 
-        file_name_stripped = strip_illegal_characters(file_name)
+        file_name_stripped = strip_illegal_characters(str(file_name))
         if file_name_stripped != file_name:
             logger.warning('Using file name {} instead of {} for {}'.format(file_name_stripped, file_name, self.name))
         self.file_name = file_name_stripped
@@ -305,8 +307,8 @@ def xy_plot(x, *y,
 
     # set x axis limits
     if x_range is None:
-        lower_limit_x = np.min(scaled_x)
-        upper_limit_x = np.max(scaled_x)
+        lower_limit_x = np.nanmin(scaled_x)
+        upper_limit_x = np.nanmax(scaled_x)
     else:
         lower_limit_x = (x_center - x_range) / unit_names_to_values[x_scale]
         upper_limit_x = (x_center + x_range) / unit_names_to_values[x_scale]
@@ -562,7 +564,26 @@ class Checked(Descriptor):
         super(Checked, self).__init__(name)
 
     def __set__(self, instance, value):
-        if not check(value):
+        if not self.check(value):
             raise ValueError('Value {} did not pass the check'.format(value))
         else:
             super(Checked, self).__set__(instance, value)
+
+
+def convert_bytes(num):
+    """
+    this function will convert bytes to MB.... GB... etc
+    """
+    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
+        if num < 1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
+
+
+def file_size(file_path):
+    """
+    this function will return the file size
+    """
+    if os.path.isfile(file_path):
+        file_info = os.stat(file_path)
+        return convert_bytes(file_info.st_size)

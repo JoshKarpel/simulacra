@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append('../../../../..')
+
 import matplotlib
 
 matplotlib.use('Agg')  # Force matplotlib to not use any Xwindows backend
@@ -14,7 +18,6 @@ import compy as cp
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = 'Run a simulation.')
     parser.add_argument('sim_name',
@@ -25,10 +28,10 @@ if __name__ == '__main__':
 
     with cp.utils.Logger('__main__', 'compy', 'ionization',
                          stdout_logs = False,
-                         file_logs = True, file_level = logging.INFO, file_name = '{}'.format(args.sim_name)) as logger:
+                         file_logs = True, file_level = logging.DEBUG, file_name = '{}'.format(args.sim_name)) as logger:
         try:
             logger.info('Loaded onto execute node {} at {}.'.format(socket.gethostname(), dt.datetime.now()))
-            logger.debug('Local directory contents: {}'.format(os.listdir(os.getcwd())))
+            logger.info('Local directory contents: {}'.format(os.listdir(os.getcwd())))
 
             # try to find existing checkpoint, and start from scratch if that fails
             try:
@@ -38,7 +41,7 @@ if __name__ == '__main__':
                 logger.debug('Checkpoint size is {}'.format(cp.utils.file_size(sim_path)))
             except (FileNotFoundError, EOFError):
                 sim = cp.Specification.load(os.path.join(os.getcwd(), '{}.spec'.format(args.sim_name))).to_simulation()
-                logger.info('Checkpoint not found, started simulation {}'.format(sim))
+                logger.info('Checkpoint not found, beginning simulation {}'.format(sim))
 
             # run the simulation and save it
             logger.info(sim.info())

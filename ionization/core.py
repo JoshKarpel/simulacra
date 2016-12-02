@@ -320,8 +320,8 @@ class ElectricFieldSpecification(cp.core.Specification):
                  electric_potential = None,
                  mask = None,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
-                 extra_time = None, extra_time_step = 1 * asec,
-                 checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
+                 minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
+                 checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
                  **kwargs):
         super(ElectricFieldSpecification, self).__init__(name, simulation_type = ElectricFieldSimulation, **kwargs)
@@ -344,11 +344,11 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.time_final = time_final
         self.time_step = time_step
 
-        self.extra_time = extra_time
+        self.minimum_time_final = minimum_time_final
         self.extra_time_step = extra_time_step
 
         self.checkpoints = checkpoints
-        self.checkpoint_at = checkpoint_at
+        self.checkpoint_every = checkpoint_every
         self.checkpoint_dir = checkpoint_dir
 
         self.animators = tuple(animators)
@@ -356,11 +356,11 @@ class ElectricFieldSpecification(cp.core.Specification):
     def info(self):
         checkpoint = ['Checkpointing: ']
         if self.checkpoints:
-            if self.animation_dir is not None:
+            if self.checkpoint_dir is not None:
                 working_in = self.checkpoint_dir
             else:
-                working_in = os.getcwd()
-            checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_at, working_in)
+                working_in = 'cwd'
+            checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_every, working_in)
         else:
             checkpoint[0] += 'disabled'
 
@@ -376,9 +376,9 @@ class ElectricFieldSpecification(cp.core.Specification):
                           '   Final Time: {} as'.format(uround(self.time_final, asec, 3)),
                           '   Time Step: {} as'.format(uround(self.time_step, asec, 3))]
 
-        if self.extra_time is not None:
-            time_evolution += ['   Extra Time: {} as'.format(uround(self.extra_time, asec, 3)),
-                               '   Extra Time Step: {} as'.format(uround(self.extra_time, asec, 3))]
+        if self.minimum_time_final is not None:
+            time_evolution += ['   Extra Time: {} as'.format(uround(self.minimum_time_final, asec, 3)),
+                               '   Extra Time Step: {} as'.format(uround(self.extra_time_step, asec, 3))]
 
         potentials = ['Potentials:']
         if self.internal_potential is not None:
@@ -1272,13 +1272,14 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
         self.r_bound = r_bound
         self.r_points = int(r_points)
         self.l_points = l_points
+        self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.l_points))
 
         self.evolution_equations = evolution_equations
         self.evolution_method = evolution_method
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
-                '   Evolution Method: {}'.format(self.evolution_method),
+                '   Evolution: {} equations, {} method'.format(self.evolution_equations, self.evolution_method),
                 '   R Boundary: {} Bohr radii'.format(uround(self.r_bound, bohr_radius, 3)),
                 '   R Points: {}'.format(self.r_points),
                 '   R Mesh Spacing: ~{} Bohr radii'.format(uround(self.r_bound / self.r_points, bohr_radius, 3)),
@@ -1300,7 +1301,6 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.r_max = np.max(self.r)
 
         self.l = np.array(range(self.spec.l_points))
-        self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.spec.l_points))
         self.theta_points = min(self.spec.l_points * 5, 360)
         self.phi_points = self.theta_points
 
@@ -1791,8 +1791,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         total_time = self.spec.time_final - self.spec.time_initial
         self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
-        if self.spec.extra_time is not None:
-            extra_times = np.delete(np.linspace(self.spec.time_final, self.spec.time_final + self.spec.extra_time, (self.spec.extra_time / self.spec.extra_time_step) + 1), 0)
+        if self.spec.time_final < self.spec.minimum_time_final:
+            extra_times = np.delete(np.linspace(self.spec.time_final, self.spec.minimum_time_final, ((self.spec.minimum_time_final - self.spec.time_final) / self.spec.extra_time_step) + 1), 0)
             self.times = np.concatenate((self.times, extra_times))
         self.time_index = 0
         self.time_steps = len(self.times)
@@ -1806,7 +1806,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
 
         if 'l' in self.mesh.mesh_storage_method:
-            self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps) * np.NaN for sph_harm in self.mesh.spherical_harmonics}
+            self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps) * np.NaN for sph_harm in self.spec.spherical_harmonics}
 
     @property
     def available_animation_frames(self):
@@ -1857,11 +1857,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if 'l' in self.mesh.mesh_storage_method:
             norm_by_l = self.mesh.norm_by_l
-            for sph_harm, l_norm in zip(self.mesh.spherical_harmonics, norm_by_l):
+            for sph_harm, l_norm in zip(self.spec.spherical_harmonics, norm_by_l):
                 self.norm_by_harmonic_vs_time[sph_harm][time_index] = l_norm  # TODO: extend to non-l storage meshes
 
-            largest_l = self.mesh.spherical_harmonics[-1]
-            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.mesh.spherical_harmonics[-1]][time_index]
+            largest_l = self.spec.spherical_harmonics[-1]
+            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][time_index]
             if norm_in_largest_l > self.norm_vs_time[self.time_index] / 1000:
                 logger.warning('Wavefunction norm in largest angular momentum state is large (l = {}, norm = {}), consider increasing l bound'.format(largest_l, norm_in_largest_l))
 
@@ -1902,7 +1902,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
                                                                                      np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
 
                 if self.spec.checkpoints:
-                    if (self.time_index + 1) % self.spec.checkpoint_at == 0:
+                    if (self.time_index + 1) % self.spec.checkpoint_every == 0:
                         self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
                         logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
 
@@ -1919,7 +1919,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             for animator in self.animators:
                 animator.cleanup()
 
-    def plot_wavefunction_vs_time(self, grayscale = False, log = False, **kwargs):
+    def plot_wavefunction_vs_time(self, use_name = False, grayscale = False, log = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.06)  # TODO: switch to fixed axis construction
@@ -1990,7 +1990,12 @@ class ElectricFieldSimulation(cp.core.Simulation):
         postfix = ''
         if grayscale:
             postfix += '_GS'
-        cp.utils.save_current_figure(name = self.spec.file_name + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
+        if log:
+            postfix += '_log'
+        prefix = self.file_name
+        if use_name:
+            prefix = self.name
+        cp.utils.save_current_figure(name = prefix + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
 
         plt.close()
 
@@ -2005,11 +2010,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_field.plot(self.times / asec, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
 
         if renormalize:
-            overlaps = [self.norm_by_harmonic_vs_time[sph_harm] / self.norm_vs_time for sph_harm in self.mesh.spherical_harmonics]
-            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2 / \left\langle \psi| \psi \right\rangle$'.format(sph_harm.tex_str) for sph_harm in self.mesh.spherical_harmonics]
+            overlaps = [self.norm_by_harmonic_vs_time[sph_harm] / self.norm_vs_time for sph_harm in self.spec.spherical_harmonics]
+            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2 / \left\langle \psi| \psi \right\rangle$'.format(sph_harm.tex_str) for sph_harm in self.spec.spherical_harmonics]
         else:
-            overlaps = [self.norm_by_harmonic_vs_time[sph_harm] for sph_harm in self.mesh.spherical_harmonics]
-            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(sph_harm.tex_str) for sph_harm in self.mesh.spherical_harmonics]
+            overlaps = [self.norm_by_harmonic_vs_time[sph_harm] for sph_harm in self.spec.spherical_harmonics]
+            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(sph_harm.tex_str) for sph_harm in self.spec.spherical_harmonics]
         num_colors = len(overlaps)
         ax_momentums.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
         ax_momentums.stackplot(self.times / asec, *overlaps, alpha = 1, labels = l_labels)
@@ -2033,7 +2038,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_momentums.set_ylabel(y_label, fontsize = 15)
         ax_field.set_ylabel('E-Field (a.u.)', fontsize = 11)
 
-        ax_momentums.legend(bbox_to_anchor = (1.1, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10, ncol = 1 + (len(self.mesh.spherical_harmonics) // 17))
+        ax_momentums.legend(bbox_to_anchor = (1.1, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10, ncol = 1 + (len(self.spec.spherical_harmonics) // 17))
 
         ax_momentums.tick_params(labelright = True)
         ax_field.tick_params(labelright = True)
@@ -2056,15 +2061,24 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_momentums.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
         postfix = ''
-        cp.utils.save_current_figure(name = self.spec.file_name + '__angular_momentum_vs_time{}'.format(postfix), **kwargs)
+        if renormalize:
+            postfix += '_renorm'
+        prefix = self.file_name
+        if use_name:
+            prefix = self.name
+        cp.utils.save_current_figure(name = prefix + '__angular_momentum_vs_time{}'.format(postfix), **kwargs)
 
         plt.close()
 
-    def plot_dipole_moment_vs_time(self, gauge = 'length', **kwargs):
+    def plot_dipole_moment_vs_time(self, gauge = 'length', use_name = False, **kwargs):
+        if not use_name:
+            prefix = self.file_name
+        else:
+            prefix = self.name
         cp.utils.xy_plot(self.times, np.real(self.electric_dipole_moment_vs_time[gauge]),
                          x_scale = 'as', y_scale = 'atomic_electric_dipole',
                          x_label = 'Time $t$', y_label = 'Dipole Moment $d(t)$',
-                         name = self.spec.file_name + '__dipole_moment_vs_time',
+                         name = prefix + '__dipole_moment_vs_time',
                          **kwargs)
 
     def dipole_moment_vs_frequency(self, gauge = 'length', first_time = None, last_time = None):
@@ -2082,14 +2096,17 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         return frequency, dipole_moment
 
-    def plot_dipole_moment_vs_frequency(self, gauge = 'length', frequency_range = 10000 * THz, first_time = None, last_time = None, **kwargs):
+    def plot_dipole_moment_vs_frequency(self, use_name = False, gauge = 'length', frequency_range = 10000 * THz, first_time = None, last_time = None, **kwargs):
+        prefix = self.file_name
+        if use_name:
+            prefix = self.name
         frequency, dipole_moment = self.dipole_moment_vs_frequency(gauge = gauge, first_time = first_time, last_time = last_time)
         cp.utils.xy_plot(frequency, np.abs(dipole_moment) ** 2 / (atomic_electric_dipole ** 2),
                          x_scale = 'THz',
                          log_y = True,
                          x_label = 'Frequency $f$', y_label = r'Dipole Moment $\left| d(\omega) \right|^2$ $\left( e^2 \, a_0^2 \right)$',
                          x_range = frequency_range / 2, x_center = frequency_range / 2,
-                         name = self.spec.file_name + '__dipole_moment_vs_frequency',
+                         name = prefix + '__dipole_moment_vs_frequency',
                          **kwargs)
 
     def save(self, target_dir = None, file_extension = '.sim', save_mesh = False):
@@ -2114,9 +2131,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
         return out
 
     @staticmethod
-    def load(file_path, initialize_mesh = False):
+    def load(file_path, initialize_mesh = False, **kwargs):
         """Return a simulation loaded from the file_path. kwargs are for Beet.load."""
-        sim = cp.core.Simulation.load(file_path)
+        sim = cp.core.Simulation.load(file_path, **kwargs)
 
         if initialize_mesh:
             sim.initialize_mesh()
