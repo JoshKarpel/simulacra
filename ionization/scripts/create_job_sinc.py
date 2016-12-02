@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     with cp.utils.Logger('compy', 'ionization', stdout_level = 31 - ((args.verbosity + 1) * 10)) as logger:
         # job type options
-        job_processor = ion.cluster.IonizationJobProcessor
+        job_processor = ion.cluster.SincPulseJobProcessor
 
         job_dir = os.path.join(args.dir, args.job_name)
 

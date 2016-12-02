@@ -122,4 +122,4 @@ if __name__ == '__main__':
                                                               out_dir_mod = out_dir_mod)
                     specs.append(spec)
 
-        cp.utils.multi_map(run, specs, processes = 4)
+        cp.utils.multi_map(run, specs, processes = 2)

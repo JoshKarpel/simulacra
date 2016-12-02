@@ -78,10 +78,13 @@ class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
         })
 
     def process_sim(self, sim_name, sim):
-        sim.spec.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(sim.spec.l_points))
-        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir)
-        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, grayscale = True)
-        sim.plot_dipole_moment_vs_time(target_dir = self.plots_dir)
+        sim.spec.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(sim.spec.l_points))  # TODO: remove
+        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True)
+        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True, log = True)
+        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True, grayscale = True)
+        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True, grayscale = True, log = True)
+        sim.plot_dipole_moment_vs_time(target_dir = self.plots_dir, use_name = True)
+        sim.plot_dipole_moment_vs_frequency(target_dir = self.plots_dir, use_name = True)
 
 
 class SincPulseJobProcessor(ElectricFieldJobProcessor):

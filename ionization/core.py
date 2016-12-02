@@ -378,7 +378,7 @@ class ElectricFieldSpecification(cp.core.Specification):
 
         if self.minimum_time_final is not None:
             time_evolution += ['   Extra Time: {} as'.format(uround(self.minimum_time_final, asec, 3)),
-                               '   Extra Time Step: {} as'.format(uround(self.minimum_time_final, asec, 3))]
+                               '   Extra Time Step: {} as'.format(uround(self.extra_time_step, asec, 3))]
 
         potentials = ['Potentials:']
         if self.internal_potential is not None:
@@ -1911,7 +1911,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             for animator in self.animators:
                 animator.cleanup()
 
-    def plot_wavefunction_vs_time(self, grayscale = False, log = False, **kwargs):
+    def plot_wavefunction_vs_time(self, use_name = False, grayscale = False, log = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.06)  # TODO: switch to fixed axis construction
@@ -1982,7 +1982,12 @@ class ElectricFieldSimulation(cp.core.Simulation):
         postfix = ''
         if grayscale:
             postfix += '_GS'
-        cp.utils.save_current_figure(name = self.spec.file_name + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
+        if log:
+            postfix += '_log'
+        prefix = self.file_name
+        if use_name:
+            prefix = self.name
+        cp.utils.save_current_figure(name = prefix + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
 
         plt.close()
 
@@ -2050,15 +2055,22 @@ class ElectricFieldSimulation(cp.core.Simulation):
         postfix = ''
         if renormalize:
             postfix += '_renorm'
-        cp.utils.save_current_figure(name = self.spec.file_name + '__angular_momentum_vs_time{}'.format(postfix), **kwargs)
+        prefix = self.file_name
+        if use_name:
+            prefix = self.name
+        cp.utils.save_current_figure(name = prefix + '__angular_momentum_vs_time{}'.format(postfix), **kwargs)
 
         plt.close()
 
-    def plot_dipole_moment_vs_time(self, gauge = 'length', **kwargs):
+    def plot_dipole_moment_vs_time(self, gauge = 'length', use_name = False, **kwargs):
+        if not use_name:
+            prefix = self.file_name
+        else:
+            prefix = self.name
         cp.utils.xy_plot(self.times, np.real(self.electric_dipole_moment_vs_time[gauge]),
                          x_scale = 'as', y_scale = 'atomic_electric_dipole',
                          x_label = 'Time $t$', y_label = 'Dipole Moment $d(t)$',
-                         name = self.spec.file_name + '__dipole_moment_vs_time',
+                         name = prefix + '__dipole_moment_vs_time',
                          **kwargs)
 
     def dipole_moment_vs_frequency(self, gauge = 'length', first_time = None, last_time = None):
@@ -2076,14 +2088,17 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         return frequency, dipole_moment
 
-    def plot_dipole_moment_vs_frequency(self, gauge = 'length', frequency_range = 10000 * THz, first_time = None, last_time = None, **kwargs):
+    def plot_dipole_moment_vs_frequency(self, use_name = False, gauge = 'length', frequency_range = 10000 * THz, first_time = None, last_time = None, **kwargs):
+        prefix = self.file_name
+        if use_name:
+            prefix = self.name
         frequency, dipole_moment = self.dipole_moment_vs_frequency(gauge = gauge, first_time = first_time, last_time = last_time)
         cp.utils.xy_plot(frequency, np.abs(dipole_moment) ** 2 / (atomic_electric_dipole ** 2),
                          x_scale = 'THz',
                          log_y = True,
                          x_label = 'Frequency $f$', y_label = r'Dipole Moment $\left| d(\omega) \right|^2$ $\left( e^2 \, a_0^2 \right)$',
                          x_range = frequency_range / 2, x_center = frequency_range / 2,
-                         name = self.spec.file_name + '__dipole_moment_vs_frequency',
+                         name = prefix + '__dipole_moment_vs_frequency',
                          **kwargs)
 
     def save(self, target_dir = None, file_extension = '.sim', save_mesh = False):

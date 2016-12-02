@@ -316,10 +316,19 @@ class JobProcessor(utils.Beet):
         raise NotImplementedError
 
     def make_plot(self, x_key, *y_keys, filter = lambda x: True, **kwargs):
-        data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and filter(v))
+        if len(y_keys) == 1 and hasattr(filter, '__iter__'):
+            data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and filter[0](v))
+            x_array = np.array(list(v[x_key] for v in data.values()))
 
-        x_array = np.array(list(v[x_key] for v in data.values()))
-        y_arrays = [np.array(list(v[y_key] for v in data.values())) for y_key in y_keys]
+            y_arrays = []
+            for f in filter:
+                data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and f(v))
+                y_arrays.append(np.array(list(v[y_keys[0]] for v in data.values())))
+        else:
+            data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and filter(v))
+
+            x_array = np.array(list(v[x_key] for v in data.values()))
+            y_arrays = [np.array(list(v[y_key] for v in data.values())) for y_key in y_keys]
 
         utils.xy_plot(x_array, *y_arrays, **kwargs)
 
