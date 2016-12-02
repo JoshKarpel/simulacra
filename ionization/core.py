@@ -2106,9 +2106,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
         return out
 
     @staticmethod
-    def load(file_path, initialize_mesh = False):
+    def load(file_path, initialize_mesh = False, **kwargs):
         """Return a simulation loaded from the file_path. kwargs are for Beet.load."""
-        sim = cp.core.Simulation.load(file_path)
+        sim = cp.core.Simulation.load(file_path, **kwargs)
 
         if initialize_mesh:
             sim.initialize_mesh()

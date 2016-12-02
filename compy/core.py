@@ -98,7 +98,7 @@ class Simulation(utils.Beet):
         return super(Simulation, self).save(target_dir, file_extension)
 
     @classmethod
-    def load(cls, file_path):
+    def load(cls, file_path, **kwargs):
         """
         Load a Simulation from file_path.
 

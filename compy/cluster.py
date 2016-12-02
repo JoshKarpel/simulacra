@@ -11,9 +11,11 @@ import itertools as it
 from copy import copy, deepcopy
 from collections import OrderedDict
 
+from tqdm import tqdm
 import numpy as np
 import paramiko
 
+from . import core
 from . import utils
 
 logger = logging.getLogger(__name__)
@@ -243,24 +245,69 @@ class JobProcessorManager:
 
 
 class JobProcessor(utils.Beet):
-    def __init__(self, job_name, job_dir_path):
+    def __init__(self, job_name, job_dir_path, simulation_type):
         super(JobProcessor, self).__init__(job_name)
         self.job_dir_path = job_dir_path
+        self.input_dir = os.path.join(self.job_dir_path, 'inputs')
+        self.output_dir = os.path.join(self.job_dir_path, 'outputs')
+        self.plots_dir = os.path.join(self.job_dir_path, 'plots')
+        self.movies_dir = os.path.join(self.job_dir_path, 'movies')
+
+        sim_names = [f.strip('.par') for f in os.listdir(self.input_dir)]
+        self.sim_names = sorted(sim_names, key = int)
+        self.sim_count = len(self.sim_names)
+        self.unprocessed_sims = set(self.sim_names)
+
+        self.data = OrderedDict((sim_name, {}) for sim_name in self.sim_names)
+
+        self.simulation_type = simulation_type
 
     def save(self, target_dir = None, file_extension = '.job'):
-        if target_dir is None:
-            target_dir = self.job_dir_path
         return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
 
-    def collect_data(self, simulation):
+    def collect_data_from_sim(self, sim_name, sim):
         """Hook method to collect summary data from a single Simulation."""
+        self.data[sim_name].update({
+            'name': sim.name,
+            'file_name': sim.file_name,
+            'start_time': sim.start_time,
+            'end_time': sim.end_time,
+            'elapsed_time': sim.elapsed_time,
+            'run_time': sim.run_time,
+        })
+
+    def process_sim(self, sim_name, sim):
         raise NotImplementedError
 
-    def load_sim(self):
-        raise NotImplementedError
+    def load_sim(self, sim_name, **load_kwargs):
+        try:
+            sim = self.simulation_type.load(os.path.join(self.output_dir, '{}.sim'.format(sim_name)), **load_kwargs)
+
+            if sim.status != 'finished':
+                raise FileNotFoundError
+
+            logger.debug('Loaded {}.sim from job {}'.format(sim_name, self.name))
+        except (FileNotFoundError, EOFError):
+            sim = None  # return None when sim is not found/not finished
+
+            logger.debug('Failed to find completed {}.sim from job {}'.format(sim_name, self.name))
+
+        return sim
 
     def process_job(self, individual_processing = False):
-        raise NotImplementedError
+        start_time = dt.datetime.now()
+        logger.info('Loading simulations from job {}'.format(self.name))
+
+        for sim_name in self.unprocessed_sims:
+            sim = self.load_sim(sim_name)
+            if sim is not None:
+                self.collect_data_from_sim(sim_name, sim)
+                if individual_processing:
+                    self.process_sim(sim_name, sim)
+                self.unprocessed_sims.remove(sim_name)
+
+        end_time = dt.datetime.now()
+        logger.info('Finished loading simulations from job {}. Failed to find {} / {} sims. Elapsed time: {}'.format(self.name, len(self.unprocessed_sims), self.sim_count, end_time - start_time))
 
     def write_to_csv(self):
         raise NotImplementedError

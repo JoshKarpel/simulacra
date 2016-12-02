@@ -62,6 +62,16 @@ def ask_mesh_type():
         ask_mesh_type()
 
 
-class IonizationJobProcessor(cp.cluster.JobProcessor):
+class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
     def __init__(self, job_name, job_dir_path):
-        super(IonizationJobProcessor, self).__init__(job_name, job_dir_path)
+        super(ElectricFieldJobProcessor, self).__init__(job_name, job_dir_path, core.ElectricFieldSimulation)
+
+    def collect_data_from_sim(self, sim_name, sim):
+        super(ElectricFieldJobProcessor, self).collect_data_from_sim(sim_name, sim)
+
+        self.data[sim_name].update({
+            'electric_potential': sim.spec.electric_potential,
+            'final_norm': sim.norm_vs_time[-1],
+            'final_inner_products': sim.inner_products_vs_time[-1],
+            'final_state_overlaps': sim.state_overlaps_vs_time[-1]
+        })
