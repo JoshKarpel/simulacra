@@ -20,6 +20,6 @@ if __name__ == '__main__':
     os.chdir('..')
     shutil.copy2('ionization/scripts/run_sim.py', 'deploy')
     shutil.copy2('ionization/scripts/run_sim.sh', 'deploy')
-    shutil.copy2('ionization/scripts/middleman.py', 'deploy')
+    shutil.copy2('ionization/scripts/cluster_sync.py', 'deploy')
     shutil.copy2('ionization/scripts/create_job_sinc.py', 'deploy')
     shutil.copy2('compy/scripts/tar.py', 'deploy')

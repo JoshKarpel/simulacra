@@ -61,7 +61,7 @@ if __name__ == '__main__':
         # pulse_widths = [1500, 1600, 1700]
         # pulse_widths = [1800, 1900, 2000]
         # pulse_widths = [1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000]
-        pulse_widths = [1800, 1900]
+        # pulse_widths = [1800, 1900]
 
         fluences = [1, 20]
 
@@ -122,4 +122,4 @@ if __name__ == '__main__':
                                                               out_dir_mod = out_dir_mod)
                     specs.append(spec)
 
-        cp.utils.multi_map(run, specs, processes = 2)
+        cp.utils.multi_map(run, specs, processes = 6)

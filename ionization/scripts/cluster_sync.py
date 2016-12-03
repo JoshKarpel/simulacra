@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def sync_process_loop(cluster_interface, wait_after_success = dt.timedelta(hours = 1), wait_after_failure = dt.timedelta(minutes = 1)):
+def cluster_sync_loop(cluster_interface, wait_after_success = dt.timedelta(hours = 1), wait_after_failure = dt.timedelta(minutes = 1)):
     latest_sync_time = None
     while True:
         if latest_sync_time is None or dt.datetime.now() - latest_sync_time > wait_after_success:
