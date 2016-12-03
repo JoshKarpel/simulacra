@@ -1,5 +1,6 @@
 import os
 import logging
+from copy import deepcopy
 
 import numpy as np
 
@@ -105,7 +106,7 @@ if __name__ == '__main__':
                                                               electric_potential = e_field_cos,
                                                               evolution_method = evol_method,
                                                               mask = mask,
-                                                              animators = animators,
+                                                              animators = deepcopy(animators),
                                                               out_dir_mod = out_dir_mod)
                     specs.append(spec)
 
@@ -118,7 +119,7 @@ if __name__ == '__main__':
                                                               electric_potential = e_field_sin,
                                                               evolution_method = evol_method,
                                                               mask = mask,
-                                                              animators = animators,
+                                                              animators = deepcopy(animators),
                                                               out_dir_mod = out_dir_mod)
                     specs.append(spec)
 

@@ -1868,6 +1868,13 @@ class ElectricFieldSimulation(cp.core.Simulation):
         logger.debug('{} {} stored data for time index {}'.format(self.__class__.__name__, self.name, time_index))
 
     def run_simulation(self, only_end_data = False, store_intermediate_meshes = False):
+        """
+        Run the simulation by repeatedly evolving the mesh by the time step and recovering various data from it.
+
+        :param only_end_data: only store data from the last time step (does not change memory/disk usage, only runtime)
+        :param store_intermediate_meshes: store the mesh at every time step (very memory-intensive)
+        :return: None
+        """
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
         try:
             for animator in self.animators:
@@ -1908,6 +1915,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         except Exception as e:
             raise e
         finally:
+            # make sure the animators get cleaned up if there's some kind of error during time evolution
             for animator in self.animators:
                 animator.cleanup()
 
