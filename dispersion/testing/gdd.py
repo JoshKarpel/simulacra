@@ -8,8 +8,8 @@ import dispersion as disp
 from compy.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
-OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
-# OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME + '_mod')
+# OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME + '_unmodulated')
+OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME + '_modulated')
 
 if __name__ == '__main__':
     with cp.utils.Logger(stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
@@ -43,12 +43,12 @@ if __name__ == '__main__':
         optics = [
             disp.BK7(name = 'Pre-cavity Lenses', length = 4 * 3 * mm),
             disp.FS(name = 'Entering Modulator', length = 1 * inch),
-            # disp.ModulateBeam(90 * THz, upshift_efficiency = 1e-4, downshift_efficiency = 1e-6),
+            disp.ModulateBeam(90 * THz, upshift_efficiency = 1e-4, downshift_efficiency = 1e-6),
             disp.FS(name = 'Exiting Modulator', length = 1 * inch),
             disp.BK7(name = 'Post-Cavity Lenses', length = 4 * 3 * mm),
             disp.FS(name = 'Dichroic Mirror', length = np.sqrt(2) * 3.2 * mm),
             disp.FS(name = 'Beamsplitter', length = np.sqrt(2) * 5 * mm),
-            # disp.BandBlockBeam(reduction_factor = 10 ** -4)
+            disp.BandBlockBeam(reduction_factor = 10 ** -4)
         ]
 
         for method in methods:
@@ -72,8 +72,10 @@ if __name__ == '__main__':
                                        x_lower_lim = 550 * nm, x_upper_lim = 1150 * nm)
 
             OUT_DIR_AFTER = os.path.join(OUT_DIR, 'after')
-            sim.plot_autocorrelations(tau_range = 160 * fsec, tau_points = 5e3, target_dir = OUT_DIR_AFTER, save_csv = True,
-                                      title = 'Simulated Interferometric Autocorrelation (No Modulation)', y_label = 'SHG Power (arb. units)',
+            sim.plot_autocorrelations(tau_range = 160 * fsec, tau_points = 1e3, target_dir = OUT_DIR_AFTER, save_csv = True,
+                                      # title = 'Simulated Interferometric Autocorrelation (No Modulation)',
+                                      # title = 'Simulated Interferometric Autocorrelation (w/ Modulation)',
+                                      y_label = 'Signal (arb. units)',
                                       label_size = 26, title_size = 26, unit_size = 16, aspect_ratio = 1.8)
             # sim.plot_autocorrelations(tau_range = 500 * fsec, tau_points = 1e4, target_dir = OUT_DIR_AFTER)
             sim.plot_electric_field_vs_time(target_dir = OUT_DIR_AFTER)

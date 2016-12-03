@@ -320,7 +320,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  electric_potential = None,
                  mask = None,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
-                 minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
+                 minimum_time_final = 0 * asec, extra_time_step = 2 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
                  **kwargs):
@@ -376,8 +376,8 @@ class ElectricFieldSpecification(cp.core.Specification):
                           '   Final Time: {} as'.format(uround(self.time_final, asec, 3)),
                           '   Time Step: {} as'.format(uround(self.time_step, asec, 3))]
 
-        if self.minimum_time_final is not None:
-            time_evolution += ['   Extra Time: {} as'.format(uround(self.minimum_time_final, asec, 3)),
+        if self.minimum_time_final is not 0:
+            time_evolution += ['   Minimum Final Time: {} as'.format(uround(self.minimum_time_final, asec, 3)),
                                '   Extra Time Step: {} as'.format(uround(self.extra_time_step, asec, 3))]
 
         potentials = ['Potentials:']
@@ -1999,7 +1999,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         plt.close()
 
-    def plot_angular_momentum_vs_time(self, log = False, renormalize = False, **kwargs):
+    def plot_angular_momentum_vs_time(self, use_name = False, log = False, renormalize = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.06)
