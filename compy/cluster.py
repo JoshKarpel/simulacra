@@ -194,7 +194,7 @@ class ClusterInterface:
         walk(remote_path)
         print()
 
-    def mirror_remote_home_dir(self, blacklist_dir_names = ('python', 'build_python', 'ionization'), whitelist_file_ext = ('.txt', '.log', '.spec', '.sim')):
+    def mirror_remote_home_dir(self, blacklist_dir_names = ('python', 'build_python', 'ionization'), whitelist_file_ext = ('.txt', '.log', '.json', '.spec', '.sim')):
         start_time = dt.datetime.now()
         logger.info('Mirroring remote home directory')
 
@@ -238,7 +238,11 @@ class JobProcessorManager:
         logger.info('Processing jobs')
 
         for job_name, job_dir_path in zip(self.job_dir_names, self.job_dir_paths):
-            self.process_job(job_name, job_dir_path, individual_processing = individual_processing)
+            try:
+                self.process_job(job_name, job_dir_path, individual_processing = individual_processing)
+            except Exception as e:
+                logger.exception(e)
+                raise e
 
         end_time = dt.datetime.now()
         logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
