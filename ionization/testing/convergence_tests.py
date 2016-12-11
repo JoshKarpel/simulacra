@@ -582,7 +582,7 @@ if __name__ == '__main__':
     # radial_points = np.logspace(start = 7, stop = 12, base = 2, num = 100)
     angular_points = [2**6, 2 ** 7, 2 ** 8]
     n_max = 3
-    states = [ion.BoundState(n, l, 0) for n in range(1, n_max + 1) for l in range(n)]
+    states = [ion.HydrogenBoundState(n, l, 0) for n in range(1, n_max + 1) for l in range(n)]
     bound = 40 * bohr_radius
 
     time_final = 10000

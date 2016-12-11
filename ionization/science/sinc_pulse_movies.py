@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
         evol_method = 'SO'
 
-        initial_states = [ion.BoundState(1, 0)]
+        initial_states = [ion.HydrogenBoundState(1, 0)]
         # initial_states = [ion.BoundState(1, 0), ion.BoundState(2, 0), ion.BoundState(2, 1)]
 
         # pulse_widths = [10, 25, 50, 100, 200]  # done

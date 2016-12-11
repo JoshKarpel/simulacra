@@ -18,14 +18,10 @@ from cycler import cycler
 import compy as cp
 import compy.cy as cy
 from compy.units import *
-from . import animators, potentials
+from . import animators, potentials, states
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-class IllegalQuantumState(Exception):
-    pass
 
 
 def electron_energy_from_wavenumber(k):
@@ -36,285 +32,14 @@ def electron_wavenumber_from_energy(energy):
     return np.sqrt(2 * electron_mass * energy) / hbar
 
 
-class BoundState:
-    """A class that represents a hydrogenic bound state."""
-
-    __slots__ = ('_n', '_l', '_m')
-
-    def __init__(self, n = 1, l = 0, m = 0):
-        """
-        Construct a BoundState from its three quantum numbers (n, l, m).
-
-        :param n: principal quantum number
-        :param l: orbital angular momentum quantum number
-        :param m: quantum number for angular momentum z-component
-        """
-        self.n = n
-        self.l = l
-        self.m = m
-
-    @property
-    def n(self):
-        """Gets _n."""
-        return self._n
-
-    @n.setter
-    def n(self, n):
-        if 0 < n == int(n):
-            self._n = n
-
-    @property
-    def l(self):
-        """Gets _l."""
-        return self._l
-
-    @l.setter
-    def l(self, l):
-        if int(l) == l and 0 <= l < self.n:
-            self._l = l
-
-    @property
-    def m(self):
-        """Gets _m."""
-        return self._m
-
-    @m.setter
-    def m(self, m):
-        if int(m) == m and -self.l <= m <= self.l:
-            self._m = m
-
-    @property
-    def spherical_harmonic(self):
-        """Gets the SphericalHarmonic associated with the BoundState's l and m."""
-        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
-
-    def __str__(self):
-        """Returns the external string representation of the BoundState."""
-        return self.ket
-
-    def __repr__(self):
-        """Returns the internal string representation of the BoundState."""
-        return '{}(n={}, l={}, m={})'.format(self.__class__.__name__, self.n, self.l, self.m)
-
-    @property
-    def ket(self):
-        """Gets the ket representation of the BoundState."""
-        return '|{},{},{}>'.format(self.n, self.l, self.m)
-
-    @property
-    def bra(self):
-        """Gets the bra representation of the BoundState"""
-        return '<{},{},{}|'.format(self.n, self.l, self.m)
-
-    @property
-    def tex_str(self):
-        """Gets a LaTeX-formatted string for the BoundState."""
-        return r'\psi_{{{},{},{}}}'.format(self.n, self.l, self.m)
-
-    # TODO: switch to simple checking of (n, l, m) tuple
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and (self.n, self.l, self.m) == (other.n, other.l, other.m)
-
-    def __lt__(self, other):
-        return isinstance(other, self.__class__) and (self.n, self.l, self.m) < (other.n, other.l, other.m)
-
-    def __gt__(self, other):
-        return isinstance(other, self.__class__) and (self.n, self.l, self.m) > (other.n, other.l, other.m)
-
-    def __le__(self, other):
-        return isinstance(other, self.__class__) and (self.n, self.l, self.m) <= (other.n, other.l, other.m)
-
-    def __ge__(self, other):
-        return isinstance(other, self.__class__) and (self.n, self.l, self.m) >= (other.n, other.l, other.m)
-
-    def __hash__(self):
-        return hash((self.n, self.l, self.m))
-
-    @staticmethod
-    def sort_key(state):
-        return state.n, state.l, state.m
-
-    def radial_part(self, r):
-        normalization = np.sqrt(((2 / (self.n * bohr_radius)) ** 3) * (sp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.math.factorial(self.n + self.l))))  # Griffith's normalization
-        r_dep = np.exp(-r / (self.n * bohr_radius)) * ((2 * r / (self.n * bohr_radius)) ** self.l)
-        lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * bohr_radius))
-
-        return normalization * r_dep * lag_poly
-
-    def __call__(self, r, theta, phi):
-        """
-        Evaluate the hydrogenic bound state wavefunction at a point, or vectorized over an array of points.
-
-        :param r: radial coordinate
-        :param theta: polar coordinate
-        :param phi: azimuthal coordinate
-        :return: the value(s) of the wavefunction at (r, theta, phi)
-        """
-        radial_part = self.radial_part(r)
-        sph_harm = self.spherical_harmonic(theta, phi)
-
-        return radial_part * sph_harm
-
-
-class BoundStateSuperposition:
-    """A class that represents a superposition of bound states."""
-
-    __slots__ = ('state',)
-
-    def __init__(self, state, normalize = True):
-        """
-        Construct a discrete superposition of states.
-
-        If normalize is True the initial amplitudes are rescaled so that the state is normalized.
-
-        :param state: a dict of BoundState:state amplitude (complex number) pairs.
-        :param normalize: if True, renormalize the state amplitudes.
-        """
-        state = dict(state)  # consume input iterators because we may need to reuse the dict several times
-
-        if normalize:
-            unnormalized_amplitude = np.sqrt(sum([np.abs(amp) ** 2 for amp in state.values()]))
-            state = {state: amp / unnormalized_amplitude for state, amp in state.items()}
-
-        self.state = state
-
-    def __str__(self):
-        pairs = ['{}: {}'.format(str(s), a) for s, a in self.state.items()]
-        out = ', '.join(pairs)
-        return out
-
-    def __repr__(self):
-        return repr(self.state)
-
-    def __getitem__(self, item):
-        return self.state[item]
-
-    def __iter__(self):
-        yield from self.state.items()
-
-    @property
-    def states(self):
-        yield from self.state.keys()
-
-    @property
-    def amplitudes(self):
-        return np.array(self.state.values())
-
-    @property
-    def norm(self):
-        return np.sum(np.abs(self.amplitudes) ** 2)
-
-    def __abs__(self):
-        return self.norm
-
-    def __call__(self, r, theta, phi):
-        return sum(state(r, theta, phi) for state in self.states)
-
-
-class FreeState:
-    """A class that represents a hydrogenic free state."""
-
-    __slots__ = ('_energy', '_l', '_m')
-
-    def __init__(self, energy = 1 * eV, l = 0, m = 0):
-        """
-        Construct a FreeState from its energy and angular momentum quantum numbers.
-
-        :param energy: energy of the free state
-        :param l: orbital angular momentum quantum number
-        :param m: quantum number for angular momentum z-component
-        """
-        if any(int(x) != x for x in (l, m)):
-            raise IllegalQuantumState('l and m must be integers')
-
-        if energy > 0:
-            self._energy = energy
-        else:
-            raise IllegalQuantumState('energy must be greater than zero')
-
-        if l >= 0:
-            self._l = l
-        else:
-            raise IllegalQuantumState('l ({}) must be greater than or equal to zero'.format(l))
-
-        if -l <= m <= l:
-            self._m = m
-        else:
-            raise IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
-
-    @classmethod
-    def from_wavenumber(cls, k, l = 0, m = 0):
-        """Construct a FreeState from its wavenumber and angular momentum quantum numbers."""
-        energy = electron_energy_from_wavenumber(k)
-
-        return cls(energy, l, m)
-
-    @property
-    def energy(self):
-        return self._energy
-
-    @property
-    def k(self):
-        return electron_wavenumber_from_energy(self.energy)
-
-    @property
-    def l(self):
-        return self._l
-
-    @property
-    def m(self):
-        return self._m
-
-    @property
-    def spherical_harmonic(self):
-        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
-
-    def __str__(self):
-        return self.ket
-
-    def __repr__(self):
-        return '{}(T={} eV, k={} 1/nm, l={}, m={})'.format(self.__class__.__name__, uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
-
-    @property
-    def ket(self):
-        return '|{} eV,{} 1/nm, {}, {}>'.format(uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
-
-    @property
-    def bra(self):
-        return '<{} eV,{} 1/nm, {}, {}|'.format(uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
-
-    @property
-    def tex_str(self):
-        """Return a LaTeX-formatted string for the BoundState."""
-        return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.energy == other.energy and self.l == other.l and self.m == other.m
-
-    def __hash__(self):
-        return hash((self.energy, self.l, self.m))
-
-    def __call__(self, r, theta, phi):
-        """
-        Evaluate the hydrogenic bound state wavefunction at a point, or vectorized over an array of points.
-
-        :param r: radial coordinate
-        :param theta: polar coordinate
-        :param phi: azimuthal coordinate
-        :return: the value(s) of the wavefunction at (r, theta, phi)
-        """
-        raise NotImplementedError
-
-
 class ElectricFieldSpecification(cp.core.Specification):
     """A base Specification for a Simulation with an electric field."""
 
     def __init__(self, name,
                  mesh_type = None,
                  test_mass = electron_mass_reduced, test_charge = electron_charge,
-                 initial_state = BoundState(1, 0),
-                 test_states = tuple(BoundState(n, l) for n in range(5) for l in range(n)),
+                 initial_state = states.HydrogenBoundState(1, 0),
+                 test_states = tuple(states.HydrogenBoundState(n, l) for n in range(5) for l in range(n)),
                  dipole_gauges = ('length',),
                  internal_potential = potentials.NuclearPotential(charge = proton_charge),
                  electric_potential = None,
@@ -481,6 +206,205 @@ class QuantumMesh:
         name = 'psi' + name_postfix
 
         self.plot_mesh(self.abs_psi_squared(normalize = normalize), name = name, title = title, color_map_min = 0, **kwargs)
+
+
+# class LineSpecification(ElectricFieldSpecification):
+#     def __init__(self, name,
+#                  mesh_type = LineMesh,
+#                  test_mass = electron_mass_reduced, test_charge = electron_charge,
+#                  initial_state = lambda x: 0,
+#                  test_states = tuple(),
+#                  internal_potential = potentials.NuclearPotential(charge = proton_charge),
+#                  electric_potential = None,
+#                  mask = None,
+#                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
+#                  x_lower_bound = -100 * bohr_radius, x_upper_bound = 100 * bohr_radius, x_points = 200,
+#                  extra_time = None, extra_time_step = 1 * asec,
+#                  checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
+#                  animators = (),
+#                  **kwargs):
+#         super(ElectricFieldSpecification, self).__init__(name, simulation_type = ElectricFieldSimulation, **kwargs)
+#
+#         if mesh_type is None:
+#             raise ValueError('{} must have a mesh_type'.format(name))
+#         self.mesh_type = mesh_type
+#
+#         self.test_mass = test_mass
+#         self.test_charge = test_charge
+#         self.initial_state = initial_state
+#         self.test_states = tuple(test_states)  # consume input iterators
+#
+#         self.internal_potential = internal_potential
+#         self.electric_potential = electric_potential
+#         self.mask = mask
+#
+#         self.time_initial = time_initial
+#         self.time_final = time_final
+#         self.time_step = time_step
+#
+#         self.x_lower_bound = x_lower_bound
+#         self.x_upper_bound = x_upper_bound
+#         self.x_points = x_points
+#
+#         self.extra_time = extra_time
+#         self.extra_time_step = extra_time_step
+#
+#         self.checkpoints = checkpoints
+#         self.checkpoint_at = checkpoint_at
+#         self.checkpoint_dir = checkpoint_dir
+#
+#         self.animators = animators
+#
+#     def info(self):
+#         checkpoint = ['Checkpointing: ']
+#         if self.checkpoints:
+#             if self.animation_dir is not None:
+#                 working_in = self.checkpoint_dir
+#             else:
+#                 working_in = os.getcwd()
+#             checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_at, working_in)
+#         else:
+#             checkpoint[0] += 'disabled'
+#
+#         animation = ['Animation: ']
+#         if len(self.animators) > 0:
+#             animation += ['   ' + str(animator) for animator in self.animators]
+#         else:
+#             animation[0] += 'disabled'
+#
+#         time_evolution = ['Time Evolution:',
+#                           '   Initial State: {}'.format(self.initial_state),
+#                           '   Initial Time: {} as'.format(uround(self.time_initial, asec, 3)),
+#                           '   Final Time: {} as'.format(uround(self.time_final, asec, 3)),
+#                           '   Time Step: {} as'.format(uround(self.time_step, asec, 3))]
+#
+#         if self.extra_time is not None:
+#             time_evolution += ['   Extra Time: {} as'.format(uround(self.extra_time, asec, 3)),
+#                                '   Extra Time Step: {} as'.format(uround(self.extra_time, asec, 3))]
+#
+#         potentials = ['Potentials:']
+#         potentials += ['   ' + str(potential) for potential in self.internal_potential]
+#         if self.electric_potential is not None:
+#             potentials += ['   ' + str(potential) for potential in self.electric_potential]
+#
+#         return '\n'.join(checkpoint + animation + time_evolution + potentials)
+
+
+class LineMesh(QuantumMesh):
+    def __init__(self, simulation):
+        super(LineMesh, self).__init__(simulation)
+
+        self.x = np.linspace(self.spec.x_lower_lim, self.spec.x_upper_lim, self.spec.x_points)
+        self.delta_x = np.abs(self.x[1] - self.x[0])
+        self.wavenumbers = 2 * pi * nfft.fftshift(nfft.fftfreq(len(self.x), d = self.delta_x))
+
+        self.psi = self.spec.initial_state(self.x)
+
+        self.free_evolution_prefactor = -1j * (hbar / 2 * self.spec.test_mass) * (self.wavenumbers ** 2)
+
+    def _evolve_potential(self, delta_t):
+        pot = self.spec.internal_potential(t = self.sim.time, x = self.x, r = self.x)
+        if self.spec.electric_potential is not None:
+            pot += self.spec.electric_potential(t = self.sim.time, x = self.x, r = self.x)
+
+        self.psi *= np.exp(-1j * delta_t * pot / hbar)
+
+    def _evolve_free(self, delta_t):
+        self.psi = nfft.ifft(nfft.ifftshift(nfft.fftshift(nfft.fft(self.psi, norm = 'ortho') * np.exp(self.free_evolution_prefactor * delta_t))), norm = 'ortho')
+
+    def evolve(self, time_step):
+        self._evolve_free(time_step / 2)
+        self._evolve_potential(time_step)
+        self._evolve_free(time_step / 2)
+
+
+# class RectangleSpecification(ElectricFieldSpecification):
+#     def __init__(self, name,
+#                  mesh_type = LineMesh,
+#                  test_mass = electron_mass_reduced, test_charge = electron_charge,
+#                  initial_state = lambda x: 0,
+#                  test_states = tuple(),
+#                  internal_potential = potentials.NuclearPotential(charge = proton_charge),
+#                  electric_potential = None,
+#                  mask = None,
+#                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
+#                  x_lower_bound = -100 * bohr_radius, x_upper_bound = 100 * bohr_radius, x_points = 200,
+#                  extra_time = None, extra_time_step = 1 * asec,
+#                  checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
+#                  animators = (),
+#                  **kwargs):
+#         super(OneDimensionalSpecification, self).__init__(name, simulation_type = core.ElectricFieldSimulation, **kwargs)
+#
+#         if mesh_type is None:
+#             raise ValueError('{} must have a mesh_type'.format(name))
+#         self.mesh_type = mesh_type
+#         self.animator_type = animator_type
+#
+#         self.test_mass = test_mass
+#         self.test_charge = test_charge
+#         self.initial_state = initial_state
+#         self.test_states = tuple(test_states)  # consume input iterators
+#         self.dipole_gauges = tuple(dipole_gauges)
+#
+#         self.internal_potential = internal_potential
+#         self.electric_potential = electric_potential
+#         self.mask = mask
+#
+#         self.time_initial = time_initial
+#         self.time_final = time_final
+#         self.time_step = time_step
+#
+#         self.x_lower_bound = x_lower_bound
+#         self.x_upper_bound = x_upper_bound
+#         self.x_points = x_points
+#
+#         self.extra_time = extra_time
+#         self.extra_time_step = extra_time_step
+#
+#         self.checkpoints = checkpoints
+#         self.checkpoint_at = checkpoint_at
+#         self.checkpoint_dir = checkpoint_dir
+#
+#         self.animators = animators
+#
+#     def info(self):
+#         checkpoint = ['Checkpointing: ']
+#         if self.checkpoints:
+#             if self.animation_dir is not None:
+#                 working_in = self.checkpoint_dir
+#             else:
+#                 working_in = os.getcwd()
+#             checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_at, working_in)
+#         else:
+#             checkpoint[0] += 'disabled'
+#
+#         animation = ['Animation: ']
+#         if len(self.animators) > 0:
+#             animation += ['   ' + str(animator) for animator in self.animators]
+#         else:
+#             animation[0] += 'disabled'
+#
+#         time_evolution = ['Time Evolution:',
+#                           '   Initial State: {}'.format(self.initial_state),
+#                           '   Initial Time: {} as'.format(uround(self.time_initial, asec, 3)),
+#                           '   Final Time: {} as'.format(uround(self.time_final, asec, 3)),
+#                           '   Time Step: {} as'.format(uround(self.time_step, asec, 3))]
+#
+#         if self.extra_time is not None:
+#             time_evolution += ['   Extra Time: {} as'.format(uround(self.extra_time, asec, 3)),
+#                                '   Extra Time Step: {} as'.format(uround(self.extra_time, asec, 3))]
+#
+#         potentials = ['Potentials:']
+#         potentials += ['   ' + str(potential) for potential in self.internal_potential]
+#         if self.electric_potential is not None:
+#             potentials += ['   ' + str(potential) for potential in self.electric_potential]
+#
+#         return '\n'.join(checkpoint + animation + time_evolution + potentials)
+#
+#
+# class RectangleMesh(QuantumMesh):
+#     def __init__(self):
+#         raise NotImplementedError
 
 
 class CylindricalSliceSpecification(ElectricFieldSpecification):

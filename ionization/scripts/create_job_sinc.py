@@ -47,12 +47,12 @@ if __name__ == '__main__':
         spec_type, mesh_kwargs = clu.ask_mesh_type()
 
         parameters.append(clu.Parameter(name = 'initial_state',
-                                        value = ion.BoundState(clu.ask_for_input('Initial State n?', default = 1, cast_to = int),
-                                                               clu.ask_for_input('Initial State l?', default = 0, cast_to = int))))
+                                        value = ion.HydrogenBoundState(clu.ask_for_input('Initial State n?', default = 1, cast_to = int),
+                                                                       clu.ask_for_input('Initial State l?', default = 0, cast_to = int))))
 
         largest_n = clu.ask_for_input('Largest Bound State n to Overlap With?', default = 5, cast_to = int)
         parameters.append(clu.Parameter(name = 'test_states',
-                                        value = tuple(ion.BoundState(n, l) for n in range(largest_n + 1) for l in range(n))))
+                                        value = tuple(ion.HydrogenBoundState(n, l) for n in range(largest_n + 1) for l in range(n))))
 
         parameters.append(clu.Parameter(name = 'time_step',
                                         value = asec * clu.ask_for_input('Time Step (in as)?', default = 1, cast_to = float)))
