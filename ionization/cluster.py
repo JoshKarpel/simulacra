@@ -67,8 +67,6 @@ class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
         super(ElectricFieldJobProcessor, self).__init__(job_name, job_dir_path, core.ElectricFieldSimulation)
 
     def collect_data_from_sim(self, sim_name, sim):
-        super(ElectricFieldJobProcessor, self).collect_data_from_sim(sim_name, sim)
-
         self.data[sim_name].update({
             'time_steps': sim.time_steps,
             'electric_potential': sim.spec.electric_potential,
@@ -76,6 +74,8 @@ class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
             'final_state_overlaps': {state: ip[-1] for state, ip in sim.state_overlaps_vs_time.items()},
             'final_initial_state_overlap': sim.state_overlaps_vs_time[sim.spec.initial_state][-1]
         })
+
+        super(ElectricFieldJobProcessor, self).collect_data_from_sim(sim_name, sim)
 
     def process_sim(self, sim_name, sim):
         sim.spec.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(sim.spec.l_points))  # TODO: remove
@@ -89,10 +89,10 @@ class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
 
 class SincPulseJobProcessor(ElectricFieldJobProcessor):
     def collect_data_from_sim(self, sim_name, sim):
-        super(SincPulseJobProcessor, self).collect_data_from_sim(sim_name, sim)
-
         self.data[sim_name].update({
             'pulse_width': sim.spec.electric_potential.pulse_width,
             'fluence': sim.spec.electric_potential.fluence,
             'phase': sim.spec.electric_potential.phase,
         })
+
+        super(SincPulseJobProcessor, self).collect_data_from_sim(sim_name, sim)

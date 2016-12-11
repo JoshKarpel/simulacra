@@ -247,106 +247,152 @@ def save_current_figure(name, name_postfix = '', target_dir = None, img_format =
 
     logger.info('Saved matplotlib figure {} to {}'.format(name, path))
 
+    return path
 
-def xy_plot(x, *y,
-            legends = None, plot_args = None,
-            x_scale = None, y_scale = None,
-            title = None, x_label = None, y_label = None,
-            x_center = 0, x_range = None,
-            y_center = None, y_range = None,
-            log_x = False, log_y = False,
-            vlines = None,
-            aspect_ratio = 1.5, title_size = 15, label_size = 15, unit_size = 10, legend_size = 12,
-            save_csv = False,
-            **kwargs):
-    fig = plt.figure(figsize = (7 * aspect_ratio, 7), dpi = 600)
-    fig.set_tight_layout(True)
-    axis = plt.subplot(111)
 
-    # generate scaled x data
-    if x_scale is not None:
-        scaled_x = x / unit_names_to_values[x_scale]
+XYAxis = collections.namedtuple('XYAxis', field_names = ('axis', 'lines', 'title', 'x_label', 'y_label', 'legend'))
+
+
+def make_xy_axis(axis,
+                 x_data, *y_data,
+                 line_labels = (), line_kwargs = (),
+                 x_scale = 1, y_scale = 1,
+                 x_log_axis = False, y_log_axis = False,
+                 x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None,
+                 vlines = (), vline_kwargs = (), hlines = (), hline_kwargs = (),
+                 title = None, x_label = None, y_label = None,
+                 font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10, font_size_legend = 12,
+                 **kwargs):
+    """
+    Turn a matplotlib axis object into a basic x-y line plot.
+
+    :param axis: the axis to perform operations on
+    :param x_data: a single array to plot the y data against
+    :param y_data: any number of arrays of the same length as x_data to plot
+    :param line_labels: the labels for the lines
+    :param line_kwargs: keyword arguments for each line's .plot() call (None for default)
+    :param x_scale: a number to scale the x_data by. Can be a string corresponding to a key in the unit name/value dict.
+    :param y_scale: a number to scale the y_data by. Can be a string corresponding to a key in the unit name/value dict.
+    :param x_log_axis: if True, log the x axis
+    :param y_log_axis: if True, log the y axis
+    :param x_lower_limit: lower limit for the x axis, defaults to np.nanmin(x_data)
+    :param x_upper_limit: upper limit for the x axis, defaults to np.nanmax(x_data)
+    :param y_lower_limit: lower limit for the y axis, defaults to min(np.nanmin(y_data))
+    :param y_upper_limit: upper limit for the y axis, defaults to min(np.nanmin(y_data))
+    :param vlines: a list of x positions to place vertical lines
+    :param vline_kwargs: a list of kwargs for each vline (None for default)
+    :param hlines: a list of y positions to place horizontal lines
+    :param hline_kwargs: a list of kwargs for each hline (None for default)
+    :param title: a title for the plot
+    :param x_label: a label for the x axis
+    :param y_label: a label for the y axis
+    :param font_size_title: font size for the title
+    :param font_size_axis_labels: font size for the axis labels
+    :param font_size_tick_labels: font size for the tick labels
+    :param font_size_legend: font size for the legend
+    :return:
+    """
+    # ensure data is in numpy arrays
+    x_data = np.array(x_data)
+    y_data = [np.array(y) for y in y_data]
+
+    # determine if scale_x/y is a unit specifier or a number and set scale and labels accordingly
+    if type(x_scale) == str:
+        scale_x_label = r' ({})'.format(unit_names_to_tex_strings[x_scale])
+        x_scale = unit_names_to_values[x_scale]
     else:
-        scaled_x = x
-
-    # generate scaled y data
-    scaled_y = []
-    for yy in y:
-        if y_scale is not None:
-            scaled_y.append(yy / unit_names_to_values[y_scale])
-        else:
-            scaled_y.append(yy)
-
-    # TODO: figure out plot_args
-
-    # plot y vs. x data
-    for ii, yy in enumerate(scaled_y):
-        if legends is not None:
-            plt.plot(scaled_x, yy, label = legends[ii])
-        else:
-            plt.plot(scaled_x, yy)
-
-    # set title
-    if title is not None:
-        title = axis.set_title(r'{}'.format(title), fontsize = title_size)
-        title.set_y(1.025)
-
-    # set x label
-    if x_label is not None:
-        if x_scale is not None:
-            x_label += r' ({})'.format(unit_names_to_tex_strings[x_scale])
-
-        axis.set_xlabel(r'{}'.format(x_label), fontsize = label_size)
-
-    # set y label
-    if y_label is not None:
-        if y_scale is not None:
-            y_label += r' ({})'.format(unit_names_to_tex_strings[y_scale])
-
-        axis.set_ylabel(r'{}'.format(y_label), fontsize = label_size)
-
-    # set x axis limits
-    if x_range is None:
-        lower_limit_x = np.nanmin(scaled_x)
-        upper_limit_x = np.nanmax(scaled_x)
+        scale_x_label = r''
+    if type(y_scale) == str:
+        scale_y_label = r' ({})'.format(unit_names_to_tex_strings[y_scale])
+        y_scale = unit_names_to_values[y_scale]
     else:
-        lower_limit_x = (x_center - x_range) / unit_names_to_values[x_scale]
-        upper_limit_x = (x_center + x_range) / unit_names_to_values[x_scale]
+        scale_y_label = r''
 
-    axis.set_xlim(lower_limit_x, upper_limit_x)
+    # zip together each set of y data with its plotting options
+    lines = []
+    for y, lab, kw in it.zip_longest(y_data, line_labels, line_kwargs):
+        if kw is None:  # means there are no kwargs for this y data
+            kw = {}
+        lines.append(plt.plot(x_data / x_scale, y / y_scale, label = lab, **kw)[0])
 
-    if y_center is not None and y_range is not None:
-        y_lower = (y_center - y_range)  # TODO: units
-        y_upper = (y_center + y_range)
-        axis.set_ylim(y_lower, y_upper)
+    # make any horizontal and vertical lines
+    for vl, vkw in it.zip_longest(vlines, vline_kwargs):
+        if vkw is None:
+            vkw = {}
+        kw = {'color': 'black', 'linestyle': '-'}
+        kw.update(vkw)
+        axis.axvline(x = vl / x_scale, **kw)
+    for hl, hkw in it.zip_longest(hlines, hline_kwargs):
+        if hkw is None:
+            hkw = {}
+        kw = {'color': 'black', 'linestyle': '-'}
+        kw.update(hkw)
+        axis.axhline(y = hl / y_scale, **kw)
 
-    # set whether axes are log scale
-    if log_x:
+    if x_log_axis:
         axis.set_xscale('log')
-    if log_y:
+    if y_log_axis:
         axis.set_yscale('log')
 
-    if vlines is not None:
-        for x in vlines:
-            plt.axvline(x / unit_names_to_values[x_scale], color = 'red', linestyle = ':')
+    # set axis limits independently
+    if x_lower_limit is None:
+        x_lower_limit = np.nanmin(x_data)
+    if x_upper_limit is None:
+        x_upper_limit = np.nanmax(x_data)
+    if y_lower_limit is None:
+        y_lower_limit = min([np.nanmin(y) for y in y_data])
+    if y_upper_limit is None:
+        y_upper_limit = max([np.nanmax(y) for y in y_data])
+    axis.set_xlim(left = x_lower_limit / x_scale, right = x_upper_limit / x_scale)
+    axis.set_ylim(bottom = y_lower_limit / y_scale, top = y_upper_limit / y_scale)
 
-    # grid and tick options
-    axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
-    axis.tick_params(axis = 'both', which = 'major', labelsize = unit_size)
+    axis.grid(True, color = 'gray', linestyle = ':')
+    axis.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
-    # draw legend
-    if legends is not None:
-        axis.legend(loc = 'best', fontsize = legend_size)
+    # make title, axis labels, and legend
+    _title, _x_label, _y_label, _legend = None, None, None, None
+    if title is not None:
+        _title = axis.set_title(r'{}'.format(title), fontsize = font_size_title)
+        _title.set_y(1.025)  # move title up a little
+    if x_label is not None:
+        _x_label = axis.set_xlabel(r'{}'.format(x_label) + scale_x_label, fontsize = font_size_axis_labels)
+    if y_label is not None:
+        _y_label = axis.set_ylabel(r'{}'.format(y_label) + scale_y_label, fontsize = font_size_axis_labels)
+    if len(line_labels) > 0:
+        _legend = axis.legend(loc = 'best', fontsize = font_size_legend)
 
-    save_current_figure(**kwargs)
+    return XYAxis(axis = axis, lines = lines, title = _title, x_label = _x_label, y_label = _y_label, legend = _legend)
+
+
+def xy_plot(name, x_data, *y_data,
+            aspect_ratio = 1.5,
+            save_csv = False,
+            **kwargs):
+    """
+    A wrapper over make_xy_axis that also saves the resulting plot.
+
+    :param name: filename for the plot
+    :param x_data: a single array to plot the y data against
+    :param y_data: any number of arrays of the same length as x_data to plot
+    :param aspect_ratio: aspect ratio for the plot, >1 for a wider plot
+    :param save_csv: if True, save x_data and y_data to a CSV file
+    :param kwargs: kwargs to be passed to make_xy_axis() and save_current_figure()
+    :return: the path the plot was saved to
+    """
+    # set up figure and axis
+    fig = plt.figure(figsize = (7 * aspect_ratio, 7), dpi = 600)
+    axis = plt.subplot(111)
+    make_xy_axis(axis, x_data, *y_data, **kwargs)
+
+    path = save_current_figure(name, **kwargs)
 
     if save_csv:
-        path = os.path.join(kwargs['target_dir'], '{}.csv'.format(kwargs['name']))
-        np.savetxt(path, (x, *y), delimiter = ',', newline = '\n')
+        csv_path = os.path.splitext(path)[0] + '.csv'
+        np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
 
-        logger.info('Saved figure data from {} to {}'.format(kwargs['name'], path))
+        logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
-    plt.close()
+    return path
 
 
 def multi_map(function, targets, processes = None, **kwargs):

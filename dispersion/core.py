@@ -301,21 +301,24 @@ class ContinuousAmplitudeSpectrumSpecification(cp.Specification):
             fitted_power_for_plotting = spline(wavelengths)
 
         if plot_fit:
-            cp.utils.xy_plot(wavelengths, 10 * np.log10(power / mW), 10 * np.log10(fitted_power_for_plotting / mW),
+            cp.utils.xy_plot('{}__power_spectrum_fit_dbm'.format(name),
+                             wavelengths, 10 * np.log10(power / mW), 10 * np.log10(fitted_power_for_plotting / mW),
                              legends = ['Measured', 'Fitted'], x_scale = 'nm',
                              title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power (dBm)',
-                             name = '{}__power_spectrum_fit_dbm'.format(name), **kwargs)
+                             **kwargs)
 
-            cp.utils.xy_plot(wavelengths, power, fitted_power_for_plotting,
+            cp.utils.xy_plot('{}__power_spectrum_fit'.format(name),
+                             wavelengths, power, fitted_power_for_plotting,
                              legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
                              title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
-                             name = '{}__power_spectrum_fit'.format(name), **kwargs)
+                             **kwargs)
 
-            cp.utils.xy_plot(wavelengths, power, fitted_power_for_plotting,
+            cp.utils.xy_plot('{}__power_spectrum_fit_log'.format(name),
+                             wavelengths, power, fitted_power_for_plotting,
                              legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
                              title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
-                             log_y = True,
-                             name = '{}__power_spectrum_fit_log'.format(name), **kwargs)
+                             y_log_axis = True,
+                             **kwargs)
 
         return cls(name, frequencies, fitted_amplitude, materials)
 
@@ -402,8 +405,8 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
                                   'x_scale': 'fs',
                                   'y_label': r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right) + E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
                                   'name': '{}__michelson_autocorrelation'.format(self.name),
-                                  'y_center': 0.5,
-                                  'y_range': 0.5}
+                                  'y_lower_limit': 0,
+                                  'y_upper_limit': 1}
         michelson_plot_options.update(kwargs)
         cp.utils.xy_plot(taus, michelson / np.nanmax(michelson), michelson_env / np.nanmax(michelson),
                          **michelson_plot_options)
@@ -413,8 +416,8 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
                                   'x_scale': 'fs',
                                   'y_label': r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|E\left( t \right)\right|^2 \, \left|E\left( t - \tau \right)\right|^2 dt$   (arb. units)',
                                   'name': '{}__intensity_autocorrelation'.format(self.name),
-                                  'y_center': 0.5,
-                                  'y_range': 0.5}
+                                  'y_lower_limit': 0,
+                                  'y_upper_limit': 1}
         intensity_plot_options.update(kwargs)
         cp.utils.xy_plot(taus, intensity / np.nanmax(intensity),
                          **intensity_plot_options)
@@ -424,8 +427,8 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
                                         'x_scale': 'fs',
                                         'y_label': r'$I\left( \tau \right) = \int_{-\infty}^{\infty} \left|\left[ E\left( t \right) + E\left( t - \tau \right) \right]^2 \right|^2 dt$   (arb. units)',
                                         'name': '{}__interferometric_autocorrelation'.format(self.name),
-                                        'y_center': 0.5,
-                                        'y_range': 0.5}
+                                        'y_lower_limit': 0,
+                                        'y_upper_limit': 1}
         interferometric_plot_options.update(kwargs)
         cp.utils.xy_plot(taus, interferometric / np.nanmax(interferometric), interferometric_env / np.nanmax(interferometric_env),
                          **interferometric_plot_options)
@@ -448,15 +451,17 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
         raise NotImplementedError
 
     def plot_power_vs_frequency(self, **kwargs):
-        cp.utils.xy_plot(np.real(self.frequencies), self.power,
-                         name = '{}__power_vs_frequency'.format(self.name), x_label = r'Frequency $f$', **kwargs)
+        cp.utils.xy_plot('{}__power_vs_frequency'.format(self.name),
+                         np.real(self.frequencies), self.power,
+                         x_label = r'Frequency $f$', **kwargs)
 
     def plot_amplitude_vs_wavelength(self, **kwargs):
         raise NotImplementedError
 
     def plot_power_vs_wavelength(self, **kwargs):
-        cp.utils.xy_plot(np.real(self.wavelengths), self.power,
-                         name = '{}__power_vs_wavelength'.format(self.name), x_label = r'Wavelength $\lambda$', **kwargs)
+        cp.utils.xy_plot('{}__power_vs_wavelength'.format(self.name),
+                         np.real(self.wavelengths), self.power,
+                         x_label = r'Wavelength $\lambda$', **kwargs)
 
     def plot_electric_field_vs_time(self, x_scale = 'fs', y_scale = None, find_center = True, x_lower_lim = -200 * fsec, x_upper_lim = 200 * fsec, **kwargs):
         fit_result, fft_result = self.fit_pulse()

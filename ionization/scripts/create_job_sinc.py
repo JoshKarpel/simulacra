@@ -85,7 +85,7 @@ if __name__ == '__main__':
         pulse_parameters = []
 
         pulse_width = clu.Parameter(name = 'pulse_width',
-                                    value = asec * clu.ask_for_eval('Pulse Widths (in as)?', default = 'np.linspace(1, 1000, 200)'),
+                                    value = asec * np.array(clu.ask_for_eval('Pulse Widths (in as)?', default = 'np.linspace(1, 1000, 200)')),
                                     expandable = True)
         pulse_parameters.append(pulse_width)
 
@@ -95,7 +95,7 @@ if __name__ == '__main__':
         pulse_parameters.append(phase)
 
         fluence = clu.Parameter(name = 'fluence',
-                                value = (J / (cm ** 2)) * clu.ask_for_eval('Pulse Fluence (in J/cm^2)?', default = 1),
+                                value = (J / (cm ** 2)) * np.array(clu.ask_for_eval('Pulse Fluence (in J/cm^2)?', default = 1)),
                                 expandable = True)
         pulse_parameters.append(fluence)
 

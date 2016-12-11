@@ -42,7 +42,7 @@ if __name__ == '__main__':
                          file_logs = True, file_level = logging.WARNING, file_dir = 'logs'):
         try:
             ci = clu.ClusterInterface('submit-5.chtc.wisc.edu', username = 'karpel', key_path = 'E:\chtc_ssh_private')
-            sync_process_loop(ci)
+            cluster_sync_loop(ci)
         except Exception as e:
             logger.exception(e)
             raise e

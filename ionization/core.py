@@ -2075,13 +2075,15 @@ class ElectricFieldSimulation(cp.core.Simulation):
             prefix = self.file_name
         else:
             prefix = self.name
-        cp.utils.xy_plot(self.times, np.real(self.electric_dipole_moment_vs_time[gauge]),
+        cp.utils.xy_plot(prefix + '__dipole_moment_vs_time',
+                         self.times, np.real(self.electric_dipole_moment_vs_time[gauge]),
                          x_scale = 'as', y_scale = 'atomic_electric_dipole',
                          x_label = 'Time $t$', y_label = 'Dipole Moment $d(t)$',
-                         name = prefix + '__dipole_moment_vs_time',
                          **kwargs)
 
     def dipole_moment_vs_frequency(self, gauge = 'length', first_time = None, last_time = None):
+        logger.critical('ALERT: this method does not account for non-uniform time step!')
+
         if first_time is None:
             first_time_index, first_time = 0, self.times[0]
         else:
@@ -2101,12 +2103,12 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if use_name:
             prefix = self.name
         frequency, dipole_moment = self.dipole_moment_vs_frequency(gauge = gauge, first_time = first_time, last_time = last_time)
-        cp.utils.xy_plot(frequency, np.abs(dipole_moment) ** 2 / (atomic_electric_dipole ** 2),
-                         x_scale = 'THz',
-                         log_y = True,
+        cp.utils.xy_plot(prefix + '__dipole_moment_vs_frequency',
+                         frequency, np.abs(dipole_moment) ** 2,
+                         x_scale = 'THz', y_scale = atomic_electric_dipole ** 2,
+                         y_log_axis = True,
                          x_label = 'Frequency $f$', y_label = r'Dipole Moment $\left| d(\omega) \right|^2$ $\left( e^2 \, a_0^2 \right)$',
-                         x_range = frequency_range / 2, x_center = frequency_range / 2,
-                         name = prefix + '__dipole_moment_vs_frequency',
+                         x_lower_limit = 0, x_upper_limit = frequency_range,
                          **kwargs)
 
     def save(self, target_dir = None, file_extension = '.sim', save_mesh = False):

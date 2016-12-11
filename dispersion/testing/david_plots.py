@@ -22,18 +22,19 @@ if __name__ == '__main__':
 
             fmts = ('png', 'svg')
             for fmt in fmts:
-                cp.utils.xy_plot(delay, signal,
+                cp.utils.xy_plot('after_cavity',
+                                 delay, signal,
                                  x_label = r'Time Delay $\tau$', x_scale = 'fs',
                                  y_label = r'SHG Power (arb. units)',
-                                 label_size = 20,
-                                 name = 'after_cavity', img_format = fmt, target_dir = OUT_DIR)
+                                 font_size_axis_labels = 20,
+                                 img_format = fmt, target_dir = OUT_DIR)
 
-                cp.utils.xy_plot(delay, signal,
+                cp.utils.xy_plot('after_cavity_with_title',
+                                 delay, signal,
                                  x_label = r'Time Delay $\tau$', x_scale = 'fs',
                                  y_label = r'SHG Power (arb. units)',
-                                 label_size = 26,
-                                 title_size = 26,
-                                 unit_size = 16,
+                                 font_size_axis_labels = 26,
+                                 font_size_title = 26,
+                                 font_size_tick_labels = 16,
                                  title = r'Measured Interferometric Autocorrelation (No Modulation)',
-                                 aspect_ratio = 1.8,
-                                 name = 'after_cavity_with_title', img_format = fmt, target_dir = OUT_DIR)
+                                 aspect_ratio = 1.8, img_format = fmt, target_dir = OUT_DIR)

@@ -9,7 +9,7 @@ import stat
 import subprocess
 import itertools as it
 from copy import copy, deepcopy
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from tqdm import tqdm
 import numpy as np
@@ -263,6 +263,7 @@ class JobProcessor(utils.Beet):
         self.unprocessed_sims = set(self.sim_names)
 
         self.data = OrderedDict((sim_name, {}) for sim_name in self.sim_names)
+        self.parameter_sets = defaultdict(default_factory = set)
 
         self.simulation_type = simulation_type
 
@@ -283,10 +284,22 @@ class JobProcessor(utils.Beet):
             'run_time': sim.run_time.total_seconds(),
         })
 
+        for parameter, value in self.data[sim_name].items():
+            self.parameter_sets[parameter].add(value)
+
     def process_sim(self, sim_name, sim):
         raise NotImplementedError
 
     def load_sim(self, sim_name, **load_kwargs):
+        """
+        Load a Simulation from the job by its file_name. load_kwargs are passed to the Simulation's load method
+
+        :param sim_name:
+        :param load_kwargs:
+        :return: the loaded Simulation, or None if it wasn't found
+        """
+        sim = None
+
         try:
             sim = self.simulation_type.load(os.path.join(self.output_dir, '{}.sim'.format(sim_name)), **load_kwargs)
 
@@ -295,9 +308,10 @@ class JobProcessor(utils.Beet):
 
             logger.debug('Loaded {}.sim from job {}'.format(sim_name, self.name))
         except (FileNotFoundError, EOFError):
-            sim = None  # return None when sim is not found/not finished
-
             logger.debug('Failed to find completed {}.sim from job {}'.format(sim_name, self.name))
+        except Exception as e:
+            logger.critical('Failed to find completed {}.sim from job {}'.format(sim_name, self.name))
+            raise e
 
         return sim
 
@@ -319,22 +333,13 @@ class JobProcessor(utils.Beet):
     def write_to_csv(self):
         raise NotImplementedError
 
-    def make_plot(self, x_key, *y_keys, filter = lambda x: True, **kwargs):
-        if len(y_keys) == 1 and hasattr(filter, '__iter__'):
-            data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and filter[0](v))
-            x_array = np.array(list(v[x_key] for v in data.values()))
+    def make_plot(self, name, x_key, *y_keys, filter = lambda x: True, **kwargs):
+        data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and filter(v))
 
-            y_arrays = []
-            for f in filter:
-                data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and f(v))
-                y_arrays.append(np.array(list(v[y_keys[0]] for v in data.values())))
-        else:
-            data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and filter(v))
+        x_array = np.array(list(v[x_key] for v in data.values()))
+        y_arrays = [np.array(list(v[y_key] for v in data.values())) for y_key in y_keys]
 
-            x_array = np.array(list(v[x_key] for v in data.values()))
-            y_arrays = [np.array(list(v[y_key] for v in data.values())) for y_key in y_keys]
-
-        utils.xy_plot(x_array, *y_arrays, **kwargs)
+        utils.xy_plot(name, x_array, *y_arrays, **kwargs)
 
 
 class Parameter:
