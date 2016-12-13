@@ -263,7 +263,7 @@ class JobProcessor(utils.Beet):
         self.unprocessed_sims = set(self.sim_names)
 
         self.data = OrderedDict((sim_name, {}) for sim_name in self.sim_names)
-        self.parameter_sets = defaultdict(default_factory = set)
+        self.parameter_sets = defaultdict(set)
 
         self.simulation_type = simulation_type
 
@@ -285,7 +285,10 @@ class JobProcessor(utils.Beet):
         })
 
         for parameter, value in self.data[sim_name].items():
-            self.parameter_sets[parameter].add(value)
+            try:
+                self.parameter_sets[parameter].add(value)
+            except TypeError as e:
+                pass
 
     def process_sim(self, sim_name, sim):
         raise NotImplementedError
@@ -307,10 +310,10 @@ class JobProcessor(utils.Beet):
                 raise FileNotFoundError
 
             logger.debug('Loaded {}.sim from job {}'.format(sim_name, self.name))
-        except (FileNotFoundError, EOFError):
-            logger.debug('Failed to find completed {}.sim from job {}'.format(sim_name, self.name))
+        except (FileNotFoundError, EOFError) as e:
+            logger.debug('Failed to find completed {}.sim from job {} due to {}'.format(sim_name, self.name, e))
         except Exception as e:
-            logger.critical('Failed to find completed {}.sim from job {}'.format(sim_name, self.name))
+            logger.critical('Error while trying to find completed {}.sim from job {} due to {}'.format(sim_name, self.name, e))
             raise e
 
         return sim
@@ -333,13 +336,39 @@ class JobProcessor(utils.Beet):
     def write_to_csv(self):
         raise NotImplementedError
 
-    def make_plot(self, name, x_key, *y_keys, filter = lambda x: True, **kwargs):
-        data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v and filter(v))
+    def make_plot(self, name, x_key, *plot_lines, **kwargs):
+        data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v)
 
-        x_array = np.array(list(v[x_key] for v in data.values()))
-        y_arrays = [np.array(list(v[y_key] for v in data.values())) for y_key in y_keys]
+        x_array = np.array(sorted(set(v[x_key] for v in data.values())))
 
-        utils.xy_plot(name, x_array, *y_arrays, **kwargs)
+        y_arrays = [np.array(list(v[plot_line.key] for v in data.values() if all(f(v) for f in plot_line.filters))) for plot_line in plot_lines]
+        line_labels = (plot_line.label for plot_line in plot_lines)
+        line_kwargs = (plot_line.line_kwargs for plot_line in plot_lines)
+
+        utils.xy_plot(name, x_array, *y_arrays, line_labels = line_labels, line_kwargs = line_kwargs, **kwargs)
+
+
+def check(parameter, value):
+    def checker(v):
+        return v[parameter] == value
+
+    return checker
+
+
+class KeyFilterLine:
+    def __init__(self, key, filters = (lambda v: True,), label = None, **line_kwargs):
+        self.key = key
+        self.filters = filters
+        if label is None:
+            label = key
+        self.label = label
+        self.line_kwargs = line_kwargs
+
+    def __str__(self):
+        return 'Line: key = {}, filters = {}'.format(self.key, self.filters)
+
+    def __repr__(self):
+        return 'KeyFilterLine(key = {}, filter = {})'.format(self.key, self.filters)
 
 
 class Parameter:
@@ -493,6 +522,7 @@ def write_parameters_info_to_file(parameters, job_dir):
 
 CHTC_SUBMIT_STRING = """universe = vanilla
 log = logs/cluster_$(Cluster).log
+error = logs/$(Process).err
 #
 executable = /home/karpel/backend/run_sim.sh
 arguments = $(Process)

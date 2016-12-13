@@ -295,6 +295,8 @@ def make_xy_axis(axis,
     # ensure data is in numpy arrays
     x_data = np.array(x_data)
     y_data = [np.array(y) for y in y_data]
+    line_labels = tuple(line_labels)
+    line_kwargs = tuple(line_kwargs)
 
     # determine if scale_x/y is a unit specifier or a number and set scale and labels accordingly
     if type(x_scale) == str:
@@ -313,6 +315,7 @@ def make_xy_axis(axis,
     for y, lab, kw in it.zip_longest(y_data, line_labels, line_kwargs):
         if kw is None:  # means there are no kwargs for this y data
             kw = {}
+        print(len(x_data), len(y), lab)
         lines.append(plt.plot(x_data / x_scale, y / y_scale, label = lab, **kw)[0])
 
     # make any horizontal and vertical lines
