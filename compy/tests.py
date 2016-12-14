@@ -3,12 +3,7 @@ import sys
 import unittest
 import shutil
 
-from . import core
-
-from .core import *
-from .utils import *
-from .cluster import *
-from .math import *
+from . import core, utils, math, cluster
 
 TEST_DIR = os.path.join(os.getcwd(), 'temp__unit_testing')
 
@@ -20,12 +15,12 @@ class TestEnsureDirExists(unittest.TestCase):
         self.target_name = os.path.join(TEST_DIR, 'foo')
 
     def test_ensure_dir_from_dirname(self):
-        ensure_dir_exists(os.path.join(TEST_DIR, self.dirname))
+        utils.ensure_dir_exists(os.path.join(TEST_DIR, self.dirname))
         self.assertTrue(os.path.exists(self.target_name))
         os.rmdir(self.target_name)  # necessary cleanup to run other tests in this case
 
     def test_ensure_dir_from_filename(self):
-        ensure_dir_exists(os.path.join(TEST_DIR, self.filename))
+        utils.ensure_dir_exists(os.path.join(TEST_DIR, self.filename))
         self.assertTrue(os.path.exists(self.target_name))
         self.assertFalse(os.path.exists(os.path.join(self.target_name, 'bar')))  # didn't accidentally create a path with the name of the file
         os.rmdir(self.target_name)  # necessary cleanup to run other tests in this TestCase
@@ -36,8 +31,8 @@ class TestEnsureDirExists(unittest.TestCase):
 
 class TestBeet(unittest.TestCase):
     def setUp(self):
-        self.beet = Beet('foo')
-        ensure_dir_exists(TEST_DIR)
+        self.beet = utils.Beet('foo')
+        utils.ensure_dir_exists(TEST_DIR)
 
     def tearDown(self):
         shutil.rmtree(TEST_DIR)
@@ -50,7 +45,7 @@ class TestBeet(unittest.TestCase):
         path = self.beet.save(target_dir = TEST_DIR)
         self.assertEqual(path, os.path.join(TEST_DIR, 'foo.beet'))  # test if path was constructed correctly
         self.assertTrue(os.path.exists(path))  # path should actually exist on the system
-        loaded = Beet.load(path)
+        loaded = utils.Beet.load(path)
         self.assertEqual(loaded, self.beet)  # beets should be equal, but NOT the same object
         self.assertEqual(loaded.uid, self.beet.uid)  # beets should have the same uid
         self.assertEqual(hash(loaded), hash(self.beet))  # beets should have the same hash
@@ -63,3 +58,12 @@ class TestSpecification(unittest.TestCase):
 
 class TestSimulation(unittest.TestCase):
     pass
+
+
+class TestFibonnaci(unittest.TestCase):
+    def test_fibonnaci_value(self):
+        self.assertEqual(math.fibonacci(99), 218922995834555169026)
+
+    def test_fibonnaci_expception(self):
+        with self.assertRaises(ValueError):
+            math.fibonacci('foo')

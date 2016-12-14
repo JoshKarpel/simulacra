@@ -74,14 +74,14 @@ class SphericalHarmonic:
 
 @utils.memoize
 def fibonacci(n):
-    """Return the n-th Fibonacci number, with Fibonacci(0) = Fibonacci(1) = 1."""
+    """Return the n-th Fibonacci number, with Fibonacci(0) = 0, Fibonacci(1) = 1."""
     if 0 <= n == int(n):
         if n == 0 or n == 1:
-            return 1
+            return n
         else:
             return fibonacci(n - 1) + fibonacci(n - 2)
     else:
-        raise ValueError('{} is not a valid index for the Fibonacci sequence')
+        raise ValueError('{} is not a valid index for the Fibonacci sequence'.format(n))
 
 
 def is_prime(n):
@@ -182,12 +182,4 @@ def centered_second_derivative(y, dx):
     :param dx: spacing between y points
     :return:
     """
-    # offdiagonal = np.ones(len(y) - 1) / (dx ** 2)
-    # diagonal = -2 * np.ones(len(y)) / (dx ** 2)
-    # operator = sparse.diags([-offdiagonal, diagonal, offdiagonal], offsets = (-1, 0, 1))
-
-
-
-    # print(operator.toarray())
-
     return centered_first_derivative(centered_first_derivative(y, dx), dx)
