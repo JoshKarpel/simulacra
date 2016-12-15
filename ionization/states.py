@@ -37,7 +37,7 @@ class Superposition(QuantumState):
 
         If normalize is True the initial amplitudes are rescaled so that the state is normalized.
 
-        :param state: a dict of BoundState:state amplitude (complex number) pairs.
+        :param state: a dict of HydrogenBoundState:state amplitude (complex number) pairs.
         :param normalize: if True, renormalize the state amplitudes.
         """
         super(Superposition, self).__init__()
@@ -90,7 +90,7 @@ class HydrogenBoundState(QuantumState):
 
     def __init__(self, n = 1, l = 0, m = 0):
         """
-        Construct a BoundState from its three quantum numbers (n, l, m).
+        Construct a HydrogenBoundState from its three quantum numbers (n, l, m).
 
         :param n: principal quantum number
         :param l: orbital angular momentum quantum number
@@ -134,30 +134,30 @@ class HydrogenBoundState(QuantumState):
 
     @property
     def spherical_harmonic(self):
-        """Gets the SphericalHarmonic associated with the BoundState's l and m."""
+        """Gets the SphericalHarmonic associated with the HydrogenBoundState's l and m."""
         return cp.math.SphericalHarmonic(l = self.l, m = self.m)
 
     def __str__(self):
-        """Returns the external string representation of the BoundState."""
+        """Returns the external string representation of the HydrogenBoundState."""
         return self.ket
 
     def __repr__(self):
-        """Returns the internal string representation of the BoundState."""
+        """Returns the internal string representation of the HydrogenBoundState."""
         return '{}(n={}, l={}, m={})'.format(self.__class__.__name__, self.n, self.l, self.m)
 
     @property
     def ket(self):
-        """Gets the ket representation of the BoundState."""
+        """Gets the ket representation of the HydrogenBoundState."""
         return '|{},{},{}>'.format(self.n, self.l, self.m)
 
     @property
     def bra(self):
-        """Gets the bra representation of the BoundState"""
+        """Gets the bra representation of the HydrogenBoundState"""
         return '<{},{},{}|'.format(self.n, self.l, self.m)
 
     @property
     def tex_str(self):
-        """Gets a LaTeX-formatted string for the BoundState."""
+        """Gets a LaTeX-formatted string for the HydrogenBoundState."""
         return r'\psi_{{{},{},{}}}'.format(self.n, self.l, self.m)
 
     # TODO: switch to simple checking of (n, l, m) tuple
@@ -282,7 +282,7 @@ class HydrogenFreeState(QuantumState):
 
     @property
     def tex_str(self):
-        """Return a LaTeX-formatted string for the BoundState."""
+        """Return a LaTeX-formatted string for the HydrogenFreeState."""
         return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
 
     def __eq__(self, other):
@@ -304,7 +304,42 @@ class HydrogenFreeState(QuantumState):
 
 
 class QHOState(QuantumState):
-    def __init__(self, n = 0, omega = twopi * THz, dimension_label = 'x'):
+    def __init__(self, omega, mass, n = 1, dimension_label = 'x'):
         self.n = n
         self.omega = omega
+        self.mass = mass
         self.dimension_label = dimension_label
+
+    @property
+    def energy(self):
+        return hbar * self.omega * (self.n + 0.5)
+
+    def __str__(self):
+        return self.ket
+
+    def __repr__(self):
+        return '{}(n = {}, mass = {}, omega = {}, energy = {})'.format(self.__class__.__name__,
+                                                                       self.n,
+                                                                       self.mass,
+                                                                       self.omega,
+                                                                       self.energy)
+
+    @property
+    def ket(self):
+        return '|n>'.format(self.n)
+
+    @property
+    def bra(self):
+        return '<n|'.format(self.n)
+
+    @property
+    def tex_str(self):
+        """Return a LaTeX-formatted string for the QHOState."""
+        return r'n'.format(self.n)
+
+    def __call__(self, x):
+        norm = (self.mass * self.omega / (pi * hbar)) ** (1 / 4) / np.sqrt((2 ** self.n) * sp.math.factorial(self.n))
+        exp = np.exp(-self.mass * self.omega * (x ** 2) / (2 * hbar))
+        herm = special.hermite(self.n)(np.sqrt(self.mass * self.omega / hbar) * x)
+
+        return norm * exp * herm

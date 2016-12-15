@@ -121,15 +121,28 @@ class QuantumMesh:
         self.sim = simulation
         self.spec = simulation.spec
 
+        self.g_mesh = None
+        self.inner_product_multiplier = None
+
     def __str__(self):
         return '{} for {}'.format(self.__class__.__name__, str(self.sim))
 
     def __repr__(self):
         return '{}(parameters = {}, simulation = {})'.format(self.__class__.__name__, repr(self.spec), repr(self.sim))
 
+    def inner_product(self, mesh_a = None, mesh_b = None):
+        """Inner product between two meshes. If either mesh is None, the state on the g_mesh is used for that state."""
+        if mesh_a is None:
+            mesh_a = self.g_mesh
+        if mesh_b is None:
+            mesh_b = self.g_mesh
+
+        # return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * self.inner_product_multiplier
+        return np.sum(np.conj(mesh_a) * mesh_b) * self.inner_product_multiplier
+
     @property
     def norm(self):
-        raise NotImplementedError
+        return np.abs(self.inner_product())
 
     def __abs__(self):
         return self.norm
@@ -208,104 +221,64 @@ class QuantumMesh:
         self.plot_mesh(self.abs_psi_squared(normalize = normalize), name = name, title = title, color_map_min = 0, **kwargs)
 
 
-# class LineSpecification(ElectricFieldSpecification):
-#     def __init__(self, name,
-#                  mesh_type = LineMesh,
-#                  test_mass = electron_mass_reduced, test_charge = electron_charge,
-#                  initial_state = lambda x: 0,
-#                  test_states = tuple(),
-#                  internal_potential = potentials.NuclearPotential(charge = proton_charge),
-#                  electric_potential = None,
-#                  mask = None,
-#                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
-#                  x_lower_bound = -100 * bohr_radius, x_upper_bound = 100 * bohr_radius, x_points = 200,
-#                  extra_time = None, extra_time_step = 1 * asec,
-#                  checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
-#                  animators = (),
-#                  **kwargs):
-#         super(ElectricFieldSpecification, self).__init__(name, simulation_type = ElectricFieldSimulation, **kwargs)
-#
-#         if mesh_type is None:
-#             raise ValueError('{} must have a mesh_type'.format(name))
-#         self.mesh_type = mesh_type
-#
-#         self.test_mass = test_mass
-#         self.test_charge = test_charge
-#         self.initial_state = initial_state
-#         self.test_states = tuple(test_states)  # consume input iterators
-#
-#         self.internal_potential = internal_potential
-#         self.electric_potential = electric_potential
-#         self.mask = mask
-#
-#         self.time_initial = time_initial
-#         self.time_final = time_final
-#         self.time_step = time_step
-#
-#         self.x_lower_bound = x_lower_bound
-#         self.x_upper_bound = x_upper_bound
-#         self.x_points = x_points
-#
-#         self.extra_time = extra_time
-#         self.extra_time_step = extra_time_step
-#
-#         self.checkpoints = checkpoints
-#         self.checkpoint_at = checkpoint_at
-#         self.checkpoint_dir = checkpoint_dir
-#
-#         self.animators = animators
-#
-#     def info(self):
-#         checkpoint = ['Checkpointing: ']
-#         if self.checkpoints:
-#             if self.animation_dir is not None:
-#                 working_in = self.checkpoint_dir
-#             else:
-#                 working_in = os.getcwd()
-#             checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_at, working_in)
-#         else:
-#             checkpoint[0] += 'disabled'
-#
-#         animation = ['Animation: ']
-#         if len(self.animators) > 0:
-#             animation += ['   ' + str(animator) for animator in self.animators]
-#         else:
-#             animation[0] += 'disabled'
-#
-#         time_evolution = ['Time Evolution:',
-#                           '   Initial State: {}'.format(self.initial_state),
-#                           '   Initial Time: {} as'.format(uround(self.time_initial, asec, 3)),
-#                           '   Final Time: {} as'.format(uround(self.time_final, asec, 3)),
-#                           '   Time Step: {} as'.format(uround(self.time_step, asec, 3))]
-#
-#         if self.extra_time is not None:
-#             time_evolution += ['   Extra Time: {} as'.format(uround(self.extra_time, asec, 3)),
-#                                '   Extra Time Step: {} as'.format(uround(self.extra_time, asec, 3))]
-#
-#         potentials = ['Potentials:']
-#         potentials += ['   ' + str(potential) for potential in self.internal_potential]
-#         if self.electric_potential is not None:
-#             potentials += ['   ' + str(potential) for potential in self.electric_potential]
-#
-#         return '\n'.join(checkpoint + animation + time_evolution + potentials)
+class LineSpecification(ElectricFieldSpecification):
+    def __init__(self, name,
+                 x_lower_lim = -20 * nm, x_upper_lim = 20 * nm,
+                 x_points = 2 ** 9,
+                 **kwargs):
+        super(LineSpecification, self).__init__(name, mesh_type = LineMesh, animator_type = animators.CylindricalSliceAnimator, **kwargs)
+
+        self.x_lower_lim = x_lower_lim
+        self.x_upper_lim = x_upper_lim
+        # TODO: ensure x_lower_lim < x_upper_lim
+        self.x_points = int(x_points)
+
+    def info(self):
+        mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
+                '   X Boundaries: {} nm to {} nm'.format(uround(self.x_lower_lim, nm, 3), uround(self.x_upper_lim, nm, 3)),
+                '   X Points: {}'.format(self.x_points),
+                '   X Mesh Spacing: ~{} nm'.format(uround((self.x_upper_lim - self.x_lower_lim) / self.x_points, nm, 3))]
+
+        return '\n'.join((super(LineSpecification, self).info(), *mesh))
 
 
 class LineMesh(QuantumMesh):
+    mesh_storage_method = ['x']
+
     def __init__(self, simulation):
         super(LineMesh, self).__init__(simulation)
 
         self.x = np.linspace(self.spec.x_lower_lim, self.spec.x_upper_lim, self.spec.x_points)
         self.delta_x = np.abs(self.x[1] - self.x[0])
-        self.wavenumbers = 2 * pi * nfft.fftshift(nfft.fftfreq(len(self.x), d = self.delta_x))
+        self.wavenumbers = twopi * nfft.fftshift(nfft.fftfreq(len(self.x), d = self.delta_x))
+
+        self.inner_product_multiplier = self.delta_x
 
         self.psi = self.spec.initial_state(self.x)
 
         self.free_evolution_prefactor = -1j * (hbar / 2 * self.spec.test_mass) * (self.wavenumbers ** 2)
 
+    @property
+    def g_mesh(self):
+        return self.psi
+
+    @g_mesh.setter
+    def g_mesh(self, g):
+        self.psi = g
+
+    def g_for_state(self, state):
+        return state(x = self.x)
+
+    @property
+    def energy_expectation_value(self):
+        logger.warning('Energy expectation value only includes potential energy for Spectral method currently')
+        # TODO: add kinetic energy
+        return self.inner_product(mesh_b = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x) * self.g_mesh)
+
     def _evolve_potential(self, delta_t):
-        pot = self.spec.internal_potential(t = self.sim.time, x = self.x, r = self.x)
+        pot = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x)
         if self.spec.electric_potential is not None:
-            pot += self.spec.electric_potential(t = self.sim.time, x = self.x, r = self.x)
+            pot += self.spec.electric_potential(t = self.sim.time, r = self.x, distance = self.x)
 
         self.psi *= np.exp(-1j * delta_t * pot / hbar)
 
@@ -317,94 +290,11 @@ class LineMesh(QuantumMesh):
         self._evolve_potential(time_step)
         self._evolve_free(time_step / 2)
 
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
+        raise NotImplementedError
 
-# class RectangleSpecification(ElectricFieldSpecification):
-#     def __init__(self, name,
-#                  mesh_type = LineMesh,
-#                  test_mass = electron_mass_reduced, test_charge = electron_charge,
-#                  initial_state = lambda x: 0,
-#                  test_states = tuple(),
-#                  internal_potential = potentials.NuclearPotential(charge = proton_charge),
-#                  electric_potential = None,
-#                  mask = None,
-#                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
-#                  x_lower_bound = -100 * bohr_radius, x_upper_bound = 100 * bohr_radius, x_points = 200,
-#                  extra_time = None, extra_time_step = 1 * asec,
-#                  checkpoints = False, checkpoint_at = 20, checkpoint_dir = None,
-#                  animators = (),
-#                  **kwargs):
-#         super(OneDimensionalSpecification, self).__init__(name, simulation_type = core.ElectricFieldSimulation, **kwargs)
-#
-#         if mesh_type is None:
-#             raise ValueError('{} must have a mesh_type'.format(name))
-#         self.mesh_type = mesh_type
-#         self.animator_type = animator_type
-#
-#         self.test_mass = test_mass
-#         self.test_charge = test_charge
-#         self.initial_state = initial_state
-#         self.test_states = tuple(test_states)  # consume input iterators
-#         self.dipole_gauges = tuple(dipole_gauges)
-#
-#         self.internal_potential = internal_potential
-#         self.electric_potential = electric_potential
-#         self.mask = mask
-#
-#         self.time_initial = time_initial
-#         self.time_final = time_final
-#         self.time_step = time_step
-#
-#         self.x_lower_bound = x_lower_bound
-#         self.x_upper_bound = x_upper_bound
-#         self.x_points = x_points
-#
-#         self.extra_time = extra_time
-#         self.extra_time_step = extra_time_step
-#
-#         self.checkpoints = checkpoints
-#         self.checkpoint_at = checkpoint_at
-#         self.checkpoint_dir = checkpoint_dir
-#
-#         self.animators = animators
-#
-#     def info(self):
-#         checkpoint = ['Checkpointing: ']
-#         if self.checkpoints:
-#             if self.animation_dir is not None:
-#                 working_in = self.checkpoint_dir
-#             else:
-#                 working_in = os.getcwd()
-#             checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_at, working_in)
-#         else:
-#             checkpoint[0] += 'disabled'
-#
-#         animation = ['Animation: ']
-#         if len(self.animators) > 0:
-#             animation += ['   ' + str(animator) for animator in self.animators]
-#         else:
-#             animation[0] += 'disabled'
-#
-#         time_evolution = ['Time Evolution:',
-#                           '   Initial State: {}'.format(self.initial_state),
-#                           '   Initial Time: {} as'.format(uround(self.time_initial, asec, 3)),
-#                           '   Final Time: {} as'.format(uround(self.time_final, asec, 3)),
-#                           '   Time Step: {} as'.format(uround(self.time_step, asec, 3))]
-#
-#         if self.extra_time is not None:
-#             time_evolution += ['   Extra Time: {} as'.format(uround(self.extra_time, asec, 3)),
-#                                '   Extra Time Step: {} as'.format(uround(self.extra_time, asec, 3))]
-#
-#         potentials = ['Potentials:']
-#         potentials += ['   ' + str(potential) for potential in self.internal_potential]
-#         if self.electric_potential is not None:
-#             potentials += ['   ' + str(potential) for potential in self.electric_potential]
-#
-#         return '\n'.join(checkpoint + animation + time_evolution + potentials)
-#
-#
-# class RectangleMesh(QuantumMesh):
-#     def __init__(self):
-#         raise NotImplementedError
+    def plot_mesh(self, mesh, **kwargs):
+        raise NotImplementedError
 
 
 class CylindricalSliceSpecification(ElectricFieldSpecification):
@@ -443,6 +333,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         self.delta_z = self.z[1] - self.z[0]
         self.delta_rho = self.rho[1] - self.rho[0]
+        self.inner_product_multiplier = self.delta_z * self.delta_rho
 
         self.rho -= self.delta_rho / 2
 
@@ -513,15 +404,6 @@ class CylindricalSliceMesh(QuantumMesh):
 
         return np.reshape(vector, self.mesh_shape, wrap)
 
-    def inner_product(self, mesh_a = None, mesh_b = None):
-        """Inner product between two meshes. If either mesh is None, the state on the g_mesh is used for that state."""
-        if mesh_a is None:
-            mesh_a = self.g_mesh
-        if mesh_b is None:
-            mesh_b = self.g_mesh
-
-        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * (self.delta_z * self.delta_rho)
-
     def state_overlap(self, state_a = None, state_b = None):
         """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
         if state_a is None:
@@ -534,10 +416,6 @@ class CylindricalSliceMesh(QuantumMesh):
             mesh_b = self.g_for_state(state_b)
 
         return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
-
-    @property
-    def norm(self):
-        return np.abs(self.inner_product())
 
     @cp.utils.memoize
     def g_for_state(self, state):
@@ -850,6 +728,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         self.delta_r = self.r[1] - self.r[0]
         self.delta_theta = self.theta[1] - self.theta[0]
+        self.inner_product_multiplier = self.delta_r * self.delta_theta
 
         self.r += self.delta_r / 2
         self.theta -= self.delta_theta / 2
@@ -905,15 +784,6 @@ class SphericalSliceMesh(QuantumMesh):
             raise ValueError("{} is not a valid specifier for wrap_vector (valid specifiers: 'r', 'theta')".format(wrap_along))
 
         return np.reshape(mesh, self.mesh_shape, wrap)
-
-    def inner_product(self, mesh_a = None, mesh_b = None):
-        """Inner product between two meshes. If either mesh is None, the state on the g_mesh is used for that state."""
-        if mesh_a is None:
-            mesh_a = self.g_mesh
-        if mesh_b is None:
-            mesh_b = self.g_mesh
-
-        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * (self.delta_r * self.delta_theta)
 
     def state_overlap(self, state_a = None, state_b = None):
         """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
@@ -1223,6 +1093,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.delta_r = self.r[1] - self.r[0]
         self.r += self.delta_r / 2
         self.r_max = np.max(self.r)
+        self.inner_product_multiplier = self.delta_r
 
         self.l = np.array(range(self.spec.l_points))
         self.theta_points = min(self.spec.l_points * 5, 360)
@@ -1272,14 +1143,6 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return np.reshape(mesh, self.mesh_shape, wrap)
 
-    def inner_product(self, mesh_a = None, mesh_b = None):
-        if mesh_a is None:
-            mesh_a = self.g_mesh
-        if mesh_b is None:
-            mesh_b = self.g_mesh
-
-        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * self.delta_r
-
     def state_overlap(self, state_a = None, state_b = None):
         if state_a is None:
             mesh_a = self.g_mesh
@@ -1291,10 +1154,6 @@ class SphericalHarmonicMesh(QuantumMesh):
             mesh_b = self.g_for_state(state_b)
 
         return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
-
-    @property
-    def norm(self):
-        return np.abs(self.inner_product())
 
     @property
     def norm_by_l(self):
@@ -1751,10 +1610,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
     def initialize_mesh(self):
         self.mesh = self.spec.mesh_type(self)
 
+        logger.debug('Initialized mesh for {} {}'.format(self.__class__.__name__, self.name))
+
         if not (.99 < self.mesh.norm < 1.01):
             logger.warning('Initial wavefunction for {} {} may not be normalized (norm = {})'.format(self.__class__.__name__, self.name, self.mesh.norm))
-
-        logger.debug('Initialized mesh for {} {}'.format(self.__class__.__name__, self.name))
 
     def store_data(self, time_index):
         """Update the time-indexed data arrays with the current values."""

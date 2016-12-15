@@ -78,6 +78,26 @@ class NuclearPotential(Potential):
         return coulomb_force_constant * self.charge * test_charge / r
 
 
+class HarmonicOscillatorPotential(Potential):
+    def __init__(self, k = .934491 * N / m, center = 0 * nm):
+        self.k = k
+        self.center = center
+
+    @classmethod
+    def from_frequency_and_mass(cls, omega = 1.012845e15 * Hz, mass = electron_mass):
+        return cls(k = mass * (omega ** 2))
+
+    @classmethod
+    def from_energy_and_mass(cls, ground_state_energy = 1 * eV, mass = electron_mass):
+        return cls.from_frequency_and_mass(omega = 2 * ground_state_energy / (3 * hbar), mass = mass)
+
+    def __call__(self, *, distance, **kwargs):
+        return 0.5 * self.k * ((distance - self.center) ** 2)
+
+    def omega(self, mass):
+        return np.sqrt(self.k / mass)
+
+
 class RadialImaginaryPotential(Potential):
     def __init__(self, center = 20 * bohr_radius, width = 2 * bohr_radius, decay_time = 100 * asec):
         """
