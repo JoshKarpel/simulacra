@@ -8,6 +8,7 @@ import posixpath
 import stat
 import subprocess
 import itertools as it
+import hashlib
 from copy import copy, deepcopy
 from collections import OrderedDict, defaultdict
 
@@ -81,16 +82,16 @@ class ClusterInterface:
 
         return local_home
 
-    def cmd(self, cmd_list):
+    def cmd(self, *cmds):
         """Run a list of commands sequentially on the remote host. Each command list begins in a totally fresh environment."""
-        cmd_list = ['. ~/.profile', '. ~/.bash_profile'] + cmd_list  # run the remote bash profile to pick up settings
+        cmd_list = ['. ~/.profile', '. ~/.bash_profile'] + list(cmds)  # run the remote bash profile to pick up settings
         cmd = ';'.join(cmd_list)
         stdin, stdout, stderr = self.ssh.exec_command(cmd)
 
         return CmdOutput(stdin, stdout, stderr)
 
     def get_remote_home_dir(self):
-        cmd_output = self.cmd(['pwd'])  # print name of home dir to stdout
+        cmd_output = self.cmd('pwd')  # print name of home dir to stdout
 
         home_path = str(cmd_output.stdout.readline()).strip('\n')  # extract path of home dir from stdout
 
@@ -99,7 +100,7 @@ class ClusterInterface:
         return home_path
 
     def get_job_status(self):
-        cmd_output = self.cmd(['condor_q'])
+        cmd_output = self.cmd('condor_q')
 
         status = cmd_output.stdout.readlines()
 
@@ -140,10 +141,20 @@ class ClusterInterface:
 
         return False
 
-    def mirror_file(self, remote_path, remote_stat):
+    def mirror_file(self, remote_path, remote_stat, force_download = False, integrity_check = True):
         local_path = self.remote_path_to_local(remote_path)
-        if not self.is_file_synced(remote_stat, local_path):
+        if force_download or not self.is_file_synced(remote_stat, local_path):
             self.get_file(remote_path, local_path, remote_stat = remote_stat, preserve_timestamps = True)
+            if integrity_check:
+                output = self.cmd('openssl md5 {}'.format(remote_path))
+                md5_remote = output.stdout.readline().split(' ')[1].strip()
+                with open(local_path, mode = 'rb') as f:
+                    md5_local = hashlib.md5()
+                    md5_local.update(f.read())
+                    md5_local = md5_local.hexdigest().strip()
+                if md5_local != md5_remote:
+                    logger.warning('MD5 hash on {} for file {} did not match local file at {}, retrying'.format(self.remote_host, remote_path, local_path))
+                    self.mirror_file(remote_path, remote_stat, force_download = True)  # TODO: decide between force_download and simply deleting the local copy (it's corrupted anyway...)
 
     def walk_remote_path(self, remote_path, func_on_dirs = None, func_on_files = None, exclude_hidden = True, blacklist_dir_names = None, whitelist_file_ext = None):
         """

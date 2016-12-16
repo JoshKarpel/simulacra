@@ -262,6 +262,7 @@ def make_xy_axis(axis,
                  vlines = (), vline_kwargs = (), hlines = (), hline_kwargs = (),
                  title = None, x_label = None, y_label = None,
                  font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10, font_size_legend = 12,
+                 ticks_on_top = True, ticks_on_right = True, legend_on_right = False,
                  **kwargs):
     """
     Turn a matplotlib axis object into a basic x-y line plot.
@@ -315,7 +316,6 @@ def make_xy_axis(axis,
     for y, lab, kw in it.zip_longest(y_data, line_labels, line_kwargs):
         if kw is None:  # means there are no kwargs for this y data
             kw = {}
-        print(len(x_data), len(y), lab)
         lines.append(plt.plot(x_data / x_scale, y / y_scale, label = lab, **kw)[0])
 
     # make any horizontal and vertical lines
@@ -352,6 +352,9 @@ def make_xy_axis(axis,
     axis.grid(True, color = 'gray', linestyle = ':')
     axis.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
+    axis.tick_params(labeltop = ticks_on_top)
+    axis.tick_params(labelright = ticks_on_right)
+
     # make title, axis labels, and legend
     _title, _x_label, _y_label, _legend = None, None, None, None
     if title is not None:
@@ -362,7 +365,10 @@ def make_xy_axis(axis,
     if y_label is not None:
         _y_label = axis.set_ylabel(r'{}'.format(y_label) + scale_y_label, fontsize = font_size_axis_labels)
     if len(line_labels) > 0:
-        _legend = axis.legend(loc = 'best', fontsize = font_size_legend)
+        if not legend_on_right:
+            _legend = axis.legend(loc = 'best', fontsize = font_size_legend)
+        if legend_on_right:
+            _legend = axis.legend(bbox_to_anchor = (1.05, 1), loc = 'upper left', borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17))
 
     return XYAxis(axis = axis, lines = lines, title = _title, x_label = _x_label, y_label = _y_label, legend = _legend)
 

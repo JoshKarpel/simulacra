@@ -3,3 +3,4 @@ scipy
 cycler
 matplotlib
 paramiko
+tqdm

@@ -11,10 +11,12 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.CRITICAL):
+    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.WARNING):
         # job_name = 'both_phases'
-        job_name = 'both_phases__multi_fluence__min_time'
+        # job_name = 'both_phases__multi_fluence__min_time'
         # job_name = 'both_phases__multi_fluence__min_time__extra_l'
+        # job_name = 'wtf'
+        job_name = 'wtf2'
         job_dir = os.path.join(OUT_DIR, job_name)
 
         try:
@@ -35,43 +37,54 @@ if __name__ == '__main__':
                      clu.KeyFilterLine('elapsed_time', label = 'Elapsed Time'),
                      target_dir = job_dir,
                      y_scale = 'hours', y_label = 'Time to Complete',
-                     x_scale = 'asec', x_label = 'Simulation Pulse Width')
+                     x_label = 'Simulation Number')
 
         phases, fluences = jp.parameter_sets['phase'], jp.parameter_sets['fluence']
 
+        colors = ('blue', 'red', 'green', 'black')
+        color_dict = dict(zip(fluences, colors))
+        style = ('-', ':')
+        style_dict = dict(zip(phases, style))
+
         final_initial_state_lines = [clu.KeyFilterLine(key = 'final_initial_state_overlap',
                                                        filters = (clu.check('phase', phase), clu.check('fluence', fluence)),
-                                                       label = 'phase = {}, fluence = {} J/cm^2'.format(phase, uround(fluence, J / (cm ** 2), 3)))
+                                                       label = 'phase = {}, fluence = {} J/cm^2'.format(phase, uround(fluence, J / (cm ** 2), 3)),
+                                                       color = color_dict[fluence], linestyle = style_dict[phase])
                                      for phase in phases for fluence in fluences]
         jp.make_plot('final_initial_state_vs_pulse_width',
                      'pulse_width',
                      *final_initial_state_lines,
                      target_dir = job_dir,
                      y_label = 'Norm',
-                     x_scale = 'asec', x_label = 'Pulse Width')
+                     x_scale = 'asec', x_label = 'Pulse Width',
+                     legend_on_right = True)
         jp.make_plot('final_initial_state_vs_pulse_width_log',
                      'pulse_width',
                      *final_initial_state_lines,
                      target_dir = job_dir,
                      y_label = 'Norm', y_log_axis = True,
-                     x_scale = 'asec', x_label = 'Pulse Width')
+                     x_scale = 'asec', x_label = 'Pulse Width',
+                     legend_on_right = True)
 
         final_norm_lines = [clu.KeyFilterLine(key = 'final_norm',
                                               filters = (clu.check('phase', phase), clu.check('fluence', fluence)),
-                                              label = 'phase = {}, fluence = {} J/cm^2'.format(phase, uround(fluence, J / (cm ** 2), 3)))
+                                              label = 'phase = {}, fluence = {} J/cm^2'.format(phase, uround(fluence, J / (cm ** 2), 3)),
+                                              color = color_dict[fluence], linestyle = style_dict[phase])
                             for phase in phases for fluence in fluences]
         jp.make_plot('final_norm_vs_pulse_width',
                      'pulse_width',
                      *final_norm_lines,
                      target_dir = job_dir,
                      y_label = 'Norm',
-                     x_scale = 'asec', x_label = 'Pulse Width')
+                     x_scale = 'asec', x_label = 'Pulse Width',
+                     legend_on_right = True)
         jp.make_plot('final_norm_vs_pulse_width_log',
                      'pulse_width',
                      *final_norm_lines,
                      target_dir = job_dir,
                      y_label = 'Norm', y_log_axis = True,
-                     x_scale = 'asec', x_label = 'Pulse Width')
+                     x_scale = 'asec', x_label = 'Pulse Width',
+                     legend_on_right = True)
         # jp.make_plot('pulse_width', 'final_norm', filter = lambda v: v['phase'] == 'sin',
         #              name = 'sin', target_dir = job_dir,
         #              y_label = 'Norm',
