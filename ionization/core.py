@@ -223,21 +223,19 @@ class QuantumMesh:
 
 class LineSpecification(ElectricFieldSpecification):
     def __init__(self, name,
-                 x_lower_lim = -5 * nm, x_upper_lim = 5 * nm,
+                 x_bound = 10 * nm,
                  x_points = 2 ** 9,
                  **kwargs):
         super(LineSpecification, self).__init__(name, mesh_type = LineMesh, animator_type = animators.CylindricalSliceAnimator, **kwargs)
 
-        self.x_lower_lim = x_lower_lim
-        self.x_upper_lim = x_upper_lim
-        # TODO: ensure x_lower_lim < x_upper_lim
+        self.x_bound = x_bound
         self.x_points = int(x_points)
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
-                '   X Boundaries: {} nm to {} nm'.format(uround(self.x_lower_lim, nm, 3), uround(self.x_upper_lim, nm, 3)),
+                '   X Bound: {} nm'.format(uround(self.x_bound, nm, 3)),
                 '   X Points: {}'.format(self.x_points),
-                '   X Mesh Spacing: ~{} nm'.format(uround((self.x_upper_lim - self.x_lower_lim) / self.x_points, nm, 3))]
+                '   X Mesh Spacing: ~{} nm'.format(uround(2 * self.x_bound / self.x_points, nm, 3))]
 
         return '\n'.join((super(LineSpecification, self).info(), *mesh))
 
@@ -248,9 +246,10 @@ class LineMesh(QuantumMesh):
     def __init__(self, simulation):
         super(LineMesh, self).__init__(simulation)
 
-        self.x = np.linspace(self.spec.x_lower_lim, self.spec.x_upper_lim, self.spec.x_points)
+        self.x = np.linspace(-self.spec.x_bound, self.spec.x_bound, self.spec.x_points)
         self.delta_x = np.abs(self.x[1] - self.x[0])
         self.wavenumbers = twopi * nfft.fftfreq(len(self.x), d = self.delta_x)
+        self.x_center_index = cp.utils.find_nearest(self.x, 0).index
 
         self.inner_product_multiplier = self.delta_x
 
@@ -286,7 +285,7 @@ class LineMesh(QuantumMesh):
     def _evolve_potential(self, time_step):
         pot = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x)
         if self.spec.electric_potential is not None:
-            pot += self.spec.electric_potential(t = self.sim.time, r = self.x, distance = self.x)
+            pot += self.spec.electric_potential(t = self.sim.time, r = self.x, distance = self.x, distance_along_polarization = self.x, test_charge = self.spec.test_charge)
         self.psi *= np.exp(-1j * time_step * pot / hbar)
 
     def _evolve_free(self, time_step):
@@ -299,8 +298,17 @@ class LineMesh(QuantumMesh):
 
         # TODO: DOES THE ORDER OF THE SPLITTING MATTER?
 
+    def get_mesh_slicer(self, plot_limit):
+        if plot_limit is None:
+            mesh_slicer = slice(None, None, 1)
+        else:
+            x_lim_points = round(plot_limit / self.delta_x)
+            mesh_slicer = slice(round(self.x_center_index - x_lim_points), round(self.x_center_index + x_lim_points + 1), 1)
+
+        return mesh_slicer
+
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
-        line, = axis.plot(self.x / nm, mesh, **kwargs)
+        line, = axis.plot(self.x[self.get_mesh_slicer(plot_limit)] / nm, mesh[self.get_mesh_slicer(plot_limit)], **kwargs)
 
         return line
 
@@ -622,13 +630,13 @@ class CylindricalSliceMesh(QuantumMesh):
             logger.debug('Applied mask {} to g_mesh for {} {}'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name))
 
     @cp.utils.memoize
-    def get_mesh_slicer(self, distance_from_center = None):
+    def get_mesh_slicer(self, plot_limit = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
-        if distance_from_center is None:
+        if plot_limit is None:
             mesh_slicer = (slice(None, None, 1), slice(None, None, 1))
         else:
-            z_lim_points = round(distance_from_center / self.delta_z)
-            rho_lim_points = round(distance_from_center / self.delta_rho)
+            z_lim_points = round(plot_limit / self.delta_z)
+            rho_lim_points = round(plot_limit / self.delta_rho)
             mesh_slicer = (slice(round(self.z_center_index - z_lim_points), round(self.z_center_index + z_lim_points + 1), 1), slice(0, rho_lim_points + 1, 1))
 
         return mesh_slicer

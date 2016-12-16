@@ -346,6 +346,9 @@ class QHOState(QuantumState):
         """Return a LaTeX-formatted string for the QHOState."""
         return r'{}'.format(self.n)
 
+    def __hash__(self):
+        return hash((self.omega, self.mass, self.n))
+
     def __call__(self, x):
         norm = ((self.mass * self.omega / (pi * hbar)) ** (1 / 4)) / (np.float64(2 ** (self.n / 2)) * np.sqrt(np.float64(sp.math.factorial(self.n))))
         exp = np.exp(-self.mass * self.omega * (x ** 2) / (2 * hbar))

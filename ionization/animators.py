@@ -138,6 +138,49 @@ class QuantumMeshAnimator(cp.Animator):
         raise NotImplementedError
 
 
+class LineAnimator(QuantumMeshAnimator):
+    def _initialize_figure(self):
+        self.fig = plt.figure(figsize = (16, 12))
+
+        self.ax_mesh = self.fig.add_axes([.06, .34, .9, .62])
+        self.ax_metrics = self.fig.add_axes([.06, .065, .9, .2])
+
+        self._make_mesh_axis(self.ax_mesh)
+        # self._make_metrics_axis(self.ax_metrics)
+
+        self.ax_metrics.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_metrics
+
+        super(LineAnimator, self)._initialize_figure()
+
+    def _make_mesh_axis(self, axis):
+        """
+        Make the given axis an axis that shows the wavefunction on the mesh as the animation proceeds.
+
+        :param axis: the axis to make into a mesh display
+        :return: the axis
+        """
+        self.mesh = self.sim.mesh.attach_g_to_axis(axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
+        self.redraw += [self.mesh]
+
+        if self.overlay_probability_current:
+            self.quiver = self.sim.mesh.attach_probability_current_quiver(axis, plot_limit = self.plot_limit, animated = True)
+            self.redraw += [self.quiver]
+
+        axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
+
+        axis.set_xlabel(r'$x$ (nm)', fontsize = 24)
+        axis.set_ylabel(r'$\left|g\right|^2$', fontsize = 24)
+
+        axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
+
+        axis.axis('tight')
+
+        self.redraw += [*axis.xaxis.get_gridlines(), *axis.yaxis.get_gridlines()]  # gridlines must be redrawn over the mesh (it's important that they're AFTER the mesh itself in self.redraw)
+
+        return axis
+
+
+
 class CylindricalSliceAnimator(QuantumMeshAnimator):
     def _initialize_figure(self):
         self.fig = plt.figure(figsize = (16, 12))
@@ -160,11 +203,11 @@ class CylindricalSliceAnimator(QuantumMeshAnimator):
         :return: the axis
         """
         self.mesh = self.sim.mesh.attach_g_to_axis(axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
+        self.redraw += [self.mesh]
 
         if self.overlay_probability_current:
             self.quiver = self.sim.mesh.attach_probability_current_quiver(axis, plot_limit = self.plot_limit, animated = True)
-
-        self.redraw += [self.mesh, self.quiver]
+            self.redraw += [self.quiver]
 
         axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
 

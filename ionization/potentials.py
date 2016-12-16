@@ -297,6 +297,10 @@ class SineWave(UniformLinearlyPolarizedElectricField):
     def from_frequency(cls, frequency, amplitude = 1 * atomic_electric_field, phase = 0, **kwargs):
         return cls(frequency * twopi, amplitude = amplitude, phase = phase, **kwargs)
 
+    @classmethod
+    def from_photon_energy(cls, photon_energy, amplitude = 1 * atomic_electric_field, phase = 0, **kwargs):
+        return cls.from_frequency(photon_energy / h, amplitude = amplitude, phase = phase, **kwargs)
+
     @property
     def frequency(self):
         return self.omega / twopi
