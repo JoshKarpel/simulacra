@@ -223,7 +223,7 @@ class QuantumMesh:
 
 class LineSpecification(ElectricFieldSpecification):
     def __init__(self, name,
-                 x_lower_lim = -20 * nm, x_upper_lim = 20 * nm,
+                 x_lower_lim = -5 * nm, x_upper_lim = 5 * nm,
                  x_points = 2 ** 9,
                  **kwargs):
         super(LineSpecification, self).__init__(name, mesh_type = LineMesh, animator_type = animators.CylindricalSliceAnimator, **kwargs)
@@ -250,13 +250,14 @@ class LineMesh(QuantumMesh):
 
         self.x = np.linspace(self.spec.x_lower_lim, self.spec.x_upper_lim, self.spec.x_points)
         self.delta_x = np.abs(self.x[1] - self.x[0])
-        self.wavenumbers = twopi * nfft.fftshift(nfft.fftfreq(len(self.x), d = self.delta_x))
+        self.wavenumbers = twopi * nfft.fftfreq(len(self.x), d = self.delta_x)
 
         self.inner_product_multiplier = self.delta_x
 
         self.psi = self.spec.initial_state(self.x)
+        self.g_factor = 1
 
-        self.free_evolution_prefactor = -1j * (hbar / 2 * self.spec.test_mass) * (self.wavenumbers ** 2)
+        self.free_evolution_prefactor = -1j * (hbar / (2 * self.spec.test_mass)) * (self.wavenumbers ** 2)
 
     @property
     def g_mesh(self):
@@ -266,34 +267,47 @@ class LineMesh(QuantumMesh):
     def g_mesh(self, g):
         self.psi = g
 
+    @cp.utils.memoize
     def g_for_state(self, state):
         return state(x = self.x)
 
     @property
     def energy_expectation_value(self):
         logger.warning('Energy expectation value only includes potential energy for Spectral method currently')
-        # TODO: add kinetic energy
+        # TODO: add kinetic energy, make these not properties
         return self.inner_product(mesh_b = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x) * self.g_mesh)
 
-    def _evolve_potential(self, delta_t):
+    def fft(self, mesh):
+        return nfft.fft(mesh, norm = 'ortho')
+
+    def ifft(self, mesh):
+        return nfft.ifft(mesh, norm = 'ortho')
+
+    def _evolve_potential(self, time_step):
         pot = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x)
         if self.spec.electric_potential is not None:
             pot += self.spec.electric_potential(t = self.sim.time, r = self.x, distance = self.x)
+        self.psi *= np.exp(-1j * time_step * pot / hbar)
 
-        self.psi *= np.exp(-1j * delta_t * pot / hbar)
-
-    def _evolve_free(self, delta_t):
-        self.psi = nfft.ifft(nfft.ifftshift(nfft.fftshift(nfft.fft(self.psi, norm = 'ortho') * np.exp(self.free_evolution_prefactor * delta_t))), norm = 'ortho')
+    def _evolve_free(self, time_step):
+        self.psi = self.ifft(self.fft(self.psi) * np.exp(self.free_evolution_prefactor * time_step))
 
     def evolve(self, time_step):
-        self._evolve_free(time_step / 2)
-        self._evolve_potential(time_step)
-        self._evolve_free(time_step / 2)
+        self._evolve_potential(time_step / 2)
+        self._evolve_free(time_step)
+        self._evolve_potential(time_step / 2)
+
+        # TODO: DOES THE ORDER OF THE SPLITTING MATTER?
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
-        raise NotImplementedError
+        line, = axis.plot(self.x / nm, mesh, **kwargs)
+
+        return line
 
     def plot_mesh(self, mesh, **kwargs):
+        cp.utils.xy_plot(kwargs.pop('name'), self.x / nm, mesh, **kwargs)
+
+    def plot_fft(self):
         raise NotImplementedError
 
 
@@ -1571,6 +1585,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.animators = self.spec.animators
 
         self.initialize_mesh()
+        self.initialize_mesh()
 
         total_time = self.spec.time_final - self.spec.time_initial
         self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
@@ -1702,31 +1717,34 @@ class ElectricFieldSimulation(cp.core.Simulation):
             for animator in self.animators:
                 animator.cleanup()
 
-    def plot_wavefunction_vs_time(self, use_name = False, grayscale = False, log = False, **kwargs):
+    def plot_wavefunction_vs_time(self, use_name = False, grayscale = False, log = False, x_scale = 'asec', **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+
+        x_scale_unit = unit_names_to_values[x_scale]  # TODO: use the same names as in xy_plot()
+        x_scale_name = unit_names_to_tex_strings[x_scale]
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.06)  # TODO: switch to fixed axis construction
         ax_overlaps = plt.subplot(grid_spec[0])
         ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
 
         if self.spec.electric_potential is not None:
-            ax_field.plot(self.times / asec, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
+            ax_field.plot(self.times / x_scale_unit, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
 
-        ax_overlaps.plot(self.times / asec, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3)
+        ax_overlaps.plot(self.times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3)
 
         if grayscale:  # stackplot with two lines in grayscale (initial and non-initial)
             initial_overlap = [self.state_overlaps_vs_time[self.spec.initial_state]]
             non_initial_overlaps = [self.state_overlaps_vs_time[state] for state in self.spec.test_states if state != self.spec.initial_state]
             total_non_initial_overlaps = functools.reduce(np.add, non_initial_overlaps)
             overlaps = [initial_overlap, total_non_initial_overlaps]
-            ax_overlaps.stackplot(self.times / asec, *overlaps, alpha = 1,
+            ax_overlaps.stackplot(self.times / x_scale_unit, *overlaps, alpha = 1,
                                   labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$', r'$\left| \left\langle \psi|\psi_{n\leq5} \right\rangle \right|^2$'],
                                   colors = ['.3', '.5'])
         else:  # stackplot with all states broken out in full color
             overlaps = [self.state_overlaps_vs_time[state] for state in self.spec.test_states]
             num_colors = len(overlaps)
             ax_overlaps.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
-            ax_overlaps.stackplot(self.times / asec, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states])
+            ax_overlaps.stackplot(self.times / x_scale_unit, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states])
 
         if log:
             ax_overlaps.set_yscale('log')
@@ -1737,11 +1755,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_overlaps.set_ylim(0, 1.0)
             ax_overlaps.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
             ax_overlaps.grid(True)
-        ax_overlaps.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
+        ax_overlaps.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
         ax_field.grid(True)
 
-        ax_field.set_xlabel('Time $t$ (as)', fontsize = 15)
+        ax_field.set_xlabel('Time $t$ ({})'.format(x_scale_name), fontsize = 15)
         ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 15)
         ax_field.set_ylabel('E-Field (a.u.)', fontsize = 11)
 

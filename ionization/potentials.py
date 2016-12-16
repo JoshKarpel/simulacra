@@ -29,6 +29,13 @@ class Potential:
     def __add__(self, other):
         return PotentialSum(self, other)
 
+    def __call__(self, *args, **kwargs):
+        return 0
+
+
+class NoPotential(Potential):
+    pass
+
 
 class PotentialSum:
     """
@@ -79,17 +86,17 @@ class NuclearPotential(Potential):
 
 
 class HarmonicOscillatorPotential(Potential):
-    def __init__(self, k = .934491 * N / m, center = 0 * nm):
+    def __init__(self, k = 8.41042 * N / m, center = 0 * nm):
         self.k = k
         self.center = center
 
     @classmethod
-    def from_frequency_and_mass(cls, omega = 1.012845e15 * Hz, mass = electron_mass):
+    def from_frequency_and_mass(cls, omega = 3.038535e15 * Hz, mass = electron_mass):
         return cls(k = mass * (omega ** 2))
 
     @classmethod
     def from_energy_and_mass(cls, ground_state_energy = 1 * eV, mass = electron_mass):
-        return cls.from_frequency_and_mass(omega = 2 * ground_state_energy / (3 * hbar), mass = mass)
+        return cls.from_frequency_and_mass(omega = 2 * ground_state_energy / hbar, mass = mass)
 
     def __call__(self, *, distance, **kwargs):
         return 0.5 * self.k * ((distance - self.center) ** 2)

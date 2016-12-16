@@ -24,5 +24,8 @@ if __name__ == '__main__':
         logger.info(sim.info())
         print(sim.info())
 
+        print(sim.mesh.norm)
+        print(sim.mesh.state_overlap(sim.spec.initial_state))
+
         sim.plot_wavefunction_vs_time(target_dir = OUT_DIR)
         sim.plot_wavefunction_vs_time(target_dir = OUT_DIR, log = True, name_postfix = 'log')

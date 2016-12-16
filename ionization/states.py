@@ -24,6 +24,7 @@ class IllegalQuantumState(Exception):
 
 class QuantumState:
     pass
+    # TODO: each state should store it's own amplitude
 
 
 class Superposition(QuantumState):
@@ -46,7 +47,7 @@ class Superposition(QuantumState):
 
         if normalize:
             unnormalized_amplitude = np.sqrt(sum([np.abs(amp) ** 2 for amp in state.values()]))
-            state = {state: amp / unnormalized_amplitude for state, amp in state.items()}
+            state = dict((state, amp / unnormalized_amplitude) for state, amp in state.items())
 
         self.state = state
 
@@ -79,8 +80,8 @@ class Superposition(QuantumState):
     def __abs__(self):
         return self.norm
 
-    def __call__(self, r, theta, phi):
-        return sum(state(r, theta, phi) for state in self.states)
+    def __call__(self, *args, **kwargs):
+        return sum(state(*args, **kwargs) * amp for state, amp in self.state.items())
 
 
 class HydrogenBoundState(QuantumState):
@@ -304,7 +305,7 @@ class HydrogenFreeState(QuantumState):
 
 
 class QHOState(QuantumState):
-    def __init__(self, omega, mass, n = 1, dimension_label = 'x'):
+    def __init__(self, omega, mass, n = 0, dimension_label = 'x'):
         self.n = n
         self.omega = omega
         self.mass = mass
@@ -313,6 +314,14 @@ class QHOState(QuantumState):
     @property
     def energy(self):
         return hbar * self.omega * (self.n + 0.5)
+
+    @property
+    def frequency(self):
+        return self.omega / twopi
+
+    @property
+    def period(self):
+        return 1 / self.frequency
 
     def __str__(self):
         return self.ket
@@ -326,20 +335,20 @@ class QHOState(QuantumState):
 
     @property
     def ket(self):
-        return '|n>'.format(self.n)
+        return '|{}>'.format(self.n)
 
     @property
     def bra(self):
-        return '<n|'.format(self.n)
+        return '<{}|'.format(self.n)
 
     @property
     def tex_str(self):
         """Return a LaTeX-formatted string for the QHOState."""
-        return r'n'.format(self.n)
+        return r'{}'.format(self.n)
 
     def __call__(self, x):
-        norm = (self.mass * self.omega / (pi * hbar)) ** (1 / 4) / np.sqrt((2 ** self.n) * sp.math.factorial(self.n))
+        norm = ((self.mass * self.omega / (pi * hbar)) ** (1 / 4)) / (np.float64(2 ** (self.n / 2)) * np.sqrt(np.float64(sp.math.factorial(self.n))))
         exp = np.exp(-self.mass * self.omega * (x ** 2) / (2 * hbar))
         herm = special.hermite(self.n)(np.sqrt(self.mass * self.omega / hbar) * x)
 
-        return norm * exp * herm
+        return (norm * exp * herm).astype(np.complex128)
