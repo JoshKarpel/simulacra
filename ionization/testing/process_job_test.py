@@ -42,27 +42,27 @@ if __name__ == '__main__':
         phases, fluences = jp.parameter_sets['phase'], jp.parameter_sets['fluence']
 
         colors = ('blue', 'red', 'green', 'black')
-        color_dict = dict(zip(fluences, colors))
+        color_dict = dict(zip(sorted(fluences), sorted(colors)))
         style = ('-', ':')
-        style_dict = dict(zip(phases, style))
+        style_dict = dict(zip(sorted(phases), sorted(style)))
 
         final_initial_state_lines = [clu.KeyFilterLine(key = 'final_initial_state_overlap',
                                                        filters = (clu.check('phase', phase), clu.check('fluence', fluence)),
                                                        label = 'phase = {}, fluence = {} J/cm^2'.format(phase, uround(fluence, J / (cm ** 2), 3)),
                                                        color = color_dict[fluence], linestyle = style_dict[phase])
-                                     for phase in phases for fluence in fluences]
+                                     for fluence in sorted(fluences) for phase in sorted(phases)]
         jp.make_plot('final_initial_state_vs_pulse_width',
                      'pulse_width',
                      *final_initial_state_lines,
                      target_dir = job_dir,
-                     y_label = 'Norm',
+                     y_label = 'Final Initial State Overlap',
                      x_scale = 'asec', x_label = 'Pulse Width',
                      legend_on_right = True)
         jp.make_plot('final_initial_state_vs_pulse_width_log',
                      'pulse_width',
                      *final_initial_state_lines,
                      target_dir = job_dir,
-                     y_label = 'Norm', y_log_axis = True,
+                     y_label = 'Final Initial State Overlap', y_log_axis = True,
                      x_scale = 'asec', x_label = 'Pulse Width',
                      legend_on_right = True)
 

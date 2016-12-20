@@ -60,7 +60,7 @@ class BoundState:
 
     @n.setter
     def n(self, n):
-        if int(n) == n and n > 0:
+        if 0 < n == int(n):
             self._n = n
 
     @property
@@ -114,19 +114,19 @@ class BoundState:
     # TODO: switch to simple checking of (n, l, m) tuple
 
     def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.n == other.n and self.l == other.l and self.m == other.m
+        return isinstance(other, self.__class__) and (self.n, self.l, self.m) == (other.n, other.l, other.m)
 
     def __lt__(self, other):
-        return isinstance(other, self.__class__) and self.n < other.n and self.l < other.l and self.m < other.m
+        return isinstance(other, self.__class__) and (self.n, self.l, self.m) < (other.n, other.l, other.m)
 
     def __gt__(self, other):
-        return isinstance(other, self.__class__) and self.n > other.n and self.l > other.l and self.m > other.m
+        return isinstance(other, self.__class__) and (self.n, self.l, self.m) > (other.n, other.l, other.m)
 
     def __le__(self, other):
-        return isinstance(other, self.__class__) and self.n <= other.n and self.l <= other.l and self.m <= other.m
+        return isinstance(other, self.__class__) and (self.n, self.l, self.m) <= (other.n, other.l, other.m)
 
     def __ge__(self, other):
-        return isinstance(other, self.__class__) and self.n >= other.n and self.l >= other.l and self.m >= other.m
+        return isinstance(other, self.__class__) and (self.n, self.l, self.m) >= (other.n, other.l, other.m)
 
     def __hash__(self):
         return hash((self.n, self.l, self.m))

@@ -291,6 +291,7 @@ def make_xy_axis(axis,
     :param font_size_axis_labels: font size for the axis labels
     :param font_size_tick_labels: font size for the tick labels
     :param font_size_legend: font size for the legend
+    :param kwargs: absorbs kwargs
     :return:
     """
     # ensure data is in numpy arrays
@@ -461,14 +462,13 @@ def memoize(func):
     return memoizer
 
 
-def watcher(watcher, copy_output = False):
+def watcher(watcher):
     """
     Returns a decorator that memoizes the result of a method call until the watcher function returns a different value.
 
     The watcher function is passed the instance that the original method is bound to.
 
     :param watcher: a function which is called to check whether to recompute the wrapped function
-    :param copy_output: if True, the output of the memo will be deepcopied before returning. Defaults to False.
     :return: a Watcher decorator
     """
 
@@ -486,7 +486,7 @@ def watcher(watcher, copy_output = False):
             return 'Watcher wrapper over {}'.format(self.func.__name__)
 
         def __repr__(self):
-            return 'watcher(copy_output = {})({})'.format(copy_output, repr(self.func))
+            return 'watcher({})'.format(repr(self.func))
 
         def __call__(self, instance, *args, **kwargs):
             check = watcher(instance)
@@ -495,15 +495,7 @@ def watcher(watcher, copy_output = False):
                 self.cached = self.func(instance, *args, **kwargs)
                 self.watched = check
 
-            value = self.cached
-
-            if copy_output:
-                try:
-                    value = value.copy()
-                except AttributeError:
-                    value = deepcopy(value)
-
-            return value
+            return self.cached
 
         def __get__(self, instance, cls):
             # support instance methods
@@ -637,7 +629,7 @@ def convert_bytes(num):
 
 def file_size(file_path):
     """
-    this function will return the file size
+    this function will return the file size as a string
     """
     if os.path.isfile(file_path):
         file_info = os.stat(file_path)

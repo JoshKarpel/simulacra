@@ -43,7 +43,7 @@ class Specification(utils.Beet):
         :param file_extension: file extension to name the Specification with
         :return: None
         """
-        super(Specification, self).save(target_dir, file_extension)
+        return super(Specification, self).save(target_dir, file_extension)
 
     def to_simulation(self):
         return self.simulation_type(self)

@@ -157,6 +157,9 @@ def prime_factorization(n):
     return factors
 
 
+# TODO: recursive prime factorization
+
+
 def centered_first_derivative(y, dx):
     """
 

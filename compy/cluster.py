@@ -90,6 +90,7 @@ class ClusterInterface:
 
         return CmdOutput(stdin, stdout, stderr)
 
+    @utils.cached_property
     def get_remote_home_dir(self):
         cmd_output = self.cmd('pwd')  # print name of home dir to stdout
 
