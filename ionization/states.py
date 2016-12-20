@@ -23,16 +23,38 @@ class IllegalQuantumState(Exception):
 
 
 class QuantumState:
-    pass
-    # TODO: each state should store it's own amplitude
+    def __init__(self, amplitude = 1):
+        self.amplitude = amplitude
+
+    @property
+    def norm(self):
+        return np.abs(self.amplitude) ** 2
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+    def __iter__(self):
+        yield self
+
+    def __add__(self, other):
+        return Superposition(*self, *other)
+
+    def __mul__(self, other):
+        new = deepcopy(self)
+        new.amplitude *= other
+        return new
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __truediv__(self, other):
+        return self * (1 / other)
 
 
 class Superposition(QuantumState):
     """A class that represents a superposition of bound states."""
 
-    __slots__ = ('state',)
-
-    def __init__(self, state, normalize = True):
+    def __init__(self, *states):
         """
         Construct a discrete superposition of states.
 
@@ -41,47 +63,25 @@ class Superposition(QuantumState):
         :param state: a dict of HydrogenBoundState:state amplitude (complex number) pairs.
         :param normalize: if True, renormalize the state amplitudes.
         """
-        super(Superposition, self).__init__()
+        norm = np.sqrt(sum(s.norm for s in states))
+        self.states = list(s / norm for s in states)
 
-        state = dict(state)  # consume input iterators because we may need to reuse the dict several times
-
-        if normalize:
-            unnormalized_amplitude = np.sqrt(sum([np.abs(amp) ** 2 for amp in state.values()]))
-            state = dict((state, amp / unnormalized_amplitude) for state, amp in state.items())
-
-        self.state = state
+        super(Superposition, self).__init__(amplitude = 1)
 
     def __str__(self):
-        pairs = ['{}: {}'.format(str(s), a) for s, a in self.state.items()]
-        out = ', '.join(pairs)
-        return out
+        return '(' + ' + '.join([str(s) for s in self.states]) + ')'
 
     def __repr__(self):
-        return repr(self.state)
+        return '{}({})'.format(self.__class__.__name__, ', '.join([repr(p) for p in self.states]))
 
     def __getitem__(self, item):
-        return self.state[item]
+        return self.states[item]
 
     def __iter__(self):
-        yield from self.state.items()
-
-    @property
-    def states(self):
-        yield from self.state.keys()
-
-    @property
-    def amplitudes(self):
-        return np.array(self.state.values())
-
-    @property
-    def norm(self):
-        return np.sum(np.abs(self.amplitudes) ** 2)
-
-    def __abs__(self):
-        return self.norm
+        yield from self.states
 
     def __call__(self, *args, **kwargs):
-        return sum(state(*args, **kwargs) * amp for state, amp in self.state.items())
+        return sum(s(*args, **kwargs) for s in self.states)
 
 
 class HydrogenBoundState(QuantumState):
@@ -89,7 +89,7 @@ class HydrogenBoundState(QuantumState):
 
     __slots__ = ('_n', '_l', '_m')
 
-    def __init__(self, n = 1, l = 0, m = 0):
+    def __init__(self, n = 1, l = 0, m = 0, amplitude = 1):
         """
         Construct a HydrogenBoundState from its three quantum numbers (n, l, m).
 
@@ -97,7 +97,7 @@ class HydrogenBoundState(QuantumState):
         :param l: orbital angular momentum quantum number
         :param m: quantum number for angular momentum z-component
         """
-        super(HydrogenBoundState, self).__init__()
+        super(HydrogenBoundState, self).__init__(amplitude = amplitude)
 
         self.n = n
         self.l = l
@@ -110,8 +110,10 @@ class HydrogenBoundState(QuantumState):
 
     @n.setter
     def n(self, n):
-        if int(n) == n and n > 0:
+        if 0 < n == int(n):
             self._n = n
+        else:
+            raise IllegalQuantumState('n ({}) must be an integer greater than zero'.format(n))
 
     @property
     def l(self):
@@ -122,6 +124,8 @@ class HydrogenBoundState(QuantumState):
     def l(self, l):
         if int(l) == l and 0 <= l < self.n:
             self._l = l
+        else:
+            raise IllegalQuantumState('l ({}) must be greater than or equal to zero and less than n ({})'.format(l, self.n))
 
     @property
     def m(self):
@@ -132,6 +136,8 @@ class HydrogenBoundState(QuantumState):
     def m(self, m):
         if int(m) == m and -self.l <= m <= self.l:
             self._m = m
+        else:
+            IllegalQuantumState('|m| (|{}|) must be less than l ({})'.format(m, self.l))
 
     @property
     def spherical_harmonic(self):
@@ -144,17 +150,17 @@ class HydrogenBoundState(QuantumState):
 
     def __repr__(self):
         """Returns the internal string representation of the HydrogenBoundState."""
-        return '{}(n={}, l={}, m={})'.format(self.__class__.__name__, self.n, self.l, self.m)
+        return '{}(n = {}, l = {}, m = {}, amplitude = {})'.format(self.__class__.__name__, self.n, self.l, self.m, self.amplitude)
 
     @property
     def ket(self):
         """Gets the ket representation of the HydrogenBoundState."""
-        return '|{},{},{}>'.format(self.n, self.l, self.m)
+        return '{}|{},{},{}>'.format(np.around(self.amplitude, 3), self.n, self.l, self.m)
 
     @property
     def bra(self):
         """Gets the bra representation of the HydrogenBoundState"""
-        return '<{},{},{}|'.format(self.n, self.l, self.m)
+        return '{}<{},{},{}|'.format(np.around(self.amplitude, 3), self.n, self.l, self.m)
 
     @property
     def tex_str(self):
@@ -204,7 +210,7 @@ class HydrogenBoundState(QuantumState):
         radial_part = self.radial_part(r)
         sph_harm = self.spherical_harmonic(theta, phi)
 
-        return radial_part * sph_harm
+        return self.amplitude * radial_part * sph_harm
 
 
 class HydrogenFreeState(QuantumState):
@@ -212,7 +218,7 @@ class HydrogenFreeState(QuantumState):
 
     __slots__ = ('_energy', '_l', '_m')
 
-    def __init__(self, energy = 1 * eV, l = 0, m = 0):
+    def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
         """
         Construct a FreeState from its energy and angular momentum quantum numbers.
 
@@ -220,7 +226,7 @@ class HydrogenFreeState(QuantumState):
         :param l: orbital angular momentum quantum number
         :param m: quantum number for angular momentum z-component
         """
-        super(HydrogenFreeState, self).__init__()
+        super(HydrogenFreeState, self).__init__(amplitude = amplitude)
 
         if any(int(x) != x for x in (l, m)):
             raise IllegalQuantumState('l and m must be integers')
@@ -271,15 +277,15 @@ class HydrogenFreeState(QuantumState):
         return self.ket
 
     def __repr__(self):
-        return '{}(T={} eV, k={} 1/nm, l={}, m={})'.format(self.__class__.__name__, uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
+        return '{}(T = {} eV, k = {} 1/nm, l = {}, m = {}, amplitude = {})'.format(self.__class__.__name__, uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m, self.amplitude)
 
     @property
     def ket(self):
-        return '|{} eV,{} 1/nm, {}, {}>'.format(uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
+        return '{}|{} eV,{} 1/nm, {}, {}>'.format(np.around(self.amplitude, 3), uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
 
     @property
     def bra(self):
-        return '<{} eV,{} 1/nm, {}, {}|'.format(uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
+        return '{}<{} eV,{} 1/nm, {}, {}|'.format(np.around(self.amplitude, 3), uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
 
     @property
     def tex_str(self):
@@ -305,11 +311,13 @@ class HydrogenFreeState(QuantumState):
 
 
 class QHOState(QuantumState):
-    def __init__(self, omega, mass, n = 0, dimension_label = 'x'):
+    def __init__(self, omega, mass, n = 0, amplitude = 1, dimension_label = 'x'):
         self.n = n
         self.omega = omega
         self.mass = mass
         self.dimension_label = dimension_label
+
+        super(QHOState, self).__init__(amplitude = amplitude)
 
     @property
     def energy(self):
@@ -327,11 +335,12 @@ class QHOState(QuantumState):
         return self.ket
 
     def __repr__(self):
-        return '{}(n = {}, mass = {}, omega = {}, energy = {})'.format(self.__class__.__name__,
-                                                                       self.n,
-                                                                       self.mass,
-                                                                       self.omega,
-                                                                       self.energy)
+        return '{}(n = {}, mass = {}, omega = {}, energy = {}, amplitude = {})'.format(self.__class__.__name__,
+                                                                                       self.n,
+                                                                                       self.mass,
+                                                                                       self.omega,
+                                                                                       self.energy,
+                                                                                       self.amplitude)
 
     @property
     def ket(self):
@@ -354,4 +363,4 @@ class QHOState(QuantumState):
         exp = np.exp(-self.mass * self.omega * (x ** 2) / (2 * hbar))
         herm = special.hermite(self.n)(np.sqrt(self.mass * self.omega / hbar) * x)
 
-        return (norm * exp * herm).astype(np.complex128)
+        return self.amplitude * (norm * exp * herm).astype(np.complex128)

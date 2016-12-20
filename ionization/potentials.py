@@ -27,7 +27,7 @@ class Potential:
         yield self
 
     def __add__(self, other):
-        return PotentialSum(self, other)
+        return PotentialSum(*self, *other)
 
     def __call__(self, *args, **kwargs):
         return 0
