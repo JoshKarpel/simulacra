@@ -2087,11 +2087,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if first_time is None:
             first_time_index, first_time = 0, self.times[0]
         else:
-            first_time_index, first_time, _ = cp.utils.find_nearest(self.times, first_time)
+            first_time_index, first_time, _ = cp.utils.find_nearest_entry(self.times, first_time)
         if last_time is None:
             last_time_index, last_time = self.time_steps - 1, self.times[self.time_steps - 1]
         else:
-            last_time_index, last_time, _ = cp.utils.find_nearest(self.times, last_time)
+            last_time_index, last_time, _ = cp.utils.find_nearest_entry(self.times, last_time)
         points = last_time_index - first_time_index
         frequency = nfft.fftshift(nfft.fftfreq(points, self.spec.time_step))
         dipole_moment = nfft.fftshift(nfft.fft(self.electric_dipole_moment_vs_time[gauge][first_time_index: last_time_index], norm = 'ortho'))

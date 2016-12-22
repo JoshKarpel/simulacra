@@ -3,7 +3,7 @@ import logging
 import os
 import subprocess
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as _plt
 
 from . import utils
 
@@ -34,6 +34,7 @@ class Specification(utils.Beet):
 
         for k, v in kwargs.items():
             setattr(self, k, v)
+            logger.debug('{} stored additional attribute {} = {}'.format(self.name, k, v))
 
     def save(self, target_dir = None, file_extension = '.spec'):
         """
@@ -146,7 +147,7 @@ class Animator:
 
     def __init__(self, postfix = '', target_dir = None,
                  length = 30, fps = 30,
-                 colormap = plt.cm.inferno):
+                 colormap = _plt.cm.inferno):
         """
         Construct an Animator instance.
 
@@ -248,7 +249,7 @@ class Animator:
 
     def _redraw_frame(self):
         """Redraw the figure frame."""
-        plt.set_cmap(self.colormap)  # make sure the colormap is correct, in case other figures have been created somewhere
+        _plt.set_cmap(self.colormap)  # make sure the colormap is correct, in case other figures have been created somewhere
 
         self.fig.canvas.restore_region(self.background)  # copy the static background back onto the figure
 

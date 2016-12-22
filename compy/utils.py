@@ -212,15 +212,15 @@ class Beet:
         return str(self)
 
 
-Nearest = collections.namedtuple('Nearest', ('index', 'value', 'target'))
+NearestEntry = collections.namedtuple('NearestEntry', ('index', 'value', 'target'))
 
 
-def find_nearest(array, target):
-    """Returns the index, value of the numpy array entry closest to the given target."""
-    index = np.argmin(np.abs(array - target))
-    value = array[index]
+def find_nearest_entry(ndarray, target):
+    """Returns the (index, value, target) of the numpy array entry closest to the given target."""
+    index = np.argmin(np.abs(ndarray - target))
+    value = ndarray[index]
 
-    return Nearest(index, value, target)
+    return NearestEntry(index, value, target)
 
 
 def ensure_dir_exists(path):

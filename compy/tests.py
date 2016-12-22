@@ -14,19 +14,18 @@ class TestEnsureDirExists(unittest.TestCase):
         self.filename = 'foo/bar.py'
         self.target_name = os.path.join(TEST_DIR, 'foo')
 
+    def tearDown(self):
+        shutil.rmtree(TEST_DIR)
+
     def test_ensure_dir_from_dirname(self):
         utils.ensure_dir_exists(os.path.join(TEST_DIR, self.dirname))
         self.assertTrue(os.path.exists(self.target_name))
-        os.rmdir(self.target_name)  # necessary cleanup to run other tests in this case
 
     def test_ensure_dir_from_filename(self):
         utils.ensure_dir_exists(os.path.join(TEST_DIR, self.filename))
         self.assertTrue(os.path.exists(self.target_name))
         self.assertFalse(os.path.exists(os.path.join(self.target_name, 'kappa')))  # didn't accidentally create a path with the name of the file
         os.rmdir(self.target_name)  # necessary cleanup to run other tests in this TestCase
-
-    def tearDown(self):
-        shutil.rmtree(TEST_DIR)
 
 
 class TestBeet(unittest.TestCase):
