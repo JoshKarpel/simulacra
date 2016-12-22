@@ -33,10 +33,10 @@ if __name__ == '__main__':
                                     # internal_potential = ion.NoPotential(),
                                     electric_potential = electric,
                                     test_mass = mass,
-                                    test_states = (ion.QHOState(omega = pot.omega(mass), mass = mass, n = n) for n in range(30)),
+                                    test_states = (ion.QHOState(omega = pot.omega(mass), mass = mass, n = n) for n in range(5)),
                                     dipole_gauges = (),
                                     initial_state = init,
-                                    time_initial = 0, time_final = 10 * fsec, time_step = 5 * asec,
+                                    time_initial = 0, time_final = 10 * fsec, time_step = 10 * asec,
                                     animators = ani
                                     ).to_simulation()
 

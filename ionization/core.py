@@ -178,10 +178,13 @@ class QuantumMesh:
     def attach_g_to_axis(self, axis, normalize = False, log = False, plot_limit = None, **kwargs):
         return self.attach_mesh_to_axis(axis, self.abs_g_squared(normalize = normalize, log = log), plot_limit = plot_limit, **kwargs)
 
-    def update_g_mesh(self, colormesh, normalize = False, log = False, plot_limit = None, slicer = 'get_mesh_slicer'):
+    def update_g_mesh(self, mesh, normalize = False, log = False, plot_limit = None, slicer = 'get_mesh_slicer'):
         new_mesh = self.abs_g_squared(normalize = normalize, log = log)[getattr(self, slicer)(plot_limit)]
 
-        colormesh.set_array(new_mesh.ravel())
+        try:
+            mesh.set_array(new_mesh.ravel())
+        except AttributeError as e:
+            mesh.set_ydata(new_mesh)
 
     def plot_g(self, normalize = True, name_postfix = '', **kwargs):
         """Plot |g|^2. kwargs are for plot_mesh."""
@@ -205,10 +208,13 @@ class QuantumMesh:
     def attach_psi_to_axis(self, axis, normalize = False, log = False, plot_limit = None, **kwargs):
         return self.attach_mesh_to_axis(axis, self.abs_psi_squared(normalize = normalize, log = log), plot_limit = plot_limit, **kwargs)
 
-    def update_psi_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
+    def update_psi_mesh(self, mesh, normalize = False, log = False, plot_limit = None):
         new_mesh = self.abs_psi_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
 
-        colormesh.set_array(new_mesh.ravel())
+        try:
+            mesh.set_array(new_mesh.ravel())
+        except AttributeError as e:
+            mesh.set_ydata(new_mesh)
 
     def plot_psi(self, normalize = True, name_postfix = '', **kwargs):
         """Plot |psi|^2. kwargs are for plot_mesh."""

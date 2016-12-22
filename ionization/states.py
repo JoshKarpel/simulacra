@@ -293,7 +293,7 @@ class HydrogenFreeState(QuantumState):
         return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
 
     def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.energy == other.energy and self.l == other.l and self.m == other.m
+        return isinstance(other, self.__class__) and (self.energy, self.l, self.m) == (other.energy, other.l, other.m)
 
     def __hash__(self):
         return hash((self.energy, self.l, self.m))
@@ -354,6 +354,9 @@ class QHOState(QuantumState):
     def tex_str(self):
         """Return a LaTeX-formatted string for the QHOState."""
         return r'{}'.format(self.n)
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and (self.omega, self.mass, self.n) == (other.omega, other.mass, other.n)
 
     def __hash__(self):
         return hash((self.omega, self.mass, self.n))

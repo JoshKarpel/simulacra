@@ -146,9 +146,10 @@ class LineAnimator(QuantumMeshAnimator):
         self.ax_metrics = self.fig.add_axes([.06, .065, .9, .2])
 
         self._make_mesh_axis(self.ax_mesh)
-        # self._make_metrics_axis(self.ax_metrics)
+        self._make_metrics_axis(self.ax_metrics)
 
-        self.ax_metrics.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_metrics
+        leg = self.ax_metrics.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_metrics
+        self.redraw += [leg]
 
         super(LineAnimator, self)._initialize_figure()
 
@@ -179,6 +180,13 @@ class LineAnimator(QuantumMeshAnimator):
 
         return axis
 
+    def _update_mesh_axis(self):  # TODO: factor out
+        self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
+
+        try:
+            self.sim.mesh.update_probability_current_quiver(self.quiver, plot_limit = self.plot_limit)
+        except AttributeError:
+            pass
 
 
 class CylindricalSliceAnimator(QuantumMeshAnimator):
@@ -191,7 +199,8 @@ class CylindricalSliceAnimator(QuantumMeshAnimator):
         self._make_mesh_axis(self.ax_mesh)
         self._make_metrics_axis(self.ax_metrics)
 
-        self.ax_metrics.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_metrics
+        leg = self.ax_metrics.legend(loc = 'center left', fontsize = 20)  # legend must be created here so that it catches all of the lines in ax_metrics
+        self.redraw += [leg]
 
         super(CylindricalSliceAnimator, self)._initialize_figure()
 
@@ -262,6 +271,9 @@ class PolarAnimator(QuantumMeshAnimator):
         super(PolarAnimator, self)._update_data()
 
         self.time_text.set_text(r'$t = {}$ as'.format(uround(self.sim.time, asec, 3)))
+
+    def _make_meshes(self, axis):
+        raise NotImplementedError
 
     def _make_mesh_axis(self, axis):
         self._make_meshes(axis)
