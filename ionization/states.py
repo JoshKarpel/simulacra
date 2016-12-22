@@ -311,13 +311,25 @@ class HydrogenFreeState(QuantumState):
 
 
 class QHOState(QuantumState):
-    def __init__(self, omega, mass, n = 0, amplitude = 1, dimension_label = 'x'):
+    def __init__(self, spring_constant, mass, n = 0, amplitude = 1, dimension_label = 'x'):
         self.n = n
-        self.omega = omega
+        self.spring_constant = spring_constant
         self.mass = mass
         self.dimension_label = dimension_label
 
         super(QHOState, self).__init__(amplitude = amplitude)
+
+    @classmethod
+    def from_omega_and_mass(cls, omega, mass, n = 0, amplitude = 1, dimension_label = 'x'):
+        return cls(spring_constant = mass * (omega ** 2), mass = mass, n = n, amplitude = amplitude, dimension_label = dimension_label)
+
+    @classmethod
+    def from_QHO_potential_and_mass(cls, qho_potential, mass, n = 0, amplitude = 1, dimension_label = 'x'):
+        return cls(spring_constant = qho_potential.spring_constant, mass = mass, n = n, amplitude = amplitude, dimension_label = dimension_label)
+
+    @property
+    def omega(self):
+        return np.sqrt(self.spring_constant / self.mass)
 
     @property
     def energy(self):
@@ -365,5 +377,7 @@ class QHOState(QuantumState):
         norm = ((self.mass * self.omega / (pi * hbar)) ** (1 / 4)) / (np.float64(2 ** (self.n / 2)) * np.sqrt(np.float64(sp.math.factorial(self.n))))
         exp = np.exp(-self.mass * self.omega * (x ** 2) / (2 * hbar))
         herm = special.hermite(self.n)(np.sqrt(self.mass * self.omega / hbar) * x)
+
+        # TODO: Stirling's approximation for large enough n in the normalization factor
 
         return self.amplitude * (norm * exp * herm).astype(np.complex128)

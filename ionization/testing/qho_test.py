@@ -14,26 +14,26 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         mass = electron_mass
-        pot = ion.HarmonicOscillatorPotential.from_energy_and_mass(ground_state_energy = 1 * eV, mass = mass)
+        pot = ion.HarmonicOscillatorPotential.from_energy_spacing_and_mass(energy_spacing = 1 * eV, mass = mass)
 
         # init = ion.Superposition({ion.QHOState(omega = pot.omega(mass), mass = mass, n = 0): 1,
         #                           ion.QHOState(omega = pot.omega(mass), mass = mass, n = 1): 1})
-        init = ion.QHOState(omega = pot.omega(mass), mass = mass, n = 0)
+        init = ion.QHOState.from_QHO_potential_and_mass(pot, mass, n = 10)
 
         electric = ion.SineWave.from_photon_energy(1 * eV, amplitude = .01 * atomic_electric_field)
 
         ani = [
             ion.animators.LineAnimator(target_dir = OUT_DIR, postfix = '_full'),
-            ion.animators.LineAnimator(target_dir = OUT_DIR, plot_limit = 20 * bohr_radius, postfix = '_20'),
+            ion.animators.LineAnimator(target_dir = OUT_DIR, plot_limit = 10 * nm, postfix = '_10'),
         ]
 
         sim = ion.LineSpecification('qho',
-                                    x_bond = 50 * nm, x_points = 2 ** 15,
+                                    x_bound = 50 * nm, x_points = 2 ** 14,
                                     internal_potential = pot,
                                     # internal_potential = ion.NoPotential(),
                                     electric_potential = electric,
                                     test_mass = mass,
-                                    test_states = (ion.QHOState(omega = pot.omega(mass), mass = mass, n = n) for n in range(5)),
+                                    test_states = (ion.QHOState.from_QHO_potential_and_mass(pot, mass, n = n) for n in range(60)),
                                     dipole_gauges = (),
                                     initial_state = init,
                                     time_initial = 0, time_final = 10 * fsec, time_step = 10 * asec,

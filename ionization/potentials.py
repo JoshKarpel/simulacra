@@ -86,23 +86,27 @@ class NuclearPotential(Potential):
 
 
 class HarmonicOscillatorPotential(Potential):
-    def __init__(self, k = 8.41042 * N / m, center = 0 * nm):
-        self.k = k
+    def __init__(self, spring_constant = 4.20521 * N / m, center = 0 * nm):
+        self.spring_constant = spring_constant
         self.center = center
 
     @classmethod
-    def from_frequency_and_mass(cls, omega = 3.038535e15 * Hz, mass = electron_mass):
+    def from_frequency_and_mass(cls, omega = 1.5192675e15 * Hz, mass = electron_mass):
         return cls(k = mass * (omega ** 2))
 
     @classmethod
-    def from_energy_and_mass(cls, ground_state_energy = 1 * eV, mass = electron_mass):
+    def from_ground_state_energy_and_mass(cls, ground_state_energy = 0.5 * eV, mass = electron_mass):
         return cls.from_frequency_and_mass(omega = 2 * ground_state_energy / hbar, mass = mass)
 
+    @classmethod
+    def from_energy_spacing_and_mass(cls, energy_spacing = 1 * eV, mass = electron_mass):
+        return cls.from_frequency_and_mass(omega = energy_spacing / hbar, mass = mass)
+
     def __call__(self, *, distance, **kwargs):
-        return 0.5 * self.k * ((distance - self.center) ** 2)
+        return 0.5 * self.spring_constant * ((distance - self.center) ** 2)
 
     def omega(self, mass):
-        return np.sqrt(self.k / mass)
+        return np.sqrt(self.spring_constant / mass)
 
 
 class RadialImaginaryPotential(Potential):

@@ -45,7 +45,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  electric_potential = None,
                  mask = None,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
-                 minimum_time_final = 0 * asec, extra_time_step = 2 * asec,
+                 minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
                  **kwargs):
@@ -316,7 +316,7 @@ class LineMesh(QuantumMesh):
             mesh_slicer = slice(None, None, 1)
         else:
             x_lim_points = round(plot_limit / self.delta_x)
-            mesh_slicer = slice(round(self.x_center_index - x_lim_points), round(self.x_center_index + x_lim_points + 1), 1)
+            mesh_slicer = slice(int(self.x_center_index - x_lim_points), int(self.x_center_index + x_lim_points + 1), 1)
 
         return mesh_slicer
 
@@ -650,7 +650,7 @@ class CylindricalSliceMesh(QuantumMesh):
         else:
             z_lim_points = round(plot_limit / self.delta_z)
             rho_lim_points = round(plot_limit / self.delta_rho)
-            mesh_slicer = (slice(round(self.z_center_index - z_lim_points), round(self.z_center_index + z_lim_points + 1), 1), slice(0, rho_lim_points + 1, 1))
+            mesh_slicer = (slice(int(self.z_center_index - z_lim_points), int(self.z_center_index + z_lim_points + 1), 1), slice(0, int(rho_lim_points + 1), 1))
 
         return mesh_slicer
 
@@ -1005,7 +1005,7 @@ class SphericalSliceMesh(QuantumMesh):
             mesh_slicer = slice(None, None, 1)
         else:
             r_lim_points = round(distance_from_center / self.delta_r)
-            mesh_slicer = slice(0, r_lim_points + 1, 1)
+            mesh_slicer = slice(0, int(r_lim_points + 1), 1)
 
         return mesh_slicer
 
@@ -1463,7 +1463,7 @@ class SphericalHarmonicMesh(QuantumMesh):
             mesh_slicer = (slice(None, None, 1), slice(None, None, 1))
         else:
             r_lim_points = int(distance_from_center / self.delta_r)
-            mesh_slicer = (slice(None, None, 1), slice(0, r_lim_points + 1, 1))
+            mesh_slicer = (slice(None, None, 1), slice(0, int(r_lim_points + 1), 1))
 
         return mesh_slicer
 
@@ -1474,7 +1474,7 @@ class SphericalHarmonicMesh(QuantumMesh):
             mesh_slicer = slice(None, None, 1)
         else:
             r_lim_points = int(distance_from_center / self.delta_r)
-            mesh_slicer = slice(0, r_lim_points + 1, 1)
+            mesh_slicer = slice(0, int(r_lim_points + 1), 1)
 
         return mesh_slicer
 
