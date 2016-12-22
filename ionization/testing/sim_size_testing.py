@@ -23,8 +23,8 @@ if __name__ == '__main__':
         e_field = ion.SineWave(omega = twopi / (50 * asec), amplitude = 1 * atomic_electric_field, window_time = 100 * asec, window_width = 10 * asec)
         # e_field = None
 
-        initial_state = ion.BoundState(1, 0, 0)
-        test_states = [ion.BoundState(n, l) for n in range(5) for l in range(n)]
+        initial_state = ion.HydrogenBoundState(1, 0, 0)
+        test_states = [ion.HydrogenBoundState(n, l) for n in range(5) for l in range(n)]
 
         ############## CYLINDRICAL SLICE ###################
 

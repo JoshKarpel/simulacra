@@ -18,14 +18,10 @@ from cycler import cycler
 import compy as cp
 import compy.cy as cy
 from compy.units import *
-from . import animators, potentials
+from . import animators, potentials, states
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-class IllegalQuantumState(Exception):
-    pass
 
 
 def electron_energy_from_wavenumber(k):
@@ -36,291 +32,20 @@ def electron_wavenumber_from_energy(energy):
     return np.sqrt(2 * electron_mass * energy) / hbar
 
 
-class BoundState:
-    """A class that represents a hydrogenic bound state."""
-
-    __slots__ = ('_n', '_l', '_m')
-
-    def __init__(self, n = 1, l = 0, m = 0):
-        """
-        Construct a BoundState from its three quantum numbers (n, l, m).
-
-        :param n: principal quantum number
-        :param l: orbital angular momentum quantum number
-        :param m: quantum number for angular momentum z-component
-        """
-        self.n = n
-        self.l = l
-        self.m = m
-
-    @property
-    def n(self):
-        """Gets _n."""
-        return self._n
-
-    @n.setter
-    def n(self, n):
-        if 0 < n == int(n):
-            self._n = n
-
-    @property
-    def l(self):
-        """Gets _l."""
-        return self._l
-
-    @l.setter
-    def l(self, l):
-        if int(l) == l and 0 <= l < self.n:
-            self._l = l
-
-    @property
-    def m(self):
-        """Gets _m."""
-        return self._m
-
-    @m.setter
-    def m(self, m):
-        if int(m) == m and -self.l <= m <= self.l:
-            self._m = m
-
-    @property
-    def spherical_harmonic(self):
-        """Gets the SphericalHarmonic associated with the BoundState's l and m."""
-        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
-
-    def __str__(self):
-        """Returns the external string representation of the BoundState."""
-        return self.ket
-
-    def __repr__(self):
-        """Returns the internal string representation of the BoundState."""
-        return '{}(n={}, l={}, m={})'.format(self.__class__.__name__, self.n, self.l, self.m)
-
-    @property
-    def ket(self):
-        """Gets the ket representation of the BoundState."""
-        return '|{},{},{}>'.format(self.n, self.l, self.m)
-
-    @property
-    def bra(self):
-        """Gets the bra representation of the BoundState"""
-        return '<{},{},{}|'.format(self.n, self.l, self.m)
-
-    @property
-    def tex_str(self):
-        """Gets a LaTeX-formatted string for the BoundState."""
-        return r'\psi_{{{},{},{}}}'.format(self.n, self.l, self.m)
-
-    # TODO: switch to simple checking of (n, l, m) tuple
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and (self.n, self.l, self.m) == (other.n, other.l, other.m)
-
-    def __lt__(self, other):
-        return isinstance(other, self.__class__) and (self.n, self.l, self.m) < (other.n, other.l, other.m)
-
-    def __gt__(self, other):
-        return isinstance(other, self.__class__) and (self.n, self.l, self.m) > (other.n, other.l, other.m)
-
-    def __le__(self, other):
-        return isinstance(other, self.__class__) and (self.n, self.l, self.m) <= (other.n, other.l, other.m)
-
-    def __ge__(self, other):
-        return isinstance(other, self.__class__) and (self.n, self.l, self.m) >= (other.n, other.l, other.m)
-
-    def __hash__(self):
-        return hash((self.n, self.l, self.m))
-
-    @staticmethod
-    def sort_key(state):
-        return state.n, state.l, state.m
-
-    def radial_part(self, r):
-        normalization = np.sqrt(((2 / (self.n * bohr_radius)) ** 3) * (sp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.math.factorial(self.n + self.l))))  # Griffith's normalization
-        r_dep = np.exp(-r / (self.n * bohr_radius)) * ((2 * r / (self.n * bohr_radius)) ** self.l)
-        lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * bohr_radius))
-
-        return normalization * r_dep * lag_poly
-
-    def __call__(self, r, theta, phi):
-        """
-        Evaluate the hydrogenic bound state wavefunction at a point, or vectorized over an array of points.
-
-        :param r: radial coordinate
-        :param theta: polar coordinate
-        :param phi: azimuthal coordinate
-        :return: the value(s) of the wavefunction at (r, theta, phi)
-        """
-        radial_part = self.radial_part(r)
-        sph_harm = self.spherical_harmonic(theta, phi)
-
-        return radial_part * sph_harm
-
-
-class BoundStateSuperposition:
-    """A class that represents a superposition of bound states."""
-
-    __slots__ = ('state',)
-
-    def __init__(self, state, normalize = True):
-        """
-        Construct a discrete superposition of states.
-
-        If normalize is True the initial amplitudes are rescaled so that the state is normalized.
-
-        :param state: a dict of BoundState:state amplitude (complex number) pairs.
-        :param normalize: if True, renormalize the state amplitudes.
-        """
-        state = dict(state)  # consume input iterators because we may need to reuse the dict several times
-
-        if normalize:
-            unnormalized_amplitude = np.sqrt(sum([np.abs(amp) ** 2 for amp in state.values()]))
-            state = {state: amp / unnormalized_amplitude for state, amp in state.items()}
-
-        self.state = state
-
-    def __str__(self):
-        pairs = ['{}: {}'.format(str(s), a) for s, a in self.state.items()]
-        out = ', '.join(pairs)
-        return out
-
-    def __repr__(self):
-        return repr(self.state)
-
-    def __getitem__(self, item):
-        return self.state[item]
-
-    def __iter__(self):
-        yield from self.state.items()
-
-    @property
-    def states(self):
-        yield from self.state.keys()
-
-    @property
-    def amplitudes(self):
-        return np.array(self.state.values())
-
-    @property
-    def norm(self):
-        return np.sum(np.abs(self.amplitudes) ** 2)
-
-    def __abs__(self):
-        return self.norm
-
-    def __call__(self, r, theta, phi):
-        return sum(state(r, theta, phi) for state in self.states)
-
-
-class FreeState:
-    """A class that represents a hydrogenic free state."""
-
-    __slots__ = ('_energy', '_l', '_m')
-
-    def __init__(self, energy = 1 * eV, l = 0, m = 0):
-        """
-        Construct a FreeState from its energy and angular momentum quantum numbers.
-
-        :param energy: energy of the free state
-        :param l: orbital angular momentum quantum number
-        :param m: quantum number for angular momentum z-component
-        """
-        if any(int(x) != x for x in (l, m)):
-            raise IllegalQuantumState('l and m must be integers')
-
-        if energy > 0:
-            self._energy = energy
-        else:
-            raise IllegalQuantumState('energy must be greater than zero')
-
-        if l >= 0:
-            self._l = l
-        else:
-            raise IllegalQuantumState('l ({}) must be greater than or equal to zero'.format(l))
-
-        if -l <= m <= l:
-            self._m = m
-        else:
-            raise IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
-
-    @classmethod
-    def from_wavenumber(cls, k, l = 0, m = 0):
-        """Construct a FreeState from its wavenumber and angular momentum quantum numbers."""
-        energy = electron_energy_from_wavenumber(k)
-
-        return cls(energy, l, m)
-
-    @property
-    def energy(self):
-        return self._energy
-
-    @property
-    def k(self):
-        return electron_wavenumber_from_energy(self.energy)
-
-    @property
-    def l(self):
-        return self._l
-
-    @property
-    def m(self):
-        return self._m
-
-    @property
-    def spherical_harmonic(self):
-        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
-
-    def __str__(self):
-        return self.ket
-
-    def __repr__(self):
-        return '{}(T={} eV, k={} 1/nm, l={}, m={})'.format(self.__class__.__name__, uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
-
-    @property
-    def ket(self):
-        return '|{} eV,{} 1/nm, {}, {}>'.format(uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
-
-    @property
-    def bra(self):
-        return '<{} eV,{} 1/nm, {}, {}|'.format(uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
-
-    @property
-    def tex_str(self):
-        """Return a LaTeX-formatted string for the BoundState."""
-        return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.energy == other.energy and self.l == other.l and self.m == other.m
-
-    def __hash__(self):
-        return hash((self.energy, self.l, self.m))
-
-    def __call__(self, r, theta, phi):
-        """
-        Evaluate the hydrogenic bound state wavefunction at a point, or vectorized over an array of points.
-
-        :param r: radial coordinate
-        :param theta: polar coordinate
-        :param phi: azimuthal coordinate
-        :return: the value(s) of the wavefunction at (r, theta, phi)
-        """
-        raise NotImplementedError
-
-
 class ElectricFieldSpecification(cp.core.Specification):
     """A base Specification for a Simulation with an electric field."""
 
     def __init__(self, name,
                  mesh_type = None,
                  test_mass = electron_mass_reduced, test_charge = electron_charge,
-                 initial_state = BoundState(1, 0),
-                 test_states = tuple(BoundState(n, l) for n in range(5) for l in range(n)),
+                 initial_state = states.HydrogenBoundState(1, 0),
+                 test_states = tuple(states.HydrogenBoundState(n, l) for n in range(5) for l in range(n)),
                  dipole_gauges = ('length',),
                  internal_potential = potentials.NuclearPotential(charge = proton_charge),
                  electric_potential = None,
                  mask = None,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
-                 minimum_time_final = 0 * asec, extra_time_step = 2 * asec,
+                 minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
                  **kwargs):
@@ -396,15 +121,29 @@ class QuantumMesh:
         self.sim = simulation
         self.spec = simulation.spec
 
+        self.g_mesh = None
+        self.g_factor = None
+        self.inner_product_multiplier = None
+
     def __str__(self):
         return '{} for {}'.format(self.__class__.__name__, str(self.sim))
 
     def __repr__(self):
         return '{}(parameters = {}, simulation = {})'.format(self.__class__.__name__, repr(self.spec), repr(self.sim))
 
+    def inner_product(self, mesh_a = None, mesh_b = None):
+        """Inner product between two meshes. If either mesh is None, the state on the g_mesh is used for that state."""
+        if mesh_a is None:
+            mesh_a = self.g_mesh
+        if mesh_b is None:
+            mesh_b = self.g_mesh
+
+        # return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * self.inner_product_multiplier
+        return np.sum(np.conj(mesh_a) * mesh_b) * self.inner_product_multiplier
+
     @property
     def norm(self):
-        raise NotImplementedError
+        return np.abs(self.inner_product())
 
     def __abs__(self):
         return self.norm
@@ -414,7 +153,7 @@ class QuantumMesh:
 
     @property
     def psi_mesh(self):
-        raise NotImplementedError
+        return self.g_mesh / self.g_factor
 
     def evolve(self, time_step):
         raise NotImplementedError
@@ -440,10 +179,13 @@ class QuantumMesh:
     def attach_g_to_axis(self, axis, normalize = False, log = False, plot_limit = None, **kwargs):
         return self.attach_mesh_to_axis(axis, self.abs_g_squared(normalize = normalize, log = log), plot_limit = plot_limit, **kwargs)
 
-    def update_g_mesh(self, colormesh, normalize = False, log = False, plot_limit = None, slicer = 'get_mesh_slicer'):
+    def update_g_mesh(self, mesh, normalize = False, log = False, plot_limit = None, slicer = 'get_mesh_slicer'):
         new_mesh = self.abs_g_squared(normalize = normalize, log = log)[getattr(self, slicer)(plot_limit)]
 
-        colormesh.set_array(new_mesh.ravel())
+        try:
+            mesh.set_array(new_mesh.ravel())
+        except AttributeError as e:
+            mesh.set_ydata(new_mesh)
 
     def plot_g(self, normalize = True, name_postfix = '', **kwargs):
         """Plot |g|^2. kwargs are for plot_mesh."""
@@ -467,10 +209,13 @@ class QuantumMesh:
     def attach_psi_to_axis(self, axis, normalize = False, log = False, plot_limit = None, **kwargs):
         return self.attach_mesh_to_axis(axis, self.abs_psi_squared(normalize = normalize, log = log), plot_limit = plot_limit, **kwargs)
 
-    def update_psi_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
+    def update_psi_mesh(self, mesh, normalize = False, log = False, plot_limit = None):
         new_mesh = self.abs_psi_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
 
-        colormesh.set_array(new_mesh.ravel())
+        try:
+            mesh.set_array(new_mesh.ravel())
+        except AttributeError as e:
+            mesh.set_ydata(new_mesh)
 
     def plot_psi(self, normalize = True, name_postfix = '', **kwargs):
         """Plot |psi|^2. kwargs are for plot_mesh."""
@@ -481,6 +226,97 @@ class QuantumMesh:
         name = 'psi' + name_postfix
 
         self.plot_mesh(self.abs_psi_squared(normalize = normalize), name = name, title = title, color_map_min = 0, **kwargs)
+
+
+class LineSpecification(ElectricFieldSpecification):
+    def __init__(self, name,
+                 x_bound = 10 * nm,
+                 x_points = 2 ** 9,
+                 **kwargs):
+        super(LineSpecification, self).__init__(name, mesh_type = LineMesh, animator_type = animators.CylindricalSliceAnimator, **kwargs)
+
+        self.x_bound = x_bound
+        self.x_points = int(x_points)
+
+    def info(self):
+        mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
+                '   X Bound: {} nm'.format(uround(self.x_bound, nm, 3)),
+                '   X Points: {}'.format(self.x_points),
+                '   X Mesh Spacing: ~{} nm'.format(uround(2 * self.x_bound / self.x_points, nm, 3))]
+
+        return '\n'.join((super(LineSpecification, self).info(), *mesh))
+
+
+class LineMesh(QuantumMesh):
+    mesh_storage_method = ['x']
+
+    def __init__(self, simulation):
+        super(LineMesh, self).__init__(simulation)
+
+        self.x = np.linspace(-self.spec.x_bound, self.spec.x_bound, self.spec.x_points)
+        self.delta_x = np.abs(self.x[1] - self.x[0])
+        self.x_center_index = cp.utils.find_nearest(self.x, 0).index
+
+        self.wavenumbers = twopi * nfft.fftfreq(len(self.x), d = self.delta_x)
+        self.delta_k = np.abs(self.wavenumbers[1] - self.wavenumbers[0])
+
+        self.inner_product_multiplier = self.delta_x
+
+        self.g_mesh = self.g_for_state(self.spec.initial_state)
+        self.g_factor = 1
+
+        self.free_evolution_prefactor = -1j * (hbar / (2 * self.spec.test_mass)) * (self.wavenumbers ** 2)
+
+    @cp.utils.memoize
+    def g_for_state(self, state):
+        return state(x = self.x)
+
+    @property
+    def energy_expectation_value(self):
+        potential = self.inner_product(mesh_b = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x) * self.g_mesh)
+        kinetic = np.sum((((hbar * self.wavenumbers) ** 2) / (2 * self.spec.test_mass)) * (np.abs(self.fft(self.g_mesh)) ** 2)) / np.sum(np.abs(self.fft(self.g_mesh)) ** 2)
+
+        return np.abs(potential + kinetic)
+
+    def fft(self, mesh):
+        return nfft.fft(mesh, norm = 'ortho')
+
+    def ifft(self, mesh):
+        return nfft.ifft(mesh, norm = 'ortho')
+
+    def _evolve_potential(self, time_step):
+        pot = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x)
+        if self.spec.electric_potential is not None:
+            pot += self.spec.electric_potential(t = self.sim.time, r = self.x, distance = self.x, distance_along_polarization = self.x, test_charge = self.spec.test_charge)
+        self.g_mesh *= np.exp(-1j * time_step * pot / hbar)
+
+    def _evolve_free(self, time_step):
+        self.g_mesh = self.ifft(self.fft(self.g_mesh) * np.exp(self.free_evolution_prefactor * time_step))
+
+    def evolve(self, time_step):
+        self._evolve_potential(time_step / 2)
+        self._evolve_free(time_step)  # splitting order chosen for efficiency
+        self._evolve_potential(time_step / 2)
+
+    def get_mesh_slicer(self, plot_limit):
+        if plot_limit is None:
+            mesh_slicer = slice(None, None, 1)
+        else:
+            x_lim_points = round(plot_limit / self.delta_x)
+            mesh_slicer = slice(int(self.x_center_index - x_lim_points), int(self.x_center_index + x_lim_points + 1), 1)
+
+        return mesh_slicer
+
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
+        line, = axis.plot(self.x[self.get_mesh_slicer(plot_limit)] / nm, mesh[self.get_mesh_slicer(plot_limit)], **kwargs)
+
+        return line
+
+    def plot_mesh(self, mesh, **kwargs):
+        cp.utils.xy_plot(kwargs.pop('name'), self.x / nm, mesh, **kwargs)
+
+    def plot_fft(self):
+        raise NotImplementedError
 
 
 class CylindricalSliceSpecification(ElectricFieldSpecification):
@@ -519,6 +355,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         self.delta_z = self.z[1] - self.z[0]
         self.delta_rho = self.rho[1] - self.rho[0]
+        self.inner_product_multiplier = self.delta_z * self.delta_rho
 
         self.rho -= self.delta_rho / 2
 
@@ -546,10 +383,6 @@ class CylindricalSliceMesh(QuantumMesh):
     @property
     def g_factor(self):
         return np.sqrt(twopi * self.rho_mesh)
-
-    @property
-    def psi_mesh(self):
-        return self.g_mesh / self.g_factor
 
     @property
     def r_mesh(self):
@@ -589,15 +422,6 @@ class CylindricalSliceMesh(QuantumMesh):
 
         return np.reshape(vector, self.mesh_shape, wrap)
 
-    def inner_product(self, mesh_a = None, mesh_b = None):
-        """Inner product between two meshes. If either mesh is None, the state on the g_mesh is used for that state."""
-        if mesh_a is None:
-            mesh_a = self.g_mesh
-        if mesh_b is None:
-            mesh_b = self.g_mesh
-
-        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * (self.delta_z * self.delta_rho)
-
     def state_overlap(self, state_a = None, state_b = None):
         """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
         if state_a is None:
@@ -610,10 +434,6 @@ class CylindricalSliceMesh(QuantumMesh):
             mesh_b = self.g_for_state(state_b)
 
         return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
-
-    @property
-    def norm(self):
-        return np.abs(self.inner_product())
 
     @cp.utils.memoize
     def g_for_state(self, state):
@@ -806,14 +626,14 @@ class CylindricalSliceMesh(QuantumMesh):
             logger.debug('Applied mask {} to g_mesh for {} {}'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name))
 
     @cp.utils.memoize
-    def get_mesh_slicer(self, distance_from_center = None):
+    def get_mesh_slicer(self, plot_limit = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
-        if distance_from_center is None:
+        if plot_limit is None:
             mesh_slicer = (slice(None, None, 1), slice(None, None, 1))
         else:
-            z_lim_points = round(distance_from_center / self.delta_z)
-            rho_lim_points = round(distance_from_center / self.delta_rho)
-            mesh_slicer = (slice(round(self.z_center_index - z_lim_points), round(self.z_center_index + z_lim_points + 1), 1), slice(0, rho_lim_points + 1, 1))
+            z_lim_points = round(plot_limit / self.delta_z)
+            rho_lim_points = round(plot_limit / self.delta_rho)
+            mesh_slicer = (slice(int(self.z_center_index - z_lim_points), int(self.z_center_index + z_lim_points + 1), 1), slice(0, int(rho_lim_points + 1), 1))
 
         return mesh_slicer
 
@@ -926,6 +746,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         self.delta_r = self.r[1] - self.r[0]
         self.delta_theta = self.theta[1] - self.theta[0]
+        self.inner_product_multiplier = self.delta_r * self.delta_theta
 
         self.r += self.delta_r / 2
         self.theta -= self.delta_theta / 2
@@ -954,10 +775,6 @@ class SphericalSliceMesh(QuantumMesh):
         return np.sqrt(twopi * np.sin(self.theta_mesh)) * self.r_mesh
 
     @property
-    def psi_mesh(self):
-        return self.g_mesh / self.g_factor
-
-    @property
     def z_mesh(self):
         return self.r_mesh * np.cos(self.theta_mesh)
 
@@ -981,15 +798,6 @@ class SphericalSliceMesh(QuantumMesh):
             raise ValueError("{} is not a valid specifier for wrap_vector (valid specifiers: 'r', 'theta')".format(wrap_along))
 
         return np.reshape(mesh, self.mesh_shape, wrap)
-
-    def inner_product(self, mesh_a = None, mesh_b = None):
-        """Inner product between two meshes. If either mesh is None, the state on the g_mesh is used for that state."""
-        if mesh_a is None:
-            mesh_a = self.g_mesh
-        if mesh_b is None:
-            mesh_b = self.g_mesh
-
-        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * (self.delta_r * self.delta_theta)
 
     def state_overlap(self, state_a = None, state_b = None):
         """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
@@ -1176,7 +984,7 @@ class SphericalSliceMesh(QuantumMesh):
             mesh_slicer = slice(None, None, 1)
         else:
             r_lim_points = round(distance_from_center / self.delta_r)
-            mesh_slicer = slice(0, r_lim_points + 1, 1)
+            mesh_slicer = slice(0, int(r_lim_points + 1), 1)
 
         return mesh_slicer
 
@@ -1299,6 +1107,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.delta_r = self.r[1] - self.r[0]
         self.r += self.delta_r / 2
         self.r_max = np.max(self.r)
+        self.inner_product_multiplier = self.delta_r
 
         self.l = np.array(range(self.spec.l_points))
         self.theta_points = min(self.spec.l_points * 5, 360)
@@ -1348,14 +1157,6 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return np.reshape(mesh, self.mesh_shape, wrap)
 
-    def inner_product(self, mesh_a = None, mesh_b = None):
-        if mesh_a is None:
-            mesh_a = self.g_mesh
-        if mesh_b is None:
-            mesh_b = self.g_mesh
-
-        return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * self.delta_r
-
     def state_overlap(self, state_a = None, state_b = None):
         if state_a is None:
             mesh_a = self.g_mesh
@@ -1367,10 +1168,6 @@ class SphericalHarmonicMesh(QuantumMesh):
             mesh_b = self.g_for_state(state_b)
 
         return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
-
-    @property
-    def norm(self):
-        return np.abs(self.inner_product())
 
     @property
     def norm_by_l(self):
@@ -1645,7 +1442,7 @@ class SphericalHarmonicMesh(QuantumMesh):
             mesh_slicer = (slice(None, None, 1), slice(None, None, 1))
         else:
             r_lim_points = int(distance_from_center / self.delta_r)
-            mesh_slicer = (slice(None, None, 1), slice(0, r_lim_points + 1, 1))
+            mesh_slicer = (slice(None, None, 1), slice(0, int(r_lim_points + 1), 1))
 
         return mesh_slicer
 
@@ -1656,7 +1453,7 @@ class SphericalHarmonicMesh(QuantumMesh):
             mesh_slicer = slice(None, None, 1)
         else:
             r_lim_points = int(distance_from_center / self.delta_r)
-            mesh_slicer = slice(0, r_lim_points + 1, 1)
+            mesh_slicer = slice(0, int(r_lim_points + 1), 1)
 
         return mesh_slicer
 
@@ -1788,6 +1585,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.animators = self.spec.animators
 
         self.initialize_mesh()
+        self.initialize_mesh()
 
         total_time = self.spec.time_final - self.spec.time_initial
         self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
@@ -1827,10 +1625,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
     def initialize_mesh(self):
         self.mesh = self.spec.mesh_type(self)
 
+        logger.debug('Initialized mesh for {} {}'.format(self.__class__.__name__, self.name))
+
         if not (.99 < self.mesh.norm < 1.01):
             logger.warning('Initial wavefunction for {} {} may not be normalized (norm = {})'.format(self.__class__.__name__, self.name, self.mesh.norm))
-
-        logger.debug('Initialized mesh for {} {}'.format(self.__class__.__name__, self.name))
 
     def store_data(self, time_index):
         """Update the time-indexed data arrays with the current values."""
@@ -1919,31 +1717,34 @@ class ElectricFieldSimulation(cp.core.Simulation):
             for animator in self.animators:
                 animator.cleanup()
 
-    def plot_wavefunction_vs_time(self, use_name = False, grayscale = False, log = False, **kwargs):
+    def plot_wavefunction_vs_time(self, use_name = False, grayscale = False, log = False, x_scale = 'asec', **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+
+        x_scale_unit = unit_names_to_values[x_scale]  # TODO: use the same names as in xy_plot()
+        x_scale_name = unit_names_to_tex_strings[x_scale]
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.06)  # TODO: switch to fixed axis construction
         ax_overlaps = plt.subplot(grid_spec[0])
         ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
 
         if self.spec.electric_potential is not None:
-            ax_field.plot(self.times / asec, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
+            ax_field.plot(self.times / x_scale_unit, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
 
-        ax_overlaps.plot(self.times / asec, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3)
+        ax_overlaps.plot(self.times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3)
 
         if grayscale:  # stackplot with two lines in grayscale (initial and non-initial)
             initial_overlap = [self.state_overlaps_vs_time[self.spec.initial_state]]
             non_initial_overlaps = [self.state_overlaps_vs_time[state] for state in self.spec.test_states if state != self.spec.initial_state]
             total_non_initial_overlaps = functools.reduce(np.add, non_initial_overlaps)
             overlaps = [initial_overlap, total_non_initial_overlaps]
-            ax_overlaps.stackplot(self.times / asec, *overlaps, alpha = 1,
+            ax_overlaps.stackplot(self.times / x_scale_unit, *overlaps, alpha = 1,
                                   labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$', r'$\left| \left\langle \psi|\psi_{n\leq5} \right\rangle \right|^2$'],
                                   colors = ['.3', '.5'])
         else:  # stackplot with all states broken out in full color
             overlaps = [self.state_overlaps_vs_time[state] for state in self.spec.test_states]
             num_colors = len(overlaps)
             ax_overlaps.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
-            ax_overlaps.stackplot(self.times / asec, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states])
+            ax_overlaps.stackplot(self.times / x_scale_unit, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states])
 
         if log:
             ax_overlaps.set_yscale('log')
@@ -1954,11 +1755,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_overlaps.set_ylim(0, 1.0)
             ax_overlaps.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
             ax_overlaps.grid(True)
-        ax_overlaps.set_xlim(self.spec.time_initial / asec, self.spec.time_final / asec)
+        ax_overlaps.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
         ax_field.grid(True)
 
-        ax_field.set_xlabel('Time $t$ (as)', fontsize = 15)
+        ax_field.set_xlabel('Time $t$ ({})'.format(x_scale_name), fontsize = 15)
         ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 15)
         ax_field.set_ylabel('E-Field (a.u.)', fontsize = 11)
 

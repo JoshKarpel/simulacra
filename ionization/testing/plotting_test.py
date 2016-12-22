@@ -25,7 +25,7 @@ if __name__ == '__main__':
         bound = 30
         angular_points = 5
 
-        states = (ion.BoundState(n, l) for n in range(n + 1) for l in range(n))
+        states = (ion.HydrogenBoundState(n, l) for n in range(n + 1) for l in range(n))
 
         specs = []
 

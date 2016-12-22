@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
         for n in range(n_max + 1):
             for l in range(n):
-                initial_state = ion.BoundState(n, l, 0)
+                initial_state = ion.HydrogenBoundState(n, l, 0)
                 OUT_DIR = os.path.join(BASE_OUT_DIR, '{}x{}'.format(points, angular_points), '{}_{}'.format(initial_state.n, initial_state.l))
 
                 ############## CYLINDRICAL SLICE ###################
