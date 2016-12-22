@@ -254,8 +254,10 @@ class LineMesh(QuantumMesh):
 
         self.x = np.linspace(-self.spec.x_bound, self.spec.x_bound, self.spec.x_points)
         self.delta_x = np.abs(self.x[1] - self.x[0])
-        self.wavenumbers = twopi * nfft.fftfreq(len(self.x), d = self.delta_x)
         self.x_center_index = cp.utils.find_nearest(self.x, 0).index
+
+        self.wavenumbers = twopi * nfft.fftfreq(len(self.x), d = self.delta_x)
+        self.delta_k = np.abs(self.wavenumbers[1] - self.wavenumbers[0])
 
         self.inner_product_multiplier = self.delta_x
 
@@ -278,9 +280,14 @@ class LineMesh(QuantumMesh):
 
     @property
     def energy_expectation_value(self):
-        logger.warning('Energy expectation value only includes potential energy for Spectral method currently')
-        # TODO: add kinetic energy, make these not properties
-        return self.inner_product(mesh_b = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x) * self.g_mesh)
+        potential = self.inner_product(mesh_b = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x) * self.g_mesh)
+        # print(np.sum(np.abs(self.fft(self.g_mesh)) ** 2) * self.delta_k)  # TODO: why not normalized?
+        kinetic = np.sum((((hbar * self.wavenumbers) ** 2) / (2 * self.spec.test_mass)) * (np.abs(self.fft(self.g_mesh)) ** 2)) / np.sum(np.abs(self.fft(self.g_mesh)) ** 2)
+
+        # print(self.delta_k)
+        # print('pot', potential / eV)
+        # print('kin', kinetic / eV)
+        return np.abs(potential + kinetic)
 
     def fft(self, mesh):
         return nfft.fft(mesh, norm = 'ortho')

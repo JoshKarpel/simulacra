@@ -50,13 +50,13 @@ if __name__ == '__main__':
         sim.run_simulation()
 
         print(sim.info())
-        print(sim.mesh.norm)
-        print(sim.energy_expectation_value_vs_time_internal / eV)
+        print('norm', sim.mesh.norm)
+        print('energy EV', sim.energy_expectation_value_vs_time_internal / eV)
         # print(pot.omega(init.mass), init.omega)
         # print('period: {} fs'.format(uround(init.period, fsec, 3)))
 
         sim.mesh.plot_g(name_postfix = '_post', target_dir = OUT_DIR)
         sim.plot_wavefunction_vs_time(target_dir = OUT_DIR, x_scale = 'fsec')
 
-        print(sim.mesh.wavenumbers)
-        print(sim.mesh.free_evolution_prefactor)
+        # print(sim.mesh.wavenumbers)
+        # print(sim.mesh.free_evolution_prefactor)
