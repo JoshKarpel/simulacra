@@ -27,7 +27,14 @@ class Potential:
         yield self
 
     def __add__(self, other):
-        return PotentialSum(self, other)
+        return PotentialSum(*self, *other)
+
+    def __call__(self, *args, **kwargs):
+        return 0
+
+
+class NoPotential(Potential):
+    pass
 
 
 class PotentialSum:
@@ -76,6 +83,30 @@ class NuclearPotential(Potential):
 
     def __call__(self, *, r, test_charge, **kwargs):
         return coulomb_force_constant * self.charge * test_charge / r
+
+
+class HarmonicOscillatorPotential(Potential):
+    def __init__(self, spring_constant = 4.20521 * N / m, center = 0 * nm):
+        self.spring_constant = spring_constant
+        self.center = center
+
+    @classmethod
+    def from_frequency_and_mass(cls, omega = 1.5192675e15 * Hz, mass = electron_mass):
+        return cls(spring_constant = mass * (omega ** 2))
+
+    @classmethod
+    def from_ground_state_energy_and_mass(cls, ground_state_energy = 0.5 * eV, mass = electron_mass):
+        return cls.from_frequency_and_mass(omega = 2 * ground_state_energy / hbar, mass = mass)
+
+    @classmethod
+    def from_energy_spacing_and_mass(cls, energy_spacing = 1 * eV, mass = electron_mass):
+        return cls.from_frequency_and_mass(omega = energy_spacing / hbar, mass = mass)
+
+    def __call__(self, *, distance, **kwargs):
+        return 0.5 * self.spring_constant * ((distance - self.center) ** 2)
+
+    def omega(self, mass):
+        return np.sqrt(self.spring_constant / mass)
 
 
 class RadialImaginaryPotential(Potential):
@@ -269,6 +300,10 @@ class SineWave(UniformLinearlyPolarizedElectricField):
     @classmethod
     def from_frequency(cls, frequency, amplitude = 1 * atomic_electric_field, phase = 0, **kwargs):
         return cls(frequency * twopi, amplitude = amplitude, phase = phase, **kwargs)
+
+    @classmethod
+    def from_photon_energy(cls, photon_energy, amplitude = 1 * atomic_electric_field, phase = 0, **kwargs):
+        return cls.from_frequency(photon_energy / h, amplitude = amplitude, phase = phase, **kwargs)
 
     @property
     def frequency(self):

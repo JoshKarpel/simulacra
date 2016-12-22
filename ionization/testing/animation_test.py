@@ -27,7 +27,7 @@ def make_movie(spec):
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
-        states = [ion.BoundState(n, l) for n in range(3) for l in range(n)]
+        states = [ion.HydrogenBoundState(n, l) for n in range(3) for l in range(n)]
 
         bound = 225
         angular_points = 50

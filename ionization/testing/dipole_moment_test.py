@@ -28,12 +28,12 @@ def run_sim(spec):
             sim.mesh.g_mesh /= np.sqrt(sim.mesh.norm)
 
             logger.info(sim.mesh.norm)
-            logger.info(sim.mesh.state_overlap(ion.BoundState(1)))
-            logger.info(sim.mesh.state_overlap(ion.BoundState(2, 0)))
-            logger.info(sim.mesh.state_overlap(ion.BoundState(2, 1)))
-            logger.info(sim.mesh.state_overlap(ion.BoundState(3, 0)))
-            logger.info(sim.mesh.state_overlap(ion.BoundState(3, 1)))
-            logger.info(sim.mesh.state_overlap(ion.BoundState(3, 2)))
+            logger.info(sim.mesh.state_overlap(ion.HydrogenBoundState(1)))
+            logger.info(sim.mesh.state_overlap(ion.HydrogenBoundState(2, 0)))
+            logger.info(sim.mesh.state_overlap(ion.HydrogenBoundState(2, 1)))
+            logger.info(sim.mesh.state_overlap(ion.HydrogenBoundState(3, 0)))
+            logger.info(sim.mesh.state_overlap(ion.HydrogenBoundState(3, 1)))
+            logger.info(sim.mesh.state_overlap(ion.HydrogenBoundState(3, 2)))
         ###
 
         logger.info(sim.info())

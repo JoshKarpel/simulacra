@@ -33,7 +33,7 @@ if __name__ == '__main__':
         l_points = 128
         dt = 1
 
-        initial_states = [ion.BoundState(1, 0), ion.BoundState(2, 0), ion.BoundState(2, 1)]
+        initial_states = [ion.HydrogenBoundState(1, 0), ion.HydrogenBoundState(2, 0), ion.HydrogenBoundState(2, 1)]
 
         pulse_widths = [10, 50, 100, 250, 500, 1000, 1500, 2000]
         fluences = [.1, 1, 5, 10, 20]
