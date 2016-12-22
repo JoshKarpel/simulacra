@@ -122,6 +122,7 @@ class QuantumMesh:
         self.spec = simulation.spec
 
         self.g_mesh = None
+        self.g_factor = None
         self.inner_product_multiplier = None
 
     def __str__(self):
@@ -152,7 +153,7 @@ class QuantumMesh:
 
     @property
     def psi_mesh(self):
-        raise NotImplementedError
+        return self.g_mesh / self.g_factor
 
     def evolve(self, time_step):
         raise NotImplementedError
@@ -261,18 +262,10 @@ class LineMesh(QuantumMesh):
 
         self.inner_product_multiplier = self.delta_x
 
-        self.psi = self.spec.initial_state(self.x)
+        self.g_mesh = self.g_for_state(self.spec.initial_state)
         self.g_factor = 1
 
         self.free_evolution_prefactor = -1j * (hbar / (2 * self.spec.test_mass)) * (self.wavenumbers ** 2)
-
-    @property
-    def g_mesh(self):
-        return self.psi
-
-    @g_mesh.setter
-    def g_mesh(self, g):
-        self.psi = g
 
     @cp.utils.memoize
     def g_for_state(self, state):
@@ -281,12 +274,8 @@ class LineMesh(QuantumMesh):
     @property
     def energy_expectation_value(self):
         potential = self.inner_product(mesh_b = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x) * self.g_mesh)
-        # print(np.sum(np.abs(self.fft(self.g_mesh)) ** 2) * self.delta_k)  # TODO: why not normalized?
         kinetic = np.sum((((hbar * self.wavenumbers) ** 2) / (2 * self.spec.test_mass)) * (np.abs(self.fft(self.g_mesh)) ** 2)) / np.sum(np.abs(self.fft(self.g_mesh)) ** 2)
 
-        # print(self.delta_k)
-        # print('pot', potential / eV)
-        # print('kin', kinetic / eV)
         return np.abs(potential + kinetic)
 
     def fft(self, mesh):
@@ -299,17 +288,15 @@ class LineMesh(QuantumMesh):
         pot = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x)
         if self.spec.electric_potential is not None:
             pot += self.spec.electric_potential(t = self.sim.time, r = self.x, distance = self.x, distance_along_polarization = self.x, test_charge = self.spec.test_charge)
-        self.psi *= np.exp(-1j * time_step * pot / hbar)
+        self.g_mesh *= np.exp(-1j * time_step * pot / hbar)
 
     def _evolve_free(self, time_step):
-        self.psi = self.ifft(self.fft(self.psi) * np.exp(self.free_evolution_prefactor * time_step))
+        self.g_mesh = self.ifft(self.fft(self.g_mesh) * np.exp(self.free_evolution_prefactor * time_step))
 
     def evolve(self, time_step):
         self._evolve_potential(time_step / 2)
-        self._evolve_free(time_step)
+        self._evolve_free(time_step)  # splitting order chosen for efficiency
         self._evolve_potential(time_step / 2)
-
-        # TODO: DOES THE ORDER OF THE SPLITTING MATTER?
 
     def get_mesh_slicer(self, plot_limit):
         if plot_limit is None:
@@ -396,10 +383,6 @@ class CylindricalSliceMesh(QuantumMesh):
     @property
     def g_factor(self):
         return np.sqrt(twopi * self.rho_mesh)
-
-    @property
-    def psi_mesh(self):
-        return self.g_mesh / self.g_factor
 
     @property
     def r_mesh(self):
@@ -790,10 +773,6 @@ class SphericalSliceMesh(QuantumMesh):
     @property
     def g_factor(self):
         return np.sqrt(twopi * np.sin(self.theta_mesh)) * self.r_mesh
-
-    @property
-    def psi_mesh(self):
-        return self.g_mesh / self.g_factor
 
     @property
     def z_mesh(self):

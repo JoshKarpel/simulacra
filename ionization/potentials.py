@@ -92,7 +92,7 @@ class HarmonicOscillatorPotential(Potential):
 
     @classmethod
     def from_frequency_and_mass(cls, omega = 1.5192675e15 * Hz, mass = electron_mass):
-        return cls(k = mass * (omega ** 2))
+        return cls(spring_constant = mass * (omega ** 2))
 
     @classmethod
     def from_ground_state_energy_and_mass(cls, ground_state_energy = 0.5 * eV, mass = electron_mass):

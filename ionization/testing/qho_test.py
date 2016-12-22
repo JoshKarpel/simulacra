@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
         # init = ion.Superposition({ion.QHOState(omega = pot.omega(mass), mass = mass, n = 0): 1,
         #                           ion.QHOState(omega = pot.omega(mass), mass = mass, n = 1): 1})
-        init = ion.QHOState.from_QHO_potential_and_mass(pot, mass, n = 10)
+        init = ion.QHOState.from_QHO_potential_and_mass(pot, mass, n = 20)
 
         electric = ion.SineWave.from_photon_energy(1 * eV, amplitude = .01 * atomic_electric_field)
 
