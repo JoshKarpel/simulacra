@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+class CompyException(Exception):
+    pass
+
+
 class Specification(utils.Beet):
     """
     A class that contains the information necessary to run a simulation.

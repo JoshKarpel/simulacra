@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class IllegalQuantumState(Exception):
+class IllegalQuantumState(cp.CompyException):
     pass
 
 

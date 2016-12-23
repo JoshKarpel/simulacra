@@ -360,7 +360,7 @@ def make_xy_axis(axis,
     _title, _x_label, _y_label, _legend = None, None, None, None
     if title is not None:
         _title = axis.set_title(r'{}'.format(title), fontsize = font_size_title)
-        _title.set_y(1.025)  # move title up a little
+        _title.set_y(1.05)  # move title up a little
     if x_label is not None:
         _x_label = axis.set_xlabel(r'{}'.format(x_label) + scale_x_label, fontsize = font_size_axis_labels)
     if y_label is not None:
@@ -408,7 +408,7 @@ def xy_plot(name, x_data, *y_data,
 def multi_map(function, targets, processes = None, **kwargs):
     """Map a function over a list of inputs using multiprocessing."""
     if processes is None:
-        processes = mp.cpu_count() - 1
+        processes = mp.cpu_count()
 
     with mp.Pool(processes = processes) as pool:
         output = pool.map(function, targets, **kwargs)

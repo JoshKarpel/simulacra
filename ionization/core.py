@@ -122,7 +122,6 @@ class QuantumMesh:
         self.spec = simulation.spec
 
         self.g_mesh = None
-        self.g_factor = None
         self.inner_product_multiplier = None
 
     def __str__(self):
@@ -1585,7 +1584,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.animators = self.spec.animators
 
         self.initialize_mesh()
-        self.initialize_mesh()
 
         total_time = self.spec.time_final - self.spec.time_initial
         self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
@@ -1596,15 +1594,14 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.time_steps = len(self.times)
 
         # simulation data storage
-        self.norm_vs_time = np.zeros(self.time_steps) * np.NaN
-        self.norm_diff_mask_vs_time = np.zeros(self.time_steps) * np.NaN
-        self.energy_expectation_value_vs_time_internal = np.zeros(self.time_steps) * np.NaN
+        self.norm_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
+        self.norm_diff_mask_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
+        self.energy_expectation_value_vs_time_internal = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
-        self.electric_field_amplitude_vs_time = np.zeros(self.time_steps) * np.NaN
+        self.electric_field_amplitude_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
-
         if 'l' in self.mesh.mesh_storage_method:
-            self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps) * np.NaN for sph_harm in self.spec.spherical_harmonics}
+            self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps, dtype = np.float64) * np.NaN for sph_harm in self.spec.spherical_harmonics}
 
     @property
     def available_animation_frames(self):

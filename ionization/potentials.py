@@ -348,7 +348,7 @@ class SineWave(UniformLinearlyPolarizedElectricField):
 
 
 class SincPulse(UniformLinearlyPolarizedElectricField):
-    def __init__(self, pulse_width = 100 * asec, fluence = 1 * J / (cm ** 2), phase = 'cos', pulse_center = 0 * asec, **kwargs):
+    def __init__(self, pulse_width = 200 * asec, fluence = 1 * J / (cm ** 2), phase = 'cos', pulse_center = 0 * asec, **kwargs):
         super(SincPulse, self).__init__(**kwargs)
 
         self.pulse_width = pulse_width
@@ -364,9 +364,19 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
         self.amplitude_density = np.sqrt(self.fluence / (2 * epsilon_0 * c * self.omega_cutoff))
         self.amplitude_prefactor = np.sqrt(2 / pi) * self.amplitude_density
 
+    @classmethod
+    def from_amplitude_density(cls, pulse_width = 100 * asec, amplitude_density = 7.7432868731566454e-06, phase = 'cos', pulse_center = 0 * asec, **kwargs):
+        omega_cutoff = twopi / pulse_width
+        fluence = (amplitude_density ** 2) * (2 * epsilon_0 * c * omega_cutoff)
+        return cls(pulse_width = pulse_width, fluence = fluence, phase = phase, pulse_center = pulse_center, **kwargs)
+
     @property
     def largest_photon_energy(self):
         return hbar * self.omega_cutoff
+
+    @property
+    def frequency_cutoff(self):
+        return self.omega_cutoff / twopi
 
     def __str__(self):
         out = '{}(pulse width = {} as, pulse center = {} as, fluence = {} J/cm^2, phase = {}, largest photon energy = {} eV)'.format(self.__class__.__name__,
