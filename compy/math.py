@@ -27,6 +27,14 @@ def gaussian_fwhm_from_sigma(sigma):
     return np.sqrt(8 * np.log(2)) * sigma
 
 
+def stirling_approximation_exp(x):
+    return np.sqrt(twopi * x) * ((x / e) ** x)
+
+
+def stirling_approximation_ln(x):
+    return x * np.log(x) - x
+
+
 class SphericalHarmonic:
     """A class that represents a spherical harmonic."""
 

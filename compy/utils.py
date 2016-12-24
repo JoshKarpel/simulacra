@@ -168,8 +168,7 @@ class Beet:
         return '{}: {} ({}) [{}]'.format(self.__class__.__name__, self.name, self.file_name, self.uid)
 
     def __repr__(self):
-        # return '{}(name = {}, file_name = {}, uid = {})'.format(self.__class__.__name__, self.name, self.file_name, self.uid)
-        return field_repr(self, 'name', 'file_name', 'uid')
+        return field_str(self, 'name', 'file_name', 'uid')
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.uid == other.uid
@@ -187,7 +186,7 @@ class Beet:
 
         :param target_dir: directory to save the Beet to
         :param file_extension: file extension to name the Beet with
-        :return: None
+        :return: the path to the saved Beet
         """
         if target_dir is None:
             target_dir = os.getcwd()

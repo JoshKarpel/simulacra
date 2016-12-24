@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class CompyException(Exception):
+class CompyException(Exception):  # base exception for all compy-specific exceptions
     pass
 
 
@@ -46,11 +46,12 @@ class Specification(utils.Beet):
 
         :param target_dir: directory to save the Specification to
         :param file_extension: file extension to name the Specification with
-        :return: None
+        :return: the path to the saved Simulation
         """
         return super(Specification, self).save(target_dir, file_extension)
 
     def to_simulation(self):
+        """Return a Simulation of the type associated with the Specification."""
         return self.simulation_type(self)
 
     def info(self):
@@ -234,7 +235,7 @@ class Animator:
         """
         Cleanup method for the Animator's ffmpeg subprocess.
 
-        Should always be called via a try...finally clause in run_simulation.
+        Should always be called via a try...finally clause (namely, in the finally) in Simulation.run_simulation.
         """
         self.ffmpeg.communicate()
         logger.info('Cleaned up {}'.format(self))
@@ -268,7 +269,7 @@ class Animator:
         logger.debug('Redrew frame for {}'.format(self))
 
     def send_frame_to_ffmpeg(self):
-        """Redraw anything that needs to be redrawn, then write the figure to an RGB string and sending it to ffmpeg."""
+        """Redraw anything that needs to be redrawn, then write the figure to an RGB string and send it to ffmpeg."""
         self._redraw_frame()
 
         self.ffmpeg.stdin.write(self.fig.canvas.tostring_argb())
@@ -291,6 +292,7 @@ class Summand:
         return str(self)
 
     def __iter__(self):
+        """When unpacked, yield self, to ensure compatability with Sum's __add__ method."""
         yield self
 
     def __add__(self, other):
@@ -327,6 +329,7 @@ class Sum(Summand):
         yield from self._container
 
     def __add__(self, other):
+        """Return a new Sum, constructed from all of the contents of self and other."""
         return self.__class__(*self, *other)  # TODO: no protection against adding together non-similar types
 
     def __call__(self, *args, **kwargs):

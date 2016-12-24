@@ -69,6 +69,84 @@ class TestSimulation(TestBeet):
         utils.ensure_dir_exists(TEST_DIR)
 
 
+class TestSumming(unittest.TestCase):
+    def setUp(self):
+        self.summand_one = core.Summand()
+        self.summand_two = core.Summand()
+        self.sum = self.summand_one + self.summand_two
+
+    def test_is(self):
+        self.assertFalse(self.summand_one is self.summand_two)
+
+    def test_equality(self):
+        self.assertFalse(self.summand_one == self.summand_two)
+
+    def test_instance_of(self):
+        self.assertTrue(isinstance(self.summand_one, core.Summand))
+        self.assertTrue(isinstance(self.summand_two, core.Summand))
+        self.assertTrue(isinstance(self.sum, core.Summand))
+        self.assertTrue(isinstance(self.sum, core.Sum))
+
+        self.assertFalse(isinstance(self.summand_one, core.Sum))
+        self.assertFalse(isinstance(self.summand_two, core.Sum))
+
+    def test_container(self):
+        self.assertTrue(self.summand_one in self.sum.summands)
+        self.assertTrue(self.summand_two in self.sum.summands)
+
+        self.assertTrue(self.summand_one in self.sum)
+        self.assertTrue(self.summand_two in self.sum)
+
+
+class TestSummingSubclassing(unittest.TestCase):
+    def setUp(self):
+        class Fruit(core.Summand):
+            def __init__(self):
+                super().__init__()
+                self.summation_class = FruitBasket
+
+        class FruitBasket(core.Sum, Fruit):
+            container_name = 'basket'
+
+        class Apple(Fruit):
+            pass
+
+        class Banana(Fruit):
+            pass
+
+        self.Fruit = Fruit
+        self.FruitBasket = FruitBasket
+        self.Apple = Apple
+        self.Banana = Banana
+
+        self.apple = self.Apple()
+        self.banana = self.Banana()
+        self.fruit_basket = self.apple + self.banana
+
+    def test_instance_of_bases(self):
+        self.assertTrue(isinstance(self.apple, core.Summand))
+        self.assertTrue(isinstance(self.banana, core.Summand))
+        self.assertTrue(isinstance(self.fruit_basket, core.Summand))
+        self.assertTrue(isinstance(self.fruit_basket, core.Sum))
+
+        self.assertFalse(isinstance(self.apple, core.Sum))
+        self.assertFalse(isinstance(self.banana, core.Sum))
+
+    def test_instance_of_subclasses(self):
+        self.assertTrue(isinstance(self.fruit_basket, self.Fruit))
+        self.assertTrue(isinstance(self.fruit_basket, self.FruitBasket))
+
+        self.assertFalse(isinstance(self.fruit_basket, self.Apple))
+        self.assertFalse(isinstance(self.fruit_basket, self.Banana))
+
+    def test_container(self):
+        self.assertTrue(self.apple in self.fruit_basket.basket)
+        self.assertTrue(self.banana in self.fruit_basket.basket)
+
+        self.assertTrue(self.apple in self.fruit_basket)
+        self.assertTrue(self.banana in self.fruit_basket)
+
+
 class TestFibonnaci(unittest.TestCase):
     def test_fibonnaci_value(self):
         self.assertEqual(math.fibonacci(99), 218922995834555169026)

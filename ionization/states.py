@@ -172,7 +172,7 @@ class HydrogenBoundState(QuantumState):
     def sort_key(state):
         return state.n, state.l, state.m
 
-    def radial_part(self, r):
+    def radial_function(self, r):
         normalization = np.sqrt(((2 / (self.n * bohr_radius)) ** 3) * (sp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.math.factorial(self.n + self.l))))  # Griffith's normalization
         r_dep = np.exp(-r / (self.n * bohr_radius)) * ((2 * r / (self.n * bohr_radius)) ** self.l)
         lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * bohr_radius))
@@ -188,7 +188,7 @@ class HydrogenBoundState(QuantumState):
         :param phi: azimuthal coordinate
         :return: the value(s) of the wavefunction at (r, theta, phi)
         """
-        radial_part = self.radial_part(r)
+        radial_part = self.radial_function(r)
         sph_harm = self.spherical_harmonic(theta, phi)
 
         return self.amplitude * radial_part * sph_harm

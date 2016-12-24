@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+import scipy.integrate as integ
 
 import compy as cp
 from compy.units import *
@@ -210,10 +211,10 @@ class UniformLinearlyPolarizedElectricField(PotentialEnergy):
     def __call__(self, *, t, distance_along_polarization, test_charge, **kwargs):
         return distance_along_polarization * test_charge * self.get_amplitude(t)
 
-    def get_total_electric_field(self, times):
-        raise NotImplementedError
+    def get_total_electric_field_numeric(self, times):
+        return integ.simps(self.get_amplitude(times), times)
 
-    def get_fluence(self, times):
+    def get_fluence_numeric(self, times):
         raise NotImplementedError
 
 

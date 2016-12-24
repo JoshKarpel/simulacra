@@ -3,6 +3,7 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 
+import compy as cp
 import ionization as ion
 
 
@@ -69,7 +70,7 @@ class StaticConvergenceTestingSimulation(ion.ElectricFieldSimulation):
         axis.legend(loc = 'best', fontsize = 12)
 
         if save:
-            utils.save_current_figure(name = self.spec.file_name + '__error_vs_time', **kwargs)
+            cp.utils.save_current_figure(name = self.spec.file_name + '__error_vs_time', **kwargs)
         if show:
             plt.show()
 

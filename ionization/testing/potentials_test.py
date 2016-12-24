@@ -43,3 +43,9 @@ if __name__ == '__main__':
         comb_again = comb_by_add + sine
         print(comb_again)
         print(repr(comb_again))
+
+        dense_t = np.linspace(0, 1, 1e5)
+
+        rect = ion.Rectangle(start_time = 0, end_time = 1 * s, amplitude = 1 * V / m)
+        print(rect)
+        print(rect.get_total_electric_field_numeric(dense_t))

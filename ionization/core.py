@@ -252,11 +252,11 @@ class LineMesh(QuantumMesh):
     def __init__(self, simulation):
         super(LineMesh, self).__init__(simulation)
 
-        self.x = np.linspace(-self.spec.x_bound, self.spec.x_bound, self.spec.x_points)
-        self.delta_x = np.abs(self.x[1] - self.x[0])
-        self.x_center_index = cp.utils.find_nearest(self.x, 0).index
+        self.x_mesh = np.linspace(-self.spec.x_bound, self.spec.x_bound, self.spec.x_points)
+        self.delta_x = np.abs(self.x_mesh[1] - self.x_mesh[0])
+        self.x_center_index = cp.utils.find_nearest_entry(self.x_mesh, 0).index
 
-        self.wavenumbers = twopi * nfft.fftfreq(len(self.x), d = self.delta_x)
+        self.wavenumbers = twopi * nfft.fftfreq(len(self.x_mesh), d = self.delta_x)
         self.delta_k = np.abs(self.wavenumbers[1] - self.wavenumbers[0])
 
         self.inner_product_multiplier = self.delta_x
@@ -268,14 +268,21 @@ class LineMesh(QuantumMesh):
 
     @cp.utils.memoize
     def g_for_state(self, state):
-        return state(x = self.x)
+        return state(x = self.x_mesh)
 
     @property
     def energy_expectation_value(self):
-        potential = self.inner_product(mesh_b = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x) * self.g_mesh)
+        potential = self.inner_product(mesh_b = self.spec.internal_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh) * self.g_mesh)
         kinetic = np.sum((((hbar * self.wavenumbers) ** 2) / (2 * self.spec.test_mass)) * (np.abs(self.fft(self.g_mesh)) ** 2)) / np.sum(np.abs(self.fft(self.g_mesh)) ** 2)
 
         return np.abs(potential + kinetic)
+
+    def dipole_moment(self, gauge = 'length'):
+        """Get the dipole moment in the specified gauge."""
+        if gauge == 'length':
+            return self.spec.test_charge * self.inner_product(mesh_b = self.x_mesh * self.g_mesh)
+        elif gauge == 'velocity':
+            raise NotImplementedError
 
     def fft(self, mesh):
         return nfft.fft(mesh, norm = 'ortho')
@@ -284,9 +291,9 @@ class LineMesh(QuantumMesh):
         return nfft.ifft(mesh, norm = 'ortho')
 
     def _evolve_potential(self, time_step):
-        pot = self.spec.internal_potential(t = self.sim.time, r = self.x, distance = self.x)
+        pot = self.spec.internal_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh)
         if self.spec.electric_potential is not None:
-            pot += self.spec.electric_potential(t = self.sim.time, r = self.x, distance = self.x, distance_along_polarization = self.x, test_charge = self.spec.test_charge)
+            pot += self.spec.electric_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh, distance_along_polarization = self.x_mesh, test_charge = self.spec.test_charge)
         self.g_mesh *= np.exp(-1j * time_step * pot / hbar)
 
     def _evolve_free(self, time_step):
@@ -307,12 +314,12 @@ class LineMesh(QuantumMesh):
         return mesh_slicer
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
-        line, = axis.plot(self.x[self.get_mesh_slicer(plot_limit)] / nm, mesh[self.get_mesh_slicer(plot_limit)], **kwargs)
+        line, = axis.plot(self.x_mesh[self.get_mesh_slicer(plot_limit)] / nm, mesh[self.get_mesh_slicer(plot_limit)], **kwargs)
 
         return line
 
     def plot_mesh(self, mesh, **kwargs):
-        cp.utils.xy_plot(kwargs.pop('name'), self.x / nm, mesh, **kwargs)
+        cp.utils.xy_plot(kwargs.pop('name'), self.x_mesh / nm, mesh, **kwargs)
 
     def plot_fft(self):
         raise NotImplementedError
@@ -1185,7 +1192,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     def g_for_state(self, state):
         g = np.zeros(self.mesh_shape)
 
-        g[state.l, :] = state.radial_part(self.r) * self.g_factor
+        g[state.l, :] = state.radial_function(self.r) * self.g_factor
 
         return g
 
