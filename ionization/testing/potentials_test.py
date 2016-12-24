@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
         coords = {'t': t, 'r': r, 'distance_along_polarization': distance_along_polarization, 'test_charge': electron_charge}
 
-        coulomb = ion.NuclearPotential()
+        coulomb = ion.Coulomb()
         logger.info(coulomb)
         logger.info(repr(coulomb))
         logger.info(coulomb(**coords) / eV)
@@ -28,7 +28,7 @@ if __name__ == '__main__':
         logger.info(repr(sine))
         logger.info(sine(**coords) / eV)
 
-        combined = ion.PotentialSum(coulomb, sine)
+        combined = ion.PotentialEnergySum(coulomb, sine)
         logger.info(combined)
         logger.info(repr(combined))
         logger.info(combined(**coords) / eV)

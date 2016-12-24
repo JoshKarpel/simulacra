@@ -86,8 +86,8 @@ if __name__ == '__main__':
 
         for amplitude in amplitudes:
             external_potential = ion.SineWave(twopi * laser_frequency, amplitude = amplitude, window = window)
-            # internal_potential = ion.NuclearPotential() + ion.RadialImaginaryPotential(center = bound * bohr_radius, width = 20 * bohr_radius, decay_time = 30 * asec)
-            internal_potential = ion.NuclearPotential()
+            # internal_potential = ion.Coulomb() + ion.RadialImaginary(center = bound * bohr_radius, width = 20 * bohr_radius, decay_time = 30 * asec)
+            internal_potential = ion.Coulomb()
 
             # mask = None
             mask = ion.RadialCosineMask(inner_radius = (bound - 50 * bohr_radius), outer_radius = bound * bohr_radius, smoothness = 8)

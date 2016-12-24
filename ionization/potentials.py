@@ -2,117 +2,102 @@ import logging
 
 import numpy as np
 
+import compy as cp
 from compy.units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class Potential:
-    """
-    A class that represents a potential, defined over some kwargs.
+class PotentialEnergy(cp.Summand):
+    def __init__(self, *args, **kwargs):
+        super(PotentialEnergy, self).__init__()
+        self.summation_class = PotentialEnergySum
 
-    The result of a call to a Potential should be the potential energy / charge (V = J/C for electric interactions, V = J/kg for gravitational interactions, etc.) at the coordinates given by kwargs.
 
-    Caution: use numpy meshgrids to vectorize over multiple kwargs.
-    """
-
-    def __str__(self):
-        return repr(self)
-
-    def __repr__(self):
-        return self.__class__.__name__
-
-    def __iter__(self):
-        yield self
-
-    def __add__(self, other):
-        return PotentialSum(*self, *other)
-
+class NoPotentialEnergy(PotentialEnergy):
     def __call__(self, *args, **kwargs):
         return 0
 
 
-class NoPotential(Potential):
-    pass
+class PotentialEnergySum(cp.Sum, PotentialEnergy):
+    container_name = 'potentials'
 
 
-class PotentialSum:
-    """
-    A class that handles a group of potentials that should be evaluated together to produce a total potential.
-
-    Caution: the potentials are summed together with no check as to the structure of the sum. Use numpy meshgrids to vectorize over multiple kwargs.
-    """
-
-    def __init__(self, *potentials):
-        self.potentials = potentials
-
-    def __str__(self):
-        return 'Potentials: {}'.format(', '.join([str(p) for p in self.potentials]))
-
-    def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, ', '.join([repr(p) for p in self.potentials]))
-
-    def __iter__(self):
-        yield from self.potentials
-
-    def __call__(self, **kwargs):
-        return sum(p(**kwargs) for p in self.potentials)
-
-    def __add__(self, other):
-        try:
-            result = PotentialSum(*self.potentials, other.potentials)
-        except AttributeError:
-            result = PotentialSum(*self.potentials, other)
-        return result
-
-
-class NuclearPotential(Potential):
-    """A Potential representing the electric potential of the nucleus of a hydrogenic atom."""
+class Coulomb(PotentialEnergy):
+    """A PotentialEnergy representing the electric potential energy of the nucleus of a hydrogenic atom."""
 
     def __init__(self, charge = 1 * proton_charge):
-        super(NuclearPotential, self).__init__()
+        """Construct a Coulomb object with the given charge."""
+        super(Coulomb, self).__init__()
 
         self.charge = charge
 
-    def __repr__(self):
-        return '{}(charge = {})'.format(self.__class__.__name__, self.charge)
-
     def __str__(self):
-        return '{}(charge = {} e)'.format(self.__class__.__name__, uround(self.charge, proton_charge, 3))
+        return cp.utils.field_str(self, ('charge', 'proton_charge'))
+
+    def __repr__(self):
+        return cp.utils.field_str(self, 'charge')
 
     def __call__(self, *, r, test_charge, **kwargs):
+        """Return the Coulomb potential energy evaluated at radial distance r for charge test_charge."""
         return coulomb_force_constant * self.charge * test_charge / r
 
 
-class HarmonicOscillatorPotential(Potential):
+class HarmonicOscillator(PotentialEnergy):
+    """A PotentialEnergy representing the potential energy of a harmonic oscillator."""
+
     def __init__(self, spring_constant = 4.20521 * N / m, center = 0 * nm):
+        """Construct a HarmonicOscillator object with the given spring constant and center position."""
         self.spring_constant = spring_constant
         self.center = center
 
     @classmethod
     def from_frequency_and_mass(cls, omega = 1.5192675e15 * Hz, mass = electron_mass):
+        """Return a HarmonicOscillator constructed from the given angular frequency and mass."""
         return cls(spring_constant = mass * (omega ** 2))
 
     @classmethod
     def from_ground_state_energy_and_mass(cls, ground_state_energy = 0.5 * eV, mass = electron_mass):
+        """
+        Return a HarmonicOscillator constructed from the given ground state energy and mass.
+
+        Note: the ground state energy is half of the energy spacing of the oscillator.
+        """
         return cls.from_frequency_and_mass(omega = 2 * ground_state_energy / hbar, mass = mass)
 
     @classmethod
     def from_energy_spacing_and_mass(cls, energy_spacing = 1 * eV, mass = electron_mass):
+        """
+        Return a HarmonicOscillator constructed from the given state energy spacing and mass.
+
+        Note: the ground state energy is half of the energy spacing of the oscillator.
+        """
         return cls.from_frequency_and_mass(omega = energy_spacing / hbar, mass = mass)
 
     def __call__(self, *, distance, **kwargs):
+        """Return the HarmonicOscillator potential energy evaluated at position distance."""
         return 0.5 * self.spring_constant * ((distance - self.center) ** 2)
 
     def omega(self, mass):
+        """Return the angular frequency for this potential for the given mass."""
         return np.sqrt(self.spring_constant / mass)
 
+    def frequency(self, mass):
+        """Return the cyclic frequency for this potential for the given mass."""
+        return self.omega(mass) / twopi
 
-class RadialImaginaryPotential(Potential):
+    def __str__(self):
+        return '{}(spring_constant = {} N/m, center = {} nm'.format(self.__class__.__name__, self.spring_constant, uround(self.center, nm, 3))
+
+    def __repr__(self):
+        return '{}(spring_constant = {}, center = {}'.format(self.__class__.__name__, self.spring_constant, self.center)
+
+
+class RadialImaginary(PotentialEnergy):
     def __init__(self, center = 20 * bohr_radius, width = 2 * bohr_radius, decay_time = 100 * asec):
         """
-        Construct a RadialImaginaryPotential. The potential is shaped like a Gaussian and has an imaginary amplitude.
+        Construct a RadialImaginary. The potential is shaped like a Gaussian and has an imaginary amplitude.
 
         A positive/negative amplitude yields an imaginary potential that causes decay/amplification.
 
@@ -140,10 +125,7 @@ class RadialImaginaryPotential(Potential):
         return self.prefactor * np.exp(-(((r - self.center) / self.width) ** 2))
 
 
-class ElectricFieldWindow(Potential):
-    def __init__(self):
-        pass
-
+class ElectricFieldWindow(PotentialEnergy):
     def __str__(self):
         return self.__class__.__name__
 
@@ -207,7 +189,7 @@ class SymmetricExponentialWindow(ElectricFieldWindow):
         return np.abs(1 / (1 + np.exp(-(t + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-(t - self.window_time) / self.window_width)))
 
 
-class UniformLinearlyPolarizedElectricField(Potential):
+class UniformLinearlyPolarizedElectricField(PotentialEnergy):
     def __init__(self, window = None):
         super(UniformLinearlyPolarizedElectricField, self).__init__()
 
@@ -455,7 +437,7 @@ class RandomizedSincPulse(UniformLinearlyPolarizedElectricField):
         return amp * self.amplitude_prefactor * super(RandomizedSincPulse, self).get_amplitude(t)
 
 
-class RadialCosineMask(Potential):
+class RadialCosineMask(PotentialEnergy):
     def __init__(self, inner_radius = 50 * bohr_radius, outer_radius = 100 * bohr_radius, smoothness = 8):
         self.inner_radius = inner_radius
         self.outer_radius = outer_radius

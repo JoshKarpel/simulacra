@@ -22,6 +22,17 @@ logger.setLevel(logging.DEBUG)
 LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
 
+def field_str(obj, *fields):
+    field_strings = []
+    for field in fields:
+        try:
+            field, unit_name = field
+            field_strings.append('{} = {} {}'.format(field, uround(getattr(obj, field), unit_names_to_values[unit_name], 3), unit_name))
+        except ValueError:
+            field_strings.append('{} = {}'.format(field, getattr(obj, field)))
+    return '{}({})'.format(obj.__class__.__name__, ', '.join(field_strings))
+
+
 class Logger:
     """A context manager to easily set up logging."""
 
@@ -43,6 +54,7 @@ class Logger:
         :param file_dir: the director for the log file, defaults to the current working directory
         :param file_mode: the file mode to open the log file with, defaults to 'a' (append)
         :param disable_level: log level to disable, short-circuits propagation of logs <= this level
+        :return None
         """
         self.logger_names = list(logger_names)
         if manual_logger_name is not None and manual_logger_name not in self.logger_names:
@@ -156,7 +168,8 @@ class Beet:
         return '{}: {} ({}) [{}]'.format(self.__class__.__name__, self.name, self.file_name, self.uid)
 
     def __repr__(self):
-        return '{}(name = {}, file_name = {}, uid = {})'.format(self.__class__.__name__, self.name, self.file_name, self.uid)
+        # return '{}(name = {}, file_name = {}, uid = {})'.format(self.__class__.__name__, self.name, self.file_name, self.uid)
+        return field_repr(self, 'name', 'file_name', 'uid')
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.uid == other.uid
@@ -198,7 +211,7 @@ class Beet:
         """
         Load a Beet from file_path.
 
-        :param file_path: the path to try to load a Beet from
+        :param file_path: the path to load a Beet from
         :return: the loaded Beet
         """
         with gzip.open(file_path, mode = 'rb') as file:
@@ -350,6 +363,7 @@ def make_xy_axis(axis,
     axis.set_xlim(left = x_lower_limit / x_scale, right = x_upper_limit / x_scale)
     axis.set_ylim(bottom = y_lower_limit / y_scale, top = y_upper_limit / y_scale)
 
+    # set up a grid of gray dotted lines
     axis.grid(True, color = 'gray', linestyle = ':')
     axis.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 

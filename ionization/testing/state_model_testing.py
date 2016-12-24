@@ -27,12 +27,16 @@ if __name__ == '__main__':
         print()
 
         print(0.5 * ion.HydrogenBoundState())
-        print(ion.HydrogenBoundState() * 0.5)
+        x = ion.HydrogenBoundState() * 0.5
+        print(x, type(x))
         print()
 
         s = 1j * np.sqrt(1 / 3) * ion.HydrogenBoundState(1) + np.sqrt(2 / 3) * ion.HydrogenBoundState(2)
-        print(s)
+        print(s, type(s))
         s += ion.HydrogenBoundState(3)
-        print(s)
+        print(s, type(s))
+
+        # s += ion.PotentialEnergy()
+        # print(s, type(s))
 
         # TODO: turn this into unit testing!

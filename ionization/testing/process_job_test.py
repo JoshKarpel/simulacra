@@ -47,7 +47,7 @@ if __name__ == '__main__':
         style_dict = dict(zip(sorted(phases), sorted(style)))
 
         final_initial_state_lines = [clu.KeyFilterLine(key = 'final_initial_state_overlap',
-                                                       filters = (clu.check('phase', phase), clu.check('fluence', fluence)),
+                                                       filters = (clu.check_value_by_key('phase', phase), clu.check_value_by_key('fluence', fluence)),
                                                        label = 'phase = {}, fluence = {} J/cm^2'.format(phase, uround(fluence, J / (cm ** 2), 3)),
                                                        color = color_dict[fluence], linestyle = style_dict[phase])
                                      for fluence in sorted(fluences) for phase in sorted(phases)]
@@ -67,7 +67,7 @@ if __name__ == '__main__':
                      legend_on_right = True)
 
         final_norm_lines = [clu.KeyFilterLine(key = 'final_norm',
-                                              filters = (clu.check('phase', phase), clu.check('fluence', fluence)),
+                                              filters = (clu.check_value_by_key('phase', phase), clu.check_value_by_key('fluence', fluence)),
                                               label = 'phase = {}, fluence = {} J/cm^2'.format(phase, uround(fluence, J / (cm ** 2), 3)),
                                               color = color_dict[fluence], linestyle = style_dict[phase])
                             for phase in phases for fluence in fluences]

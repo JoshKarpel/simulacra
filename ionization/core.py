@@ -41,7 +41,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  initial_state = states.HydrogenBoundState(1, 0),
                  test_states = tuple(states.HydrogenBoundState(n, l) for n in range(5) for l in range(n)),
                  dipole_gauges = ('length',),
-                 internal_potential = potentials.NuclearPotential(charge = proton_charge),
+                 internal_potential = potentials.Coulomb(charge = proton_charge),
                  electric_potential = None,
                  mask = None,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,

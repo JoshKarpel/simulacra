@@ -349,20 +349,31 @@ class JobProcessor(utils.Beet):
         raise NotImplementedError
 
     def make_plot(self, name, x_key, *plot_lines, **kwargs):
+        # begin by getting an OrderedDict of sim: sim_data, sorted by the value of the x_key
         data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v)
 
+        # the x_array is unique values of the x_key in the data
         x_array = np.array(sorted(set(v[x_key] for v in data.values())))
 
+        # each y array is constructed by looking through the data for sims that pass all of the filters for that line
         y_arrays = [np.array(list(v[plot_line.key] for v in data.values() if all(f(v) for f in plot_line.filters))) for plot_line in plot_lines]
         line_labels = (plot_line.label for plot_line in plot_lines)
         line_kwargs = (plot_line.line_kwargs for plot_line in plot_lines)
 
+        # pass everything to xy_plot to do the heavy lifting
         utils.xy_plot(name, x_array, *y_arrays, line_labels = line_labels, line_kwargs = line_kwargs, **kwargs)
 
 
-def check(parameter, value):
-    def checker(v):
-        return v[parameter] == value
+def check_value_by_key(key, value):
+    """
+    Return a function which accepts a single argument, which should be a dictionary. The functions returns dictionary[key] == value.
+    :param key: the key to look for in the dictionary
+    :param value: the value to check dictionary[key] against
+    :return: a checker function
+    """
+
+    def checker(dictionary):
+        return dictionary[key] == value
 
     return checker
 

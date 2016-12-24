@@ -7,6 +7,9 @@ unit_names_to_tex_strings = {}
 
 
 def uround(value, units = 1, digits = 3):
+    if type(units) == str:
+        units = unit_names_to_values[units]
+
     return _np.around(value / units, digits)
 
 
@@ -76,12 +79,28 @@ unit_names_to_values.update({'cm': cm,
                              'bohr_radius': bohr_radius,
                              'inch': inch})
 unit_names_to_tex_strings.update({'cm': r'$\mathrm{cm}$',
+                                  'cetimeter': r'$\mathrm{cm}$',
+                                  'cetimeters': r'$\mathrm{cm}$',
                                   'mm': r'$\mathrm{mm}$',
+                                  'millimeter': r'$\mathrm{mm}$',
+                                  'millimeters': r'$\mathrm{mm}$',
                                   'um': r'$\mathrm{um}$',
+                                  'micrometer': r'$\mathrm{um}$',
+                                  'micrometers': r'$\mathrm{um}$',
+                                  'micron': r'$\mathrm{um}$',
+                                  'microns': r'$\mathrm{um}$',
                                   'nm': r'$\mathrm{nm}$',
+                                  'nanometer': r'$\mathrm{nm}$',
+                                  'nanometers': r'$\mathrm{nm}$',
                                   'pm': r'$\mathrm{pm}$',
+                                  'picometer': r'$\mathrm{pm}$',
+                                  'picometers': r'$\mathrm{pm}$',
                                   'fm': r'$\mathrm{fm}$',
+                                  'femtometer': r'$\mathrm{fm}$',
+                                  'femtometers': r'$\mathrm{fm}$',
                                   'km': r'$\mathrm{km}$',
+                                  'kilometer': r'$\mathrm{km}$',
+                                  'kilometers': r'$\mathrm{km}$',
                                   'Mm': r'$\mathrm{Mm}$',
                                   'Gm': r'$\mathrm{Gm}$',
                                   'Tm': r'$\mathrm{Tm}$',

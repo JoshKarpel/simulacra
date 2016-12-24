@@ -14,7 +14,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         mass = electron_mass
-        pot = ion.HarmonicOscillatorPotential.from_energy_spacing_and_mass(energy_spacing = 1 * eV, mass = mass)
+        pot = ion.HarmonicOscillator.from_energy_spacing_and_mass(energy_spacing = 1 * eV, mass = mass)
 
         # init = ion.Superposition({ion.QHOState(omega = pot.omega(mass), mass = mass, n = 0): 1,
         #                           ion.QHOState(omega = pot.omega(mass), mass = mass, n = 1): 1})
@@ -30,7 +30,7 @@ if __name__ == '__main__':
         sim = ion.LineSpecification('qho',
                                     x_bound = 50 * nm, x_points = 2 ** 14,
                                     internal_potential = pot,
-                                    # internal_potential = ion.NoPotential(),
+                                    # internal_potential = ion.NoPotentialEnergy(),
                                     electric_potential = electric,
                                     test_mass = mass,
                                     test_states = (ion.QHOState.from_QHO_potential_and_mass(pot, mass, n = n) for n in range(60)),

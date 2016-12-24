@@ -22,22 +22,15 @@ class IllegalQuantumState(cp.CompyException):
     pass
 
 
-class QuantumState:
+class QuantumState(cp.Summand):
     def __init__(self, amplitude = 1):
+        super(QuantumState, self).__init__()
         self.amplitude = amplitude
+        self.summation_class = Superposition
 
     @property
     def norm(self):
         return np.abs(self.amplitude) ** 2
-
-    def __repr__(self):
-        return self.__class__.__name__
-
-    def __iter__(self):
-        yield self
-
-    def __add__(self, other):
-        return Superposition(*self, *other)
 
     def __mul__(self, other):
         new = deepcopy(self)
@@ -51,8 +44,10 @@ class QuantumState:
         return self * (1 / other)
 
 
-class Superposition(QuantumState):
+class Superposition(cp.Sum, QuantumState):
     """A class that represents a superposition of bound states."""
+
+    container_name = 'states'
 
     def __init__(self, *states):
         """
@@ -63,25 +58,9 @@ class Superposition(QuantumState):
         :param state: a dict of HydrogenBoundState:state amplitude (complex number) pairs.
         :param normalize: if True, renormalize the state amplitudes.
         """
+        super(Superposition, self).__init__(amplitude = 1)
         norm = np.sqrt(sum(s.norm for s in states))
         self.states = list(s / norm for s in states)
-
-        super(Superposition, self).__init__(amplitude = 1)
-
-    def __str__(self):
-        return '(' + ' + '.join([str(s) for s in self.states]) + ')'
-
-    def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, ', '.join([repr(p) for p in self.states]))
-
-    def __getitem__(self, item):
-        return self.states[item]
-
-    def __iter__(self):
-        yield from self.states
-
-    def __call__(self, *args, **kwargs):
-        return sum(s(*args, **kwargs) for s in self.states)
 
 
 class HydrogenBoundState(QuantumState):
@@ -140,6 +119,10 @@ class HydrogenBoundState(QuantumState):
             IllegalQuantumState('|m| (|{}|) must be less than l ({})'.format(m, self.l))
 
     @property
+    def tuple(self):
+        return self.n, self.l, self.m
+
+    @property
     def spherical_harmonic(self):
         """Gets the SphericalHarmonic associated with the HydrogenBoundState's l and m."""
         return cp.math.SphericalHarmonic(l = self.l, m = self.m)
@@ -150,42 +133,40 @@ class HydrogenBoundState(QuantumState):
 
     def __repr__(self):
         """Returns the internal string representation of the HydrogenBoundState."""
-        return '{}(n = {}, l = {}, m = {}, amplitude = {})'.format(self.__class__.__name__, self.n, self.l, self.m, self.amplitude)
+        return cp.utils.field_str(self, 'n', 'l', 'm', 'amplitude')
 
     @property
     def ket(self):
         """Gets the ket representation of the HydrogenBoundState."""
-        return '{}|{},{},{}>'.format(np.around(self.amplitude, 3), self.n, self.l, self.m)
+        return '{}|{},{},{}>'.format(np.around(self.amplitude, 3), *self.tuple)
 
     @property
     def bra(self):
         """Gets the bra representation of the HydrogenBoundState"""
-        return '{}<{},{},{}|'.format(np.around(self.amplitude, 3), self.n, self.l, self.m)
+        return '{}<{},{},{}|'.format(np.around(self.amplitude, 3), *self.tuple)
 
     @property
     def tex_str(self):
         """Gets a LaTeX-formatted string for the HydrogenBoundState."""
-        return r'\psi_{{{},{},{}}}'.format(self.n, self.l, self.m)
-
-    # TODO: switch to simple checking of (n, l, m) tuple
+        return r'\psi_{{{},{},{}}}'.format(*self.tuple)
 
     def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.n == other.n and self.l == other.l and self.m == other.m
+        return isinstance(other, self.__class__) and self.tuple == other.tuple
 
     def __lt__(self, other):
-        return isinstance(other, self.__class__) and self.n < other.n and self.l < other.l and self.m < other.m
+        return isinstance(other, self.__class__) and self.tuple < other.tuple
 
     def __gt__(self, other):
-        return isinstance(other, self.__class__) and self.n > other.n and self.l > other.l and self.m > other.m
+        return isinstance(other, self.__class__) and self.tuple > other.tuple
 
     def __le__(self, other):
-        return isinstance(other, self.__class__) and self.n <= other.n and self.l <= other.l and self.m <= other.m
+        return isinstance(other, self.__class__) and self.tuple <= other.tuple
 
     def __ge__(self, other):
-        return isinstance(other, self.__class__) and self.n >= other.n and self.l >= other.l and self.m >= other.m
+        return isinstance(other, self.__class__) and self.tuple >= other.tuple
 
     def __hash__(self):
-        return hash((self.n, self.l, self.m))
+        return hash(self.tuple)
 
     @staticmethod
     def sort_key(state):
