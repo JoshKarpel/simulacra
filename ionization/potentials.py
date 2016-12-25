@@ -212,7 +212,8 @@ class UniformLinearlyPolarizedElectricField(PotentialEnergy):
         return distance_along_polarization * test_charge * self.get_amplitude(t)
 
     def get_total_electric_field_numeric(self, times):
-        return integ.simps(self.get_amplitude(times), times)
+        """Return the integral of the electric field amplitude from the start of times for each interval in times."""
+        return np.cumsum(self.get_amplitude(times)) * np.abs(times[1] - times[0])
 
     def get_fluence_numeric(self, times):
         raise NotImplementedError
@@ -331,7 +332,18 @@ class SineWave(UniformLinearlyPolarizedElectricField):
 
 
 class SincPulse(UniformLinearlyPolarizedElectricField):
-    def __init__(self, pulse_width = 200 * asec, fluence = 1 * J / (cm ** 2), phase = 'cos', pulse_center = 0 * asec, **kwargs):
+    def __init__(self, pulse_width = 200 * asec, fluence = 1 * J / (cm ** 2), phase = 'cos', pulse_center = 0 * asec,
+                 dc_correction_time = None,
+                 **kwargs):
+        """
+
+        :param pulse_width:
+        :param fluence:
+        :param phase:
+        :param pulse_center:
+        :param dc_correction_time: if given, the dc field component for cosine phase will be equalized at this time
+        :param kwargs:
+        """
         super(SincPulse, self).__init__(**kwargs)
 
         self.pulse_width = pulse_width
@@ -346,6 +358,8 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
         self.omega_cutoff = twopi / self.pulse_width
         self.amplitude_density = np.sqrt(self.fluence / (2 * epsilon_0 * c * self.omega_cutoff))
         self.amplitude_prefactor = np.sqrt(2 / pi) * self.amplitude_density
+
+        self.dc_correction_time = dc_correction_time
 
     @classmethod
     def from_amplitude_density(cls, pulse_width = 100 * asec, amplitude_density = 7.7432868731566454e-06, phase = 'cos', pulse_center = 0 * asec, **kwargs):
@@ -384,8 +398,11 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
     def get_amplitude(self, t):
         if self.phase == 'cos':
             amp = np.where(np.not_equal(t, 0),
-                           np.sin(self.omega_cutoff * (t - self.pulse_center)) / (t - self.pulse_center),
+                           (np.sin(self.omega_cutoff * (t - self.pulse_center)) / (t - self.pulse_center)),
                            self.omega_cutoff)
+
+            if self.dc_correction_time is not None:
+                amp -= pi / (2 * self.dc_correction_time)
         elif self.phase == 'sin':
             amp = np.where(np.not_equal(t, 0),
                            (np.cos(self.omega_cutoff * (t - self.pulse_center)) - 1) / (t - self.pulse_center),
