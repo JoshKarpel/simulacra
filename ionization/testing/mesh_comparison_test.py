@@ -35,7 +35,7 @@ if __name__ == '__main__':
         t_init = -8 * period
         t_final = -t_init
 
-        window = ion.LinearRampWindow(ramp_on_time = t_init + (200 * asec), ramp_time = 4 * period)
+        window = ion.LinearRampTimeWindow(ramp_on_time = t_init + (200 * asec), ramp_time = 4 * period)
         e_field = ion.SineWave(omega = twopi / (period), amplitude = 0.5 * atomic_electric_field, window = window)
 
         specs = []

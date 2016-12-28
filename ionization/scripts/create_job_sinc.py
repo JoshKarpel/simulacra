@@ -100,16 +100,16 @@ if __name__ == '__main__':
         pulse_parameters.append(fluence)
 
         window_time_in_pw = clu.Parameter(name = 'window_time_in_pw',
-                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 1, cast_to = float))
+                                          value = clu.ask_for_input('TimeWindow Time (in pulse widths)?', default = time_bound_in_pw.value - 1, cast_to = float))
         window_width_in_pw = clu.Parameter(name = 'window_width_in_pw',
-                                           value = clu.ask_for_input('Window Width (in pulse widths)?', default = 0.5, cast_to = float))
+                                           value = clu.ask_for_input('TimeWindow Width (in pulse widths)?', default = 0.5, cast_to = float))
         parameters.append(window_time_in_pw)
         parameters.append(window_width_in_pw)
 
         parameters.append(clu.Parameter(name = 'electric_potential',
                                         value = tuple(ion.SincPulse(**d,
-                                                                    window = ion.SymmetricExponentialWindow(window_time = d['pulse_width'] * window_time_in_pw.value,
-                                                                                                            window_width = d['pulse_width'] * window_width_in_pw.value))
+                                                                    window = ion.SymmetricExponentialTimeWindow(window_time = d['pulse_width'] * window_time_in_pw.value,
+                                                                                                                window_width = d['pulse_width'] * window_width_in_pw.value))
                                                       for d in clu.expand_parameters_to_dicts(pulse_parameters)),
                                         expandable = True))
 

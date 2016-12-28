@@ -42,7 +42,7 @@ if __name__ == '__main__':
                     t_init = 0
                     t_final = 20 * period * asec
 
-                    window = ion.LinearRampWindow(ramp_on_time = t_init + period * asec, ramp_time = 5 * period * asec)
+                    window = ion.LinearRampTimeWindow(ramp_on_time = t_init + period * asec, ramp_time = 5 * period * asec)
                     e_field = ion.SineWave(omega = twopi / (period * asec), amplitude = amp * atomic_electric_field, window = window)
                     internal_potential = ion.Coulomb()
                     mask = ion.RadialCosineMask(inner_radius = (bound - 50) * bohr_radius, outer_radius = bound * bohr_radius)

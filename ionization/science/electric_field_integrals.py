@@ -30,7 +30,7 @@ if __name__ == '__main__':
         field_prefactor = electron_charge  # convert to momentum
 
         cp.utils.xy_plot('pw={}as_flu={}Jcm2_field'.format(pulse_width, fluence), times,
-                         sinc_cos.get_amplitude(times), sinc_sin.get_amplitude(times),
+                         sinc_cos.get_electric_field_amplitude(times), sinc_sin.get_electric_field_amplitude(times),
                          line_labels = ('Cos', 'Sin'),
                          x_scale = 'asec', y_scale = 'atomic_electric_field',
                          x_label = r'Time $t$', y_label = r'Electric Field $E(t)$',

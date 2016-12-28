@@ -82,7 +82,7 @@ if __name__ == '__main__':
                     t_init = -20 * pw
                     t_final = -t_init
 
-                    window = ion.potentials.SymmetricExponentialWindow(window_time = t_init + (2 * pw), window_width = pw / 3)
+                    window = ion.potentials.SymmetricExponentialTimeWindow(window_time = t_init + (2 * pw), window_width = pw / 3)
                     e_field_sin = ion.potentials.SincPulse(pulse_width = pw, fluence = flu, phase = 'sin', window = window)
                     e_field_cos = ion.potentials.SincPulse(pulse_width = pw, fluence = flu, phase = 'cos', window = window)
 

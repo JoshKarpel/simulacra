@@ -30,7 +30,7 @@ if __name__ == '__main__':
         t_step = laser_period / 800
 
         # external_potential = ion.Rectangle(start_time = 40 * asec, end_time = 80 * asec, amplitude = .1 * atomic_electric_field)
-        window = ion.LinearRampWindow(ramp_on_time = 0, ramp_time = 1 * laser_period)
+        window = ion.LinearRampTimeWindow(ramp_on_time = 0, ramp_time = 1 * laser_period)
         amplitude = 1 * atomic_electric_field
         external_potential = ion.SineWave(twopi * laser_frequency, amplitude = amplitude,
                                           window = window)

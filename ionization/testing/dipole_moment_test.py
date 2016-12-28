@@ -77,7 +77,7 @@ if __name__ == '__main__':
         t_step = laser_period / 800
 
         # external_potential = ion.Rectangle(start_time = 40 * asec, end_time = 80 * asec, amplitude = .1 * atomic_electric_field)
-        window = ion.LinearRampWindow(ramp_on_time = 0, ramp_time = 5 * laser_period)
+        window = ion.LinearRampTimeWindow(ramp_on_time = 0, ramp_time = 5 * laser_period)
 
         base_amplitude = 1.2e10 * V / m
         amplitudes = np.sqrt(np.linspace(1, 10, 2)) * base_amplitude

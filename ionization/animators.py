@@ -85,7 +85,7 @@ class QuantumMeshAnimator(cp.Animator):
         self.redraw += [*self.overlaps_stackplot, self.norm_line, self.time_line]
 
         if self.spec.electric_potential is not None:
-            self.field_max = np.abs(np.max(self.spec.electric_potential.get_amplitude(self.sim.times)))
+            self.field_max = np.abs(np.max(self.spec.electric_potential.get_electric_field_amplitude(self.sim.times)))
             self.electric_field_line, = axis.plot(self.sim.times / asec, np.abs(self.sim.electric_field_amplitude_vs_time) / self.field_max,
                                                   label = r'$|E|/\left|E_{\mathrm{max}}\right|$',
                                                   color = 'red', linewidth = 2,

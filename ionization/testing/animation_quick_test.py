@@ -20,7 +20,7 @@ if __name__ == '__main__':
             ion.animators.SphericalHarmonicAnimator(target_dir = OUT_DIR, postfix = '30_no_renorm', plot_limit = 30 * bohr_radius, renormalize_l_decomposition = False)
         ]
 
-        e_pot = ion.Rectangle(amplitude = 3 * atomic_electric_field, window = ion.LinearRampWindow(ramp_on_time = 10 * asec, ramp_time = 10 * asec))
+        e_pot = ion.Rectangle(amplitude = 3 * atomic_electric_field, window = ion.LinearRampTimeWindow(ramp_on_time = 10 * asec, ramp_time = 10 * asec))
 
         sim = ion.SphericalHarmonicSpecification('test',
                                                  evolution_method = 'SO',

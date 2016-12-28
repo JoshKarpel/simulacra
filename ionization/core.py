@@ -35,6 +35,9 @@ def electron_wavenumber_from_energy(energy):
 class ElectricFieldSpecification(cp.core.Specification):
     """A base Specification for a Simulation with an electric field."""
 
+    evolution_equations = cp.utils.RestrictedValues('evolution_equations', {'L', 'H'})
+    evolution_method = cp.utils.RestrictedValues('evolution_method', {'CN', 'SO', 'S'})
+
     def __init__(self, name,
                  mesh_type = None,
                  test_mass = electron_mass_reduced, test_charge = electron_charge,
@@ -42,8 +45,9 @@ class ElectricFieldSpecification(cp.core.Specification):
                  test_states = tuple(states.HydrogenBoundState(n, l) for n in range(5) for l in range(n)),
                  dipole_gauges = ('length',),
                  internal_potential = potentials.Coulomb(charge = proton_charge),
-                 electric_potential = None,
-                 mask = None,
+                 electric_potential = potentials.NoPotentialEnergy(),
+                 mask = potentials.NoMask(),
+                 evolution_method = 'CN', evolution_equations = 'H',
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
                  minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
@@ -64,6 +68,9 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.internal_potential = internal_potential
         self.electric_potential = electric_potential
         self.mask = mask
+
+        self.evolution_method = evolution_method
+        self.evolution_equations = evolution_equations
 
         self.time_initial = time_initial
         self.time_final = time_final
@@ -105,13 +112,11 @@ class ElectricFieldSpecification(cp.core.Specification):
             time_evolution += ['   Minimum Final Time: {} as'.format(uround(self.minimum_time_final, asec, 3)),
                                '   Extra Time Step: {} as'.format(uround(self.extra_time_step, asec, 3))]
 
-        potentials = ['Potentials:']
-        if self.internal_potential is not None:
-            potentials += ['   ' + str(potential) for potential in self.internal_potential]
-        if self.electric_potential is not None:
-            potentials += ['   ' + str(potential) for potential in self.electric_potential]
-        if self.mask is not None:
-            potentials += ['   ' + str(mask) for mask in self.mask]
+        potentials = ['Potentials and Masks:']
+        # potentials += ['   ' + str(potential) for potential in self.internal_potential]
+        # potentials += ['   ' + str(potential) for potential in self.electric_potential]
+        # potentials += ['   ' + str(mask) for mask in self.mask]
+        potentials += ['   {}'.format(x) for x in it.chain(self.internal_potential, self.electric_potential, self.mask)]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials)
 
@@ -155,7 +160,17 @@ class QuantumMesh:
         return self.g_mesh / self.g_factor
 
     def evolve(self, time_step):
-        raise NotImplementedError
+        pre_evolve_norm = self.norm
+        getattr(self, '_evolve_' + self.spec.evolution_method)(time_step)
+        norm_diff_evolve = pre_evolve_norm - self.norm
+        if norm_diff_evolve / pre_evolve_norm > .001:
+            logger.warning('Evolution may be dangerously non-unitary, norm decreased by {} ({} %) during evolution step'.format(norm_diff_evolve, norm_diff_evolve / pre_evolve_norm))
+
+        pre_mask_norm = self.norm
+        self.g_mesh *= self.spec.mask(r = self.r_mesh)
+        norm_diff_mask = pre_mask_norm - self.norm
+        logger.debug('Applied mask {} to g_mesh for {} {}, removing {} norm'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name, norm_diff_mask))
+        return norm_diff_mask
 
     def get_mesh_slicer(self, plot_limit):
         raise NotImplementedError
@@ -232,7 +247,9 @@ class LineSpecification(ElectricFieldSpecification):
                  x_bound = 10 * nm,
                  x_points = 2 ** 9,
                  **kwargs):
-        super(LineSpecification, self).__init__(name, mesh_type = LineMesh, animator_type = animators.CylindricalSliceAnimator, **kwargs)
+        super(LineSpecification, self).__init__(name, mesh_type = LineMesh, animator_type = animators.CylindricalSliceAnimator,
+                                                evolution_method = 'S',
+                                                **kwargs)
 
         self.x_bound = x_bound
         self.x_points = int(x_points)
@@ -291,17 +308,15 @@ class LineMesh(QuantumMesh):
         return nfft.ifft(mesh, norm = 'ortho')
 
     def _evolve_potential(self, time_step):
-        pot = self.spec.internal_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh)
-        if self.spec.electric_potential is not None:
-            pot += self.spec.electric_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh, distance_along_polarization = self.x_mesh, test_charge = self.spec.test_charge)
+        pot = self.spec.internal_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh) + self.spec.electric_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh, distance_along_polarization = self.x_mesh, test_charge = self.spec.test_charge)
         self.g_mesh *= np.exp(-1j * time_step * pot / hbar)
 
     def _evolve_free(self, time_step):
         self.g_mesh = self.ifft(self.fft(self.g_mesh) * np.exp(self.free_evolution_prefactor * time_step))
 
-    def evolve(self, time_step):
+    def _evolve_S(self, time_step):
         self._evolve_potential(time_step / 2)
-        self._evolve_free(time_step)  # splitting order chosen for efficiency
+        self._evolve_free(time_step)  # splitting order chosen for computational efficiency
         self._evolve_potential(time_step / 2)
 
     def get_mesh_slicer(self, plot_limit):
@@ -586,10 +601,7 @@ class CylindricalSliceMesh(QuantumMesh):
         """
         tau = time_step / (2 * hbar)
 
-        if self.spec.electric_potential is not None:
-            electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
-        else:
-            electric_potential_energy_mesh = np.zeros(self.mesh_shape)
+        electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
 
         # add the external potential to the Hamiltonian matrices and multiply them by i * tau to get them ready for the next steps
         hamiltonian_z, hamiltonian_rho = self._get_internal_hamiltonian_matrix_operators()
@@ -626,10 +638,6 @@ class CylindricalSliceMesh(QuantumMesh):
         g_vector = self.flatten_mesh(self.g_mesh, 'rho')
         g_vector = cy.tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'rho')
-
-        if self.spec.mask is not None:
-            self.g_mesh *= self.spec.mask(r = self.r_mesh)
-            logger.debug('Applied mask {} to g_mesh for {} {}'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name))
 
     @cp.utils.memoize
     def get_mesh_slicer(self, plot_limit = None):
@@ -938,10 +946,7 @@ class SphericalSliceMesh(QuantumMesh):
     def evolve(self, time_step):
         tau = time_step / (2 * hbar)
 
-        if self.spec.electric_potential is not None:
-            electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
-        else:
-            electric_potential_energy_mesh = np.zeros(self.mesh_shape)
+        electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
 
         # add the external potential to the Hamiltonian matrices and multiply them by i * tau to get them ready for the next steps
         hamiltonian_r, hamiltonian_theta = self.get_internal_hamiltonian_matrix_operators()
@@ -979,9 +984,6 @@ class SphericalSliceMesh(QuantumMesh):
         g_vector = cy.tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'theta')
 
-        if self.spec.mask is not None:
-            self.g_mesh *= self.spec.mask(r = self.r_mesh)
-            logger.debug('Applied mask {} to g_mesh for {} {}'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name))
 
     @cp.utils.memoize
     def get_mesh_slicer(self, distance_from_center = None):
@@ -1060,9 +1062,6 @@ class SphericalSliceMesh(QuantumMesh):
 
 
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
-    evolution_equations = cp.utils.RestrictedValues('evolution_equations', {'L', 'H'})
-    evolution_method = cp.utils.RestrictedValues('evolution_method', {'CN', 'SO'})
-
     def __init__(self, name,
                  r_bound = 20 * bohr_radius,
                  r_points = 2 ** 9,
@@ -1321,27 +1320,10 @@ class SphericalHarmonicMesh(QuantumMesh):
     def get_probability_current_vector_field(self):
         raise NotImplementedError
 
-    def evolve(self, time_step):
-        pre_evolve_norm = self.norm
-        getattr(self, '_evolve_' + self.spec.evolution_method)(time_step)
-        norm_diff_evolve = pre_evolve_norm - self.norm
-        if norm_diff_evolve / pre_evolve_norm > .001:
-            logger.warning('Evolution may be dangerously non-unitary, norm decreased by {} ({} %) during evolution step'.format(norm_diff_evolve, norm_diff_evolve / pre_evolve_norm))
-
-        if self.spec.mask is not None:
-            pre_mask_norm = self.norm
-            self.g_mesh *= self.spec.mask(r = self.r_mesh)
-            norm_diff_mask = pre_mask_norm - self.norm
-            logger.debug('Applied mask {} to g_mesh for {} {}, removing {} norm'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name, norm_diff_mask))
-            return norm_diff_mask
-
     def _evolve_CN(self, time_step):
         tau = time_step / (2 * hbar)
 
-        if self.spec.electric_potential is not None:
-            electric_field_amplitude = self.spec.electric_potential.get_amplitude(self.sim.time)
-        else:
-            electric_field_amplitude = 0
+        electric_field_amplitude = self.spec.electric_potential.get_electric_field_amplitude(self.sim.time)
         l_multiplier = self.spec.test_charge * electric_field_amplitude
 
         hamiltonian_r, hamiltonian_l = self._get_internal_hamiltonian_matrix_operators()
@@ -1400,10 +1382,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     def _evolve_SO(self, time_step):
         tau = time_step / (2 * hbar)
 
-        if self.spec.electric_potential is not None:
-            electric_field_amplitude = self.spec.electric_potential.get_amplitude(self.sim.time)
-        else:
-            electric_field_amplitude = 0
+        electric_field_amplitude = self.spec.electric_potential.get_electric_field_amplitude(self.sim.time)
         l_multiplier = self.spec.test_charge * electric_field_amplitude
 
         hamiltonian_r, hamiltonian_l = self._get_internal_hamiltonian_matrix_operators()
@@ -1654,8 +1633,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         for state in self.spec.test_states:
             self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(self.mesh.g_for_state(state))
 
-        if self.spec.electric_potential is not None:
-            self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_amplitude(t = self.times[time_index])
+        self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.times[time_index])
 
         if 'l' in self.mesh.mesh_storage_method:
             norm_by_l = self.mesh.norm_by_l
@@ -1731,7 +1709,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_overlaps = plt.subplot(grid_spec[0])
         ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
 
-        if self.spec.electric_potential is not None:
+        if not isinstance(self.spec.electric_potential, potentials.NoPotentialEnergy):
             ax_field.plot(self.times / x_scale_unit, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
 
         ax_overlaps.plot(self.times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3)
@@ -1811,7 +1789,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_momentums = plt.subplot(grid_spec[0])
         ax_field = plt.subplot(grid_spec[1], sharex = ax_momentums)
 
-        if self.spec.electric_potential is not None:
+        if not isinstance(self.spec.electric_potential, potentials.NoPotentialEnergy):
             ax_field.plot(self.times / asec, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
 
         if renormalize:
