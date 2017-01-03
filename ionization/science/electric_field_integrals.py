@@ -16,30 +16,37 @@ log = cp.utils.Logger('compy', 'ionization', stdout_level = logging.INFO, file_l
 
 if __name__ == '__main__':
     with log as logger:
-        pulse_width = 200
         fluence = 1
 
-        bound = 25
+        bound = 30
 
-        times = np.linspace(-bound * pulse_width * asec, bound * pulse_width * asec, 1e4)
+        for pulse_width in (50, 100, 200, 500, 1000):
+            times = np.linspace(-bound * pulse_width * asec, bound * pulse_width * asec, 1e4)
 
-        sinc_cos = ion.SincPulse(pulse_width = pulse_width * asec, fluence = fluence * J / (cm ** 2), phase = 'cos',
-                                 dc_correction_time = bound * pulse_width * asec)
-        sinc_sin = ion.SincPulse(pulse_width = pulse_width * asec, fluence = fluence * J / (cm ** 2), phase = 'sin')
+            window = ion.SymmetricExponentialTimeWindow(window_time = bound * pulse_width * asec, window_width = pulse_width * asec / 2)
 
-        field_prefactor = electron_charge  # convert to momentum
+            sinc_cos = ion.SincPulse(pulse_width = pulse_width * asec, fluence = fluence * J / (cm ** 2), phase = 'cos',
+                                     dc_correction_time = bound * pulse_width * asec,
+                                     window = window)
+            sinc_sin = ion.SincPulse(pulse_width = pulse_width * asec, fluence = fluence * J / (cm ** 2), phase = 'sin',
+                                     window = window)
 
-        cp.utils.xy_plot('pw={}as_flu={}Jcm2_field'.format(pulse_width, fluence), times,
-                         sinc_cos.get_electric_field_amplitude(times), sinc_sin.get_electric_field_amplitude(times),
-                         line_labels = ('Cos', 'Sin'),
-                         x_scale = 'asec', y_scale = 'atomic_electric_field',
-                         x_label = r'Time $t$', y_label = r'Electric Field $E(t)$',
-                         target_dir = OUT_DIR)
+            field_prefactor = electron_charge  # convert to momentum
 
-        cp.utils.xy_plot('pw={}as_flu={}Jcm2_integrated'.format(pulse_width, fluence), times,
-                         sinc_cos.get_total_electric_field_numeric(times) * field_prefactor,
-                         sinc_sin.get_total_electric_field_numeric(times) * field_prefactor,
-                         line_labels = ('Cos', 'Sin'),
-                         x_scale = 'asec', y_scale = atomic_momentum,
-                         x_label = r'Time $t$', y_label = r'$e \, \int^{t} E(\tau) \, \mathrm{d}\tau$',
-                         target_dir = OUT_DIR)
+            print(sinc_cos)
+            print(sinc_sin)
+
+            cp.utils.xy_plot('pw={}as_flu={}Jcm2_field'.format(pulse_width, fluence), times,
+                             sinc_cos.get_electric_field_amplitude(times), sinc_sin.get_electric_field_amplitude(times),
+                             line_labels = ('Cos', 'Sin'),
+                             x_scale = 'asec', y_scale = 'atomic_electric_field',
+                             x_label = r'Time $t$', y_label = r'Electric Field $E(t)$',
+                             target_dir = OUT_DIR)
+
+            cp.utils.xy_plot('pw={}as_flu={}Jcm2_integrated'.format(pulse_width, fluence), times,
+                             sinc_cos.get_total_electric_field_numeric(times) * field_prefactor,
+                             sinc_sin.get_total_electric_field_numeric(times) * field_prefactor,
+                             line_labels = ('Cos', 'Sin'),
+                             x_scale = 'asec', y_scale = 'atomic_momentum',
+                             x_label = r'Time $t$', y_label = r'$e \, \int_{-\infty}^{t} E(\tau) \, \mathrm{d}\tau$',
+                             target_dir = OUT_DIR)

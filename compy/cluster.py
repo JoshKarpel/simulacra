@@ -52,8 +52,6 @@ class ClusterInterface:
 
         self.ftp = None
 
-        self.remote_home_dir = None
-
     def __enter__(self):
         """Open the SSH and FTP connections."""
         self.ssh.connect(self.remote_host, username = self.username, key_filename = self.key_path)
@@ -91,7 +89,7 @@ class ClusterInterface:
         return CmdOutput(stdin, stdout, stderr)
 
     @utils.cached_property
-    def get_remote_home_dir(self):
+    def remote_home_dir(self):
         cmd_output = self.cmd('pwd')  # print name of home dir to stdout
 
         home_path = str(cmd_output.stdout.readline()).strip('\n')  # extract path of home dir from stdout
@@ -210,7 +208,7 @@ class ClusterInterface:
         start_time = dt.datetime.now()
         logger.info('Mirroring remote home directory')
 
-        self.walk_remote_path(self.get_remote_home_dir(), func_on_files = self.mirror_file, blacklist_dir_names = blacklist_dir_names, whitelist_file_ext = whitelist_file_ext)
+        self.walk_remote_path(self.remote_home_dir, func_on_files = self.mirror_file, blacklist_dir_names = blacklist_dir_names, whitelist_file_ext = whitelist_file_ext)
 
         end_time = dt.datetime.now()
         logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))
@@ -581,15 +579,16 @@ def format_chtc_submit_string(job_name, parameter_count, memory = 4, disk = 4, c
     return submit_string
 
 
-def specification_check(specifications):
+def specification_check(specifications, check = 3):
     print('Generated {} Specifications'.format(len(specifications)))
 
-    print('-' * 20)
-    print(specifications[0])
-    print(specifications[0].info())
-    print('-' * 20)
+    for s in specifications[0:check]:
+        print('-' * 20)
+        print(s)
+        print(s.info())
+        print('-' * 20)
 
-    check = ask_for_bool('Does the first Specification look correct?', default = 'No')
+    check = ask_for_bool('Do the first {} Specifications look correct?'.format(check), default = 'No')
     if not check:
         abort_job_creation()
 

@@ -28,7 +28,7 @@ def field_str(obj, *fields):
         try:
             field, unit_name = field
             field_strings.append('{} = {} {}'.format(field, uround(getattr(obj, field), unit_names_to_values[unit_name], 3), unit_name))
-        except ValueError:
+        except (ValueError, TypeError):
             field_strings.append('{} = {}'.format(field, getattr(obj, field)))
     return '{}({})'.format(obj.__class__.__name__, ', '.join(field_strings))
 

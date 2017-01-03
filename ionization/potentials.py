@@ -340,24 +340,24 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
         return self.omega_cutoff / twopi
 
     def __str__(self):
-        out = '{}(pulse width = {} as, pulse center = {} as, fluence = {} J/cm^2, phase = {}, largest photon energy = {} eV)'.format(self.__class__.__name__,
-                                                                                                                                     uround(self.pulse_width, asec, 3),
-                                                                                                                                     uround(self.pulse_center, asec, 3),
-                                                                                                                                     uround(self.fluence, J / (cm ** 2), 3),
-                                                                                                                                     self.phase,
-                                                                                                                                     uround(self.largest_photon_energy, eV, 3))
+        out = cp.utils.field_str(self,
+                                 ('pulse_width', 'asec'),
+                                 ('pulse_center', 'asec'),
+                                 ('fluence', 'J/cm^2'),
+                                 'phase',
+                                 ('largest_photon_energy', 'eV'),
+                                 ('dc_correction_time', 'asec'))
 
         return out + super(SincPulse, self).__str__()
 
     def __repr__(self):
-        out = '{}(pulse width = {}, pulse center = {}, fluence = {}, phase = {}, window = {})'.format(self.__class__.__name__,
-                                                                                                      self.pulse_width,
-                                                                                                      self.pulse_center,
-                                                                                                      self.fluence,
-                                                                                                      self.phase,
-                                                                                                      repr(self.window))
-
-        return out
+        return cp.utils.field_str(self,
+                                  'pulse_width',
+                                  'pulse_center',
+                                  'fluence',
+                                  'phase',
+                                  'largest_photon_energy',
+                                  'dc_correction_time')
 
     def get_electric_field_amplitude(self, t):
         if self.phase == 'cos':

@@ -62,8 +62,8 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.test_mass = test_mass
         self.test_charge = test_charge
         self.initial_state = initial_state
-        self.test_states = tuple(test_states)  # consume input iterators
-        self.dipole_gauges = tuple(dipole_gauges)
+        self.test_states = tuple(sorted(test_states))  # consume input iterators
+        self.dipole_gauges = tuple(sorted(dipole_gauges))
 
         self.internal_potential = internal_potential
         self.electric_potential = electric_potential
@@ -104,21 +104,24 @@ class ElectricFieldSpecification(cp.core.Specification):
 
         time_evolution = ['Time Evolution:',
                           '   Initial State: {}'.format(self.initial_state),
-                          '   Initial Time: {} as'.format(uround(self.time_initial, asec, 3)),
-                          '   Final Time: {} as'.format(uround(self.time_final, asec, 3)),
-                          '   Time Step: {} as'.format(uround(self.time_step, asec, 3))]
+                          '   Initial Time: {} as'.format(uround(self.time_initial, asec)),
+                          '   Final Time: {} as'.format(uround(self.time_final, asec)),
+                          '   Time Step: {} as'.format(uround(self.time_step, asec))]
 
         if self.minimum_time_final is not 0:
-            time_evolution += ['   Minimum Final Time: {} as'.format(uround(self.minimum_time_final, asec, 3)),
-                               '   Extra Time Step: {} as'.format(uround(self.extra_time_step, asec, 3))]
+            time_evolution += ['   Minimum Final Time: {} as'.format(uround(self.minimum_time_final, asec)),
+                               '   Extra Time Step: {} as'.format(uround(self.extra_time_step, asec))]
 
         potentials = ['Potentials and Masks:']
-        # potentials += ['   ' + str(potential) for potential in self.internal_potential]
-        # potentials += ['   ' + str(potential) for potential in self.electric_potential]
-        # potentials += ['   ' + str(mask) for mask in self.mask]
         potentials += ['   {}'.format(x) for x in it.chain(self.internal_potential, self.electric_potential, self.mask)]
 
-        return '\n'.join(checkpoint + animation + time_evolution + potentials)
+        analysis = ['Analysis:',
+                    '   Test Charge: {} e'.format(uround(self.test_charge, proton_charge)),
+                    '   Test Mass: {} m_e'.format(uround(self.test_mass, electron_mass)),
+                    '   Test States: {}'.format(self.test_states),
+                    '   Dipole Gauges: {}'.format(self.dipole_gauges)]
+
+        return '\n'.join(checkpoint + animation + time_evolution + potentials + analysis)
 
 
 class QuantumMesh:

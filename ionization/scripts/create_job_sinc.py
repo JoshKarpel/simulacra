@@ -46,19 +46,24 @@ if __name__ == '__main__':
         # get input from the user to define the job
         spec_type, mesh_kwargs = clu.ask_mesh_type()
 
-        parameters.append(clu.Parameter(name = 'initial_state',
-                                        value = ion.HydrogenBoundState(clu.ask_for_input('Initial State n?', default = 1, cast_to = int),
-                                                                       clu.ask_for_input('Initial State l?', default = 0, cast_to = int))))
+        initial_state = clu.Parameter(name = 'initial_state',
+                                      value = ion.HydrogenBoundState(clu.ask_for_input('Initial State n?', default = 1, cast_to = int),
+                                                                     clu.ask_for_input('Initial State l?', default = 0, cast_to = int)))
+        parameters.append(initial_state)
 
-        largest_n = clu.ask_for_input('Largest Bound State n to Overlap With?', default = 5, cast_to = int)
-        parameters.append(clu.Parameter(name = 'test_states',
-                                        value = tuple(ion.HydrogenBoundState(n, l) for n in range(largest_n + 1) for l in range(n))))
+        if clu.ask_for_bool('Overlap only with initial state?', default = 'yes'):
+            parameters.append(clu.Parameter(name = 'test_states',
+                                            value = [initial_state.value]))
+        else:
+            largest_n = clu.ask_for_input('Largest Bound State n to Overlap With?', default = 5, cast_to = int)
+            parameters.append(clu.Parameter(name = 'test_states',
+                                            value = tuple(ion.HydrogenBoundState(n, l) for n in range(largest_n + 1) for l in range(n))))
 
         parameters.append(clu.Parameter(name = 'time_step',
                                         value = asec * clu.ask_for_input('Time Step (in as)?', default = 1, cast_to = float)))
 
         time_bound_in_pw = clu.Parameter(name = 'time_bound_in_pw',
-                                         value = clu.ask_for_input('Time Bound (in pulse widths)?', default = 20, cast_to = float))
+                                         value = clu.ask_for_input('Time Bound (in pulse widths)?', default = 30, cast_to = float))
         parameters.append(time_bound_in_pw)
 
         minimum_time_final = clu.Parameter(name = 'minimum_time_final',
@@ -100,9 +105,9 @@ if __name__ == '__main__':
         pulse_parameters.append(fluence)
 
         window_time_in_pw = clu.Parameter(name = 'window_time_in_pw',
-                                          value = clu.ask_for_input('TimeWindow Time (in pulse widths)?', default = time_bound_in_pw.value - 1, cast_to = float))
+                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 1, cast_to = float))
         window_width_in_pw = clu.Parameter(name = 'window_width_in_pw',
-                                           value = clu.ask_for_input('TimeWindow Width (in pulse widths)?', default = 0.5, cast_to = float))
+                                           value = clu.ask_for_input('Window Width (in pulse widths)?', default = 0.5, cast_to = float))
         parameters.append(window_time_in_pw)
         parameters.append(window_width_in_pw)
 
@@ -126,6 +131,9 @@ if __name__ == '__main__':
                              file_name = str(ii),
                              time_initial = -time_bound, time_final = time_bound,
                              **mesh_kwargs, **spec_kwargs)
+
+            if spec.electric_potential.phase == 'cos':
+                spec.electric_potential.dc_correction_time = spec.time_final
 
             specs.append(spec)
 

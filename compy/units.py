@@ -290,29 +290,38 @@ MJ = 1e6 * J
 GJ = 1e9 * J
 TJ = 1e12 * J
 PJ = 1e15 * J
+Jcm2 = J / (cm ** 2)
 
-unit_names_to_values.update({'J': J,
-                             'mJ': mJ,
-                             'uJ': uJ,
-                             'nJ': nJ,
-                             'pJ': pJ,
-                             'fJ': fJ,
-                             'kJ': kJ,
-                             'MJ': MJ,
-                             'GJ': GJ,
-                             'TJ': TJ,
-                             'PJ': PJ})
-unit_names_to_tex_strings.update({'J': r'$\mathrm{J}$',
-                                  'mJ': r'$\mathrm{mJ}$',
-                                  'uJ': r'$\mathrm{uJ}$',
-                                  'nJ': r'$\mathrm{nJ}$',
-                                  'pJ': r'$\mathrm{pJ}$',
-                                  'fJ': r'$\mathrm{fJ}$',
-                                  'kJ': r'$\mathrm{kJ}$',
-                                  'MJ': r'$\mathrm{MJ}$',
-                                  'GJ': r'$\mathrm{GJ}$',
-                                  'TJ': r'$\mathrm{TJ}$',
-                                  'PJ': r'$\mathrm{PJ}$'})
+unit_names_to_values.update({
+    'J': J,
+    'mJ': mJ,
+    'uJ': uJ,
+    'nJ': nJ,
+    'pJ': pJ,
+    'fJ': fJ,
+    'kJ': kJ,
+    'MJ': MJ,
+    'GJ': GJ,
+    'TJ': TJ,
+    'PJ': PJ,
+    'J/cm^2': Jcm2,
+    'Jcm2': Jcm2,
+})
+unit_names_to_tex_strings.update({
+    'J': r'$\mathrm{J}$',
+    'mJ': r'$\mathrm{mJ}$',
+    'uJ': r'$\mathrm{uJ}$',
+    'nJ': r'$\mathrm{nJ}$',
+    'pJ': r'$\mathrm{pJ}$',
+    'fJ': r'$\mathrm{fJ}$',
+    'kJ': r'$\mathrm{kJ}$',
+    'MJ': r'$\mathrm{MJ}$',
+    'GJ': r'$\mathrm{GJ}$',
+    'TJ': r'$\mathrm{TJ}$',
+    'PJ': r'$\mathrm{PJ}$',
+    'J/cm^2': r'$\mathrm{J/cm^2}$',
+    'Jcm2': r'$\mathrm{J/cm^2}$'
+})
 
 # voltage
 V = 1 * J / C
