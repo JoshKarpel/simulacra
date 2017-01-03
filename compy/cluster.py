@@ -9,6 +9,7 @@ import stat
 import subprocess
 import itertools as it
 import hashlib
+import pickle
 from copy import copy, deepcopy
 from collections import OrderedDict, defaultdict
 
@@ -214,48 +215,48 @@ class ClusterInterface:
         logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))
 
 
-class JobProcessorManager:
-    def __init__(self, jobs_dir):
-        self.jobs_dir = os.path.abspath(jobs_dir)
-
-    @property
-    def job_dir_names(self):
-        return (name for name in sorted(os.listdir(self.jobs_dir)) if os.path.isdir(os.path.join(self.jobs_dir, name)))
-
-    @property
-    def job_dir_paths(self):
-        return (os.path.abspath(os.path.join(self.jobs_dir, name)) for name in self.job_dir_names)
-
-    def process_job(self, job_name, job_dir_path, individual_processing = False, force_reprocess = False):
-        # try to find an existing job processor for the job
-        try:
-            try:
-                if force_reprocess:
-                    raise FileNotFoundError  # if force reprocessing, pretend like we haven't found the job
-                jp = JobProcessor.load(os.path.join(job_dir_path, '{}.job'.format(job_name)))
-            except (AttributeError, TypeError):
-                raise FileNotFoundError  # if something goes wrong, pretend like we haven't found it
-        except (FileNotFoundError, EOFError, ImportError):
-            job_info_path = os.path.join(job_dir_path, '{}_info.json'.format(job_name))
-            with open(job_info_path, mode = 'r') as f:
-                job_info = json.load(f)
-            jp = job_info['job_processor'](job_name, job_dir_path)  # TODO: this won't work maybe?
-
-        jp.process_job(individual_processing = individual_processing)  # try to detect if jp is from previous version and won't work, maybe catch attribute access exceptions?
-
-    def process_jobs(self, individual_processing = False):
-        start_time = dt.datetime.now()
-        logger.info('Processing jobs')
-
-        for job_name, job_dir_path in zip(self.job_dir_names, self.job_dir_paths):
-            try:
-                self.process_job(job_name, job_dir_path, individual_processing = individual_processing)
-            except Exception as e:
-                logger.exception(e)
-                raise e
-
-        end_time = dt.datetime.now()
-        logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
+# class JobProcessorManager:
+#     def __init__(self, jobs_dir):
+#         self.jobs_dir = os.path.abspath(jobs_dir)
+#
+#     @property
+#     def job_dir_names(self):
+#         return (name for name in sorted(os.listdir(self.jobs_dir)) if os.path.isdir(os.path.join(self.jobs_dir, name)))
+#
+#     @property
+#     def job_dir_paths(self):
+#         return (os.path.abspath(os.path.join(self.jobs_dir, name)) for name in self.job_dir_names)
+#
+#     def process_job(self, job_name, job_dir_path, individual_processing = False, force_reprocess = False):
+#         # try to find an existing job processor for the job
+#         try:
+#             try:
+#                 if force_reprocess:
+#                     raise FileNotFoundError  # if force reprocessing, pretend like we haven't found the job
+#                 jp = JobProcessor.load(os.path.join(job_dir_path, '{}.job'.format(job_name)))
+#             except (AttributeError, TypeError):
+#                 raise FileNotFoundError  # if something goes wrong, pretend like we haven't found it
+#         except (FileNotFoundError, EOFError, ImportError):
+#             job_info_path = os.path.join(job_dir_path, '{}_info.json'.format(job_name))
+#             with open(job_info_path, mode = 'r') as f:
+#                 job_info = json.load(f)
+#             jp = job_info['job_processor'](job_name, job_dir_path)  # TODO: this won't work maybe?
+#
+#         jp.process_job(individual_processing = individual_processing)  # try to detect if jp is from previous version and won't work, maybe catch attribute access exceptions?
+#
+#     def process_jobs(self, individual_processing = False):
+#         start_time = dt.datetime.now()
+#         logger.info('Processing jobs')
+#
+#         for job_name, job_dir_path in zip(self.job_dir_names, self.job_dir_paths):
+#             try:
+#                 self.process_job(job_name, job_dir_path, individual_processing = individual_processing)
+#             except Exception as e:
+#                 logger.exception(e)
+#                 raise e
+#
+#         end_time = dt.datetime.now()
+#         logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
 
 
 class JobProcessor(utils.Beet):
@@ -267,10 +268,9 @@ class JobProcessor(utils.Beet):
         self.plots_dir = os.path.join(self.job_dir_path, 'plots')
         self.movies_dir = os.path.join(self.job_dir_path, 'movies')
 
-        sim_names = [f.strip('.spec') for f in os.listdir(self.input_dir)]
-        self.sim_names = sorted(sim_names, key = int)
+        self.sim_names = self.get_sim_names()
         self.sim_count = len(self.sim_names)
-        self.unprocessed_sims = set(self.sim_names)
+        self.unprocessed_sim_names = set(self.sim_names)
 
         self.data = OrderedDict((sim_name, {}) for sim_name in self.sim_names)
         self.parameter_sets = defaultdict(set)
@@ -278,7 +278,10 @@ class JobProcessor(utils.Beet):
         self.simulation_type = simulation_type
 
     def __str__(self):
-        return '{} for job {}, processed {}/{} Simulations'.format(self.__class__.__name__, self.name, self.sim_count - len(self.unprocessed_sims), self.sim_count)
+        return '{} for job {}, processed {}/{} Simulations'.format(self.__class__.__name__, self.name, self.sim_count - len(self.unprocessed_sim_names), self.sim_count)
+
+    def get_sim_names(self):
+        return sorted([f.strip('.spec') for f in os.listdir(self.input_dir)], key = int)
 
     def save(self, target_dir = None, file_extension = '.job'):
         return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
@@ -328,20 +331,25 @@ class JobProcessor(utils.Beet):
 
         return sim
 
-    def process_job(self, individual_processing = False):
+    def process_job(self, individual_processing = False, force_reprocess = False):
         start_time = dt.datetime.now()
         logger.info('Loading simulations from job {}'.format(self.name))
 
-        for sim_name in tqdm(copy(self.unprocessed_sims)):
+        if force_reprocess:
+            sim_names = tqdm(copy(self.sim_names))
+        else:
+            sim_names = tqdm(copy(self.unprocessed_sim_names))
+
+        for sim_name in sim_names:
             sim = self.load_sim(sim_name)
             if sim is not None:
                 self.collect_data_from_sim(sim_name, sim)
                 if individual_processing:
                     self.process_sim(sim_name, sim)
-                self.unprocessed_sims.remove(sim_name)
+                self.unprocessed_sim_names.remove(sim_name)
 
         end_time = dt.datetime.now()
-        logger.info('Finished loading simulations from job {}. Failed to find {} / {} sims. Elapsed time: {}'.format(self.name, len(self.unprocessed_sims), self.sim_count, end_time - start_time))
+        logger.info('Finished loading simulations from job {}. Failed to find {} / {} sims. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, end_time - start_time))
 
     def write_to_csv(self):
         raise NotImplementedError
@@ -612,9 +620,14 @@ def write_submit_file(submit_string, job_dir):
     logger.debug('Saved submit file')
 
 
-def write_job_info(job_info, job_dir):
-    with open(os.path.join(job_dir, 'info.json'), mode = 'w') as f:
-        json.dump(job_info, f)
+def write_job_info_to_file(job_info, job_dir):
+    with open(os.path.join(job_dir, 'info.pkl'), mode = 'wb') as f:
+        pickle.dump(job_info, f, protocol = -1)
+
+
+def load_job_info_from_file(job_dir):
+    with open(os.path.join(job_dir, 'info.pkl'), mode = 'rb') as f:
+        return pickle.load(f)
 
 
 def submit_job(job_dir):
