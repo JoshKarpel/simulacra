@@ -9,6 +9,7 @@ import stat
 import subprocess
 import itertools as it
 import hashlib
+import pickle
 from copy import copy, deepcopy
 from collections import OrderedDict, defaultdict
 
@@ -612,9 +613,14 @@ def write_submit_file(submit_string, job_dir):
     logger.debug('Saved submit file')
 
 
-def write_job_info(job_info, job_dir):
-    with open(os.path.join(job_dir, 'info.json'), mode = 'w') as f:
-        json.dump(job_info, f)
+def write_job_info_to_file(job_info, job_dir):
+    with open(os.path.join(job_dir, 'info.pkl'), mode = 'wb') as f:
+        pickle.dump(job_info, f, protocol = -1)
+
+
+def load_job_info_from_file(job_dir):
+    with open(os.path.join(job_dir, 'info.pkl'), mode = 'rb') as f:
+        return pickle.load(f)
 
 
 def submit_job(job_dir):

@@ -151,7 +151,7 @@ if __name__ == '__main__':
                     'specification_type': specs[0].__class__.__name__,
                     'external_potential_type': specs[0].electric_potential.__class__.__name__,
                     }
-        clu.write_job_info(job_info, job_dir)
+        clu.write_job_info_to_file(job_info, job_dir)
 
         clu.write_submit_file(submit_string, job_dir)
 
