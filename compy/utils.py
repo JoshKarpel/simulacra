@@ -10,6 +10,7 @@ import pickle
 import sys
 import uuid
 from copy import deepcopy
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -647,3 +648,28 @@ def file_size(file_path):
     if os.path.isfile(file_path):
         file_info = os.stat(file_path)
         return convert_bytes(file_info.st_size)
+
+
+def try_loop(*functions_to_run,
+             wait_after_success = dt.timedelta(hours = 1), wait_after_failure = dt.timedelta(minutes = 1),
+             begin_text = 'Beginning', complete_text = 'Complete'):
+    latest_sync_time = None
+    while True:
+        if latest_sync_time is None or dt.datetime.now() - latest_sync_time > wait_after_success:
+            try:
+                start_time = dt.datetime.now()
+                logger.info(begin_text)
+
+                for f in functions_to_run:
+                    f()
+
+                end_time = dt.datetime.now()
+                logger.info(complete_text + '. Elapsed time: {}'.format(end_time - start_time))
+
+                latest_sync_time = end_time
+                logger.info('Next loop cycle at ~{}'.format(latest_sync_time + wait_after_success))
+            except (FileNotFoundError, PermissionError, TimeoutError) as e:
+                logger.exception('Exception encountered')
+                logger.warning('Loop cycle failed, retrying in {} seconds'.format(wait_after_failure.total_seconds()))
+
+        time.sleep(wait_after_failure.total_seconds())
