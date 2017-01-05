@@ -464,6 +464,8 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
                          x_label = r'Wavelength $\lambda$', **kwargs)
 
     def plot_electric_field_vs_time(self, x_scale = 'fs', y_scale = None, find_center = True, x_lower_lim = -200 * fsec, x_upper_lim = 200 * fsec, **kwargs):
+        # TODO: make this use xy_plot
+
         fit_result, fft_result = self.fit_pulse()
 
         t_center, sigma, prefactor, _ = fit_result
@@ -516,6 +518,10 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
         axis.legend(loc = 'best', fontsize = 12)
+
+        print(kwargs.keys())
+        csv_path = os.path.join(kwargs['target_dir'], '{}__electric_field_vs_time_{}.csv'.format(self.name, kwargs['name_postfix']))
+        np.savetxt(csv_path, (t, field), delimiter = ',')
 
         cp.utils.save_current_figure(name = '{}__electric_field_vs_time'.format(self.name), **kwargs)
 

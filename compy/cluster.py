@@ -346,7 +346,7 @@ class JobProcessor(utils.Beet):
                 self.collect_data_from_sim(sim_name, sim)
                 if individual_processing:
                     self.process_sim(sim_name, sim)
-                self.unprocessed_sim_names.remove(sim_name)
+                self.unprocessed_sim_names.discard(sim_name)
 
         end_time = dt.datetime.now()
         logger.info('Finished loading simulations from job {}. Failed to find {} / {} sims. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, end_time - start_time))

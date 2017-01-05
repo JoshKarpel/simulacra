@@ -18,10 +18,17 @@ if __name__ == '__main__':
         print(free_state)
         print(repr(free_state))
 
+        animators = [ion.animators.SphericalHarmonicAnimator(target_dir = OUT_DIR),
+                     ion.animators.SphericalHarmonicAnimator(postfix = '30', target_dir = OUT_DIR, plot_limit = 30 * bohr_radius),
+                     ion.animators.SphericalHarmonicAnimator(postfix = '100', target_dir = OUT_DIR, plot_limit = 100 * bohr_radius)
+                     ]
+
         spec = ion.SphericalHarmonicSpecification('free_state',
-                                                  r_bound = 200 * bohr_radius, r_points = 2 ** 10,
+                                                  r_bound = 200 * bohr_radius, r_points = 200 * 4, l_points = 100,
                                                   internal_potential = ion.NoPotentialEnergy(),
-                                                  initial_state = free_state)
+                                                  initial_state = free_state,
+                                                  # animators = animators
+                                                  )
 
         sim = spec.to_simulation()
 
