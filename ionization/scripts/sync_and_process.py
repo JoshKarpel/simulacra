@@ -53,12 +53,10 @@ def process_jobs(jobs_dir):
         process_job(job_name, jobs_dir = jobs_dir)
 
 
-
-
 if __name__ == '__main__':
     with cp.utils.Logger('__main__', 'compy', 'ionization',
                          stdout_logs = True, stdout_level = logging.INFO,
-                         file_logs = True, file_level = logging.WARNING, file_name = 'syncinc', file_dir = 'logs'):
+                         file_logs = True, file_level = logging.WARNING, file_name = '{}_{}'.format(__file__, dt.date.today().strftime('%Y-%M-%D')), file_dir = 'logs'):
         try:
             CI = clu.ClusterInterface('submit-5.chtc.wisc.edu', username = 'karpel', key_path = 'E:\chtc_ssh_private')
             JOBS_DIR = "E:\Dropbox\Research\Cluster\cluster_mirror\home\karpel\jobs"

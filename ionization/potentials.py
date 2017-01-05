@@ -183,6 +183,14 @@ class UniformLinearlyPolarizedElectricField(PotentialEnergy):
         raise NotImplementedError
 
 
+class NoElectricField(UniformLinearlyPolarizedElectricField):
+    def __str__(self):
+        return self.__class__.__name__ + super(NoElectricField, self).__str__()
+
+    def get_electric_field_amplitude(self, t):
+        return 0 * super(NoElectricField, self).get_electric_field_amplitude(t)
+
+
 class Rectangle(UniformLinearlyPolarizedElectricField):
     def __init__(self, start_time = 0 * asec, end_time = 50 * asec, amplitude = 1 * atomic_electric_field, **kwargs):
         super(Rectangle, self).__init__(**kwargs)

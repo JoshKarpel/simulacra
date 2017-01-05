@@ -45,7 +45,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  test_states = tuple(states.HydrogenBoundState(n, l) for n in range(5) for l in range(n)),
                  dipole_gauges = ('length',),
                  internal_potential = potentials.Coulomb(charge = proton_charge),
-                 electric_potential = potentials.NoPotentialEnergy(),
+                 electric_potential = potentials.NoElectricField(),
                  mask = potentials.NoMask(),
                  evolution_method = 'CN', evolution_equations = 'H',
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
@@ -1146,14 +1146,17 @@ class SphericalHarmonicMesh(QuantumMesh):
 
     def flatten_mesh(self, mesh, flatten_along):
         """Return a mesh flattened along one of the mesh coordinates ('theta' or 'r')."""
-        if flatten_along == 'l':
-            flat = 'F'
-        elif flatten_along == 'r':
-            flat = 'C'
-        else:
-            raise ValueError("{} is not a valid specifier for flatten_mesh (valid specifiers: 'l', 'r')".format(flatten_along))
+        try:
+            if flatten_along == 'l':
+                flat = 'F'
+            elif flatten_along == 'r':
+                flat = 'C'
+            else:
+                raise ValueError("{} is not a valid specifier for flatten_mesh (valid specifiers: 'l', 'r')".format(flatten_along))
 
-        return mesh.flatten(flat)
+            return mesh.flatten(flat)
+        except AttributeError:  # occurs if the "mesh" is actually an int or float, in which case we should should just return it
+            return mesh
 
     def wrap_vector(self, mesh, wrap_along):
         if wrap_along == 'l':
@@ -1194,7 +1197,8 @@ class SphericalHarmonicMesh(QuantumMesh):
     def g_for_state(self, state):
         g = np.zeros(self.mesh_shape)
 
-        g[state.l, :] = state.radial_function(self.r) * self.g_factor
+        for s in state:
+            g[s.l, :] += s.radial_function(self.r) * self.g_factor
 
         return g
 
@@ -1674,9 +1678,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
                     if self.time_index == 0 or self.time_index == self.time_steps or self.time_index % animator.decimation == 0:
                         animator.send_frame_to_ffmpeg()
 
-                self.time_index += 1
-                if self.time_index == self.time_steps:
+                if self.time_index == self.time_steps - 1:
                     break
+
+                self.time_index += 1
 
                 norm_diff_mask = self.mesh.evolve(self.times[self.time_index] - self.times[self.time_index - 1])  # evolve the mesh forward to the next time step
                 self.norm_diff_mask_vs_time[self.time_index] = norm_diff_mask  # move to store data so it has the right index?

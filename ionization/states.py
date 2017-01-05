@@ -63,6 +63,99 @@ class Superposition(cp.Sum, QuantumState):
         self.states = list(s / norm for s in states)
 
 
+class FreeSphericalWave(QuantumState):
+    """A class that represents a free spherical wave."""
+
+    energy = cp.utils.Checked('energy', check = lambda x: x > 0)
+
+    def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
+        """
+        Construct a FreeState from its energy and angular momentum quantum numbers.
+
+        :param energy: energy of the free state
+        :param l: orbital angular momentum quantum number
+        :param m: quantum number for angular momentum z-component
+        """
+        super(FreeSphericalWave, self).__init__(amplitude = amplitude)
+
+        if any(int(x) != x for x in (l, m)):
+            raise IllegalQuantumState('l and m must be integers')
+
+        self.energy = energy
+
+        if l >= 0:
+            self._l = l
+        else:
+            raise IllegalQuantumState('l ({}) must be greater than or equal to zero'.format(l))
+
+        if -l <= m <= l:
+            self._m = m
+        else:
+            raise IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
+
+    @classmethod
+    def from_wavenumber(cls, k, l = 0, m = 0):
+        """Construct a FreeState from its wavenumber and angular momentum quantum numbers."""
+        energy = core.electron_energy_from_wavenumber(k)
+
+        return cls(energy, l, m)
+
+    @property
+    def k(self):
+        return core.electron_wavenumber_from_energy(self.energy)
+
+    @property
+    def l(self):
+        return self._l
+
+    @property
+    def m(self):
+        return self._m
+
+    @property
+    def spherical_harmonic(self):
+        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
+
+    def __str__(self):
+        return self.ket
+
+    def __repr__(self):
+        return '{}(energy = {} eV, k = {} 1/nm, l = {}, m = {}, amplitude = {})'.format(self.__class__.__name__, uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m, self.amplitude)
+
+    @property
+    def ket(self):
+        return '{}|{} eV, {} 1/nm, {}, {}>'.format(np.around(self.amplitude, 3), uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
+
+    @property
+    def bra(self):
+        return '{}<{} eV, {} 1/nm, {}, {}|'.format(np.around(self.amplitude, 3), uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
+
+    @property
+    def tex_str(self):
+        """Return a LaTeX-formatted string for the HydrogenFreeState."""
+        return r'\Psi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and (self.energy, self.l, self.m) == (other.energy, other.l, other.m)
+
+    def __hash__(self):
+        return hash((self.energy, self.l, self.m))
+
+    def radial_function(self, r):
+        return np.sqrt(2 * (self.k ** 2) / pi) * special.spherical_jn(self.l, self.k * r)
+
+    def __call__(self, r, theta, phi):
+        """
+        Evaluate the free spherical wave wavefunction at a point, or vectorized over an array of points.
+
+        :param r: radial coordinate
+        :param theta: polar coordinate
+        :param phi: azimuthal coordinate
+        :return: the value(s) of the wavefunction at (r, theta, phi)
+        """
+        return self.amplitude * self.radial_function(r) * self.spherical_harmonic(theta, phi)
+
+
 class HydrogenBoundState(QuantumState):
     """A class that represents a hydrogenic bound state."""
 
@@ -188,20 +281,15 @@ class HydrogenBoundState(QuantumState):
         :param phi: azimuthal coordinate
         :return: the value(s) of the wavefunction at (r, theta, phi)
         """
-        radial_part = self.radial_function(r)
-        sph_harm = self.spherical_harmonic(theta, phi)
-
-        return self.amplitude * radial_part * sph_harm
+        return self.amplitude * self.radial_function(r) * self.spherical_harmonic(theta, phi)
 
 
 class HydrogenFreeState(QuantumState):
     """A class that represents a hydrogenic free state."""
 
-    __slots__ = ('_energy', '_l', '_m')
-
     def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
         """
-        Construct a FreeState from its energy and angular momentum quantum numbers.
+        Construct a HydrogenFreeState from its energy and angular momentum quantum numbers.
 
         :param energy: energy of the free state
         :param l: orbital angular momentum quantum number
@@ -258,7 +346,7 @@ class HydrogenFreeState(QuantumState):
         return self.ket
 
     def __repr__(self):
-        return '{}(T = {} eV, k = {} 1/nm, l = {}, m = {}, amplitude = {})'.format(self.__class__.__name__, uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m, self.amplitude)
+        return '{}(energy = {} eV, k = {} 1/nm, l = {}, m = {}, amplitude = {})'.format(self.__class__.__name__, uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m, self.amplitude)
 
     @property
     def ket(self):

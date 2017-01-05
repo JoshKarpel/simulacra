@@ -202,7 +202,7 @@ class Beet:
 
         os.replace(file_path_working, file_path)
 
-        logger.info('Saved {} {} to {}'.format(self.__class__.__name__, self.name, file_path))
+        logger.debug('Saved {} {} to {}'.format(self.__class__.__name__, self.name, file_path))
 
         return file_path
 
@@ -217,7 +217,7 @@ class Beet:
         with gzip.open(file_path, mode = 'rb') as file:
             beet = pickle.load(file)
 
-        logger.info('Loaded {} {} from {}'.format(beet.__class__.__name__, beet.name, file_path))
+        logger.debug('Loaded {} {} from {}'.format(beet.__class__.__name__, beet.name, file_path))
 
         return beet
 
@@ -258,7 +258,7 @@ def save_current_figure(name, name_postfix = '', target_dir = None, img_format =
 
     plt.savefig(path, dpi = img_scale * plt.gcf().dpi, bbox_inches = 'tight', transparent = transparent)
 
-    logger.info('Saved matplotlib figure {} to {}'.format(name, path))
+    logger.debug('Saved matplotlib figure {} to {}'.format(name, path))
 
     return path
 
