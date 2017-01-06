@@ -38,7 +38,7 @@ if __name__ == '__main__':
                 sim_path = os.path.join(os.getcwd(), '{}.sim'.format(args.sim_name))
                 sim = cp.Simulation.load(sim_path)
                 logger.info('Checkpoint found at {}, recovered simulation {}'.format(sim_path, sim))
-                logger.debug('Checkpoint size is {}'.format(cp.utils.file_size(sim_path)))
+                logger.debug('Checkpoint size is {}'.format(cp.utils.get_file_size_as_string(sim_path)))
             except (FileNotFoundError, EOFError):
                 sim = cp.Specification.load(os.path.join(os.getcwd(), '{}.spec'.format(args.sim_name))).to_simulation()
                 logger.info('Checkpoint not found, beginning simulation {}'.format(sim))

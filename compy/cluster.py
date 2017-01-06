@@ -295,6 +295,7 @@ class JobProcessor(utils.Beet):
             'end_time': sim.end_time,
             'elapsed_time': sim.elapsed_time.total_seconds(),
             'run_time': sim.run_time.total_seconds(),
+            'file_size': utils.get_file_size(os.path.join(self.output_dir, '{}.sim'.format(sim_name)))
         })
 
         for parameter, value in self.data[sim_name].items():

@@ -641,7 +641,11 @@ def convert_bytes(num):
         num /= 1024.0
 
 
-def file_size(file_path):
+def get_file_size(file_path):
+    return os.stat(file_path).st_size
+
+
+def get_file_size_as_string(file_path):
     """
     this function will return the file size as a string
     """
