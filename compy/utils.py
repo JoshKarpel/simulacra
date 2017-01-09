@@ -11,6 +11,7 @@ import sys
 import uuid
 from copy import deepcopy
 import time
+import psutil
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -677,3 +678,11 @@ def try_loop(*functions_to_run,
                 logger.warning('Loop cycle failed, retrying in {} seconds'.format(wait_after_failure.total_seconds()))
 
         time.sleep(wait_after_failure.total_seconds())
+
+
+def get_process_by_name(process_name):
+    for proc in psutil.process_iter():
+        if proc.name() == process_name:
+            return proc
+
+    raise ProcessLookupError('No process with name "{}" found'.format(process_name))

@@ -4,3 +4,4 @@ cycler
 matplotlib
 paramiko
 tqdm
+psutil

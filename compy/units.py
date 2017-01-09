@@ -13,6 +13,21 @@ def uround(value, units = 1, digits = 3):
     return _np.around(value / units, digits)
 
 
+def unit_value_and_name_from_unit(unit):
+    """
+
+    :param unit:
+    :return:
+    """
+    if type(unit) == str:
+        unit = unit_names_to_values[unit]
+        unit_name = unit_names_to_tex_strings[unit]
+    else:
+        unit_name = ''
+
+    return unit, unit_name
+
+
 # dimensionless constants
 alpha = 7.2973525664e-3
 pi = _np.pi
