@@ -5,6 +5,7 @@ import datetime as dt
 import logging
 import argparse
 import functools as ft
+import psutil
 from pprint import pprint
 
 import compy as cp
@@ -53,16 +54,32 @@ def process_jobs(jobs_dir):
         process_job(job_name, jobs_dir = jobs_dir)
 
 
+def suspend_process(process):
+    process.suspend()
+    logger.info('Suspended {}'.format(process))
+
+
+def resume_process(process):
+    process.resume()
+    logger.info('Resumed {}'.format(process))
+
+
 if __name__ == '__main__':
     with cp.utils.Logger('__main__', 'compy', 'ionization',
                          stdout_logs = True, stdout_level = logging.INFO,
-                         file_logs = True, file_level = logging.WARNING, file_name = '{}_{}'.format(__file__, dt.date.today().strftime('%Y-%M-%D')), file_dir = 'logs'):
+                         file_logs = True, file_level = logging.WARNING, file_name = '{}_{}'.format(__file__, dt.date.today().strftime('%Y-%m-%d_%H_%M_%S')), file_dir = 'logs'):
+        dropbox_process = cp.utils.get_process_by_name('Dropbox.exe')
+
         try:
             CI = clu.ClusterInterface('submit-5.chtc.wisc.edu', username = 'karpel', key_path = 'E:\chtc_ssh_private')
             JOBS_DIR = "E:\Dropbox\Research\Cluster\cluster_mirror\home\karpel\jobs"
 
-            cp.utils.try_loop(ft.partial(synchronize_with_cluster, CI),
-                              ft.partial(process_jobs, JOBS_DIR))
+            cp.utils.try_loop(ft.partial(suspend_process, dropbox_process),
+                              ft.partial(synchronize_with_cluster, CI),
+                              ft.partial(process_jobs, JOBS_DIR),
+                              ft.partial(resume_process, dropbox_process))
         except Exception as e:
             logger.exception(e)
             raise e
+        finally:
+            resume_process(dropbox_process)

@@ -16,6 +16,82 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+class MetricsAndElectricField(cp.AxisManager):
+    def __init__(self, *args, time_unit = 'asec', metrics = ('norm',), **kwargs):
+        super(MetricsAndElectricField, self).__init__(*args, **kwargs)
+
+        if type(time_unit) == str:
+            self.time_unit_str = unit_names_to_tex_strings[time_unit]
+            self.time_unit = unit_names_to_values[time_unit]
+        else:
+            self.time_unit_str = ''
+            self.time_unit = time_unit
+
+        self.metrics = metrics
+
+    def initialize(self):
+        self.time_line, = self.axis.plot([self.sim.times[self.sim.time_index] / asec, self.sim.times[self.sim.time_index] / asec], [0, 1],
+                                         color = 'gray',
+                                         animated = True)
+
+        for metric in self.metrics:
+            self.__getattribute__('_initialize_metric_' + metric)
+
+        self.axis.grid(True)
+
+        self.axis.set_xlabel('Time $t$ (as)', fontsize = 24)
+        self.axis.set_ylabel('Ionization Metric', fontsize = 24)
+
+        self.axis.set_xlim(self.sim.times[0] / asec, self.sim.times[-1] / asec)
+        self.axis.set_ylim(-.01, 1.01)
+
+        # self.axis.tick_params(labelleft = left_tick_labels, labelright = right_tick_labels)
+        self.axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
+
+        # if label_right:
+        #     self.axis.yaxis.set_label_position('right')
+
+    def _initialize_metric_norm(self):
+        self.norm_line, = self.axis.plot(self.sim.times / asec, self.sim.norm_vs_time,
+                                         label = r'$\left\langle \psi|\psi \right\rangle$',
+                                         color = 'black', linewidth = 3,
+                                         animated = True)
+
+    def _initialize_metric_initial_state_overlap(self):
+        raise NotImplementedError
+
+    def _initialize_metric_test_state_overlaps(self):
+        self.overlaps_stackplot = self.axis.stackplot(self.sim.times / asec, *self._compute_stackplot_overlaps(),
+                                                      labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$',
+                                                                r'$\left| \left\langle \psi|\psi_{{n \leq {}}} \right\rangle \right|^2$'.format(max(self.sim.spec.test_states, key = lambda s: s.n).n)],
+                                                      colors = ['.3', '.5'],
+                                                      animated = True)
+
+    def _initialize_metric_total_test_state_overlaps(self):
+        raise NotImplementedError
+
+    def update(self):
+        for metric in self.metrics:
+            self.__getattribute__('_update_metric_' + metric)()
+
+    def _update_metric_norm(self):
+        self.norm_line.set_ydata(self.sim.norm_vs_time)
+
+    def _update_metric_initial_state_overlap(self):
+        raise NotImplementedError
+
+    def _update_metric_test_state_overlaps(self):
+        raise NotImplementedError
+
+    def _update_metric_total_test_state_overlaps(self):
+        raise NotImplementedError
+
+
+class QuantumMeshAxis(cp.AxisManager):
+    def __init__(self, renormalize = True):
+        self.renormalize = renormalize
+
+
 class QuantumMeshAnimator(cp.Animator):
     def __init__(self, plot_limit = None, renormalize = True, log_g = False, log_metrics = False, overlay_probability_current = False, **kwargs):
         super(QuantumMeshAnimator, self).__init__(**kwargs)
@@ -51,11 +127,11 @@ class QuantumMeshAnimator(cp.Animator):
                                                                                                                                                self.overlay_probability_current,
                                                                                                                                                self.sim)
 
-    def _update_data(self):
-        self._update_metric_axis()
-        self._update_mesh_axis()
-
-        super(QuantumMeshAnimator, self)._update_data()
+    # def _update_data(self):
+    #     self._update_metric_axis()
+    #     self._update_mesh_axis()
+    #
+    #     super(QuantumMeshAnimator, self)._update_data()
 
     def _make_metrics_axis(self, axis, label_right = False, left_tick_labels = True, right_tick_labels = True):
         """
@@ -140,6 +216,30 @@ class QuantumMeshAnimator(cp.Animator):
         raise NotImplementedError
 
 
+class LineAxis(cp.AxisManager):
+    def initialize(self):
+        self.mesh = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
+        self.redraw += [self.mesh]
+
+        if self.overlay_probability_current:
+            self.quiver = self.sim.mesh.attach_probability_current_quiver(self.axis, plot_limit = self.plot_limit, animated = True)
+            self.redraw += [self.quiver]
+
+        self.axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
+
+        self.axis.set_xlabel(r'$x$ (nm)', fontsize = 24)
+        self.axis.set_ylabel(r'$\left|g\right|^2$', fontsize = 24)
+
+        self.axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
+
+        self.axis.axis('tight')
+
+        self.redraw += [*self.axis.xaxis.get_gridlines(), *self.axis.yaxis.get_gridlines()]  # gridlines must be redrawn over the mesh (it's important that they're AFTER the mesh itself in self.redraw)
+
+    def update(self):
+        raise NotImplementedError
+
+
 class LineAnimator(QuantumMeshAnimator):
     def _initialize_figure(self):
         self.fig = plt.figure(figsize = (16, 12))
@@ -189,6 +289,14 @@ class LineAnimator(QuantumMeshAnimator):
             self.sim.mesh.update_probability_current_quiver(self.quiver, plot_limit = self.plot_limit)
         except AttributeError:
             pass
+
+
+class CylindricalSliceAxis(cp.AxisManager):
+    def draw(self):
+        raise NotImplementedError
+
+    def update(self):
+        raise NotImplementedError
 
 
 class CylindricalSliceAnimator(QuantumMeshAnimator):
@@ -245,6 +353,38 @@ class CylindricalSliceAnimator(QuantumMeshAnimator):
             self.sim.mesh.update_probability_current_quiver(self.quiver, plot_limit = self.plot_limit)
         except AttributeError:
             pass
+
+
+class PhiSlice(cp.AxisManager):
+    def initialize(self):
+        raise NotImplementedError
+
+    def update(self):
+        raise NotImplementedError
+
+
+class SphericalSlicePhiSlice(PhiSlice):
+    def initialize(self):
+        raise NotImplementedError
+
+    def update(self):
+        raise NotImplementedError
+
+
+class SphericalHarmonicPhiSlice(PhiSlice):
+    def initialize(self):
+        raise NotImplementedError
+
+    def update(self):
+        raise NotImplementedError
+
+
+class AngularMomentumDecomposition(cp.AxisManager):
+    def initialize(self):
+        raise NotImplementedError
+
+    def update(self):
+        raise NotImplementedError
 
 
 class PolarAnimator(QuantumMeshAnimator):
