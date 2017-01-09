@@ -16,7 +16,7 @@ if __name__ == '__main__':
         sim = ion.SphericalHarmonicSpecification('mask',
                                                  evolution_method = 'SO',
                                                  time_final = 200 * asec,
-                                                 r_bound = 50 * bohr_radius, r_points = 900,
+                                                 r_bound = 50 * bohr_radius, r_points = 50 * 8,
                                                  l_points = 50,
                                                  mask = mask).to_simulation()
 
