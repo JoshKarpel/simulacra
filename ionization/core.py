@@ -42,7 +42,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  mesh_type = None,
                  test_mass = electron_mass_reduced, test_charge = electron_charge,
                  initial_state = states.HydrogenBoundState(1, 0),
-                 test_states = tuple(states.HydrogenBoundState(n, l) for n in range(5) for l in range(n)),
+                 test_states = tuple(),
                  dipole_gauges = ('length',),
                  internal_potential = potentials.Coulomb(charge = proton_charge),
                  electric_potential = potentials.NoElectricField(),
@@ -250,7 +250,7 @@ class LineSpecification(ElectricFieldSpecification):
                  x_bound = 10 * nm,
                  x_points = 2 ** 9,
                  **kwargs):
-        super(LineSpecification, self).__init__(name, mesh_type = LineMesh, animator_type = animators.CylindricalSliceAnimator,
+        super(LineSpecification, self).__init__(name, mesh_type = LineMesh,
                                                 evolution_method = 'S',
                                                 **kwargs)
 
@@ -288,7 +288,7 @@ class LineMesh(QuantumMesh):
 
     @cp.utils.memoize
     def g_for_state(self, state):
-        return state(x = self.x_mesh)
+        return state(self.x_mesh)
 
     @property
     def energy_expectation_value(self):
