@@ -286,6 +286,10 @@ class LineMesh(QuantumMesh):
 
         self.free_evolution_prefactor = -1j * (hbar / (2 * self.spec.test_mass)) * (self.wavenumbers ** 2)
 
+    @property
+    def r_mesh(self):
+        return self.x_mesh
+
     @cp.utils.memoize
     def g_for_state(self, state):
         return state(x = self.x_mesh)

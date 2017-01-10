@@ -43,6 +43,25 @@ class QuantumState(cp.Summand):
     def __truediv__(self, other):
         return self * (1 / other)
 
+    @property
+    def tuple(self):
+        return 0
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.tuple == other.tuple
+
+    def __lt__(self, other):
+        return isinstance(other, self.__class__) and self.tuple < other.tuple
+
+    def __gt__(self, other):
+        return isinstance(other, self.__class__) and self.tuple > other.tuple
+
+    def __le__(self, other):
+        return isinstance(other, self.__class__) and self.tuple <= other.tuple
+
+    def __ge__(self, other):
+        return isinstance(other, self.__class__) and self.tuple >= other.tuple
+
 
 class Superposition(cp.Sum, QuantumState):
     """A class that represents a superposition of bound states."""
@@ -135,8 +154,24 @@ class FreeSphericalWave(QuantumState):
         """Return a LaTeX-formatted string for the HydrogenFreeState."""
         return r'\Psi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
 
+    @property
+    def tuple(self):
+        return self.k, self.l, self.m
+
     def __eq__(self, other):
-        return isinstance(other, self.__class__) and (self.energy, self.l, self.m) == (other.energy, other.l, other.m)
+        return isinstance(other, self.__class__) and self.tuple == other.tuple
+
+    def __lt__(self, other):
+        return isinstance(other, self.__class__) and self.tuple < other.tuple
+
+    def __gt__(self, other):
+        return isinstance(other, self.__class__) and self.tuple > other.tuple
+
+    def __le__(self, other):
+        return isinstance(other, self.__class__) and self.tuple <= other.tuple
+
+    def __ge__(self, other):
+        return isinstance(other, self.__class__) and self.tuple >= other.tuple
 
     def __hash__(self):
         return hash((self.energy, self.l, self.m))
@@ -436,9 +471,24 @@ class QHOState(QuantumState):
         """Return a LaTeX-formatted string for the QHOState."""
         return r'{}'.format(self.n)
 
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and (self.omega, self.mass, self.n) == (other.omega, other.mass, other.n)
+    @property
+    def tuple(self):
+        return self.n, self.mass, self.omega
 
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.tuple == other.tuple
+
+    def __lt__(self, other):
+        return isinstance(other, self.__class__) and self.tuple < other.tuple
+
+    def __gt__(self, other):
+        return isinstance(other, self.__class__) and self.tuple > other.tuple
+
+    def __le__(self, other):
+        return isinstance(other, self.__class__) and self.tuple <= other.tuple
+
+    def __ge__(self, other):
+        return isinstance(other, self.__class__) and self.tuple >= other.tuple
     def __hash__(self):
         return hash((self.omega, self.mass, self.n))
 

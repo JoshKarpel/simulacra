@@ -150,10 +150,11 @@ class AxisManager:
     def __init__(self, axis, simulation):
         self.axis = axis
         self.sim = simulation
+        self.spec = simulation.spec
 
         self.redraw = []
 
-        self.initialize()
+        self.redraw += [*self.axis.xaxis.get_gridlines(), *self.axis.yaxis.get_gridlines()]
 
     def initialize(self):
         raise NotImplementedError
@@ -236,7 +237,7 @@ class Animator:
 
         self._initialize_figure()  # call figure initialization hook
 
-        self.fig.canvas.initialize()
+        self.fig.canvas.draw()
         self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
         canvas_width, canvas_height = self.fig.canvas.get_width_height()
         self.cmdstring = ("ffmpeg",
@@ -268,12 +269,17 @@ class Animator:
 
         Make sure that any plot element that will be mutated during the animation is created using the animation = True keyword argument and has a reference in self.redraw.
         """
+        for ax in self.axis_managers:
+            ax.initialize()
 
         logger.debug('Initialized figure for {}'.format(self))
 
-    # def _update_data(self):
-    #     """Hook for a method to update the data for each animated figure element."""
-    #     logger.debug('{} updated data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
+    def _update_data(self):
+        """Hook for a method to update the data for each animated figure element."""
+        for ax in self.axis_managers:
+            ax.update()
+
+        logger.debug('{} updated data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
     def _redraw_frame(self):
         """Redraw the figure frame."""
@@ -281,11 +287,14 @@ class Animator:
 
         self.fig.canvas.restore_region(self.background)  # copy the static background back onto the figure
 
-        # self._update_data()  # get data from the Simulation and update any plot elements that need to be redrawn
+        self._update_data()  # get data from the Simulation and update any plot elements that need to be redrawn
 
         # draw everything that needs to be redrawn (any plot elements that will be mutated during the animation should be added to self.redraw)
         for rd in it.chain(self.redraw, *(ax.redraw for ax in self.axis_managers)):
-            self.fig.draw_artist(rd)
+            try:
+                self.fig.draw_artist(rd)
+            except AttributeError:
+                pass
 
         self.fig.canvas.blit(self.fig.bbox)  # blit the canvas, finalizing all of the draw_artists
 
