@@ -490,24 +490,27 @@ class LinearRampTimeWindow(TimeWindow):
 
 
 class SymmetricExponentialTimeWindow(TimeWindow):
-    def __init__(self, window_time = 500 * asec, window_width = 10 * asec):
+    def __init__(self, window_time = 500 * asec, window_width = 10 * asec, window_center = 0 * asec):
         self.window_time = window_time
         self.window_width = window_width
+        self.window_center = window_center
 
         super(SymmetricExponentialTimeWindow, self).__init__()
 
     def __str__(self):
-        return '{}(window time = {} as, window width = {} as)'.format(self.__class__.__name__,
-                                                                      uround(self.window_time, asec, 3),
-                                                                      uround(self.window_width, asec, 3))
+        return '{}(window time = {} as, window width = {} as, window center = {})'.format(self.__class__.__name__,
+                                                                                          uround(self.window_time, asec, 3),
+                                                                                          uround(self.window_width, asec, 3),
+                                                                                          uround(self.window_center, asec, 3))
 
     def __repr__(self):
-        return '{}(window_time = {}, window_width = {})'.format(self.__class__.__name__,
-                                                                self.window_time,
-                                                                self.window_width)
+        return '{}(window_time = {}, window_width = {}, window_center = {})'.format(self.__class__.__name__,
+                                                                                    self.window_time,
+                                                                                    self.window_width,
+                                                                                    self.window_center)
 
     def __call__(self, t):
-        return np.abs(1 / (1 + np.exp(-(t + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-(t - self.window_time) / self.window_width)))
+        return np.abs(1 / (1 + np.exp(-((t - self.window_center) + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-((t - self.window_center) - self.window_time) / self.window_width)))
 
 
 class RadialCosineMask(Mask):

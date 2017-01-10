@@ -463,6 +463,7 @@ class FiniteSquareWellState(QuantumState):
         self.well_width = well_width
         self.well_center = well_center
         self.mass = mass
+        self.n = n
 
         z_0 = (well_width / 2) * np.sqrt(2 * mass * well_depth) / hbar
 
@@ -488,12 +489,41 @@ class FiniteSquareWellState(QuantumState):
 
         super(FiniteSquareWellState, self).__init__(amplitude = amplitude)
 
+    def __str__(self):
+        return self.ket
+
+    def __repr__(self):
+        return '{}(n = {}, mass = {}, well_depth = {}, well_width = {}, energy = {}, amplitude = {})'.format(self.__class__.__name__,
+                                                                                                             self.n,
+                                                                                                             self.mass,
+                                                                                                             self.well_depth,
+                                                                                                             self.well_width,
+                                                                                                             self.energy,
+                                                                                                             self.amplitude)
+
+    @property
+    def ket(self):
+        return '|{}>'.format(self.n)
+
+    @property
+    def bra(self):
+        return '<{}|'.format(self.n)
+
+    @property
+    def tex_str(self):
+        """Return a LaTeX-formatted string for the QHOState."""
+        return r'{}'.format(self.n)
+
+    @property
+    def tuple(self):
+        return self.well_depth, self.well_width, self.mass, self.n
+
     @classmethod
     def all_states_of_well(cls, well_depth, well_width, mass, well_center = 0, amplitude = 1):
         states = []
         for n in it.count(1):
             try:
-                states.append(cls(well_depth, well_width, mass, n = n, well_center = well_center, amplitude = 1))
+                states.append(cls(well_depth, well_width, mass, n = n, well_center = well_center, amplitude = amplitude))
             except IllegalQuantumState:
                 return states
 
@@ -510,4 +540,4 @@ class FiniteSquareWellState(QuantumState):
 
         return np.where(cond,
                         self.normalization_factor_inside_well * self.function_inside_well(self.wavenumber_inside_well * x),
-                        self.normalization_factor_outside_well * np.exp(-self.wavenumber_outside_well * np.abs(x)))
+                        self.normalization_factor_outside_well * np.exp(-self.wavenumber_outside_well * np.abs(x))).astype(np.complex128)

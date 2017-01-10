@@ -62,8 +62,8 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.test_mass = test_mass
         self.test_charge = test_charge
         self.initial_state = initial_state
-        self.test_states = tuple(sorted(test_states))  # consume input iterators
-        self.dipole_gauges = tuple(sorted(dipole_gauges))
+        self.test_states = tuple(sorted(tuple(test_states)))  # consume input iterators
+        self.dipole_gauges = tuple(sorted(tuple(dipole_gauges)))
 
         self.internal_potential = internal_potential
         self.electric_potential = electric_potential
@@ -118,8 +118,8 @@ class ElectricFieldSpecification(cp.core.Specification):
         analysis = ['Analysis:',
                     '   Test Charge: {} e'.format(uround(self.test_charge, proton_charge)),
                     '   Test Mass: {} m_e'.format(uround(self.test_mass, electron_mass)),
-                    '   Test States: {}'.format(self.test_states),
-                    '   Dipole Gauges: {}'.format(self.dipole_gauges)]
+                    '   Test States: {}'.format(', '.join(str(s) for s in self.test_states)),
+                    '   Dipole Gauges: {}'.format(', '.join(self.dipole_gauges))]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials + analysis)
 
@@ -285,6 +285,10 @@ class LineMesh(QuantumMesh):
         self.g_factor = 1
 
         self.free_evolution_prefactor = -1j * (hbar / (2 * self.spec.test_mass)) * (self.wavenumbers ** 2)
+
+    @property
+    def r_mesh(self):
+        return self.x_mesh
 
     @cp.utils.memoize
     def g_for_state(self, state):
