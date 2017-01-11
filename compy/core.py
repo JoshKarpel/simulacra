@@ -154,13 +154,17 @@ class AxisManager:
 
         self.redraw = []
 
-        self.redraw += [*self.axis.xaxis.get_gridlines(), *self.axis.yaxis.get_gridlines()]
+    def __str__(self):
+        return self.__class__.__name__
+
+    def __repr__(self):
+        return self.__class__.__name__
 
     def initialize(self):
-        raise NotImplementedError
+        logger.debug('Initialized {}'.format(self))
 
     def update(self):
-        raise NotImplementedError
+        logger.debug('Updated {}'.format(self))
 
 
 class Animator:
@@ -237,6 +241,9 @@ class Animator:
 
         self._initialize_figure()  # call figure initialization hook
 
+        for ax in self.axis_managers:
+            ax.initialize()
+
         self.fig.canvas.draw()
         self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
         canvas_width, canvas_height = self.fig.canvas.get_width_height()
@@ -269,9 +276,6 @@ class Animator:
 
         Make sure that any plot element that will be mutated during the animation is created using the animation = True keyword argument and has a reference in self.redraw.
         """
-        for ax in self.axis_managers:
-            ax.initialize()
-
         logger.debug('Initialized figure for {}'.format(self))
 
     def _update_data(self):

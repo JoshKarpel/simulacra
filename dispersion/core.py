@@ -521,7 +521,7 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
 
         print(kwargs.keys())
         csv_path = os.path.join(kwargs['target_dir'], '{}__electric_field_vs_time_{}.csv'.format(self.name, kwargs['name_postfix']))
-        np.savetxt(csv_path, (t, field), delimiter = ',')
+        np.savetxt(csv_path, (t, np.real(field), np.imag(field), np.abs(field)), delimiter = ',')
 
         cp.utils.save_current_figure(name = '{}__electric_field_vs_time'.format(self.name), **kwargs)
 

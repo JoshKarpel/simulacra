@@ -23,12 +23,15 @@ logger.setLevel(logging.DEBUG)
 LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
 
-def field_str(obj, *fields):
+def field_str(obj, *fields, digits = 3):
     field_strings = []
     for field in fields:
         try:
-            field, unit_name = field
-            field_strings.append('{} = {} {}'.format(field, uround(getattr(obj, field), unit_names_to_values[unit_name], 3), unit_name))
+            field_name, unit_name = field
+            try:
+                field_strings.append('{} = {} {}'.format(field_name, uround(getattr(obj, field_name), unit_names_to_values[unit_name], digits = digits), unit_name))
+            except TypeError:
+                field_strings.append('{} = {}'.format(field_name, getattr(obj, field_name)))
         except (ValueError, TypeError):
             field_strings.append('{} = {}'.format(field, getattr(obj, field)))
     return '{}({})'.format(obj.__class__.__name__, ', '.join(field_strings))
