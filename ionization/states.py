@@ -9,6 +9,7 @@ from copy import deepcopy
 import numpy as np
 import scipy as sp
 import scipy.special as special
+import scipy.optimize as optimize
 
 import compy as cp
 from compy.units import *
@@ -46,6 +47,9 @@ class QuantumState(cp.Summand):
     @property
     def tuple(self):
         return 0
+
+    def __hash__(self):
+        return hash(self.tuple)
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.tuple == other.tuple
@@ -132,6 +136,10 @@ class FreeSphericalWave(QuantumState):
         return self._m
 
     @property
+    def tuple(self):
+        return self.k, self.l, self.m
+
+    @property
     def spherical_harmonic(self):
         return cp.math.SphericalHarmonic(l = self.l, m = self.m)
 
@@ -153,28 +161,6 @@ class FreeSphericalWave(QuantumState):
     def tex_str(self):
         """Return a LaTeX-formatted string for the HydrogenFreeState."""
         return r'\Psi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
-
-    @property
-    def tuple(self):
-        return self.k, self.l, self.m
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.tuple == other.tuple
-
-    def __lt__(self, other):
-        return isinstance(other, self.__class__) and self.tuple < other.tuple
-
-    def __gt__(self, other):
-        return isinstance(other, self.__class__) and self.tuple > other.tuple
-
-    def __le__(self, other):
-        return isinstance(other, self.__class__) and self.tuple <= other.tuple
-
-    def __ge__(self, other):
-        return isinstance(other, self.__class__) and self.tuple >= other.tuple
-
-    def __hash__(self):
-        return hash((self.energy, self.l, self.m))
 
     def radial_function(self, r):
         return np.sqrt(2 * (self.k ** 2) / pi) * special.spherical_jn(self.l, self.k * r)
@@ -278,24 +264,6 @@ class HydrogenBoundState(QuantumState):
         """Gets a LaTeX-formatted string for the HydrogenBoundState."""
         return r'\psi_{{{},{},{}}}'.format(*self.tuple)
 
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.tuple == other.tuple
-
-    def __lt__(self, other):
-        return isinstance(other, self.__class__) and self.tuple < other.tuple
-
-    def __gt__(self, other):
-        return isinstance(other, self.__class__) and self.tuple > other.tuple
-
-    def __le__(self, other):
-        return isinstance(other, self.__class__) and self.tuple <= other.tuple
-
-    def __ge__(self, other):
-        return isinstance(other, self.__class__) and self.tuple >= other.tuple
-
-    def __hash__(self):
-        return hash(self.tuple)
-
     @staticmethod
     def sort_key(state):
         return state.n, state.l, state.m
@@ -376,6 +344,10 @@ class HydrogenFreeState(QuantumState):
     @property
     def spherical_harmonic(self):
         return cp.math.SphericalHarmonic(l = self.l, m = self.m)
+
+    @property
+    def tuple(self):
+        return self.k, self.l, self.m
 
     def __str__(self):
         return self.ket
@@ -475,23 +447,6 @@ class QHOState(QuantumState):
     def tuple(self):
         return self.n, self.mass, self.omega
 
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.tuple == other.tuple
-
-    def __lt__(self, other):
-        return isinstance(other, self.__class__) and self.tuple < other.tuple
-
-    def __gt__(self, other):
-        return isinstance(other, self.__class__) and self.tuple > other.tuple
-
-    def __le__(self, other):
-        return isinstance(other, self.__class__) and self.tuple <= other.tuple
-
-    def __ge__(self, other):
-        return isinstance(other, self.__class__) and self.tuple >= other.tuple
-    def __hash__(self):
-        return hash((self.omega, self.mass, self.n))
-
     def __call__(self, x):
         norm = ((self.mass * self.omega / (pi * hbar)) ** (1 / 4)) / (np.float64(2 ** (self.n / 2)) * np.sqrt(np.float64(sp.math.factorial(self.n))))
         exp = np.exp(-self.mass * self.omega * (x ** 2) / (2 * hbar))
@@ -500,3 +455,89 @@ class QHOState(QuantumState):
         # TODO: Stirling's approximation for large enough n in the normalization factor
 
         return self.amplitude * (norm * exp * herm).astype(np.complex128)
+
+
+class FiniteSquareWellState(QuantumState):
+    def __init__(self, well_depth, well_width, mass, n = 1, well_center = 0, amplitude = 1):
+        self.well_depth = well_depth
+        self.well_width = well_width
+        self.well_center = well_center
+        self.mass = mass
+        self.n = n
+
+        z_0 = (well_width / 2) * np.sqrt(2 * mass * well_depth) / hbar
+
+        if z_0 < n * pi / 2:
+            raise IllegalQuantumState('There is no bound state with the given parameters')
+
+        left_bound = (n - 1) * pi / 2
+        right_bound = left_bound + (pi / 2)
+
+        if n % 2 != 0:
+            z = optimize.brentq(lambda z: np.tan(z) - np.sqrt(((z_0 / z) ** 2) - 1), left_bound, right_bound)
+            self.function_inside_well = np.cos
+        else:
+            z = optimize.brentq(lambda z: (1 / np.tan(z)) + np.sqrt(((z_0 / z) ** 2) - 1), left_bound, right_bound)
+            self.function_inside_well = np.sin
+
+        self.wavenumber_inside_well = z / (well_width / 2)
+        self.energy = (((hbar * self.wavenumber_inside_well) ** 2) / (2 * mass)) - well_depth
+        self.wavenumber_outside_well = np.sqrt(-2 * mass * self.energy) / hbar
+
+        self.normalization_factor_inside_well = 1 / np.sqrt((self.well_width / 2) + (1 / self.wavenumber_outside_well))
+        self.normalization_factor_outside_well = np.exp(self.wavenumber_outside_well * (self.well_width / 2)) * self.function_inside_well(self.wavenumber_inside_well * (self.well_width / 2)) / np.sqrt((self.well_width / 2) + (1 / self.wavenumber_outside_well))
+
+        super(FiniteSquareWellState, self).__init__(amplitude = amplitude)
+
+    def __str__(self):
+        return self.ket
+
+    def __repr__(self):
+        return '{}(n = {}, mass = {}, well_depth = {}, well_width = {}, energy = {}, amplitude = {})'.format(self.__class__.__name__,
+                                                                                                             self.n,
+                                                                                                             self.mass,
+                                                                                                             self.well_depth,
+                                                                                                             self.well_width,
+                                                                                                             self.energy,
+                                                                                                             self.amplitude)
+
+    @property
+    def ket(self):
+        return '|{}>'.format(self.n)
+
+    @property
+    def bra(self):
+        return '<{}|'.format(self.n)
+
+    @property
+    def tex_str(self):
+        """Return a LaTeX-formatted string for the QHOState."""
+        return r'{}'.format(self.n)
+
+    @property
+    def tuple(self):
+        return self.well_depth, self.well_width, self.mass, self.n
+
+    @classmethod
+    def all_states_of_well(cls, well_depth, well_width, mass, well_center = 0, amplitude = 1):
+        states = []
+        for n in it.count(1):
+            try:
+                states.append(cls(well_depth, well_width, mass, n = n, well_center = well_center, amplitude = amplitude))
+            except IllegalQuantumState:
+                return states
+
+    @property
+    def left_edge(self):
+        return self.well_center - (self.well_width / 2)
+
+    @property
+    def right_edge(self):
+        return self.well_center + (self.well_width / 2)
+
+    def __call__(self, x):
+        cond = np.greater_equal(x, self.left_edge) * np.less_equal(x, self.right_edge)
+
+        return np.where(cond,
+                        self.normalization_factor_inside_well * self.function_inside_well(self.wavenumber_inside_well * x),
+                        self.normalization_factor_outside_well * np.exp(-self.wavenumber_outside_well * np.abs(x))).astype(np.complex128)

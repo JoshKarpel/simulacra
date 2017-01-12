@@ -11,6 +11,7 @@ import sys
 import uuid
 from copy import deepcopy
 import time
+import psutil
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -419,6 +420,8 @@ def xy_plot(name, x_data, *y_data,
 
         logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
+    plt.close()
+
     return path
 
 
@@ -680,3 +683,27 @@ def try_loop(*functions_to_run,
                 logger.warning('Loop cycle failed, retrying in {} seconds'.format(wait_after_failure.total_seconds()))
 
         time.sleep(wait_after_failure.total_seconds())
+
+
+def grouper(iterable, n, fillvalue = None):
+    """
+    Collect data into fixed-length chunks or blocks
+
+    See https://docs.python.org/3/library/itertools.html#itertools-recipes
+
+    :param iterable:
+    :param n:
+    :param fillvalue:
+    :return:
+    """
+    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return it.zip_longest(*args, fillvalue = fillvalue)
+
+
+def get_process_by_name(process_name):
+    for proc in psutil.process_iter():
+        if proc.name() == process_name:
+            return proc
+
+    raise ProcessLookupError('No process with name "{}" found'.format(process_name))

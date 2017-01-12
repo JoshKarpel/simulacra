@@ -154,7 +154,7 @@ class ClusterInterface:
                     md5_local = md5_local.hexdigest().strip()
                 if md5_local != md5_remote:
                     logger.warning('MD5 hash on {} for file {} did not match local file at {}, retrying'.format(self.remote_host, remote_path, local_path))
-                    self.mirror_file(remote_path, remote_stat, force_download = True)  # TODO: decide between force_download and simply deleting the local copy (it's corrupted anyway...)
+                    self.mirror_file(remote_path, remote_stat, force_download = True)
 
     def walk_remote_path(self, remote_path, func_on_dirs = None, func_on_files = None, exclude_hidden = True, blacklist_dir_names = None, whitelist_file_ext = None):
         """
@@ -180,7 +180,7 @@ class ClusterInterface:
         path_count = 0
 
         def walk(remote_path):
-            for remote_stat in self.ftp.listdir_attr(remote_path):
+            for remote_stat in self.ftp.listdir_attr(remote_path):  # don't try to sort these, they're actually SFTPAttribute objects that don't have guaranteed attributes
                 full_remote_path = posixpath.join(remote_path, remote_stat.filename)
 
                 logger.debug('Checking remote path {}'.format(full_remote_path))
@@ -316,9 +316,10 @@ class JobProcessor(utils.Beet):
         :return: the loaded Simulation, or None if it wasn't found
         """
         sim = None
+        sim_path = os.path.join(self.output_dir, '{}.sim'.format(sim_name))
 
         try:
-            sim = self.simulation_type.load(os.path.join(self.output_dir, '{}.sim'.format(sim_name)), **load_kwargs)
+            sim = self.simulation_type.load(os.path.join(sim_path), **load_kwargs)
 
             if sim.status != 'finished':
                 raise FileNotFoundError
@@ -326,6 +327,9 @@ class JobProcessor(utils.Beet):
             logger.debug('Loaded {}.sim from job {}'.format(sim_name, self.name))
         except (FileNotFoundError, EOFError) as e:
             logger.debug('Failed to find completed {}.sim from job {} due to {}'.format(sim_name, self.name, e))
+        # except zlib.error as e:
+        #     logger.warning('Encountered zlib error while trying to read {}.sim from job {}: {}'.format(sim_name, self.name, e))
+        #     os.remove(sim_path)
         except Exception as e:
             logger.critical('Error while trying to find completed {}.sim from job {} due to {}'.format(sim_name, self.name, e))
             raise e
@@ -533,6 +537,7 @@ def write_specifications_info_to_file(specifications, job_dir):
     with open(os.path.join(job_dir, 'specifications.txt'), 'w') as file:
         for spec in specifications:
             file.write(str(spec))
+            file.write('\n')
             file.write(spec.info())
             file.write('\n\n')  # blank line between specs
 

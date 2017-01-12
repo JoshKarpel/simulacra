@@ -23,3 +23,11 @@ if __name__ == '__main__':
     shutil.copy2('ionization/scripts/sync_and_process.py', 'deploy')
     shutil.copy2('ionization/scripts/create_job_sinc.py', 'deploy')
     # shutil.copy2('compy/scripts/tar.py', 'deploy')
+
+    for path in (r'C:\Users\Josh\Dropbox\Research\deploy',
+                 r'D:\Dropbox\Research\deploy'):
+        try:
+            shutil.rmtree(path, ignore_errors = True)
+            shutil.copytree('deploy', path)
+        except Exception as e:
+            print(e)

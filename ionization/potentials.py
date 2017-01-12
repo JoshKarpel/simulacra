@@ -127,6 +127,33 @@ class HarmonicOscillator(PotentialEnergy):
         return '{}(spring_constant = {}, center = {}'.format(self.__class__.__name__, self.spring_constant, self.center)
 
 
+class FiniteSquareWell(PotentialEnergy):
+    def __init__(self, potential_depth = 1 * eV, width = 10 * nm, center = 0 * nm):
+        self.potential_depth = potential_depth
+
+        self.width = width
+        self.center = center
+
+        super(FiniteSquareWell, self).__init__()
+
+    @property
+    def left_edge(self):
+        return self.center - (self.width / 2)
+
+    @property
+    def right_edge(self):
+        return self.center + (self.width / 2)
+
+    def __call__(self, *, distance, **kwargs):
+        cond = np.greater_equal(distance, self.left_edge) * np.less_equal(distance, self.right_edge)
+
+        out = -self.potential_depth * np.where(cond, 1, 0)
+
+        # use -abs(x) to get decay right on both sides of well
+
+        return out
+
+
 class RadialImaginary(PotentialEnergy):
     def __init__(self, center = 20 * bohr_radius, width = 2 * bohr_radius, decay_time = 100 * asec):
         """
@@ -463,24 +490,27 @@ class LinearRampTimeWindow(TimeWindow):
 
 
 class SymmetricExponentialTimeWindow(TimeWindow):
-    def __init__(self, window_time = 500 * asec, window_width = 10 * asec):
+    def __init__(self, window_time = 500 * asec, window_width = 10 * asec, window_center = 0 * asec):
         self.window_time = window_time
         self.window_width = window_width
+        self.window_center = window_center
 
         super(SymmetricExponentialTimeWindow, self).__init__()
 
     def __str__(self):
-        return '{}(window time = {} as, window width = {} as)'.format(self.__class__.__name__,
-                                                                      uround(self.window_time, asec, 3),
-                                                                      uround(self.window_width, asec, 3))
+        return '{}(window time = {} as, window width = {} as, window center = {})'.format(self.__class__.__name__,
+                                                                                          uround(self.window_time, asec, 3),
+                                                                                          uround(self.window_width, asec, 3),
+                                                                                          uround(self.window_center, asec, 3))
 
     def __repr__(self):
-        return '{}(window_time = {}, window_width = {})'.format(self.__class__.__name__,
-                                                                self.window_time,
-                                                                self.window_width)
+        return '{}(window_time = {}, window_width = {}, window_center = {})'.format(self.__class__.__name__,
+                                                                                    self.window_time,
+                                                                                    self.window_width,
+                                                                                    self.window_center)
 
     def __call__(self, t):
-        return np.abs(1 / (1 + np.exp(-(t + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-(t - self.window_time) / self.window_width)))
+        return np.abs(1 / (1 + np.exp(-((t - self.window_center) + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-((t - self.window_center) - self.window_time) / self.window_width)))
 
 
 class RadialCosineMask(Mask):

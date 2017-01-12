@@ -38,17 +38,17 @@ def run_sim(spec):
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
-        bound = 1
+        bound = 50
         # points = 2 ** 8
-        points = bound * 3
+        points = bound * 4
         # angular_points = 2 ** 6
-        angular_points = 4
+        angular_points = 100
 
         laser_frequency = c / (1064 * nm)
         laser_period = 1 / laser_frequency
 
         t_init = 0
-        t_final = 10 * laser_period
+        t_final = 1 * laser_period
         t_step = laser_period / 800
 
         # external_potential = ion.Rectangle(start_time = 40 * asec, end_time = 80 * asec, amplitude = .1 * atomic_electric_field)

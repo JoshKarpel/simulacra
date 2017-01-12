@@ -42,7 +42,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  mesh_type = None,
                  test_mass = electron_mass_reduced, test_charge = electron_charge,
                  initial_state = states.HydrogenBoundState(1, 0),
-                 test_states = tuple(states.HydrogenBoundState(n, l) for n in range(5) for l in range(n)),
+                 test_states = tuple(),
                  dipole_gauges = ('length',),
                  internal_potential = potentials.Coulomb(charge = proton_charge),
                  electric_potential = potentials.NoElectricField(),
@@ -62,8 +62,8 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.test_mass = test_mass
         self.test_charge = test_charge
         self.initial_state = initial_state
-        self.test_states = tuple(sorted(test_states))  # consume input iterators
-        self.dipole_gauges = tuple(sorted(dipole_gauges))
+        self.test_states = tuple(sorted(tuple(test_states)))  # consume input iterators
+        self.dipole_gauges = tuple(sorted(tuple(dipole_gauges)))
 
         self.internal_potential = internal_potential
         self.electric_potential = electric_potential
@@ -118,8 +118,8 @@ class ElectricFieldSpecification(cp.core.Specification):
         analysis = ['Analysis:',
                     '   Test Charge: {} e'.format(uround(self.test_charge, proton_charge)),
                     '   Test Mass: {} m_e'.format(uround(self.test_mass, electron_mass)),
-                    '   Test States: {}'.format(self.test_states),
-                    '   Dipole Gauges: {}'.format(self.dipole_gauges)]
+                    '   Test States: {}'.format(', '.join(str(s) for s in self.test_states)),
+                    '   Dipole Gauges: {}'.format(', '.join(self.dipole_gauges))]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials + analysis)
 
@@ -250,7 +250,7 @@ class LineSpecification(ElectricFieldSpecification):
                  x_bound = 10 * nm,
                  x_points = 2 ** 9,
                  **kwargs):
-        super(LineSpecification, self).__init__(name, mesh_type = LineMesh, animator_type = animators.CylindricalSliceAnimator,
+        super(LineSpecification, self).__init__(name, mesh_type = LineMesh,
                                                 evolution_method = 'S',
                                                 **kwargs)
 
@@ -292,7 +292,7 @@ class LineMesh(QuantumMesh):
 
     @cp.utils.memoize
     def g_for_state(self, state):
-        return state(x = self.x_mesh)
+        return state(self.x_mesh)
 
     @property
     def energy_expectation_value(self):
@@ -1243,22 +1243,23 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         @cp.utils.memoize
         def alpha(j):
-            return (j ** 2) / ((j ** 2) - 0.25)
-            # return (j ** 2) / ((j ** 2) - j + 0.25)  # TODO: WHY
+            x = (j ** 2) + (2 * j)
+            return (x + 1) / (x + 0.75)
 
         @cp.utils.memoize
         def beta(j):
-            return ((j ** 2) - j + 0.5) / ((j ** 2) - j + 0.25)
+            x = 2 * (j ** 2) + (2 * j)
+            return (x + 1) / (x + 0.5)
 
         r_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
         r_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
         for r_index in range(self.mesh_points):
-            j = r_index % self.spec.r_points + 1
+            j = r_index % self.spec.r_points
             r_diagonal[r_index] = beta(j)
 
         for r_index in range(self.mesh_points - 1):
             if (r_index + 1) % self.spec.r_points != 0:  # TODO: should be possible to clean this if up
-                j = (r_index % self.spec.r_points) + 1
+                j = (r_index % self.spec.r_points)
                 r_offdiagonal[r_index] = alpha(j)
         r_diagonal *= -2 * r_prefactor
         r_offdiagonal *= r_prefactor

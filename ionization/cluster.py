@@ -75,6 +75,13 @@ class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
             'final_initial_state_overlap': sim.state_overlaps_vs_time[sim.spec.initial_state][-1]
         })
 
+        try:
+            self.data[sim_name].update({
+                'r_points': sim.spec.r_points
+            })
+        except AttributeError:
+            pass
+
         super(ElectricFieldJobProcessor, self).collect_data_from_sim(sim_name, sim)
 
     def process_sim(self, sim_name, sim):

@@ -27,7 +27,7 @@ def make_movie(spec):
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO) as logger:
-        bound = 50
+        bound = 200
         radial_points = bound * 4
         angular_points = 100
 
@@ -40,9 +40,9 @@ if __name__ == '__main__':
         initial_state = ion.HydrogenBoundState(2, 1, 0)
 
         window = ion.LinearRampTimeWindow(ramp_on_time = t_init * asec, ramp_time = (t_init + 200) * asec)
-        e_field = ion.SineWave.from_frequency(1 / (100 * asec), amplitude = 2 * atomic_electric_field, window = window)
+        e_field = ion.SineWave.from_frequency(1 / (100 * asec), amplitude = 1 * atomic_electric_field, window = window)
         # e_field = ion.SineWave.from_photon_energy(1 * eV, amplitude = .1 * atomic_electric_field, window = window)
-        mask = ion.RadialCosineMask(inner_radius = (bound - 25) * bohr_radius, outer_radius = bound * bohr_radius)
+        mask = ion.RadialCosineMask(inner_radius = (bound - 50) * bohr_radius, outer_radius = bound * bohr_radius)
 
         animators = [
             ion.animators.CylindricalSliceAnimator(target_dir = OUT_DIR),
