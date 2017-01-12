@@ -386,6 +386,52 @@ class HydrogenFreeState(QuantumState):
         raise NotImplementedError
 
 
+class OneDFreeParticle(QuantumState):
+    wavenumber = cp.utils.Checked('k', lambda k: k != 0)
+    mass = cp.utils.Checked('mass', lambda mass: mass > 0)
+
+    def __init__(self, wavenumber = twopi / nm, mass = electron_mass, amplitude = 1, dimension_label = 'x'):
+        self.wavenumber = wavenumber
+        self.mass = mass
+        self.dimension_label = dimension_label
+
+        super(OneDFreeParticle, self).__init__(amplitude = amplitude)
+
+    @classmethod
+    def from_energy(cls, energy = 1.50412 * eV, k_sign = 1, mass = electron_mass, amplitude = 1, dimension_label = 'x'):
+        """
+
+        :param energy:
+        :param k_sign: make it -1 to get a left-mover
+        :param mass:
+        :param amplitude:
+        :param dimension_label:
+        :return:
+        """
+        return cls(k_sign * np.sqrt(2 * mass * energy) / hbar, mass, amplitude = amplitude, dimension_label = dimension_label)
+
+    @property
+    def energy(self):
+        return ((hbar * self.wavenumber) ** 2) / (2 * self.mass)
+
+    @property
+    def tuple(self):
+        return self.wavenumber, self.mass, self.dimension_label
+
+    def __str__(self):
+        return r'|k = 2pi * {} 1/nm, E = {} eV>'.format(uround(self.wavenumber / twopi, per_nm), uround(self.energy, eV))
+
+    def __repr__(self):
+        return cp.utils.field_str(self, 'wavenumber', 'energy', 'mass', 'amplitude')
+
+    @property
+    def tex_str(self):
+        return r'k = {} 2\pi/{}, E = {} {}'.format(uround(self.wavenumber / twopi, per_nm), r'\mathrm{nm}', uround(self.energy, eV), r'\mathrm{eV}')
+
+    def __call__(self, x):
+        return np.exp(1j * self.wavenumber * x) / np.sqrt(twopi)
+
+
 class QHOState(QuantumState):
     def __init__(self, spring_constant, mass, n = 0, amplitude = 1, dimension_label = 'x'):
         self.n = n
@@ -445,7 +491,7 @@ class QHOState(QuantumState):
 
     @property
     def tuple(self):
-        return self.n, self.mass, self.omega
+        return self.n, self.mass, self.omega, self.dimension_label
 
     def __call__(self, x):
         norm = ((self.mass * self.omega / (pi * hbar)) ** (1 / 4)) / (np.float64(2 ** (self.n / 2)) * np.sqrt(np.float64(sp.math.factorial(self.n))))

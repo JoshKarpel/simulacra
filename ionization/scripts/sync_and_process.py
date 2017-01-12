@@ -31,13 +31,11 @@ def process_job(job_name, jobs_dir = None):
         logger.info('Job {} has not finished synchronizing specifications, aborting'.format(job_name))
         return  # don't both processing the job if we haven't seen all the inputs yet
 
-    job_processor = job_info['job_processor']
-
     try:
-        jp = job_processor.load(os.path.join(job_dir, job_name + '.job'))
+        jp = clu.JobProcessor.load(os.path.join(job_dir, job_name + '.job'))
         logger.info('Loaded existing job processor for job {}'.format(job_name))
     except FileNotFoundError:
-        jp = job_processor(job_name, job_dir)
+        jp = job_info['job_processor_type'](job_name, job_dir)
         logger.info('Created new job processor for job {}'.format(job_name))
 
     jp.process_job(individual_processing = False, force_reprocess = True)

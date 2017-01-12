@@ -152,10 +152,10 @@ if __name__ == '__main__':
         clu.write_parameters_info_to_file(parameters + pulse_parameters, job_dir)
 
         job_info = {'name': args.job_name,
-                    'job_processor_type': job_processor.__name__,  # set at top of if-name-main
+                    'job_processor_type': job_processor,  # set at top of if-name-main
                     'number_of_sims': len(specs),
-                    'specification_type': specs[0].__class__.__name__,
-                    'external_potential_type': specs[0].electric_potential.__class__.__name__,
+                    'specification_type': specs[0].__class__,
+                    'external_potential_type': specs[0].electric_potential.__class__,
                     }
         clu.write_job_info_to_file(job_info, job_dir)
 
