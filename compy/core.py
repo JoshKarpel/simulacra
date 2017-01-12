@@ -2,6 +2,7 @@ import datetime as dt
 import logging
 import os
 import subprocess
+import itertools as it
 
 import matplotlib.pyplot as _plt
 
@@ -141,6 +142,31 @@ class Simulation(utils.Beet):
         return '\n'.join((str(self), *diag, self.spec.info()))
 
 
+class AxisManager:
+    """
+    A superclass that manages a matplotlib axis for an Animator.
+    """
+
+    def __init__(self, axis, simulation):
+        self.axis = axis
+        self.sim = simulation
+        self.spec = simulation.spec
+
+        self.redraw = []
+
+    def __str__(self):
+        return self.__class__.__name__
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+    def initialize(self):
+        logger.debug('Initialized {}'.format(self))
+
+    def update(self):
+        logger.debug('Updated {}'.format(self))
+
+
 class Animator:
     """
     A superclass that handles sending frames to ffmpeg to create animations.
@@ -175,6 +201,7 @@ class Animator:
         self.fps = fps
         self.colormap = colormap
 
+        self.axis_managers = []
         self.redraw = []
 
         self.sim = None
@@ -214,6 +241,9 @@ class Animator:
 
         self._initialize_figure()  # call figure initialization hook
 
+        for ax in self.axis_managers:
+            ax.initialize()
+
         self.fig.canvas.draw()
         self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
         canvas_width, canvas_height = self.fig.canvas.get_width_height()
@@ -250,6 +280,9 @@ class Animator:
 
     def _update_data(self):
         """Hook for a method to update the data for each animated figure element."""
+        for ax in self.axis_managers:
+            ax.update()
+
         logger.debug('{} updated data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
     def _redraw_frame(self):
@@ -261,8 +294,11 @@ class Animator:
         self._update_data()  # get data from the Simulation and update any plot elements that need to be redrawn
 
         # draw everything that needs to be redrawn (any plot elements that will be mutated during the animation should be added to self.redraw)
-        for rd in self.redraw:
-            self.fig.draw_artist(rd)
+        for rd in it.chain(self.redraw, *(ax.redraw for ax in self.axis_managers)):
+            try:
+                self.fig.draw_artist(rd)
+            except AttributeError:
+                pass
 
         self.fig.canvas.blit(self.fig.bbox)  # blit the canvas, finalizing all of the draw_artists
 

@@ -12,7 +12,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.INFO) as logger:
         mass = electron_mass
         pot = ion.HarmonicOscillator.from_energy_spacing_and_mass(energy_spacing = 1 * eV, mass = mass)
 
@@ -24,6 +24,7 @@ if __name__ == '__main__':
 
         ani = [
             ion.animators.LineAnimator(target_dir = OUT_DIR, postfix = '_full'),
+            ion.animators.LineAnimator(target_dir = OUT_DIR, postfix = '_full_log', log_metrics = True),
             ion.animators.LineAnimator(target_dir = OUT_DIR, plot_limit = 10 * nm, postfix = '_10'),
         ]
 

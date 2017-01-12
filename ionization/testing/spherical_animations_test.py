@@ -34,7 +34,7 @@ if __name__ == '__main__':
         specs = []
 
         t_init = 0
-        t_final = 1000
+        t_final = 50
         dt = 1
 
         initial_state = ion.HydrogenBoundState(2, 1, 0)
@@ -58,7 +58,7 @@ if __name__ == '__main__':
                                                        ))
 
         animators = [
-            ion.animators.SphericalSliceAnimator(target_dir = OUT_DIR, length = 60),
+            ion.animators.SphericalSliceAnimator(target_dir = OUT_DIR),
         ]
         specs.append(ion.SphericalSliceSpecification('sph_slice',
                                                      time_initial = t_init * asec, time_final = t_final * asec, time_step = dt * asec,
@@ -71,7 +71,7 @@ if __name__ == '__main__':
                                                      ))
 
         animators = [
-            ion.animators.SphericalHarmonicAnimator(target_dir = OUT_DIR, length = 60),
+            ion.animators.SphericalHarmonicAnimator(target_dir = OUT_DIR),
         ]
         specs.append(ion.SphericalHarmonicSpecification('sph_harm', time_initial = t_init * asec, time_final = t_final * asec, time_step = dt * asec,
                                                         r_bound = bound * bohr_radius, r_points = radial_points,

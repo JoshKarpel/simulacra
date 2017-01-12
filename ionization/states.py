@@ -445,7 +445,7 @@ class QHOState(QuantumState):
 
     @property
     def tuple(self):
-        return self.omega, self.mass, self.n
+        return self.n, self.mass, self.omega
 
     def __call__(self, x):
         norm = ((self.mass * self.omega / (pi * hbar)) ** (1 / 4)) / (np.float64(2 ** (self.n / 2)) * np.sqrt(np.float64(sp.math.factorial(self.n))))

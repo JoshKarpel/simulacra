@@ -551,6 +551,7 @@ unit_names_to_values.update({'atomic_electric_field': atomic_electric_field,
                              'atomic_velocity': atomic_velocity,
                              'atomic_momentum': atomic_momentum})
 unit_names_to_tex_strings.update({'atomic_electric_field': r'a.u.',  # TODO: add these
+                                  'AEF': r'a.u.',
                                   'atomic_electric_potential': r'a.u.',
                                   'atomic_electric_dipole': r'$e \, a_0$',
                                   'atomic_velocity': r'a.u.',

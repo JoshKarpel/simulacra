@@ -1009,7 +1009,7 @@ class SphericalSliceMesh(QuantumMesh):
                                      mesh[self.get_mesh_slicer(plot_limit)],
                                      shading = 'gouraud',
                                      **kwargs)
-        color_mesh_mirror = axis.pcolormesh(-self.theta_mesh[self.get_mesh_slicer(plot_limit)] + (2 * pi),
+        color_mesh_mirror = axis.pcolormesh(twopi - self.theta_mesh[self.get_mesh_slicer(plot_limit)],
                                             self.r_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
                                             mesh[self.get_mesh_slicer(plot_limit)],
                                             shading = 'gouraud',
@@ -1496,7 +1496,6 @@ class SphericalHarmonicMesh(QuantumMesh):
 
     def abs_g_squared(self, normalize = False, log = False):
         out = np.abs(self.space_g) ** 2
-        # out *= twopi * self.r_theta_mesh * np.sin(self.theta_mesh % pi)  # TODO: decide on this, or make optional
         if normalize:
             out /= np.nanmax(out)
         if log:
