@@ -24,22 +24,25 @@ if __name__ == '__main__':
         pot = ion.FiniteSquareWell(potential_depth = depth, width = width)
         init = ion.FiniteSquareWellState(well_depth = depth, well_width = width, mass = mass, n = 1)
 
+        plane_waves = [ion.OneDFreeParticle(twopi * k / nm, mass = mass) for k in np.linspace(.1, 10, 100)]
+        dk = plane_waves[1].wavenumber - plane_waves[0].wavenumber
+
         electric = ion.SineWave.from_photon_energy(1 * eV, amplitude = .01 * atomic_electric_field,
                                                    window = ion.SymmetricExponentialTimeWindow(window_time = 5 * fsec, window_width = 250 * asec, window_center = 10 * fsec))
 
-        ani = [ion.animators.LineAnimator(postfix = '_full_2', target_dir = OUT_DIR, length = 60, renormalize = True)]
+        ani = [ion.animators.LineAnimator(postfix = '_full_new', target_dir = OUT_DIR, length = 60, renormalize = True)]
 
         sim = ion.LineSpecification('fsw',
                                     x_bound = 50 * nm, x_points = 2 ** 15,
                                     internal_potential = pot,
                                     electric_potential = electric,
                                     test_mass = mass,
-                                    test_states = ion.FiniteSquareWellState.all_states_of_well(depth, width, mass),
+                                    test_states = ion.FiniteSquareWellState.all_states_of_well(depth, width, mass) + plane_waves,
                                     dipole_gauges = (),
                                     initial_state = init,
-                                    time_initial = 0 * fsec, time_final = 50 * fsec, time_step = 5 * asec,
+                                    time_initial = 0 * fsec, time_final = 1 * fsec, time_step = 5 * asec,
                                     mask = ion.RadialCosineMask(inner_radius = 40 * nm, outer_radius = 50 * nm),
-                                    animators = ani
+                                    # animators = ani
                                     ).to_simulation()
 
         print(sim.info())
@@ -57,6 +60,11 @@ if __name__ == '__main__':
         print(sim.info())
         print('norm', sim.mesh.norm)
         print('energy EV', sim.energy_expectation_value_vs_time_internal / eV)
+
+        for k in sorted(s for s in sim.spec.test_states if s in plane_waves):
+            print('{}: {}'.format(k,
+                                  sim.state_overlaps_vs_time[k] * dk
+                                  ))
 
         sim.mesh.plot_g(name_postfix = '_post', target_dir = OUT_DIR)
         sim.plot_wavefunction_vs_time(target_dir = OUT_DIR, x_scale = 'fsec')

@@ -68,6 +68,7 @@ cm = 1e-2 * m
 mm = 1e-3 * m
 um = 1e-6 * m
 nm = 1e-9 * m
+per_nm = 1 / nm
 pm = 1e-12 * m
 fm = 1e-15 * m
 km = 1e3 * m
