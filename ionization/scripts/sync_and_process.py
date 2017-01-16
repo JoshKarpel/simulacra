@@ -27,9 +27,6 @@ def process_job(job_name, jobs_dir = None):
     job_dir = os.path.join(jobs_dir, job_name)
 
     job_info = clu.load_job_info_from_file(job_dir)
-    if len(os.listdir(os.path.join(job_dir, 'inputs'))) != job_info['number_of_sims']:
-        logger.info('Job {} has not finished synchronizing specifications, aborting'.format(job_name))
-        return  # don't both processing the job if we haven't seen all the inputs yet
 
     try:
         jp = clu.JobProcessor.load(os.path.join(job_dir, job_name + '.job'))
@@ -38,12 +35,9 @@ def process_job(job_name, jobs_dir = None):
         jp = job_info['job_processor_type'](job_name, job_dir)
         logger.info('Created new job processor for job {}'.format(job_name))
 
-    jp.process_job(individual_processing = False, force_reprocess = True)
+    jp.process_job(individual_processing = False, force_reprocess = False)
 
     jp.save(target_dir = job_dir)
-
-    with open(os.path.join(job_dir, 'data.txt'), mode = 'w') as f:
-        pprint(jp.data, stream = f)
 
 
 def process_jobs(jobs_dir):
@@ -75,7 +69,8 @@ if __name__ == '__main__':
             cp.utils.try_loop(ft.partial(suspend_process, dropbox_process),
                               ft.partial(synchronize_with_cluster, CI),
                               ft.partial(process_jobs, JOBS_DIR),
-                              ft.partial(resume_process, dropbox_process))
+                              ft.partial(resume_process, dropbox_process),
+                              wait_after_success = dt.timedelta(hours = 3))
         except Exception as e:
             logger.exception(e)
             raise e

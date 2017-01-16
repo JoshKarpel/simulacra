@@ -12,6 +12,7 @@ import hashlib
 import pickle
 from copy import copy, deepcopy
 from collections import OrderedDict, defaultdict
+from pprint import pprint
 
 from tqdm import tqdm
 import numpy as np
@@ -353,11 +354,17 @@ class JobProcessor(utils.Beet):
                     self.process_sim(sim_name, sim)
                 self.unprocessed_sim_names.discard(sim_name)
 
+        self.write_to_txt()
+
         end_time = dt.datetime.now()
         logger.info('Finished loading simulations from job {}. Failed to find {} / {} sims. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, end_time - start_time))
 
     def write_to_csv(self):
         raise NotImplementedError
+
+    def write_to_txt(self):
+        with open(os.path.join(self.job_dir_path, 'data.txt'), mode = 'w') as f:
+            pprint(self.data, stream = f)
 
     def make_plot(self, name, x_key, *plot_lines, **kwargs):
         # begin by getting an OrderedDict of sim: sim_data, sorted by the value of the x_key
