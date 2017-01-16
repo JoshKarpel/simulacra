@@ -52,6 +52,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
+                 store_norm_by_l = False,
                  **kwargs):
         super(ElectricFieldSpecification, self).__init__(name, simulation_type = ElectricFieldSimulation, **kwargs)
 
@@ -84,6 +85,8 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.checkpoint_dir = checkpoint_dir
 
         self.animators = tuple(animators)
+
+        self.store_norm_by_l = store_norm_by_l
 
     def info(self):
         checkpoint = ['Checkpointing: ']
@@ -1597,7 +1600,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
-        if 'l' in self.mesh.mesh_storage_method:
+        if 'l' in self.mesh.mesh_storage_method and spec.store_norm_by_l:
             self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps, dtype = np.float64) * np.NaN for sph_harm in self.spec.spherical_harmonics}
 
     @property
@@ -1646,7 +1649,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.times[time_index])
 
-        if 'l' in self.mesh.mesh_storage_method:
+        if 'l' in self.mesh.mesh_storage_method and spec.store_norm_by_l:
             norm_by_l = self.mesh.norm_by_l
             for sph_harm, l_norm in zip(self.spec.spherical_harmonics, norm_by_l):
                 self.norm_by_harmonic_vs_time[sph_harm][time_index] = l_norm  # TODO: extend to non-l storage meshes
@@ -1658,7 +1661,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         logger.debug('{} {} stored data for time index {}'.format(self.__class__.__name__, self.name, time_index))
 
-    def run_simulation(self, only_end_data = False, store_intermediate_meshes = False):
+    def run_simulation(self, store_intermediate_meshes = False):
         """
         Run the simulation by repeatedly evolving the mesh by the time step and recovering various data from it.
 
@@ -1675,8 +1678,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             logger.debug("{} {} ({}) status set to 'running'".format(self.__class__.__name__, self.name, self.file_name))
 
             while True:
-                if not only_end_data or self.time_index == self.time_steps - 1:  # if last time step or taking all data
-                    self.store_data(self.time_index)
+                self.store_data(self.time_index)
 
                 for animator in self.animators:
                     if self.time_index == 0 or self.time_index == self.time_steps or self.time_index % animator.decimation == 0:
