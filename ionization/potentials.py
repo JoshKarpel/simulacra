@@ -11,55 +11,77 @@ logger.setLevel(logging.DEBUG)
 
 
 class PotentialEnergy(cp.Summand):
+    """A class representing some kind of potential energy. Can be summed to form a PotentialEnergySum."""
+
     def __init__(self, *args, **kwargs):
         super(PotentialEnergy, self).__init__()
         self.summation_class = PotentialEnergySum
 
 
 class PotentialEnergySum(cp.Sum, PotentialEnergy):
+    """A class representing a combination of potential energies."""
+
     container_name = 'potentials'
 
 
 class NoPotentialEnergy(PotentialEnergy):
+    """A class representing no potential energy from any source."""
+
     def __call__(self, *args, **kwargs):
+        """Return 0 for any arguments."""
         return 0
 
 
 class TimeWindow(cp.Summand):
+    """A class representing a time-window that can be attached to another potential."""
+
     def __init__(self):
         super(TimeWindow, self).__init__()
         self.summation_class = TimeWindowSum
 
 
 class TimeWindowSum(cp.Sum, TimeWindow):
+    """A class representing a combination of time-windows."""
+
     container_name = 'windows'
 
 
 class NoTimeWindow(TimeWindow):
+    """A class representing the lack of a time-window."""
     def __call__(self, t):
         return 1
 
 
 class Mask(cp.Summand):
+    """A class representing a spatial 'mask' that can be applied to the wavefunction to reduce it in certain regions."""
+
     def __init__(self):
         super(Mask, self).__init__()
         self.summation_class = MaskSum
 
 
 class MaskSum(cp.Sum, Mask):
+    """A class representing a combination of masks."""
+
     container_name = 'masks'
 
 
 class NoMask(Mask):
+    """A class representing the lack of a mask."""
+
     def __call__(self, *args, **kwargs):
         return 1
 
 
 class Coulomb(PotentialEnergy):
-    """A PotentialEnergy representing the electric potential energy of the nucleus of a hydrogenic atom."""
+    """A class representing the electric potential energy caused by the Coulomb potential."""
 
     def __init__(self, charge = 1 * proton_charge):
-        """Construct a Coulomb object with the given charge."""
+        """
+        Construct a Coulomb from a charge.
+
+        :param charge: the charge of the particle providing the potential
+        """
         super(Coulomb, self).__init__()
 
         self.charge = charge
@@ -71,7 +93,16 @@ class Coulomb(PotentialEnergy):
         return cp.utils.field_str(self, 'charge')
 
     def __call__(self, *, r, test_charge, **kwargs):
-        """Return the Coulomb potential energy evaluated at radial distance r for charge test_charge."""
+        """
+        Return the Coulomb potential energy evaluated at radial distance r for charge test_charge.
+
+        Accepts only keyword arguments.
+
+        :param r: the radial distance coordinate
+        :param test_charge: the test charge
+        :param kwargs: absorbs any other keyword arguments
+        :return:
+        """
         return coulomb_force_constant * self.charge * test_charge / r
 
 
@@ -147,23 +178,19 @@ class FiniteSquareWell(PotentialEnergy):
     def __call__(self, *, distance, **kwargs):
         cond = np.greater_equal(distance, self.left_edge) * np.less_equal(distance, self.right_edge)
 
-        out = -self.potential_depth * np.where(cond, 1, 0)
-
-        # use -abs(x) to get decay right on both sides of well
-
-        return out
+        return -self.potential_depth * np.where(cond, 1, 0)
 
 
 class RadialImaginary(PotentialEnergy):
     def __init__(self, center = 20 * bohr_radius, width = 2 * bohr_radius, decay_time = 100 * asec):
         """
-        Construct a RadialImaginary. The potential is shaped like a Gaussian and has an imaginary amplitude.
+        Construct a RadialImaginary potential. The potential is shaped like a Gaussian wrapped around a ring and has an imaginary amplitude.
 
         A positive/negative amplitude yields an imaginary potential that causes decay/amplification.
 
         :param center: the radial coordinate to center the potential on
         :param width: the width (FWHM) of the Gaussian
-        :param amplitude: the peak amplitude of the Gaussian
+        :param decay_time: the decay time (1/e time) of a wavefunction packet at the peak of the imaginary potential
         """
         self.center = center
         self.width = width
@@ -197,6 +224,7 @@ class UniformLinearlyPolarizedElectricField(PotentialEnergy):
         return ' with {}'.format(self.window)
 
     def get_electric_field_amplitude(self, t):
+        """Return the electric field amplitude at time t."""
         return self.window(t)
 
     def __call__(self, *, t, distance_along_polarization, test_charge, **kwargs):
@@ -211,15 +239,28 @@ class UniformLinearlyPolarizedElectricField(PotentialEnergy):
 
 
 class NoElectricField(UniformLinearlyPolarizedElectricField):
+    """A class representing the lack of an electric field."""
+
     def __str__(self):
         return self.__class__.__name__ + super(NoElectricField, self).__str__()
 
     def get_electric_field_amplitude(self, t):
+        """Return the electric field amplitude at time t."""
         return 0 * super(NoElectricField, self).get_electric_field_amplitude(t)
 
 
 class Rectangle(UniformLinearlyPolarizedElectricField):
+    """A class representing an electric with a sharp turn-on and turn-off time."""
+
     def __init__(self, start_time = 0 * asec, end_time = 50 * asec, amplitude = 1 * atomic_electric_field, **kwargs):
+        """
+        Construct a Rectangle from a start time, end time, and electric field amplitude.
+
+        :param start_time: the time the electric field turns on
+        :param end_time: the time the electric field turns off
+        :param amplitude: the amplitude of the electric field between start_time and end_time
+        :param kwargs: kwargs are passed to UniformLinearlyPolarizedElectricField
+        """
         super(Rectangle, self).__init__(**kwargs)
 
         self.start_time = start_time
@@ -244,6 +285,7 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
         return out
 
     def get_electric_field_amplitude(self, t):
+        """Return the electric field amplitude at time t."""
         cond = np.greater_equal(t, self.start_time) * np.less_equal(t, self.end_time)
         on = np.ones(np.shape(t))
         off = np.zeros(np.shape(t))
@@ -255,6 +297,14 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
 
 class SineWave(UniformLinearlyPolarizedElectricField):
     def __init__(self, omega, amplitude = 1 * atomic_electric_field, phase = 0, **kwargs):
+        """
+        Construct a SineWave from the angular frequency, electric field amplitude, and phase.
+
+        :param omega: the photon angular frequency
+        :param amplitude: the electric field amplitude
+        :param phase: the phase of the electric field (0 corresponds to a sine wave)
+        :param kwargs: kwargs are passed to UniformLinearlyPolarizedElectricField
+        """
         super(SineWave, self).__init__(**kwargs)
 
         self.omega = omega
@@ -282,10 +332,28 @@ class SineWave(UniformLinearlyPolarizedElectricField):
 
     @classmethod
     def from_frequency(cls, frequency, amplitude = 1 * atomic_electric_field, phase = 0, **kwargs):
+        """
+        Construct a SineWave from the frequency, electric field amplitude, and phase.
+
+        :param frequency: the photon frequency
+        :param amplitude: the electric field amplitude
+        :param phase: the phase of the electric field (0 corresponds to a sine wave)
+        :param kwargs: kwargs are passed to UniformLinearlyPolarizedElectricField
+        :return: a SineWave instance
+        """
         return cls(frequency * twopi, amplitude = amplitude, phase = phase, **kwargs)
 
     @classmethod
     def from_photon_energy(cls, photon_energy, amplitude = 1 * atomic_electric_field, phase = 0, **kwargs):
+        """
+        Construct a SineWave from the photon energy, electric field amplitude, and phase.
+
+        :param photon_energy: the photon energy
+        :param amplitude: the electric field amplitude
+        :param phase: the phase of the electric field (0 corresponds to a sine wave)
+        :param kwargs: kwargs are passed to UniformLinearlyPolarizedElectricField
+        :return: a SineWave instance
+        """
         return cls.from_frequency(photon_energy / h, amplitude = amplitude, phase = phase, **kwargs)
 
     @property
@@ -321,6 +389,7 @@ class SineWave(UniformLinearlyPolarizedElectricField):
         self.omega = photon_energy / hbar
 
     def get_electric_field_amplitude(self, t):
+        """Return the electric field amplitude at time t."""
         return np.sin((self.omega * t) + self.phase) * self.amplitude * super(SineWave, self).get_electric_field_amplitude(t)
 
     def get_peak_amplitude(self):
@@ -395,6 +464,7 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
                                   'dc_correction_time')
 
     def get_electric_field_amplitude(self, t):
+        """Return the electric field amplitude at time t."""
         if self.phase == 'cos':
             amp = np.where(np.not_equal(t, 0),
                            (np.sin(self.omega_cutoff * (t - self.pulse_center)) / (t - self.pulse_center)),
@@ -514,7 +584,10 @@ class SymmetricExponentialTimeWindow(TimeWindow):
 
 
 class RadialCosineMask(Mask):
+    """A class representing a masks which begins at some radius and smoothly decreases to 0 as the nth-root of cosine."""
+
     def __init__(self, inner_radius = 50 * bohr_radius, outer_radius = 100 * bohr_radius, smoothness = 8):
+        """Construct a RadialCosineMask from an inner radius, outer radius, and cosine 'smoothness' (the cosine will be raised to the 1/smoothness power)."""
         super(RadialCosineMask, self).__init__()
         self.inner_radius = inner_radius
         self.outer_radius = outer_radius
@@ -533,6 +606,15 @@ class RadialCosineMask(Mask):
                                                                                   self.smoothness)
 
     def __call__(self, *, r, **kwargs):
+        """
+        Return the value(s) of the mask at radial position(s) r.
+
+        Accepts only keyword arguments.
+
+        :param r: the radial position coordinate
+        :param kwargs: absorbs keyword arguments.
+        :return: the value(s) of the mask at r
+        """
         return np.where(np.greater_equal(r, self.inner_radius) * np.less_equal(r, self.outer_radius),
                         np.abs(np.cos(0.5 * pi * (r - self.inner_radius) / np.abs(self.outer_radius - self.inner_radius))) ** (1 / self.smoothness),
                         np.where(np.greater_equal(r, self.outer_radius), 0, 1))

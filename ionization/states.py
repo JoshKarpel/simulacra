@@ -20,11 +20,21 @@ logger.setLevel(logging.DEBUG)
 
 
 class IllegalQuantumState(cp.CompyException):
+    """An exception indicating that a state with an illegal quantum number has been generated."""
     pass
 
 
 class QuantumState(cp.Summand):
+    """A class that represents a quantum state, with an amplitude and some basic multiplication/addition rules. Can be summed to form a Superposition."""
+
     def __init__(self, amplitude = 1):
+        """
+        Construct a QuantumState with a given amplitude.
+
+        QuantumStates should not be instantiated directly (they have no useful properties).
+
+        :param amplitude: the probability amplitude of the state
+        """
         super(QuantumState, self).__init__()
         self.amplitude = amplitude
         self.summation_class = Superposition
@@ -46,6 +56,7 @@ class QuantumState(cp.Summand):
 
     @property
     def tuple(self):
+        """This property should return a tuple of unique information about the state, which will be used to hash it or perform comparison operations."""
         return 0
 
     def __hash__(self):
@@ -66,6 +77,14 @@ class QuantumState(cp.Summand):
     def __ge__(self, other):
         return isinstance(other, self.__class__) and self.tuple >= other.tuple
 
+    @property
+    def tex_str(self):
+        """Return a string in TeX notation that should be placed inside bras or kets in output."""
+        return r'\psi'
+
+    def __call__(self, *args, **kwargs):
+        return 0
+
 
 class Superposition(cp.Sum, QuantumState):
     """A class that represents a superposition of bound states."""
@@ -76,14 +95,11 @@ class Superposition(cp.Sum, QuantumState):
         """
         Construct a discrete superposition of states.
 
-        If normalize is True the initial amplitudes are rescaled so that the state is normalized.
-
-        :param state: a dict of HydrogenBoundState:state amplitude (complex number) pairs.
-        :param normalize: if True, renormalize the state amplitudes.
+        :param states: any number of QuantumStates
         """
         super(Superposition, self).__init__(amplitude = 1)
         norm = np.sqrt(sum(s.norm for s in states))
-        self.states = list(s / norm for s in states)
+        self.states = list(s / norm for s in states)  # note that the states are implicitly copied here
 
 
 class FreeSphericalWave(QuantumState):
@@ -98,6 +114,7 @@ class FreeSphericalWave(QuantumState):
         :param energy: energy of the free state
         :param l: orbital angular momentum quantum number
         :param m: quantum number for angular momentum z-component
+        :param amplitude: the probability amplitude of the state
         """
         super(FreeSphericalWave, self).__init__(amplitude = amplitude)
 
@@ -141,6 +158,7 @@ class FreeSphericalWave(QuantumState):
 
     @property
     def spherical_harmonic(self):
+        """Return the SphericalHarmonic for the state's angular momentum quantum numbers."""
         return cp.math.SphericalHarmonic(l = self.l, m = self.m)
 
     def __str__(self):
@@ -343,6 +361,7 @@ class HydrogenFreeState(QuantumState):
 
     @property
     def spherical_harmonic(self):
+        """Return the SphericalHarmonic for the state's angular momentum quantum numbers."""
         return cp.math.SphericalHarmonic(l = self.l, m = self.m)
 
     @property
@@ -368,12 +387,6 @@ class HydrogenFreeState(QuantumState):
         """Return a LaTeX-formatted string for the HydrogenFreeState."""
         return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
 
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and (self.energy, self.l, self.m) == (other.energy, other.l, other.m)
-
-    def __hash__(self):
-        return hash((self.energy, self.l, self.m))
-
     def __call__(self, r, theta, phi):
         """
         Evaluate the hydrogenic bound state wavefunction at a point, or vectorized over an array of points.
@@ -387,10 +400,17 @@ class HydrogenFreeState(QuantumState):
 
 
 class OneDFreeParticle(QuantumState):
-    wavenumber = cp.utils.Checked('k', lambda k: k != 0)
-    mass = cp.utils.Checked('mass', lambda mass: mass > 0)
+    """A class representing a free particle in one dimension."""
 
     def __init__(self, wavenumber = twopi / nm, mass = electron_mass, amplitude = 1, dimension_label = 'x'):
+        """
+        Construct a OneDFreeParticle from a wavenumber and mass.
+
+        :param wavenumber: the wavenumber (2p / wavelength) of the particle
+        :param mass: the mass of the particle
+        :param amplitude: the probability amplitude of the state
+        :param dimension_label: a label indicating which dimension the particle is travelling in
+        """
         self.wavenumber = wavenumber
         self.mass = mass
         self.dimension_label = dimension_label
@@ -400,19 +420,24 @@ class OneDFreeParticle(QuantumState):
     @classmethod
     def from_energy(cls, energy = 1.50412 * eV, k_sign = 1, mass = electron_mass, amplitude = 1, dimension_label = 'x'):
         """
+        Construct a OneDFreeparticle from an energy and a mass. The sign of the desired k-vector must be included as well.
 
-        :param energy:
-        :param k_sign: make it -1 to get a left-mover
-        :param mass:
-        :param amplitude:
-        :param dimension_label:
-        :return:
+        :param energy: the energy of the particle
+        :param k_sign: a prefactor that will be multiplied by the magnitude of the wavenumber determined from the given energy
+        :param mass: the mass of the particle
+        :param amplitude: the probability amplitude of the state
+        :param dimension_label: a label indicating which dimension the particle is travelling in
+        :return: a OneDFreeParticle instance
         """
         return cls(k_sign * np.sqrt(2 * mass * energy) / hbar, mass, amplitude = amplitude, dimension_label = dimension_label)
 
     @property
     def energy(self):
         return ((hbar * self.wavenumber) ** 2) / (2 * self.mass)
+
+    @property
+    def momentum(self):
+        return hbar * self.wavenumber
 
     @property
     def tuple(self):
@@ -429,11 +454,28 @@ class OneDFreeParticle(QuantumState):
         return r'k = {} 2\pi/{}, E = {} {}'.format(uround(self.wavenumber / twopi, per_nm), r'\mathrm{nm}', uround(self.energy, eV), r'\mathrm{eV}')
 
     def __call__(self, x):
+        """
+        Evaluate the free particle wavefunction at a point, or vectorized over an array of points.
+
+        :param x: the distance coordinate along the direction of motion
+        :return: the value(s) of the wavefunction at x
+        """
         return np.exp(1j * self.wavenumber * x) / np.sqrt(twopi)
 
 
 class QHOState(QuantumState):
+    """A class representing a bound state of the quantum harmonic oscillator."""
+
     def __init__(self, spring_constant, mass, n = 0, amplitude = 1, dimension_label = 'x'):
+        """
+        Construct a QHOState from a spring constant, mass, and energy index n.
+
+        :param spring_constant: the spring constant for the quantum harmonic oscillator
+        :param mass: the mass of the particle
+        :param n: the energy index of the state
+        :param amplitude: the probability amplitude of the state
+        :param dimension_label: a label indicating which dimension the particle is confined in
+        """
         self.n = n
         self.spring_constant = spring_constant
         self.mass = mass
@@ -443,10 +485,30 @@ class QHOState(QuantumState):
 
     @classmethod
     def from_omega_and_mass(cls, omega, mass, n = 0, amplitude = 1, dimension_label = 'x'):
+        """
+        Construct a QHOState from an angular frequency, mass, and energy index n.
+
+        :param omega: the fundamental angular frequency of the quantum harmonic oscillator
+        :param mass: the mass of the particle
+        :param n: the energy index of the state
+        :param amplitude: the probability amplitude of the state
+        :param dimension_label: a label indicating which dimension the particle is confined in
+        :return: a QHOState instance
+        """
         return cls(spring_constant = mass * (omega ** 2), mass = mass, n = n, amplitude = amplitude, dimension_label = dimension_label)
 
     @classmethod
     def from_QHO_potential_and_mass(cls, qho_potential, mass, n = 0, amplitude = 1, dimension_label = 'x'):
+        """
+        Construct a QHOState from a HarmonicOscillator, mass, and energy index n.
+
+        :param qho_potential: a HarmonicOscillator instance
+        :param mass: the mass of the particle
+        :param n: the energy index of the state
+        :param amplitude: the probability amplitude of the state
+        :param dimension_label: a label indicating which dimension the particle is confined in
+        :return: a QHOState instance
+        """
         return cls(spring_constant = qho_potential.spring_constant, mass = mass, n = n, amplitude = amplitude, dimension_label = dimension_label)
 
     @property
@@ -494,6 +556,14 @@ class QHOState(QuantumState):
         return self.n, self.mass, self.omega, self.dimension_label
 
     def __call__(self, x):
+        """
+        Evaluate the quantum harmonic oscillator bound state wavefunction at a point, or vectorized over an array of points.
+
+        Warning: for large enough n (>= ~60) this will fail due to n! overflowing.
+
+        :param x: the distance coordinate along the direction of confinement
+        :return: the value(s) of the wavefunction at x
+        """
         norm = ((self.mass * self.omega / (pi * hbar)) ** (1 / 4)) / (np.float64(2 ** (self.n / 2)) * np.sqrt(np.float64(sp.math.factorial(self.n))))
         exp = np.exp(-self.mass * self.omega * (x ** 2) / (2 * hbar))
         herm = special.hermite(self.n)(np.sqrt(self.mass * self.omega / hbar) * x)
@@ -504,12 +574,26 @@ class QHOState(QuantumState):
 
 
 class FiniteSquareWellState(QuantumState):
-    def __init__(self, well_depth, well_width, mass, n = 1, well_center = 0, amplitude = 1):
+    """A class representing a bound state of a finite square well."""
+
+    def __init__(self, well_depth, well_width, mass, n = 1, well_center = 0, amplitude = 1, dimension_label = 'x'):
+        """
+        Construct a FiniteSquareWellState from the well properties, the particle mass, and an energy index.
+
+        :param well_depth: the depth of the potential well
+        :param well_width: the full width of the potential well
+        :param mass: the mass of the particle
+        :param n: the energy index of the state
+        :param well_center: the center position of the well
+        :param amplitude: the probability amplitude of the state
+        :param dimension_label: a label indicating which dimension the particle is confined in
+        """
         self.well_depth = well_depth
         self.well_width = well_width
         self.well_center = well_center
         self.mass = mass
         self.n = n
+        self.dimension_label = dimension_label
 
         z_0 = (well_width / 2) * np.sqrt(2 * mass * well_depth) / hbar
 
@@ -534,6 +618,21 @@ class FiniteSquareWellState(QuantumState):
         self.normalization_factor_outside_well = np.exp(self.wavenumber_outside_well * (self.well_width / 2)) * self.function_inside_well(self.wavenumber_inside_well * (self.well_width / 2)) / np.sqrt((self.well_width / 2) + (1 / self.wavenumber_outside_well))
 
         super(FiniteSquareWellState, self).__init__(amplitude = amplitude)
+
+    @classmethod
+    def from_square_well_potential(cls, finite_square_well_potential, mass, n = 1, amplitude = 1, dimension_label = 'x'):
+        """
+        Construct a FiniteSquareWellState from a FiniteSquareWell potential, the particle mass, and an energy index.
+
+        :param finite_square_well_potential: a FiniteSquareWell potential.
+        :param mass: the mass of the particle
+        :param n: the energy index of the state
+        :param amplitude: the probability amplitude of the state
+        :param dimension_label: a label indicating which dimension the particle is confined in
+        :return: a FiniteSquareWellState instance
+        """
+
+        raise NotImplementedError
 
     def __str__(self):
         return self.ket
@@ -566,6 +665,18 @@ class FiniteSquareWellState(QuantumState):
 
     @classmethod
     def all_states_of_well(cls, well_depth, well_width, mass, well_center = 0, amplitude = 1):
+        """
+        Return a list containing all of the bound states of a well.
+
+        The states are ordered in increasing energy.
+
+        :param well_depth: the depth of the potential well
+        :param well_width: the full width of the potential well
+        :param mass: the mass of the particle
+        :param well_center: the center position of the well
+        :param amplitude: the probability amplitude of the states
+        :return: a list of FiniteSquareWell instances
+        """
         states = []
         for n in it.count(1):
             try:
@@ -573,15 +684,25 @@ class FiniteSquareWellState(QuantumState):
             except IllegalQuantumState:
                 return states
 
+                # TODO: switch this over to reading a FiniteSquareWell potential
+
     @property
     def left_edge(self):
+        """Return the position of the left edge of the well."""
         return self.well_center - (self.well_width / 2)
 
     @property
     def right_edge(self):
+        """Return the position of the right edge of the well."""
         return self.well_center + (self.well_width / 2)
 
     def __call__(self, x):
+        """
+        Evaluate the finite square well bound state wavefunction at a point, or vectorized over an array of points.
+
+        :param x: the distance coordinate along the direction of confinement
+        :return: the value(s) of the wavefunction at x
+        """
         cond = np.greater_equal(x, self.left_edge) * np.less_equal(x, self.right_edge)
 
         return np.where(cond,

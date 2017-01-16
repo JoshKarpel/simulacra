@@ -24,11 +24,13 @@ if __name__ == '__main__':
         pot = ion.FiniteSquareWell(potential_depth = depth, width = width)
         init = ion.FiniteSquareWellState(well_depth = depth, well_width = width, mass = mass, n = 1)
 
-        plane_waves = [ion.OneDFreeParticle(twopi * k / nm, mass = mass) for k in np.linspace(.1, 10, 100)]
-        dk = plane_waves[1].wavenumber - plane_waves[0].wavenumber
+        wavenumbers = (twopi / nm) * np.linspace(-10, 10, 1000)
+        plane_waves = [ion.OneDFreeParticle(k, mass = mass) for k in wavenumbers]
+        dk = np.abs(plane_waves[1].wavenumber - plane_waves[0].wavenumber)
 
-        electric = ion.SineWave.from_photon_energy(1 * eV, amplitude = .01 * atomic_electric_field,
-                                                   window = ion.SymmetricExponentialTimeWindow(window_time = 5 * fsec, window_width = 250 * asec, window_center = 10 * fsec))
+        # electric = ion.SineWave.from_photon_energy(1 * eV, amplitude = .01 * atomic_electric_field,
+        #                                            window = ion.SymmetricExponentialTimeWindow(window_time = 10 * fsec, window_width = 1 * fsec, window_center = 5 * fsec))
+        electric = ion.NoElectricField()
 
         ani = [ion.animators.LineAnimator(postfix = '_full_new', target_dir = OUT_DIR, length = 60, renormalize = True)]
 
@@ -61,10 +63,24 @@ if __name__ == '__main__':
         print('norm', sim.mesh.norm)
         print('energy EV', sim.energy_expectation_value_vs_time_internal / eV)
 
-        for k in sorted(s for s in sim.spec.test_states if s in plane_waves):
-            print('{}: {}'.format(k,
-                                  sim.state_overlaps_vs_time[k] * dk
-                                  ))
-
         sim.mesh.plot_g(name_postfix = '_post', target_dir = OUT_DIR)
-        sim.plot_wavefunction_vs_time(target_dir = OUT_DIR, x_scale = 'fsec')
+        # sim.plot_wavefunction_vs_time(target_dir = OUT_DIR, x_scale = 'fsec')
+
+        overlap_vs_k = np.zeros(len(plane_waves)) * np.NaN
+
+        for ii, k in enumerate(sorted(s for s in sim.spec.test_states if s in plane_waves)):
+            overlap = sim.state_overlaps_vs_time[k][-1] * dk
+            # print('{}: {}'.format(k, overlap))
+
+            overlap_vs_k[ii] = overlap
+
+        print(wavenumbers)
+        print(overlap_vs_k)
+
+        print(np.sum(overlap_vs_k))
+
+        cp.utils.xy_plot('overlap_vs_k',
+                         wavenumbers, overlap_vs_k,
+                         x_scale = twopi / nm, x_label = r'Wavenumber $k$ ($2\pi/\mathrm{nm}$)',
+                         y_lower_limit = 0, y_upper_limit = 1,
+                         target_dir = OUT_DIR)

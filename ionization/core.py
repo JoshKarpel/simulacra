@@ -299,7 +299,7 @@ class LineMesh(QuantumMesh):
         potential = self.inner_product(mesh_b = self.spec.internal_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh) * self.g_mesh)
         kinetic = np.sum((((hbar * self.wavenumbers) ** 2) / (2 * self.spec.test_mass)) * (np.abs(self.fft(self.g_mesh)) ** 2)) / np.sum(np.abs(self.fft(self.g_mesh)) ** 2)
 
-        return np.abs(potential + kinetic)
+        return np.real(potential + kinetic)
 
     def dipole_moment(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
