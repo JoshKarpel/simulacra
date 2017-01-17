@@ -20,12 +20,13 @@ def unit_value_and_name_from_unit(unit):
     :return:
     """
     if type(unit) == str:
-        unit = unit_names_to_values[unit]
+        unit_value = unit_names_to_values[unit]
         unit_name = unit_names_to_tex_strings[unit]
     else:
+        unit_value = unit
         unit_name = ''
 
-    return unit, unit_name
+    return unit_value, unit_name
 
 
 # dimensionless constants

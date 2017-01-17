@@ -154,6 +154,8 @@ class AxisManager:
 
         self.redraw = []
 
+        self.initialized = False
+
     def __str__(self):
         return self.__class__.__name__
 
@@ -161,6 +163,8 @@ class AxisManager:
         return self.__class__.__name__
 
     def initialize(self):
+        self.initialized = True
+
         logger.debug('Initialized {}'.format(self))
 
     def update(self):

@@ -147,11 +147,13 @@ class QuantumMeshAxis(cp.AxisManager):
                  plot_limit = None,
                  renormalize = True,
                  log_g = False,
-                 overlay_probability_current = False):
+                 overlay_probability_current = False,
+                 distance_unit = 'bohr_radius'):
         self.plot_limit = plot_limit
         self.renormalize = renormalize
         self.log_g = log_g
         self.overlay_probability_current = overlay_probability_current
+        self.distance_unit = distance_unit
 
         super(QuantumMeshAxis, self).__init__(axis, simulation)
 
@@ -163,6 +165,7 @@ class WavefunctionSimulationAnimator(cp.Animator):
                  log_g = False,
                  log_metrics = False,
                  overlay_probability_current = False,
+                 distance_unit = 'bohr_radius',
                  **kwargs):
         super(WavefunctionSimulationAnimator, self).__init__(*args, **kwargs)
 
@@ -171,9 +174,10 @@ class WavefunctionSimulationAnimator(cp.Animator):
         self.log_g = log_g
         self.log_metrics = log_metrics
         self.overlay_probability_current = overlay_probability_current
+        self.distance_unit = distance_unit
 
     def __str__(self):
-        return cp.utils.field_str(self, 'postfix', ('plot_limit', 'bohr_radius'), 'renormalize', 'log_g', 'log_metrics', 'overlay_probability_current')
+        return cp.utils.field_str(self, 'postfix', ('plot_limit', self.distance_unit), 'distance_unit', 'renormalize', 'log_g', 'log_metrics', 'overlay_probability_current')
 
     def __repr__(self):
         return self.__str__()
@@ -181,15 +185,17 @@ class WavefunctionSimulationAnimator(cp.Animator):
 
 class LineAxis(QuantumMeshAxis):
     def initialize(self):
-        self.mesh = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
+        unit_value, unit_name = unit_value_and_name_from_unit(self.distance_unit)
+
+        self.mesh = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, distance_unit = self.distance_unit, animated = True)
         self.redraw += [self.mesh]
 
-        self.axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
+        self.axis.grid(True, color = core.GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
 
-        self.axis.set_xlabel(r'$x$ ($\mathrm{nm}$)', fontsize = 24)
+        self.axis.set_xlabel(r'$x$ ({})'.format(unit_name), fontsize = 24)
         self.axis.set_ylabel(r'$\left|\psi\right|^2$', fontsize = 30)
 
-        self.axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
+        self.axis.tick_params(axis = 'both', which = 'major', labelsize = 20)
         self.axis.tick_params(labelright = True, labeltop = True)
 
         self.axis.axis('tight')
@@ -208,11 +214,12 @@ class LineAnimator(WavefunctionSimulationAnimator):
     def _initialize_figure(self):
         self.fig = plt.figure(figsize = (16, 12))
 
-        self.ax_mesh = LineAxis(self.fig.add_axes([.065, .34, .9, .62]), self.sim,
+        self.ax_mesh = LineAxis(self.fig.add_axes([.07, .34, .88, .62]), self.sim,
                                 plot_limit = self.plot_limit,
                                 renormalize = self.renormalize,
                                 log_g = self.log_g,
-                                overlay_probability_current = self.overlay_probability_current)
+                                overlay_probability_current = self.overlay_probability_current,
+                                distance_unit = self.distance_unit)
         self.ax_metrics = MetricsAndElectricField(self.fig.add_axes([.065, .065, .865, .2]), self.sim,
                                                   log_metrics = self.log_metrics)
 
@@ -223,26 +230,30 @@ class LineAnimator(WavefunctionSimulationAnimator):
 
 class CylindricalSliceAxis(QuantumMeshAxis):
     def initialize(self):
-        self.mesh = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
+        unit_value, unit_name = unit_value_and_name_from_unit(self.distance_unit)
+
+        self.mesh = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, distance_unit = self.distance_unit, animated = True)
         self.redraw += [self.mesh]
 
         if self.overlay_probability_current:
-            self.quiver = self.sim.mesh.attach_probability_current_quiver(self.axis, plot_limit = self.plot_limit, animated = True)
+            self.quiver = self.sim.mesh.attach_probability_current_quiver(self.axis, plot_limit = self.plot_limit, distance_unit = self.distance_unit, animated = True)
             self.redraw += [self.quiver]
 
-        self.axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
+        self.axis.grid(True, color = core.GRID_COLOR, linestyle = ':', linewidth = 2)  # change grid color to make it show up against the colormesh
 
-        self.axis.set_xlabel(r'$z$ (Bohr radii)', fontsize = 24)
-        self.axis.set_ylabel(r'$\rho$ (Bohr radii)', fontsize = 24)
+        self.axis.set_xlabel(r'$z$ ({})'.format(unit_name), fontsize = 24)
+        self.axis.set_ylabel(r'$\rho$ ({})'.format(unit_name), fontsize = 24)
 
-        self.axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
+        self.axis.tick_params(axis = 'both', which = 'major', labelsize = 20)
 
         divider = make_axes_locatable(self.axis)
         cax = divider.append_axes("right", size = "2%", pad = 0.05)
         self.cbar = plt.colorbar(cax = cax, mappable = self.mesh)
-        self.cbar.ax.tick_params(labelsize = 14)
+        self.cbar.ax.tick_params(labelsize = 20)
 
         self.axis.axis('tight')
+
+        self.redraw += [*self.axis.xaxis.get_gridlines(), *self.axis.yaxis.get_gridlines(), *self.axis.yaxis.get_ticklabels()]  # gridlines must be redrawn over the mesh (it's important that they're AFTER the mesh itself in self.redraw)
 
         super(CylindricalSliceAxis, self).initialize()
 
@@ -261,12 +272,13 @@ class CylindricalSliceAnimator(WavefunctionSimulationAnimator):
     def _initialize_figure(self):
         self.fig = plt.figure(figsize = (16, 12))
 
-        self.ax_mesh = CylindricalSliceAxis(self.fig.add_axes([.065, .34, .9, .62]), self.sim,
+        self.ax_mesh = CylindricalSliceAxis(self.fig.add_axes([.07, .34, .88, .62]), self.sim,
                                             plot_limit = self.plot_limit,
                                             renormalize = self.renormalize,
                                             log_g = self.log_g,
-                                            overlay_probability_current = self.overlay_probability_current)
-        self.ax_metrics = MetricsAndElectricField(self.fig.add_axes([.065, .065, .865, .2]), self.sim,
+                                            overlay_probability_current = self.overlay_probability_current,
+                                            distance_unit = self.distance_unit)
+        self.ax_metrics = MetricsAndElectricField(self.fig.add_axes([.065, .065, .855, .2]), self.sim,
                                                   log_metrics = self.log_metrics)
 
         self.axis_managers += [self.ax_mesh, self.ax_metrics]
@@ -276,17 +288,34 @@ class CylindricalSliceAnimator(WavefunctionSimulationAnimator):
 
 class PhiSliceAxis(QuantumMeshAxis):
     def initialize(self):
+        unit_value, unit_name = unit_value_and_name_from_unit(self.distance_unit)
+
         self.axis.set_theta_zero_location('N')
         self.axis.set_theta_direction('clockwise')
         self.axis.set_rlabel_position(80)
 
-        self.axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
-
+        self.axis.grid(True, color = core.GRID_COLOR, linestyle = ':', linewidth = 2)  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         self.axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         self.axis.tick_params(axis = 'both', which = 'major', labelsize = 20)  # increase size of tick labels
-        self.axis.tick_params(axis = 'y', which = 'major', colors = 'silver', pad = 3)  # make r ticks a color that shows up against the colormesh
+        self.axis.tick_params(axis = 'y', which = 'major', colors = core.GRID_COLOR, pad = 3)  # make r ticks a color that shows up against the colormesh
+
+        self.axis.set_rlabel_position(80)
+
+        max_yticks = 5
+        yloc = plt.MaxNLocator(max_yticks, symmetric = False, prune = 'both')
+        self.axis.yaxis.set_major_locator(yloc)
+
+        plt.gcf().canvas.draw()  # must draw early to modify the axis text
+
+        if not self.initialized:
+            tick_labels = self.axis.get_yticklabels()
+            for t in tick_labels:
+                t.set_text(t.get_text() + r'{}'.format(unit_name))
+                self.axis.set_yticklabels(tick_labels)
+
+        self.axis.set_rmax((self.sim.mesh.r_max - (self.sim.mesh.delta_r / 2)) / unit_value)
 
         self.axis.axis('tight')
 
@@ -298,6 +327,7 @@ class PhiSliceAxis(QuantumMeshAxis):
 class SphericalSlicePhiSliceAxis(PhiSliceAxis):
     def initialize(self):
         self.mesh, self.mesh_mirror = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit,
+                                                                     distance_unit = self.distance_unit,
                                                                      animated = True)
 
         self.redraw += [self.mesh, self.mesh_mirror]
@@ -318,7 +348,7 @@ class SphericalSlicePhiSliceAxis(PhiSliceAxis):
 
 class SphericalHarmonicPhiSliceAxis(PhiSliceAxis):
     def initialize(self):
-        self.mesh = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, animated = True)
+        self.mesh = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, distance_unit = self.distance_unit, animated = True)
 
         self.redraw += [self.mesh]
 
@@ -364,7 +394,7 @@ class AngularMomentumDecompositionAxis(cp.AxisManager):
         self.axis.set_xlim(np.min(self.sim.mesh.l) - 0.4, np.max(self.sim.mesh.l) + 0.4)
 
         self.axis.tick_params(labelleft = False, labelright = True)
-        self.axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
+        self.axis.tick_params(axis = 'both', which = 'major', labelsize = 20)
 
         self.redraw += [*self.axis.yaxis.get_gridlines()]
 
@@ -403,7 +433,8 @@ class PhiSliceAnimator(WavefunctionSimulationAnimator):
                                            plot_limit = self.plot_limit,
                                            renormalize = self.renormalize,
                                            log_g = self.log_g,
-                                           overlay_probability_current = self.overlay_probability_current)
+                                           overlay_probability_current = self.overlay_probability_current,
+                                           distance_unit = self.distance_unit)
 
         legend_kwargs = {'bbox_to_anchor': (1., 1.1),
                          'loc': 'lower right',
@@ -416,7 +447,7 @@ class PhiSliceAnimator(WavefunctionSimulationAnimator):
                                                   label_left = False, legend_kwargs = legend_kwargs)
 
         self.ax_mesh.initialize()  # must pre-initialize so that the colobar can see the colormesh
-        self.ax_cbar = ColorBarAxis(self.fig.add_axes([.65, .3, .03, .45]), self.sim, colorable = self.ax_mesh.mesh)
+        self.ax_cbar = ColorBarAxis(self.fig.add_axes([.65, .25, .03, .5]), self.sim, colorable = self.ax_mesh.mesh)
 
         self.axis_managers += [self.ax_mesh, self.ax_metrics, self.ax_cbar]
 

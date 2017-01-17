@@ -152,10 +152,10 @@ class HarmonicOscillator(PotentialEnergy):
         return self.omega(mass) / twopi
 
     def __str__(self):
-        return '{}(spring_constant = {} N/m, center = {} nm'.format(self.__class__.__name__, self.spring_constant, uround(self.center, nm, 3))
+        return '{}(spring_constant = {} N/m, center = {} nm)'.format(self.__class__.__name__, np.around(self.spring_constant, 3), uround(self.center, nm, 3))
 
     def __repr__(self):
-        return '{}(spring_constant = {}, center = {}'.format(self.__class__.__name__, self.spring_constant, self.center)
+        return '{}(spring_constant = {}, center = {})'.format(self.__class__.__name__, self.spring_constant, self.center)
 
 
 class FiniteSquareWell(PotentialEnergy):

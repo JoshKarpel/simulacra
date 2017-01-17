@@ -13,36 +13,39 @@ CMAP = plt.cm.inferno
 
 
 def make_plots(spec):
-    with cp.utils.Timer() as t:
-        sim = ion.ElectricFieldSimulation(spec)
-        sim.mesh.plot_g(target_dir = OUT_DIR, colormap = CMAP)
-        # sim.mesh.plot_psi(target_dir = OUT_DIR, colormap = CMAP)
-    print(sim.name, t)
+    sim = ion.ElectricFieldSimulation(spec)
+    for unit in ('nm', 'bohr_radius'):
+        sim.mesh.plot_g(name_postfix = '__' + unit, target_dir = OUT_DIR, colormap = CMAP, distance_unit = unit)
+        # sim.mesh.plot_psi(name_postfix = '__' + unit, target_dir = OUT_DIR, colormap = CMAP, distance_unit = unit)
+
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization') as logger:
-        n = 4
-        bound = 30
-        angular_points = 5
+        n = 3
+        bound = 25
+        angular_points = 100
 
         states = (ion.HydrogenBoundState(n, l) for n in range(n + 1) for l in range(n))
 
         specs = []
 
+        line_potential = ion.FiniteSquareWell(potential_depth = 3 * eV, width = 1 * nm)
+        for initial_state in ion.FiniteSquareWellState.all_states_of_well(3 * eV, 1 * nm, electron_mass):
+            specs.append(ion.LineSpecification('line_mesh__{}'.format(initial_state.n),
+                                               initial_state = initial_state,
+                                               x_bound = 30 * nm))
+
         for initial_state in states:
-            # spec = ion.CylindricalSliceSpecification('cyl_slice__{}_{}'.format(initial_state.n, initial_state.l),
-            #                                          initial_state = initial_state,
-            #                                          z_bound = bound * bohr_radius, rho_bound = bound * bohr_radius)
-            # specs.append(spec)
-            #
-            # spec = ion.SphericalSliceSpecification('sph_slice__{}_{}'.format(initial_state.n, initial_state.l),
-            #                                        initial_state = initial_state,
-            #                                        r_bound = bound * bohr_radius, theta_points = angular_points)
-            # specs.append(spec)
+            specs.append(ion.CylindricalSliceSpecification('cyl_slice__{}_{}'.format(initial_state.n, initial_state.l),
+                                                           initial_state = initial_state,
+                                                           z_bound = bound * bohr_radius, rho_bound = bound * bohr_radius))
 
-            spec = ion.SphericalHarmonicSpecification('sph_harms__{}_{}'.format(initial_state.n, initial_state.l),
-                                                      initial_state = initial_state,
-                                                      r_bound = bound * bohr_radius, spherical_harmonics_max_l = angular_points)
-            specs.append(spec)
+            specs.append(ion.SphericalSliceSpecification('sph_slice__{}_{}'.format(initial_state.n, initial_state.l),
+                                                         initial_state = initial_state,
+                                                         r_bound = bound * bohr_radius, theta_points = angular_points))
 
-        cp.utils.multi_map(make_plots, specs, processes = 3)
+            specs.append(ion.SphericalHarmonicSpecification('sph_harms__{}_{}'.format(initial_state.n, initial_state.l),
+                                                            initial_state = initial_state,
+                                                            r_bound = bound * bohr_radius, l_points = angular_points))
+
+        cp.utils.multi_map(make_plots, specs, processes = 4)

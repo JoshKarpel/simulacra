@@ -23,6 +23,8 @@ from . import animators, potentials, states
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+GRID_COLOR = 'dodgerblue'
+
 
 def electron_energy_from_wavenumber(k):
     return (hbar * k) ** 2 / (2 * electron_mass)
@@ -181,10 +183,10 @@ class QuantumMesh:
     def get_mesh_slicer(self, plot_limit):
         raise NotImplementedError
 
-    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, distance_unit = 'nm', **kwargs):
         raise NotImplementedError
 
-    def plot_mesh(self, mesh, **kwargs):
+    def plot_mesh(self, mesh, distance_unit = 'nm', **kwargs):
         raise NotImplementedError
 
     def abs_g_squared(self, normalize = False, log = False):
@@ -204,7 +206,7 @@ class QuantumMesh:
 
         try:
             mesh.set_array(new_mesh.ravel())
-        except AttributeError as e:
+        except AttributeError as e:  # if the mesh is 1D we can't .ravel() it and instead should just set the y data with the mesh
             mesh.set_ydata(new_mesh)
 
     def plot_g(self, normalize = True, name_postfix = '', **kwargs):
@@ -338,13 +340,18 @@ class LineMesh(QuantumMesh):
 
         return mesh_slicer
 
-    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
-        line, = axis.plot(self.x_mesh[self.get_mesh_slicer(plot_limit)] / nm, mesh[self.get_mesh_slicer(plot_limit)], **kwargs)
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, distance_unit = 'nm', **kwargs):
+        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+
+        line, = axis.plot(self.x_mesh[self.get_mesh_slicer(plot_limit)] / unit_value, mesh[self.get_mesh_slicer(plot_limit)], **kwargs)
 
         return line
 
-    def plot_mesh(self, mesh, **kwargs):
-        cp.utils.xy_plot(kwargs.pop('name'), self.x_mesh / nm, mesh, **kwargs)
+    def plot_mesh(self, mesh, distance_unit = 'nm', **kwargs):
+        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+
+        cp.utils.xy_plot(self.sim.name + '_' + kwargs.pop('name'), self.x_mesh, mesh,
+                         x_label = 'Distance $x$', x_scale = distance_unit, **kwargs)
 
     def plot_fft(self):
         raise NotImplementedError
@@ -355,7 +362,7 @@ class CylindricalSliceSpecification(ElectricFieldSpecification):
                  z_bound = 20 * bohr_radius, rho_bound = 20 * bohr_radius,
                  z_points = 2 ** 9, rho_points = 2 ** 8,
                  **kwargs):
-        super(CylindricalSliceSpecification, self).__init__(name, mesh_type = CylindricalSliceMesh, animator_type = animators.CylindricalSliceAnimator, **kwargs)
+        super(CylindricalSliceSpecification, self).__init__(name, mesh_type = CylindricalSliceMesh, **kwargs)
 
         self.z_bound = z_bound
         self.rho_bound = rho_bound
@@ -661,16 +668,20 @@ class CylindricalSliceMesh(QuantumMesh):
 
         return mesh_slicer
 
-    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
-        color_mesh = axis.pcolormesh(self.z_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
-                                     self.rho_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, distance_unit = 'bohr_radius', **kwargs):
+        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+
+        color_mesh = axis.pcolormesh(self.z_mesh[self.get_mesh_slicer(plot_limit)] / unit_value,
+                                     self.rho_mesh[self.get_mesh_slicer(plot_limit)] / unit_value,
                                      mesh[self.get_mesh_slicer(plot_limit)],
                                      shading = 'gouraud',
                                      **kwargs)
 
         return color_mesh
 
-    def attach_probability_current_to_axis(self, axis, plot_limit = None):
+    def attach_probability_current_to_axis(self, axis, plot_limit = None, distance_unit = 'bohr_radius'):
+        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+
         current_mesh_z, current_mesh_rho = self.get_probability_current_vector_field()
 
         current_mesh_z *= self.delta_z
@@ -682,30 +693,32 @@ class CylindricalSliceMesh(QuantumMesh):
         if normalization == 0 or normalization is np.NaN:
             normalization = 1
 
-        quiv = axis.quiver(self.z_mesh[self.get_mesh_slicer(plot_limit)][skip] / bohr_radius,
-                           self.rho_mesh[self.get_mesh_slicer(plot_limit)][skip] / bohr_radius,
+        quiv = axis.quiver(self.z_mesh[self.get_mesh_slicer(plot_limit)][skip] / unit_value,
+                           self.rho_mesh[self.get_mesh_slicer(plot_limit)][skip] / unit_value,
                            current_mesh_z[self.get_mesh_slicer(plot_limit)][skip] / normalization,
                            current_mesh_rho[self.get_mesh_slicer(plot_limit)][skip] / normalization,
                            pivot = 'middle', units = 'width', scale = 10, scale_units = 'width', width = 0.0015, alpha = 0.5)
 
         return quiv
 
-    def plot_mesh(self, mesh, name = '', target_dir = None, img_format = 'png', title = None,
+    def plot_mesh(self, mesh, name = '', target_dir = None, title = None,
                   overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
-                  colormap = plt.cm.inferno,
+                  distance_unit = 'nm',
                   **kwargs):
+        plt.close()
+
+        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
         axis = plt.subplot(111)
 
-        plt.set_cmap(colormap)
-
-        color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit)
+        color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit, distance_unit = distance_unit)
         if overlay_probability_current:
-            quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit)
+            quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit, distance_unit = distance_unit)
 
-        axis.set_xlabel(r'$z$ (Bohr radii)', fontsize = 15)
-        axis.set_ylabel(r'$\rho$ (Bohr radii)', fontsize = 15)
+        axis.set_xlabel(r'$z$ ({})'.format(unit_name), fontsize = 15)
+        axis.set_ylabel(r'$\rho$ ({})'.format(unit_name), fontsize = 15)
         if title is not None:
             title = axis.set_title(title, fontsize = 15)
             title.set_y(1.05)  # move title up a bit
@@ -716,7 +729,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         axis.axis('tight')  # removes blank space between color mesh and axes
 
-        axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
 
         axis.tick_params(labelright = True, labeltop = True)  # ticks on all sides
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
@@ -729,7 +742,7 @@ class CylindricalSliceMesh(QuantumMesh):
         y_ticks[-1].label1.set_visible(False)
         y_ticks[-1].label2.set_visible(False)
 
-        cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
+        cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, **kwargs)
 
         plt.close()
 
@@ -739,7 +752,7 @@ class SphericalSliceSpecification(ElectricFieldSpecification):
                  r_bound = 20 * bohr_radius,
                  r_points = 2 ** 10, theta_points = 2 ** 10,
                  **kwargs):
-        super(SphericalSliceSpecification, self).__init__(name, mesh_type = SphericalSliceMesh, animator_type = animators.SphericalSliceAnimator, **kwargs)
+        super(SphericalSliceSpecification, self).__init__(name, mesh_type = SphericalSliceMesh, **kwargs)
 
         self.r_bound = r_bound
 
@@ -1006,38 +1019,43 @@ class SphericalSliceMesh(QuantumMesh):
 
         return mesh_slicer
 
-    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, **kwargs):
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, distance_unit = 'bohr_radius', **kwargs):
+        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+
         color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer(plot_limit)],
-                                     self.r_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
+                                     self.r_mesh[self.get_mesh_slicer(plot_limit)] / unit_value,
                                      mesh[self.get_mesh_slicer(plot_limit)],
                                      shading = 'gouraud',
                                      **kwargs)
         color_mesh_mirror = axis.pcolormesh(twopi - self.theta_mesh[self.get_mesh_slicer(plot_limit)],
-                                            self.r_mesh[self.get_mesh_slicer(plot_limit)] / bohr_radius,
+                                            self.r_mesh[self.get_mesh_slicer(plot_limit)] / unit_value,
                                             mesh[self.get_mesh_slicer(plot_limit)],
                                             shading = 'gouraud',
                                             **kwargs)  # another colormesh, mirroring the first mesh onto pi to 2pi
 
         return color_mesh, color_mesh_mirror
 
-    def attach_probability_current_to_axis(self, axis, plot_limit = None):
+    def attach_probability_current_to_axis(self, axis, plot_limit = None, distance_unit = 'bohr_radius'):
         raise NotImplementedError
 
     def plot_mesh(self, mesh,
                   name = '', target_dir = None, img_format = 'png', title = None,
                   overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
+                  distance_unit = 'nm',
                   **kwargs):
         plt.close()  # close any old figures
 
-        fig = plt.figure(figsize = (7, 7), dpi = 600)
+        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
 
+        fig = plt.figure(figsize = (7, 7), dpi = 600)
+        fig.set_tight_layout(True)
         axis = plt.subplot(111, projection = 'polar')
         axis.set_theta_zero_location('N')
         axis.set_theta_direction('clockwise')
 
-        color_mesh, color_mesh_mirror = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit)
+        color_mesh, color_mesh_mirror = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit, distance_unit = distance_unit)
         if overlay_probability_current:
-            quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit)
+            quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit, distance_unit = distance_unit)
 
         if title is not None:
             title = axis.set_title(title, fontsize = 15)
@@ -1049,22 +1067,28 @@ class SphericalSliceMesh(QuantumMesh):
         cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
         cbar.ax.tick_params(labelsize = 10)
 
-        axis.set_rmax((self.r_max - (self.delta_r / 2)) / bohr_radius)
-
-        axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
-        angle_labels = ['{}\u00b0'.format(s) for s in (30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
-        angle_labels = ['\u03b8=0\u00b0'] + angle_labels
+        axis.grid(True, color = GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
+        angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
-        axis.tick_params(axis = 'y', which = 'major', colors = 'silver', pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'y', which = 'major', colors = GRID_COLOR, pad = 3)  # make r ticks a color that shows up against the colormesh
         axis.tick_params(axis = 'both', which = 'both', length = 0)
 
         axis.set_rlabel_position(80)
-        last_r_label = axis.get_yticklabels()[-1]
-        last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
 
-        fig.set_tight_layout(True)
+        max_yticks = 5
+        yloc = plt.MaxNLocator(max_yticks, symmetric = False, prune = 'both')
+        axis.yaxis.set_major_locator(yloc)
+
+        fig.canvas.draw()  # must draw early to modify the axis text
+
+        tick_labels = axis.get_yticklabels()
+        for t in tick_labels:
+            t.set_text(t.get_text() + r'{}'.format(unit_name))
+        axis.set_yticklabels(tick_labels)
+
+        axis.set_rmax((self.r_max - (self.delta_r / 2)) / unit_value)
 
         cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
 
@@ -1515,26 +1539,29 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return out
 
-    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, color_map_min = 0, **kwargs):
+    def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, color_map_min = 0, distance_unit = 'bohr_radius', **kwargs):
+        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+
         color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer_spatial(plot_limit)],
-                                     self.r_theta_mesh[self.get_mesh_slicer_spatial(plot_limit)] / bohr_radius,
+                                     self.r_theta_mesh[self.get_mesh_slicer_spatial(plot_limit)] / unit_value,
                                      mesh[self.get_mesh_slicer_spatial(plot_limit)],
                                      shading = 'gouraud', vmin = color_map_min,
                                      **kwargs)
 
         return color_mesh
 
-    def attach_probability_current_to_axis(self, axis, plot_limit = None):
+    def attach_probability_current_to_axis(self, axis, plot_limit = None, distance_unit = 'bohr_radius'):
         raise NotImplementedError
 
     def plot_mesh(self, mesh,
                   name = '', target_dir = None, img_format = 'png', title = None,
                   overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
-                  colormap = plt.cm.inferno, color_map_min = 0,
+                  color_map_min = 0,
+                  distance_unit = 'bohr_radius',
                   **kwargs):
         plt.close()  # close any old figures
 
-        plt.set_cmap(colormap)
+        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
 
         fig = plt.figure(figsize = (7, 7), dpi = 600)
         fig.set_tight_layout(True)
@@ -1542,9 +1569,9 @@ class SphericalHarmonicMesh(QuantumMesh):
         axis.set_theta_zero_location('N')
         axis.set_theta_direction('clockwise')
 
-        color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit, color_map_min = color_map_min)
+        color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit, color_map_min = color_map_min, distance_unit = distance_unit)
         if overlay_probability_current:
-            quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit)
+            quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit, distance_unit = distance_unit)
 
         if title is not None:
             title = axis.set_title(title, fontsize = 15)
@@ -1556,20 +1583,28 @@ class SphericalHarmonicMesh(QuantumMesh):
         cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
         cbar.ax.tick_params(labelsize = 10)
 
-        axis.set_rmax((self.r_max - (self.delta_r / 2)) / bohr_radius)
-
-        axis.grid(True, color = 'silver', linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
-        # angle_labels = ['\u03b8=0\u00b0'] + angle_labels
         axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
-        axis.tick_params(axis = 'y', which = 'major', colors = 'silver', pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'y', which = 'major', colors = GRID_COLOR, pad = 3)  # make r ticks a color that shows up against the colormesh
         axis.tick_params(axis = 'both', which = 'both', length = 0)
 
         axis.set_rlabel_position(80)
-        last_r_label = axis.get_yticklabels()[-1]
-        last_r_label.set_color('black')  # last r tick is outside the colormesh, so make it black again
+
+        max_yticks = 5
+        yloc = plt.MaxNLocator(max_yticks, symmetric = False, prune = 'both')
+        axis.yaxis.set_major_locator(yloc)
+
+        fig.canvas.draw()  # must draw early to modify the axis text
+
+        tick_labels = axis.get_yticklabels()
+        for t in tick_labels:
+            t.set_text(t.get_text() + r'{}'.format(unit_name))
+        axis.set_yticklabels(tick_labels)
+
+        axis.set_rmax((self.r_max - (self.delta_r / 2)) / unit_value)
 
         cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
 
@@ -1600,7 +1635,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
-        if 'l' in self.mesh.mesh_storage_method and spec.store_norm_by_l:
+
+        # optional data storage
+        if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:
             self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps, dtype = np.float64) * np.NaN for sph_harm in self.spec.spherical_harmonics}
 
     @property
@@ -1649,7 +1686,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.times[time_index])
 
-        if 'l' in self.mesh.mesh_storage_method and spec.store_norm_by_l:
+        if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:
             norm_by_l = self.mesh.norm_by_l
             for sph_harm, l_norm in zip(self.spec.spherical_harmonics, norm_by_l):
                 self.norm_by_harmonic_vs_time[sph_harm][time_index] = l_norm  # TODO: extend to non-l storage meshes

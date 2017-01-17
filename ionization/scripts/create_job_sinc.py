@@ -119,6 +119,9 @@ if __name__ == '__main__':
                                                       for d in clu.expand_parameters_to_dicts(pulse_parameters)),
                                         expandable = True))
 
+        parameters.append(clu.Parameter(name = 'store_norm_by_l',
+                                        value = clu.ask_for_bool('Store Norm-by-L?')))
+
         print('Generating parameters...')
 
         spec_kwargs_list = clu.expand_parameters_to_dicts(parameters)
