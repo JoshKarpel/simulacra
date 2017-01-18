@@ -125,6 +125,15 @@ class MetricsAndElectricField(cp.AxisManager):
 
         self.redraw += [self.norm_line]
 
+    def _initialize_metric_initial_state_overlap(self):
+        self.initial_state_overlap_line, = self.axis.plot(self.sim.times / self.time_unit,
+                                                          self.sim.state_overlaps_vs_time[self.sim.spec.initial_state],
+                                                          label = r'$\left| \left\langle \psi|{} \right\rangle \right|^2$'.format(self.sim.spec.initial_state.tex_str),
+                                                          color = 'blue', linewidth = '3',
+                                                          animated = True)
+
+        self.redraw += [self.initial_state_overlap_line]
+
     def update(self):
         self._update_electric_field()
 
@@ -140,6 +149,9 @@ class MetricsAndElectricField(cp.AxisManager):
 
     def _update_metric_norm(self):
         self.norm_line.set_ydata(self.sim.norm_vs_time)
+
+    def _update_metric_initial_state_overlap(self):
+        self.initial_state_overlap_line.set_ydata(self.sim.state_overlaps_vs_time[self.sim.spec.initial_state])
 
 
 class QuantumMeshAxis(cp.AxisManager):
@@ -166,6 +178,7 @@ class WavefunctionSimulationAnimator(cp.Animator):
                  log_metrics = False,
                  overlay_probability_current = False,
                  distance_unit = 'bohr_radius',
+                 metrics = ('norm',),
                  **kwargs):
         super(WavefunctionSimulationAnimator, self).__init__(*args, **kwargs)
 
@@ -175,6 +188,7 @@ class WavefunctionSimulationAnimator(cp.Animator):
         self.log_metrics = log_metrics
         self.overlay_probability_current = overlay_probability_current
         self.distance_unit = distance_unit
+        self.metrics = metrics
 
     def __str__(self):
         return cp.utils.field_str(self, 'postfix', ('plot_limit', self.distance_unit), 'distance_unit', 'renormalize', 'log_g', 'log_metrics', 'overlay_probability_current')
@@ -221,7 +235,8 @@ class LineAnimator(WavefunctionSimulationAnimator):
                                 overlay_probability_current = self.overlay_probability_current,
                                 distance_unit = self.distance_unit)
         self.ax_metrics = MetricsAndElectricField(self.fig.add_axes([.065, .065, .865, .2]), self.sim,
-                                                  log_metrics = self.log_metrics)
+                                                  log_metrics = self.log_metrics,
+                                                  metrics = self.metrics)
 
         self.axis_managers += [self.ax_mesh, self.ax_metrics]
 
@@ -279,7 +294,8 @@ class CylindricalSliceAnimator(WavefunctionSimulationAnimator):
                                             overlay_probability_current = self.overlay_probability_current,
                                             distance_unit = self.distance_unit)
         self.ax_metrics = MetricsAndElectricField(self.fig.add_axes([.065, .065, .855, .2]), self.sim,
-                                                  log_metrics = self.log_metrics)
+                                                  log_metrics = self.log_metrics,
+                                                  metrics = self.metrics)
 
         self.axis_managers += [self.ax_mesh, self.ax_metrics]
 
@@ -444,7 +460,8 @@ class PhiSliceAnimator(WavefunctionSimulationAnimator):
                          'framealpha': .1}
         self.ax_metrics = MetricsAndElectricField(self.fig.add_axes([.575, .075, .36, .15]), self.sim,
                                                   log_metrics = self.log_metrics,
-                                                  label_left = False, legend_kwargs = legend_kwargs)
+                                                  label_left = False, legend_kwargs = legend_kwargs,
+                                                  metrics = self.metrics)
 
         self.ax_mesh.initialize()  # must pre-initialize so that the colobar can see the colormesh
         self.ax_cbar = ColorBarAxis(self.fig.add_axes([.65, .25, .03, .5]), self.sim, colorable = self.ax_mesh.mesh)

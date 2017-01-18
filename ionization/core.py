@@ -153,6 +153,19 @@ class QuantumMesh:
         # return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * self.inner_product_multiplier
         return np.sum(np.conj(mesh_a) * mesh_b) * self.inner_product_multiplier
 
+    def state_overlap(self, state_a = None, state_b = None):
+        """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
+        if state_a is None:
+            mesh_a = self.g_mesh
+        else:
+            mesh_a = self.g_for_state(state_a)
+        if state_b is None:
+            mesh_b = self.g_mesh
+        else:
+            mesh_b = self.g_for_state(state_b)
+
+        return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
+
     @property
     def norm(self):
         return np.abs(self.inner_product())
@@ -286,7 +299,7 @@ class LineMesh(QuantumMesh):
 
         self.inner_product_multiplier = self.delta_x
 
-        self.g_mesh = self.g_for_state(self.spec.initial_state)
+        self.g_mesh = self.get_g_for_state(self.spec.initial_state)
         self.g_factor = 1
 
         self.free_evolution_prefactor = -1j * (hbar / (2 * self.spec.test_mass)) * (self.wavenumbers ** 2)
@@ -296,7 +309,7 @@ class LineMesh(QuantumMesh):
         return self.x_mesh
 
     @cp.utils.memoize
-    def g_for_state(self, state):
+    def get_g_for_state(self, state):
         return state(self.x_mesh)
 
     @property
@@ -402,7 +415,7 @@ class CylindricalSliceMesh(QuantumMesh):
         self.rho_max = np.max(self.rho)
 
         # self.z_mesh, self.rho_mesh = np.meshgrid(self.z, self.rho, indexing = 'ij')
-        self.g_mesh = self.g_for_state(self.spec.initial_state)
+        self.g_mesh = self.get_g_for_state(self.spec.initial_state)
 
         self.mesh_points = len(self.z) * len(self.rho)
         self.matrix_operator_shape = (self.mesh_points, self.mesh_points)
@@ -460,21 +473,8 @@ class CylindricalSliceMesh(QuantumMesh):
 
         return np.reshape(vector, self.mesh_shape, wrap)
 
-    def state_overlap(self, state_a = None, state_b = None):
-        """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
-        if state_a is None:
-            mesh_a = self.g_mesh
-        else:
-            mesh_a = self.g_for_state(state_a)
-        if state_b is None:
-            mesh_b = self.g_mesh
-        else:
-            mesh_b = self.g_for_state(state_b)
-
-        return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
-
     @cp.utils.memoize
-    def g_for_state(self, state):
+    def get_g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
     def dipole_moment(self, gauge = 'length'):
@@ -791,7 +791,7 @@ class SphericalSliceMesh(QuantumMesh):
         self.r_max = np.max(self.r)
 
         # self.r_mesh, self.theta_mesh = np.meshgrid(self.r, self.theta, indexing = 'ij')
-        self.g_mesh = self.g_for_state(self.spec.initial_state)
+        self.g_mesh = self.get_g_for_state(self.spec.initial_state)
 
         self.mesh_points = len(self.r) * len(self.theta)
         self.matrix_operator_shape = (self.mesh_points, self.mesh_points)
@@ -841,11 +841,11 @@ class SphericalSliceMesh(QuantumMesh):
         if state_a is None:
             mesh_a = self.g_mesh
         else:
-            mesh_a = self.g_for_state(state_a)
+            mesh_a = self.get_g_for_state(state_a)
         if state_b is None:
             mesh_b = self.g_mesh
         else:
-            mesh_b = self.g_for_state(state_b)
+            mesh_b = self.get_g_for_state(state_b)
 
         return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
 
@@ -854,7 +854,7 @@ class SphericalSliceMesh(QuantumMesh):
         return np.abs(self.inner_product())
 
     @cp.utils.memoize
-    def g_for_state(self, state):
+    def get_g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
     def dipole_moment(self, gauge = 'length'):
@@ -1155,7 +1155,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.mesh_points = len(self.r) * len(self.l)
         self.mesh_shape = np.shape(self.r_mesh)
 
-        self.g_mesh = self.g_for_state(self.spec.initial_state)
+        self.g_mesh = self.get_g_for_state(self.spec.initial_state)
 
     @property
     @cp.utils.memoize
@@ -1199,18 +1199,6 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return np.reshape(mesh, self.mesh_shape, wrap)
 
-    def state_overlap(self, state_a = None, state_b = None):
-        if state_a is None:
-            mesh_a = self.g_mesh
-        else:
-            mesh_a = self.g_for_state(state_a)
-        if state_b is None:
-            mesh_b = self.g_mesh
-        else:
-            mesh_b = self.g_for_state(state_b)
-
-        return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
-
     @property
     def norm_by_l(self):
         return np.abs(np.sum(np.conj(self.g_mesh) * self.g_mesh, axis = 1) * self.delta_r)
@@ -1225,7 +1213,7 @@ class SphericalHarmonicMesh(QuantumMesh):
             raise NotImplementedError
 
     @cp.utils.memoize
-    def g_for_state(self, state):
+    def get_g_for_state(self, state):
         g = np.zeros(self.mesh_shape)
 
         for s in state:
@@ -1682,7 +1670,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             self.electric_dipole_moment_vs_time[gauge][time_index] = self.mesh.dipole_moment(gauge = gauge)
 
         for state in self.spec.test_states:
-            self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(self.mesh.g_for_state(state))
+            self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(self.mesh.get_g_for_state(state))
 
         self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.times[time_index])
 

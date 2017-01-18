@@ -632,7 +632,7 @@ class FiniteSquareWellState(QuantumState):
         :return: a FiniteSquareWellState instance
         """
 
-        raise NotImplementedError
+        return cls(finite_square_well_potential.depth, finite_square_well_potential.width, mass, n = n, well_center = finite_square_well_potential.center, amplitude = amplitude, dimension_label = dimension_label)
 
     def __str__(self):
         return self.ket

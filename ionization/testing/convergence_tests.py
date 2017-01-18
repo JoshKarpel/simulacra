@@ -158,7 +158,7 @@ def cylindrical_slice_norm_energy(z_points, states, bound = 30 * bohr_radius):
         sim = ion.ElectricFieldSimulation(spec)
 
         for state in states:
-            sim.mesh.g_mesh = sim.mesh.g_for_state(state)
+            sim.mesh.g_mesh = sim.mesh.get_g_for_state(state)
 
             norms[state][ii] = sim.mesh.norm
             energies[state][ii] = sim.mesh.energy_expectation_value
@@ -234,7 +234,7 @@ def spherical_slice_norm_energy(r_points, states, theta_points = 128, bound = 30
         sim = ion.ElectricFieldSimulation(spec)
 
         for state in states:
-            sim.mesh.g_mesh = sim.mesh.g_for_state(state)
+            sim.mesh.g_mesh = sim.mesh.get_g_for_state(state)
 
             norms[state][ii] = sim.mesh.norm
             energies[state][ii] = sim.mesh.energy_expectation_value
@@ -310,7 +310,7 @@ def spherical_harmonic_norm_energy(r_points, states, spherical_harmonics = 128, 
         sim = ion.ElectricFieldSimulation(spec)
 
         for state in states:
-            sim.mesh.g_mesh = sim.mesh.g_for_state(state)
+            sim.mesh.g_mesh = sim.mesh.get_g_for_state(state)
 
             norms[state][ii] = sim.mesh.norm
             energies[state][ii] = sim.mesh.energy_expectation_value
