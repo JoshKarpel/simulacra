@@ -96,7 +96,7 @@ if __name__ == '__main__':
         specs.append(ion.LineSpecification('line',
                                            x_bound = 50 * nm, x_points = 2 ** 14,
                                            internal_potential = pot,
-                                           electric_potential = e_field,
+                                           electric_potential = ion.SineWave.from_photon_energy(1 * eV, amplitude = .05 * atomic_electric_field),
                                            test_states = (ion.QHOState.from_QHO_potential_and_mass(pot, mass, n = n) for n in range(20)),
                                            initial_state = init,
                                            time_initial = t_init * asec, time_final = t_final * 10 * asec, time_step = dt * asec,
