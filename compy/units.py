@@ -7,6 +7,7 @@ unit_names_to_tex_strings = {}
 
 
 def uround(value, units = 1, digits = 3):
+    """Round value to the number of digits, represented in the given units (by name or value)."""
     if type(units) == str:
         units = unit_names_to_values[units]
 
@@ -14,19 +15,15 @@ def uround(value, units = 1, digits = 3):
 
 
 def unit_value_and_name_from_unit(unit):
-    """
-
-    :param unit:
-    :return:
-    """
+    """Return the (unit_value, unit_tex_string) pair from a unit name."""
     if type(unit) == str:
         unit_value = unit_names_to_values[unit]
-        unit_name = unit_names_to_tex_strings[unit]
+        unit_tex_string = unit_names_to_tex_strings[unit]
     else:
         unit_value = unit
-        unit_name = ''
+        unit_tex_string = ''
 
-    return unit_value, unit_name
+    return unit_value, unit_tex_string
 
 
 # dimensionless constants
@@ -520,7 +517,7 @@ unit_names_to_tex_strings.update({'h': r'$h$',
                                   'rydberg': r'$\mathrm{Ry}',
                                   'hartree': r'$\mathrm{Ha}'})
 
-# speed of light and EM
+# speed of light and E&M
 c = 299792458 * m / s
 mu_0 = pi * 4e-7 * N / (A ** 2)
 epsilon_0 = 1 / (mu_0 * (c ** 2))

@@ -1,9 +1,7 @@
 import datetime as dt
 import functools
 import logging
-import os
 import itertools as it
-import functools as ft
 from copy import deepcopy
 
 import matplotlib
@@ -18,12 +16,12 @@ from cycler import cycler
 import compy as cp
 import compy.cy as cy
 from compy.units import *
-from . import animators, potentials, states
+from . import potentials, states
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-GRID_COLOR = 'dodgerblue'
+GRID_COLOR = 'dodgerblue'  # the color to use for the gridlines on colormesh plots
 
 
 def electron_energy_from_wavenumber(k):
@@ -56,6 +54,35 @@ class ElectricFieldSpecification(cp.core.Specification):
                  animators = tuple(),
                  store_norm_by_l = False,
                  **kwargs):
+        """
+        Initialize an ElectricFieldSpecification instance from the given parameters.
+
+        This class should generally not be instantiated directly - its subclasses contain information about the mesh that is necessary to create an actual ElectricFieldSimulation.
+
+        :param name: the name of the Specification
+        :param mesh_type: the type of QuantumMesh that will be used in the Simulation.
+        :param test_mass: the mass of the test particle
+        :param test_charge: the charge of the test particle
+        :param initial_state: the initial QuantumState of the test particle
+        :param test_states: a list of states to perform inner products with during time evolution
+        :param dipole_gauges: a list of dipole gauges to check the expectation value of during time evolution
+        :param internal_potential: the time-independent part of the potential the particle experiences
+        :param electric_potential: the electric field (possibly time-dependent) that the particle experiences
+        :param mask: a mask function to be applied to the QuantumMesh after every time step
+        :param evolution_method: which evolution method to use. Options are 'CN' (Crank-Nicolson), 'SO' (Split-Operator), and 'S' (Spectral). Only certain options are available for certain meshes.
+        :param evolution_equations: which form of the evolution equations to use. Options are 'L' (Lagrangian) and 'H' (Hamiltonian). Most meshes use 'H'.
+        :param time_initial: the initial time
+        :param time_final: the final time
+        :param time_step: the time step
+        :param minimum_time_final: the minimum final time the Simulation will run to (i.e., if this is longer than time_final, more time will be added to the Simulation)
+        :param extra_time_step: the time step to use during extra time from minimum_final_time
+        :param checkpoints: if True, a checkpoint file will be maintained during time evolution
+        :param checkpoint_every: how many time steps to calculate between checkpoints
+        :param checkpoint_dir: a directory path to store the checkpoint file in
+        :param animators: a list of Animators which will be run during time evolution
+        :param store_norm_by_l: if True, the Simulation will store the amount of norm in each spherical harmonic.
+        :param kwargs:
+        """
         super(ElectricFieldSpecification, self).__init__(name, simulation_type = ElectricFieldSimulation, **kwargs)
 
         if mesh_type is None:
@@ -105,7 +132,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         if len(self.animators) > 0:
             animation += ['   ' + str(animator) for animator in self.animators]
         else:
-            animation[0] += 'disabled'
+            animation[0] += 'None'
 
         time_evolution = ['Time Evolution:',
                           '   Initial State: {}'.format(self.initial_state),
@@ -153,6 +180,9 @@ class QuantumMesh:
         # return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * self.inner_product_multiplier
         return np.sum(np.conj(mesh_a) * mesh_b) * self.inner_product_multiplier
 
+    def mesh_overlap(self, mesh_a = None, mesh_b = None):
+        return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
+
     def state_overlap(self, state_a = None, state_b = None):
         """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
         if state_a is None:
@@ -169,6 +199,13 @@ class QuantumMesh:
     @property
     def norm(self):
         return np.abs(self.inner_product())
+
+    @property
+    def energy_expectation_value(self):
+        raise NotImplementedError
+
+    def dipole_moment_expectation_value(self, gauge = 'length'):
+        raise NotImplementedError
 
     def __abs__(self):
         return self.norm
@@ -212,9 +249,11 @@ class QuantumMesh:
         return out
 
     def attach_g_to_axis(self, axis, normalize = False, log = False, plot_limit = None, **kwargs):
+        """Attach a colormesh of |g|^2 to the given axis."""
         return self.attach_mesh_to_axis(axis, self.abs_g_squared(normalize = normalize, log = log), plot_limit = plot_limit, **kwargs)
 
     def update_g_mesh(self, mesh, normalize = False, log = False, plot_limit = None, slicer = 'get_mesh_slicer'):
+        """Update a colormesh with with the current value of |g|^2."""
         new_mesh = self.abs_g_squared(normalize = normalize, log = log)[getattr(self, slicer)(plot_limit)]
 
         try:
@@ -242,15 +281,17 @@ class QuantumMesh:
         return out
 
     def attach_psi_to_axis(self, axis, normalize = False, log = False, plot_limit = None, **kwargs):
+        """Attach a colormesh of |psi|^2 to the given axis."""
         return self.attach_mesh_to_axis(axis, self.abs_psi_squared(normalize = normalize, log = log), plot_limit = plot_limit, **kwargs)
 
-    def update_psi_mesh(self, mesh, normalize = False, log = False, plot_limit = None):
+    def update_psi_mesh(self, colormesh, normalize = False, log = False, plot_limit = None):
+        """Update a colormesh with with the current value of |psi|^2."""
         new_mesh = self.abs_psi_squared(normalize = normalize, log = log)[self.get_mesh_slicer(plot_limit)]
 
         try:
-            mesh.set_array(new_mesh.ravel())
+            colormesh.set_array(new_mesh.ravel())
         except AttributeError as e:
-            mesh.set_ydata(new_mesh)
+            colormesh.set_ydata(new_mesh)
 
     def plot_psi(self, normalize = True, name_postfix = '', **kwargs):
         """Plot |psi|^2. kwargs are for plot_mesh."""
@@ -319,7 +360,7 @@ class LineMesh(QuantumMesh):
 
         return np.real(potential + kinetic)
 
-    def dipole_moment(self, gauge = 'length'):
+    def dipole_moment_expectation_value(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
         if gauge == 'length':
             return self.spec.test_charge * self.inner_product(mesh_b = self.x_mesh * self.g_mesh)
@@ -477,7 +518,7 @@ class CylindricalSliceMesh(QuantumMesh):
     def get_g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
-    def dipole_moment(self, gauge = 'length'):
+    def dipole_moment_expectation_value(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
         if gauge == 'length':
             return self.spec.test_charge * self.inner_product(mesh_b = self.z_mesh * self.g_mesh)
@@ -857,7 +898,7 @@ class SphericalSliceMesh(QuantumMesh):
     def get_g_for_state(self, state):
         return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
 
-    def dipole_moment(self, gauge = 'length'):
+    def dipole_moment_expectation_value(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
         if gauge == 'length':
             return self.spec.test_charge * self.inner_product(mesh_b = self.z_mesh * self.g_mesh)
@@ -1203,7 +1244,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     def norm_by_l(self):
         return np.abs(np.sum(np.conj(self.g_mesh) * self.g_mesh, axis = 1) * self.delta_r)
 
-    def dipole_moment(self, gauge = 'length'):
+    def dipole_moment_expectation_value(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
         if gauge == 'length':
             _, operator = self._get_kinetic_energy_matrix_operators()
@@ -1667,7 +1708,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.energy_expectation_value_vs_time_internal[time_index] = self.mesh.energy_expectation_value
 
         for gauge in self.spec.dipole_gauges:
-            self.electric_dipole_moment_vs_time[gauge][time_index] = self.mesh.dipole_moment(gauge = gauge)
+            self.electric_dipole_moment_vs_time[gauge][time_index] = self.mesh.dipole_moment_expectation_value(gauge = gauge)
 
         for state in self.spec.test_states:
             self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(self.mesh.get_g_for_state(state))

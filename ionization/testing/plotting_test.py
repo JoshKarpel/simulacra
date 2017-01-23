@@ -30,7 +30,7 @@ if __name__ == '__main__':
         specs = []
 
         line_potential = ion.FiniteSquareWell(potential_depth = 3 * eV, width = 1 * nm)
-        for initial_state in ion.FiniteSquareWellState.all_states_of_well(3 * eV, 1 * nm, electron_mass):
+        for initial_state in ion.FiniteSquareWellState.all_states_of_well_from_parameters(3 * eV, 1 * nm, electron_mass):
             specs.append(ion.LineSpecification('line_mesh__{}'.format(initial_state.n),
                                                initial_state = initial_state,
                                                x_bound = 30 * nm))

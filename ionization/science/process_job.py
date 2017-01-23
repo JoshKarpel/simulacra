@@ -4,7 +4,8 @@ import logging
 import itertools as it
 from pprint import pprint
 
-sys.path.append("D:\GitHubProjects\compy")
+sys.path.append(r"D:\GitHubProjects\compy")
+sys.path.append(r"C:\Users\Josh\GitHubProjects\compy")
 
 import compy as cp
 from compy.units import *
@@ -38,7 +39,7 @@ if __name__ == '__main__':
 
         colors = ['#1b9e77', '#d95f02', '#7570b3', '#e7298a', '#66a61e', '#e6ab02', '#a6761d']
 
-        fluences_skipping = list(fluences[i] for i in (0, 4, 9, 14, 19, 25, 29))
+        fluences_skipping = list(fluences[i] for i in range(5))
         color_dict = dict(zip(fluences_skipping, colors))
 
         dashes = ((), (5, 2))

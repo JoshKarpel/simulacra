@@ -597,16 +597,17 @@ class FiniteSquareWellState(QuantumState):
 
         z_0 = (well_width / 2) * np.sqrt(2 * mass * well_depth) / hbar
 
-        if z_0 < n * pi / 2:
+        if n - 1 > z_0 // (pi / 2):
             raise IllegalQuantumState('There is no bound state with the given parameters')
 
         left_bound = (n - 1) * pi / 2
-        right_bound = left_bound + (pi / 2)
+        right_bound = min(z_0, left_bound + (pi / 2))
 
-        if n % 2 != 0:
+        # determine the energy of the state by solving a transcendental equation
+        if n % 2 != 0:  # n is odd
             z = optimize.brentq(lambda z: np.tan(z) - np.sqrt(((z_0 / z) ** 2) - 1), left_bound, right_bound)
             self.function_inside_well = np.cos
-        else:
+        else:  # n is even
             z = optimize.brentq(lambda z: (1 / np.tan(z)) + np.sqrt(((z_0 / z) ** 2) - 1), left_bound, right_bound)
             self.function_inside_well = np.sin
 
@@ -631,8 +632,7 @@ class FiniteSquareWellState(QuantumState):
         :param dimension_label: a label indicating which dimension the particle is confined in
         :return: a FiniteSquareWellState instance
         """
-
-        return cls(finite_square_well_potential.depth, finite_square_well_potential.width, mass, n = n, well_center = finite_square_well_potential.center, amplitude = amplitude, dimension_label = dimension_label)
+        return cls(finite_square_well_potential.potential_depth, finite_square_well_potential.width, mass, n = n, well_center = finite_square_well_potential.center, amplitude = amplitude, dimension_label = dimension_label)
 
     def __str__(self):
         return self.ket
@@ -664,7 +664,7 @@ class FiniteSquareWellState(QuantumState):
         return self.well_depth, self.well_width, self.mass, self.n
 
     @classmethod
-    def all_states_of_well(cls, well_depth, well_width, mass, well_center = 0, amplitude = 1):
+    def all_states_of_well_from_parameters(cls, well_depth, well_width, mass, well_center = 0, amplitude = 1):
         """
         Return a list containing all of the bound states of a well.
 
@@ -684,7 +684,21 @@ class FiniteSquareWellState(QuantumState):
             except IllegalQuantumState:
                 return states
 
-                # TODO: switch this over to reading a FiniteSquareWell potential
+    @classmethod
+    def all_states_of_well_from_well(cls, finite_square_well_potential, mass, amplitude = 1):
+        """
+        Return a list containing all of the bound states of a well.
+
+        :param finite_square_well_potential: a FiniteSquareWell
+        :param mass: the mass of the particle
+        :param amplitude: the probability amplitude of the states
+        :return:
+        """
+        return cls.all_states_of_well_from_parameters(finite_square_well_potential.potential_depth,
+                                                      finite_square_well_potential.width,
+                                                      mass,
+                                                      well_center = finite_square_well_potential.center,
+                                                      amplitude = 1)
 
     @property
     def left_edge(self):

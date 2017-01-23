@@ -47,7 +47,7 @@ if __name__ == '__main__':
         depth = 1 * eV
         width = 1 * nm
         finite_square_well = ion.FiniteSquareWell(potential_depth = depth, width = width)
-        square_well_states = list(ion.FiniteSquareWellState.all_states_of_well(depth, width, electron_mass))
+        square_well_states = list(ion.FiniteSquareWellState.all_states_of_well_from_parameters(depth, width, electron_mass))
 
         animators = [
             ion.animators.LineAnimator(postfix = '', target_dir = OUT_DIR, plot_limit = 40 * nm, length = 60, renormalize = False, metrics = ('norm', 'initial_state_overlap')),
@@ -150,4 +150,5 @@ if __name__ == '__main__':
             # print()
 
         cp.utils.xy_plot('a_vs_t', times, np.abs(a) ** 2,
-                         x_scale = 'asec', x_label = r'$t$')
+                         x_scale = 'asec', x_label = r'$t$',
+                         target_dir = OUT_DIR)

@@ -25,6 +25,16 @@ LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', d
 
 
 def field_str(obj, *fields, digits = 3):
+    """
+    Generate a repr-like string from the object's attributes.
+
+    Each field should be a string containing the name of an attribute or a ('attribute_name', 'unit_name') pair. uround will be used to format in the second case.
+
+    :param obj: the object to get attributes from
+    :param fields: the attributes or (attribute, unit) pairs to get from obj
+    :param digits: the number of digits to round to for uround
+    :return: the formatted string
+    """
     field_strings = []
     for field in fields:
         try:
@@ -88,7 +98,7 @@ class Logger:
         self.logger = None
 
     def __enter__(self):
-        """Enter special method. Gets a logger with the specified name, replace it's handlers with, and returns itself."""
+        """Gets a logger with the specified name, replace it's handlers with, and returns itself."""
         logging.disable(self.disable_level)
 
         self.loggers = {name: logging.getLogger(name) for name in self.logger_names}
@@ -123,7 +133,7 @@ class Logger:
         return self.loggers[self.logger_names[0]]
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit special method. Restores the logger to it's pre-context state."""
+        """Restores the logger to it's pre-context state."""
         logging.disable(logging.NOTSET)
 
         for name, logger in self.loggers.items():
@@ -267,6 +277,27 @@ def save_current_figure(name, name_postfix = '', target_dir = None, img_format =
     logger.debug('Saved matplotlib figure {} to {}'.format(name, path))
 
     return path
+
+
+def downsample(dense_x_array, sparse_x_array, dense_y_array):
+    """
+    Downsample (dense_x_array, dense_y_array) to (sparse_x_array, sparse_y_array).
+
+    The downsampling is performed by matching points from sparse_x_array to dense_x_array using find_nearest_entry. Use with caution!
+
+    :param dense_x_array:
+    :param sparse_x_array:
+    :param dense_y_array:
+    :return: a sparsified version of dense_y_array
+    """
+
+    sparse_y_array = np.zeros(len(sparse_x_array), dtype = dense_y_array.dtype) * np.NaN
+
+    for sparse_index, x in enumerate(sparse_x_array):
+        dense_index, _, _ = find_nearest_entry(dense_x_array, x)
+        sparse_y_array[sparse_index] = dense_y_array[dense_index]
+
+    return sparse_y_array
 
 
 XYAxis = collections.namedtuple('XYAxis', field_names = ('axis', 'lines', 'title', 'x_label', 'y_label', 'legend'))
@@ -471,15 +502,16 @@ def method_dispatch(func):
     return wrapper
 
 
-def memoize(func):
-    func.memo = {}
+def memoize(function):
+    """Memoize a function by storing a dictionary of {inputs: outputs}."""
+    memo = {}
 
-    @ft.wraps(func)
+    @ft.wraps(function)
     def memoizer(*args, **kwargs):
         key = str(args) + str(kwargs)
-        if key not in func.memo:
-            func.memo[key] = func(*args, **kwargs)
-        return func.memo[key]
+        if key not in memo:
+            memo[key] = function(*args, **kwargs)
+        return memo[key]
 
     return memoizer
 
@@ -640,9 +672,7 @@ class Checked(Descriptor):
 
 
 def convert_bytes(num):
-    """
-    this function will convert bytes to MB.... GB... etc
-    """
+    """Return a number of bytes as a human-readable string."""
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
@@ -650,13 +680,12 @@ def convert_bytes(num):
 
 
 def get_file_size(file_path):
+    """Return the size of the file at file_path."""
     return os.stat(file_path).st_size
 
 
 def get_file_size_as_string(file_path):
-    """
-    this function will return the file size as a string
-    """
+    """Return the size of the file at file_path as a human-readable string."""
     if os.path.isfile(file_path):
         file_info = os.stat(file_path)
         return convert_bytes(file_info.st_size)
@@ -664,25 +693,33 @@ def get_file_size_as_string(file_path):
 
 def try_loop(*functions_to_run,
              wait_after_success = dt.timedelta(hours = 1), wait_after_failure = dt.timedelta(minutes = 1),
-             begin_text = 'Beginning', complete_text = 'Complete'):
-    latest_sync_time = None
-    while True:
-        if latest_sync_time is None or dt.datetime.now() - latest_sync_time > wait_after_success:
-            try:
-                start_time = dt.datetime.now()
-                logger.info(begin_text)
+             begin_text = 'Beginning loop', complete_text = 'Completed loop'):
+    """
+    Run the given functions in a constant loop.
 
+    :param functions_to_run: call these functions in order during each loop
+    :param wait_after_success: a datetime.timedelta object specifying how long to wait after a loop completes
+    :param wait_after_failure: a datetime.timedelta object specifying how long to wait after a loop fails (i.e., raises an exception)
+    :param begin_text: a string to print at the beginning of each loop
+    :param complete_text: a string to print at the end of each loop
+    :return:
+    """
+    while True:
+        try:
+            logger.info(begin_text)
+
+            with Timer() as timer:
                 for f in functions_to_run:
                     f()
 
-                end_time = dt.datetime.now()
-                logger.info(complete_text + '. Elapsed time: {}'.format(end_time - start_time))
+            logger.info(complete_text + '. Elapsed time: {}'.format(timer.time_elapsed))
 
-                latest_sync_time = end_time
-                logger.info('Next loop cycle at ~{}'.format(latest_sync_time + wait_after_success))
-            except (FileNotFoundError, PermissionError, TimeoutError) as e:
-                logger.exception('Exception encountered')
-                logger.warning('Loop cycle failed, retrying in {} seconds'.format(wait_after_failure.total_seconds()))
+            logger.info('Next loop cycle at {}'.format(dt.datetime.now() + wait_after_success))
+
+            time.sleep(wait_after_success.total_seconds())
+        except Exception as e:
+            logger.exception('Exception encountered')
+            logger.warning('Loop cycle failed, retrying in {} seconds'.format(wait_after_failure.total_seconds()))
 
         time.sleep(wait_after_failure.total_seconds())
 
