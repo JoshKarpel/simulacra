@@ -15,10 +15,14 @@ if __name__ == '__main__':
         mass = electron_mass
         pw = 200
 
-        bound = 200
+        space_bound = 50000 * nm / bohr_radius
+        time_bound = 5
 
         depth = 21.02 * eV
         width = 1.2632 * 2 * bohr_radius
+
+        # depth = 1.5 * eV
+        # width = 1 * nm
 
         z_0 = width * np.sqrt(2 * mass * depth) / hbar / 2
         print('z_0 = {},   floor(z_0 / pi / 2) = {},   pi / 2 = {}'.format(z_0, np.ceil(z_0 / (pi / 2)), pi / 2))
@@ -38,7 +42,7 @@ if __name__ == '__main__':
 
         # electric = ion.SineWave.from_photon_energy(1 * eV, amplitude = .01 * atomic_electric_field,
         #                                            window = ion.SymmetricExponentialTimeWindow(window_time = 10 * fsec, window_width = 1 * fsec, window_center = 5 * fsec))
-        # electric = ion.SincPulse(pulse_width = pw * asec, fluence = 1 * Jcm2, phase = 'cos', dc_correction_time = 30 * pw * asec,
+        # electric = ion.SincPulse(pulse_width = pw * asec, fluence = 1 * Jcm2, phase = 'cos', dc_correction_time = time_bound * pw * asec,
         #                          window = ion.SymmetricExponentialTimeWindow(window_time = 29 * pw * asec, window_width = pw * asec / 2))
         electric = ion.NoElectricField()
 
@@ -51,22 +55,22 @@ if __name__ == '__main__':
         test_states = ion.FiniteSquareWellState.all_states_of_well_from_parameters(depth, width, mass)
 
         sim = ion.LineSpecification('fsw',
-                                    x_bound = bound * bohr_radius, x_points = 2 ** 19,
+                                    x_bound = space_bound * bohr_radius, x_points = 2 ** 20,
                                     internal_potential = pot,
                                     electric_potential = electric,
                                     test_mass = mass,
                                     test_states = test_states,
                                     dipole_gauges = (),
                                     initial_state = init,
-                                    time_initial = -pw * 30 * asec, time_final = pw * 30 * asec, time_step = 1 * asec,
-                                    mask = ion.RadialCosineMask(inner_radius = (bound - 50) * bohr_radius, outer_radius = bound * bohr_radius),
+                                    time_initial = -pw * time_bound * asec, time_final = pw * time_bound * asec, time_step = 1 * asec,
+                                    # mask = ion.RadialCosineMask(inner_radius = (space_bound - 50) * bohr_radius, outer_radius = space_bound * bohr_radius),
                                     animators = ani
                                     ).to_simulation()
 
         print(sim.info())
 
         cp.utils.xy_plot('fsw_potential', sim.mesh.x_mesh, pot(distance = sim.mesh.x_mesh),
-                         x_scale = 'nm', y_scale = 'eV',
+                         x_scale = 'bohr_radius', y_scale = 'eV',
                          target_dir = OUT_DIR)
 
         print('init norm', sim.mesh.norm)
@@ -81,7 +85,11 @@ if __name__ == '__main__':
 
         sim.mesh.plot_g(name_postfix = '_post', target_dir = OUT_DIR)
         sim.plot_wavefunction_vs_time(target_dir = OUT_DIR, x_scale = 'asec')
-        sim.plot_energy_expectation_value_vs_time(target_dir = OUT_DIR, x_scale = 'asec')
+        cp.utils.xy_plot('energy_vs_time',
+                         sim.times, sim.energy_expectation_value_vs_time_internal,
+                         x_label = '$t$', x_scale = 'asec', y_label = 'Energy', y_scale = 'eV',
+                         target_dir = OUT_DIR)
+        # sim.plot_energy_expectation_value_vs_time(target_dir = OUT_DIR, x_scale = 'asec')
 
         # overlap_vs_k = np.zeros(len(plane_waves)) * np.NaN
         #

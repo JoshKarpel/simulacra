@@ -161,11 +161,16 @@ class HarmonicOscillator(PotentialEnergy):
 class FiniteSquareWell(PotentialEnergy):
     def __init__(self, potential_depth = 1 * eV, width = 10 * nm, center = 0 * nm):
         self.potential_depth = potential_depth
-
         self.width = width
         self.center = center
 
         super(FiniteSquareWell, self).__init__()
+
+    def __str__(self):
+        return cp.utils.field_str(self, ('potential_depth', 'eV'), ('width', 'nm'), ('center', 'nm'))
+
+    def __repr__(self):
+        return cp.utils.field_str(self, 'potential_depth', 'width', 'center')
 
     @property
     def left_edge(self):
