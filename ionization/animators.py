@@ -234,7 +234,7 @@ class LineAnimator(WavefunctionSimulationAnimator):
                                 log_g = self.log_g,
                                 overlay_probability_current = self.overlay_probability_current,
                                 distance_unit = self.distance_unit)
-        self.ax_metrics = MetricsAndElectricField(self.fig.add_axes([.065, .065, .865, .2]), self.sim,
+        self.ax_metrics = MetricsAndElectricField(self.fig.add_axes([.065, .065, .85, .2]), self.sim,
                                                   log_metrics = self.log_metrics,
                                                   metrics = self.metrics)
 
@@ -293,7 +293,7 @@ class CylindricalSliceAnimator(WavefunctionSimulationAnimator):
                                             log_g = self.log_g,
                                             overlay_probability_current = self.overlay_probability_current,
                                             distance_unit = self.distance_unit)
-        self.ax_metrics = MetricsAndElectricField(self.fig.add_axes([.065, .065, .855, .2]), self.sim,
+        self.ax_metrics = MetricsAndElectricField(self.fig.add_axes([.065, .065, .85, .2]), self.sim,
                                                   log_metrics = self.log_metrics,
                                                   metrics = self.metrics)
 

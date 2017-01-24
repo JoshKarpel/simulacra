@@ -10,6 +10,7 @@ import numpy as np
 import scipy as sp
 import scipy.special as special
 import scipy.optimize as optimize
+import mpmath
 
 import compy as cp
 from compy.units import *
@@ -177,7 +178,7 @@ class FreeSphericalWave(QuantumState):
 
     @property
     def tex_str(self):
-        """Return a LaTeX-formatted string for the HydrogenFreeState."""
+        """Return a LaTeX-formatted string for the HydrogenCoulombState."""
         return r'\Psi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
 
     def radial_function(self, r):
@@ -287,6 +288,7 @@ class HydrogenBoundState(QuantumState):
         return state.n, state.l, state.m
 
     def radial_function(self, r):
+        """Return the radial part of the wavefunction R(r) evaluated at r."""
         normalization = np.sqrt(((2 / (self.n * bohr_radius)) ** 3) * (sp.math.factorial(self.n - self.l - 1) / (2 * self.n * sp.math.factorial(self.n + self.l))))  # Griffith's normalization
         r_dep = np.exp(-r / (self.n * bohr_radius)) * ((2 * r / (self.n * bohr_radius)) ** self.l)
         lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * bohr_radius))
@@ -305,18 +307,18 @@ class HydrogenBoundState(QuantumState):
         return self.amplitude * self.radial_function(r) * self.spherical_harmonic(theta, phi)
 
 
-class HydrogenFreeState(QuantumState):
+class HydrogenCoulombState(QuantumState):
     """A class that represents a hydrogenic free state."""
 
     def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
         """
-        Construct a HydrogenFreeState from its energy and angular momentum quantum numbers.
+        Construct a HydrogenCoulombState from its energy and angular momentum quantum numbers.
 
         :param energy: energy of the free state
         :param l: orbital angular momentum quantum number
         :param m: quantum number for angular momentum z-component
         """
-        super(HydrogenFreeState, self).__init__(amplitude = amplitude)
+        super(HydrogenCoulombState, self).__init__(amplitude = amplitude)
 
         if any(int(x) != x for x in (l, m)):
             raise IllegalQuantumState('l and m must be integers')
@@ -335,6 +337,11 @@ class HydrogenFreeState(QuantumState):
             self._m = m
         else:
             raise IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
+
+        self.eta = - (1) * (electron_charge ** 2) * (electron_mass_reduced) / (4 * pi * epsilon_0 * (hbar ** 2) * self.k)  # TODO: generalize
+
+        hgf = ft.partial(mpmath.hyp1f1, self.l + 1 - (1j * self.eta), 2 * (self.l + 1))  # construct a partial function, with a and b filled in
+        self.hgf = np.vectorize(hgf, otypes = [np.complex128])  # vectorize using numpy
 
     @classmethod
     def from_wavenumber(cls, k, l = 0, m = 0):
@@ -376,27 +383,37 @@ class HydrogenFreeState(QuantumState):
 
     @property
     def ket(self):
-        return '{}|{} eV,{} 1/nm, {}, {}>'.format(np.around(self.amplitude, 3), uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
+        return '{}|{} eV, {} 1/nm, {}, {}>'.format(np.around(self.amplitude, 3), uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
 
     @property
     def bra(self):
-        return '{}<{} eV,{} 1/nm, {}, {}|'.format(np.around(self.amplitude, 3), uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
+        return '{}<{} eV, {} 1/nm, {}, {}|'.format(np.around(self.amplitude, 3), uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
 
     @property
     def tex_str(self):
-        """Return a LaTeX-formatted string for the HydrogenFreeState."""
+        """Return a LaTeX-formatted string for the HydrogenCoulombState."""
         return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
+
+    def radial_function(self, r):
+        """Return the radial part of the wavefunction R(r) evaluated at r."""
+        rho = self.k * r
+
+        normalization = (2 ** self.l) * np.exp(-pi * self.eta / 2) * special.gamma(self.l + 1 + (1j * self.eta)) / special.factorial((2 * self.l) + 1)
+        radial_dependence = (rho ** (self.l + 1)) * np.exp(-1j * rho) / r
+        hypergeometric_function = self.hgf(2j * rho)
+
+        return normalization * radial_dependence * hypergeometric_function
 
     def __call__(self, r, theta, phi):
         """
-        Evaluate the hydrogenic bound state wavefunction at a point, or vectorized over an array of points.
+        Evaluate the hydrogenic Coulomb state wavefunction at a point, or vectorized over an array of points.
 
         :param r: radial coordinate
         :param theta: polar coordinate
         :param phi: azimuthal coordinate
         :return: the value(s) of the wavefunction at (r, theta, phi)
         """
-        raise NotImplementedError
+        return self.amplitude * self.radial_function(r) * self.spherical_harmonic(theta, phi)
 
 
 class OneDFreeParticle(QuantumState):

@@ -318,9 +318,9 @@ class LineSpecification(ElectricFieldSpecification):
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
-                '   X Bound: {} nm'.format(uround(self.x_bound, nm, 3)),
+                '   X Bound: {} Bohr radii | {} nm'.format(uround(self.x_bound, bohr_radius, 3), uround(self.x_bound, nm, 3)),
                 '   X Points: {}'.format(self.x_points),
-                '   X Mesh Spacing: ~{} nm'.format(uround(2 * self.x_bound / self.x_points, nm, 3))]
+                '   X Mesh Spacing: ~{} Bohr radii | ~{} nm'.format(uround(2 * self.x_bound / self.x_points, bohr_radius, 3), uround(2 * self.x_bound / self.x_points, nm, 3))]
 
         return '\n'.join((super(LineSpecification, self).info(), *mesh))
 
@@ -357,9 +357,6 @@ class LineMesh(QuantumMesh):
     def energy_expectation_value(self):
         potential = self.inner_product(mesh_b = self.spec.internal_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh) * self.g_mesh)
         kinetic = np.sum((((hbar * self.wavenumbers) ** 2) / (2 * self.spec.test_mass)) * (np.abs(self.fft(self.g_mesh)) ** 2)) / np.sum(np.abs(self.fft(self.g_mesh)) ** 2)
-
-        print('pot', potential / eV)
-        print('kin', kinetic / eV)
 
         return np.real(potential + kinetic)
 
@@ -1258,7 +1255,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
     @cp.utils.memoize
     def get_g_for_state(self, state):
-        g = np.zeros(self.mesh_shape)
+        g = np.zeros(self.mesh_shape, dtype = np.complex128)
 
         for s in state:
             g[s.l, :] += s.radial_function(self.r) * self.g_factor
