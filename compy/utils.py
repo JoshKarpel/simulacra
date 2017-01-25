@@ -525,14 +525,13 @@ def watcher(watcher):
     :param watcher: a function which is called to check whether to recompute the wrapped function
     :return: a Watcher decorator
     """
-
     class Watcher:
         __slots__ = ('func', 'cached', 'watched', '__doc__')
 
         def __init__(self, func):
             self.func = func
-            self.cached = None
-            self.watched = None
+            self.cached = {}
+            self.watched = {}
 
             self.__doc__ = func.__doc__
 
@@ -545,11 +544,11 @@ def watcher(watcher):
         def __call__(self, instance, *args, **kwargs):
             check = watcher(instance)
 
-            if self.watched != check:
-                self.cached = self.func(instance, *args, **kwargs)
-                self.watched = check
+            if self.watched.get(instance) != check:
+                self.cached[instance] = self.func(instance, *args, **kwargs)
+                self.watched[instance] = check
 
-            return self.cached
+            return self.cached[instance]
 
         def __get__(self, instance, cls):
             # support instance methods

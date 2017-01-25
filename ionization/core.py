@@ -378,7 +378,7 @@ class LineMesh(QuantumMesh):
 
     def _evolve_S(self, time_step):
         self._evolve_potential(time_step / 2)
-        self._evolve_free(time_step)  # splitting order chosen for computational efficiency
+        self._evolve_free(time_step)  # splitting order chosen for computational efficiency (only one FFT per time step)
         self._evolve_potential(time_step / 2)
 
     def get_mesh_slicer(self, plot_limit):
@@ -1252,29 +1252,32 @@ class SphericalHarmonicMesh(QuantumMesh):
     def get_g_for_state(self, state):
         # don't memoize this, instead rely on the memoization in get_radial_function_for_state, more compact in memory (at the cost of some runtime in having to reassemble g occasionally)
 
-        if all(hasattr(s, 'spherical_harmonic') for s in state):  # shortcut
+        if all(hasattr(s, 'spherical_harmonic') for s in state):
             g = np.zeros(self.mesh_shape, dtype = np.complex128)
 
             for s in state:
-                g[s.l, :] += self.get_radial_function_for_state(state)
+                g[s.l, :] += self.get_radial_g_for_state(s)  # fill in g state-by-state to improve runtime
+
+            # for l in range(6):
+            #     print('l', l, g[l, :])
+
+            return g
         else:
-            g = state(self.r_mesh, self.theta_mesh, 0)
+            raise NotImplementedError('States with non-definite angular momentum are not currently supported by SphericalHarmonicMesh')
 
-        return g
-
-    @cp.utils.memoize
-    def get_radial_function_for_state(self, state):
-        # memoizeable wrapper over radial_function
+    # @cp.utils.memoize
+    def get_radial_g_for_state(self, state):
+        """Return the radial g function evaluated on the radial mesh for a state that has a radial function."""
         return state.radial_function(self.r) * self.g_factor
 
     def inner_product(self, a = None, b = None):
-        if a is not None and all(hasattr(s, 'spherical_harmonic') for s in a) and b is None:  # shortcut
+        if isinstance(a, states.QuantumState) and all(hasattr(s, 'spherical_harmonic') for s in a) and b is None:  # shortcut
             ip = 0
 
             for s in a:
-                ip += np.sum(np.conj(self.get_radial_function_for_state(a)) * self.g_mesh[s.spherical_harmonic.l, :]) * self.inner_product_multiplier
+                ip += np.sum(np.conj(self.get_radial_g_for_state(s)) * self.g_mesh[s.l, :])  # calculate inner product state-by-state to improve runtime
 
-            return ip
+            return ip * self.inner_product_multiplier
         else:
             return super().inner_product(a, b)
 
@@ -1476,33 +1479,49 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         even, odd = self._get_split_operator_evolution_matrices(hamiltonian_l.data[0][:-1])
 
-        # STEP 1
-        g_vector = self.flatten_mesh(self.g_mesh, 'l')
-        g_vector = even.dot(g_vector)
+        # COMPACT VERSION WITH FEWER INTERMEDIATE STEPS
+        # BROKEN OUT VERSION BELOW
 
-        # STEP 2
-        g_vector = odd.dot(g_vector)
-        self.g_mesh = self.wrap_vector(g_vector, 'l')
+        # STEP 1 & 2
+        self.g_mesh = self.wrap_vector(odd.dot(even.dot(self.flatten_mesh(self.g_mesh, 'l'))), 'l')
 
-        # STEP 3
-        g_vector = self.flatten_mesh(self.g_mesh, 'r')
-        hamiltonian = -1 * hamiltonian_r
-        hamiltonian.data[1] += 1  # add identity to matrix operator
-        g_vector = hamiltonian.dot(g_vector)
+        # STEP 3 & 4
+        hamiltonian_3 = -1 * hamiltonian_r
+        hamiltonian_3.data[1] += 1  # add identity to sparse matrix operator
+        hamiltonian_4 = hamiltonian_r.copy()
+        hamiltonian_4.data[1] += 1  # add identity to sparse matrix operator
+        self.g_mesh = self.wrap_vector(cy.tdma(hamiltonian_4, hamiltonian_3.dot(self.flatten_mesh(self.g_mesh, 'r'))), 'r')
 
-        # STEP 4
-        hamiltonian = hamiltonian_r.copy()
-        hamiltonian.data[1] += 1  # add identity to matrix operator
-        g_vector = cy.tdma(hamiltonian, g_vector)
-        self.g_mesh = self.wrap_vector(g_vector, 'r')
+        # STEP 5 & 6
+        self.g_mesh = self.wrap_vector(even.dot(odd.dot(self.flatten_mesh(self.g_mesh, 'l'))), 'l')
 
-        # STEP 5
-        g_vector = self.flatten_mesh(self.g_mesh, 'l')
-        g_vector = odd.dot(g_vector)
+        # # STEP 1
+        # g_vector = self.flatten_mesh(self.g_mesh, 'l')
+        # g_vector = even.dot(g_vector)
+        #
+        # # STEP 2
+        # g_vector = odd.dot(g_vector)
+        # self.g_mesh = self.wrap_vector(g_vector, 'l')
+        #
+        # # STEP 3
+        # g_vector = self.flatten_mesh(self.g_mesh, 'r')
+        # hamiltonian = -1 * hamiltonian_r
+        # hamiltonian.data[1] += 1  # add identity to matrix operator
+        # g_vector = hamiltonian.dot(g_vector)
+        #
+        # # STEP 4
+        # hamiltonian = hamiltonian_r.copy()
+        # hamiltonian.data[1] += 1  # add identity to matrix operator
+        # g_vector = cy.tdma(hamiltonian, g_vector)
+        # self.g_mesh = self.wrap_vector(g_vector, 'r')
 
-        # STEP 6
-        g_vector = even.dot(g_vector)
-        self.g_mesh = self.wrap_vector(g_vector, 'l')
+        # # STEP 5
+        # g_vector = self.flatten_mesh(self.g_mesh, 'l')
+        # g_vector = odd.dot(g_vector)
+        #
+        # # STEP 6
+        # g_vector = even.dot(g_vector)
+        # self.g_mesh = self.wrap_vector(g_vector, 'l')
 
     @cp.utils.memoize
     def get_mesh_slicer(self, distance_from_center = None):
@@ -1559,12 +1578,12 @@ class SphericalHarmonicMesh(QuantumMesh):
     @property
     @cp.utils.watcher(lambda s: s.sim.time)
     def space_g(self):
+        # print('hi')
         return self._reconstruct_spatial_mesh(self.g_mesh)
 
     @property
-    @cp.utils.watcher(lambda s: s.sim.time)
     def space_psi(self):
-        return self._reconstruct_spatial_mesh(self.psi_mesh)  # TODO: should reference space_g, remove watcher
+        return self.space_g / self.g_factor
 
     def abs_g_squared(self, normalize = False, log = False):
         out = np.abs(self.space_g) ** 2

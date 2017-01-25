@@ -21,8 +21,8 @@ def make_plots(spec):
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization') as logger:
-        n = 3
-        bound = 25
+        n = 5
+        bound = 50
         angular_points = 100
 
         states = (ion.HydrogenBoundState(n, l) for n in range(n + 1) for l in range(n))
@@ -48,4 +48,4 @@ if __name__ == '__main__':
                                                             initial_state = initial_state,
                                                             r_bound = bound * bohr_radius, l_points = angular_points))
 
-        cp.utils.multi_map(make_plots, specs, processes = 4)
+        cp.utils.multi_map(make_plots, specs, processes = 2)

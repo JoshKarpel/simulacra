@@ -61,7 +61,7 @@ class QuantumState(cp.Summand):
         return 0
 
     def __hash__(self):
-        return hash(self.tuple)
+        return hash((self.__class__.__name__, self.__doc__) + self.tuple)
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.tuple == other.tuple
@@ -155,7 +155,7 @@ class FreeSphericalWave(QuantumState):
 
     @property
     def tuple(self):
-        return self.k, self.l, self.m
+        return self.k, self.l, self.m, self.energy
 
     @property
     def spherical_harmonic(self):
@@ -373,7 +373,7 @@ class HydrogenCoulombState(QuantumState):
 
     @property
     def tuple(self):
-        return self.k, self.l, self.m
+        return self.k, self.l, self.m, self.energy
 
     def __str__(self):
         return self.ket
@@ -398,7 +398,7 @@ class HydrogenCoulombState(QuantumState):
         """Return the radial part of the wavefunction R(r) evaluated at r."""
         rho = self.k * r
 
-        normalization = (2 ** self.l) * np.exp(-pi * self.eta / 2) * special.gamma(self.l + 1 + (1j * self.eta)) / special.factorial((2 * self.l) + 1)
+        normalization = (2 ** self.l) * np.exp(-pi * self.eta / 2) * np.abs(special.gamma(self.l + 1 + (1j * self.eta))) / special.factorial((2 * self.l) + 1)
         radial_dependence = (rho ** (self.l + 1)) * np.exp(-1j * rho) / r
         hypergeometric_function = self.hgf(2j * rho)
 
