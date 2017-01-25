@@ -93,6 +93,8 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.test_charge = test_charge
         self.initial_state = initial_state
         self.test_states = tuple(sorted(tuple(test_states)))  # consume input iterators
+        if len(self.test_states) == 0:
+            self.test_states = (self.initial_state,)
         self.dipole_gauges = tuple(sorted(tuple(dipole_gauges)))
 
         self.internal_potential = internal_potential
@@ -170,31 +172,25 @@ class QuantumMesh:
     def __repr__(self):
         return '{}(parameters = {}, simulation = {})'.format(self.__class__.__name__, repr(self.spec), repr(self.sim))
 
-    def inner_product(self, mesh_a = None, mesh_b = None):
+    def get_g_for_state(self, state):
+        raise NotImplementedError
+
+    def state_to_mesh(self, state_or_mesh):
+        """Return the mesh associated with the given state, or simply passes the mesh through."""
+        if state_or_mesh is None:
+            return self.g_mesh
+        elif isinstance(state_or_mesh, states.QuantumState):
+            return self.get_g_for_state(state_or_mesh)
+        else:
+            return state_or_mesh
+
+    def inner_product(self, a = None, b = None):
         """Inner product between two meshes. If either mesh is None, the state on the g_mesh is used for that state."""
-        if mesh_a is None:
-            mesh_a = self.g_mesh
-        if mesh_b is None:
-            mesh_b = self.g_mesh
+        return np.sum(np.conj(self.state_to_mesh(a)) * self.state_to_mesh(b)) * self.inner_product_multiplier
 
-        # return np.einsum('ij,ij->', np.conj(mesh_a), mesh_b) * self.inner_product_multiplier
-        return np.sum(np.conj(mesh_a) * mesh_b) * self.inner_product_multiplier
-
-    def mesh_overlap(self, mesh_a = None, mesh_b = None):
-        return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
-
-    def state_overlap(self, state_a = None, state_b = None):
+    def state_overlap(self, a = None, b = None):
         """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
-        if state_a is None:
-            mesh_a = self.g_mesh
-        else:
-            mesh_a = self.g_for_state(state_a)
-        if state_b is None:
-            mesh_b = self.g_mesh
-        else:
-            mesh_b = self.g_for_state(state_b)
-
-        return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
+        return np.abs(self.inner_product(a, b)) ** 2
 
     @property
     def norm(self):
@@ -355,7 +351,7 @@ class LineMesh(QuantumMesh):
 
     @property
     def energy_expectation_value(self):
-        potential = self.inner_product(mesh_b = self.spec.internal_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh) * self.g_mesh)
+        potential = self.inner_product(b = self.spec.internal_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh) * self.g_mesh)
         kinetic = np.sum((((hbar * self.wavenumbers) ** 2) / (2 * self.spec.test_mass)) * (np.abs(self.fft(self.g_mesh)) ** 2)) / np.sum(np.abs(self.fft(self.g_mesh)) ** 2)
 
         return np.real(potential + kinetic)
@@ -363,7 +359,7 @@ class LineMesh(QuantumMesh):
     def dipole_moment_expectation_value(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
         if gauge == 'length':
-            return self.spec.test_charge * self.inner_product(mesh_b = self.x_mesh * self.g_mesh)
+            return self.spec.test_charge * self.inner_product(b = self.x_mesh * self.g_mesh)
         elif gauge == 'velocity':
             raise NotImplementedError
 
@@ -521,7 +517,7 @@ class CylindricalSliceMesh(QuantumMesh):
     def dipole_moment_expectation_value(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
         if gauge == 'length':
-            return self.spec.test_charge * self.inner_product(mesh_b = self.z_mesh * self.g_mesh)
+            return self.spec.test_charge * self.inner_product(b = self.z_mesh * self.g_mesh)
         elif gauge == 'velocity':
             raise NotImplementedError
 
@@ -595,7 +591,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
     @property
     def energy_expectation_value(self):
-        return np.real(self.inner_product(mesh_b = self.hg_mesh()))
+        return np.real(self.inner_product(b = self.hg_mesh()))
 
     @cp.utils.memoize
     def _get_probability_current_matrix_operators(self):
@@ -884,11 +880,11 @@ class SphericalSliceMesh(QuantumMesh):
         else:
             mesh_a = self.get_g_for_state(state_a)
         if state_b is None:
-            mesh_b = self.g_mesh
+            b = self.g_mesh
         else:
-            mesh_b = self.get_g_for_state(state_b)
+            b = self.get_g_for_state(state_b)
 
-        return np.abs(self.inner_product(mesh_a, mesh_b)) ** 2
+        return np.abs(self.inner_product(mesh_a, b)) ** 2
 
     @property
     def norm(self):
@@ -901,7 +897,7 @@ class SphericalSliceMesh(QuantumMesh):
     def dipole_moment_expectation_value(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
         if gauge == 'length':
-            return self.spec.test_charge * self.inner_product(mesh_b = self.z_mesh * self.g_mesh)
+            return self.spec.test_charge * self.inner_product(b = self.z_mesh * self.g_mesh)
         elif gauge == 'velocity':
             raise NotImplementedError
 
@@ -995,7 +991,7 @@ class SphericalSliceMesh(QuantumMesh):
 
     @property
     def energy_expectation_value(self):
-        return np.real(self.inner_product(mesh_b = self.hg_mesh()))
+        return np.real(self.inner_product(b = self.hg_mesh()))
 
     @cp.utils.memoize
     def get_probability_current_matrix_operators(self):
@@ -1249,18 +1245,38 @@ class SphericalHarmonicMesh(QuantumMesh):
         if gauge == 'length':
             _, operator = self._get_kinetic_energy_matrix_operators()
             g = self.wrap_vector(operator.dot(self.flatten_mesh(self.g_mesh, 'l')), 'l')
-            return self.spec.test_charge * self.inner_product(mesh_b = g)
+            return self.spec.test_charge * self.inner_product(b = g)
         elif gauge == 'velocity':
             raise NotImplementedError
 
-    @cp.utils.memoize
     def get_g_for_state(self, state):
-        g = np.zeros(self.mesh_shape, dtype = np.complex128)
+        # don't memoize this, instead rely on the memoization in get_radial_function_for_state, more compact in memory (at the cost of some runtime in having to reassemble g occasionally)
 
-        for s in state:
-            g[s.l, :] += s.radial_function(self.r) * self.g_factor
+        if all(hasattr(s, 'spherical_harmonic') for s in state):  # shortcut
+            g = np.zeros(self.mesh_shape, dtype = np.complex128)
+
+            for s in state:
+                g[s.l, :] += self.get_radial_function_for_state(state)
+        else:
+            g = state(self.r_mesh, self.theta_mesh, 0)
 
         return g
+
+    @cp.utils.memoize
+    def get_radial_function_for_state(self, state):
+        # memoizeable wrapper over radial_function
+        return state.radial_function(self.r) * self.g_factor
+
+    def inner_product(self, a = None, b = None):
+        if a is not None and all(hasattr(s, 'spherical_harmonic') for s in a) and b is None:  # shortcut
+            ip = 0
+
+            for s in a:
+                ip += np.sum(np.conj(self.get_radial_function_for_state(a)) * self.g_mesh[s.spherical_harmonic.l, :]) * self.inner_product_multiplier
+
+            return ip
+        else:
+            return super().inner_product(a, b)
 
     @cp.utils.memoize
     def _get_kinetic_energy_matrix_operators(self):
@@ -1379,7 +1395,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
     @property
     def energy_expectation_value(self):
-        return np.real(self.inner_product(mesh_b = self.hg_mesh()))
+        return np.real(self.inner_product(b = self.hg_mesh()))
 
     @cp.utils.memoize
     def get_probability_current_matrix_operators(self):

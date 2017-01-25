@@ -271,12 +271,12 @@ class HydrogenBoundState(QuantumState):
     @property
     def ket(self):
         """Gets the ket representation of the HydrogenBoundState."""
-        return '{}|{},{},{}>'.format(np.around(self.amplitude, 3), *self.tuple)
+        return '|{},{},{}>'.format(*self.tuple)
 
     @property
     def bra(self):
         """Gets the bra representation of the HydrogenBoundState"""
-        return '{}<{},{},{}|'.format(np.around(self.amplitude, 3), *self.tuple)
+        return '<{},{},{}|'.format(*self.tuple)
 
     @property
     def tex_str(self):
@@ -383,11 +383,11 @@ class HydrogenCoulombState(QuantumState):
 
     @property
     def ket(self):
-        return '{}|{} eV, {} 1/nm, {}, {}>'.format(np.around(self.amplitude, 3), uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
+        return '|{} eV, {} 1/nm, {}, {}>'.format(uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
 
     @property
     def bra(self):
-        return '{}<{} eV, {} 1/nm, {}, {}|'.format(np.around(self.amplitude, 3), uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
+        return '<{} eV, {} 1/nm, {}, {}|'.format(uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
 
     @property
     def tex_str(self):
