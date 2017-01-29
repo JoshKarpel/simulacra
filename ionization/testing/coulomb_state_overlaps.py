@@ -1,6 +1,7 @@
 import logging
 import os
 import datetime as dt
+from tqdm import tqdm
 
 import numpy as np
 
@@ -31,16 +32,16 @@ if __name__ == '__main__':
         time_bound = 10  # multiples of pw
         dt = 1  # asec
 
-        space_bound = 80  # BR
+        space_bound = 200  # BR
         points_per_bohr_radius = 4
         l_points = 20
 
         initial_state = ion.HydrogenBoundState(1, 0)
 
         test_states_bound_max_n = 10
-        test_states_free_per_l = 100
-        test_states_max_energy = 100  # eV
-        test_states_l_points = 10  # < l_points
+        test_states_free_per_l = 1000
+        test_states_max_energy = 50  # eV
+        test_states_l_points = 15  # < l_points
 
         identifier = '{}_{}__{}_at_{}x{}__pw={}as__phase={}'.format(initial_state.n, initial_state.l, space_bound, points_per_bohr_radius, l_points, pw, phase)
 
@@ -59,13 +60,15 @@ if __name__ == '__main__':
         # PREP
         mask = ion.RadialCosineMask(inner_radius = .8 * space_bound, outer_radius = space_bound)
 
-        electric_field = ion.SincPulse(pulse_width = pw, fluence = flu, dc_correction_time = time_bound, phase = phase,
-                                       window = ion.SymmetricExponentialTimeWindow(window_time = time_bound - pw, window_width = pw / 2))
+        # electric_field = ion.SincPulse(pulse_width = pw, fluence = flu, dc_correction_time = time_bound, phase = phase,
+        #                                window = ion.SymmetricExponentialTimeWindow(window_time = time_bound - pw, window_width = pw / 2))
         # electric_field = ion.Rectangle(start_time = -time_bound + 25 * asec, end_time = -time_bound + 25 * asec + pw, amplitude = 1 * atomic_electric_field)
+        # electric_field = ion.SineWave.from_photon_energy(rydberg + 1 * eV, amplitude = .01 * atomic_electric_field)
+        electric_field = ion.SineWave.from_photon_energy(rydberg + 5 * eV, amplitude = .01 * atomic_electric_field)
 
         test_states = [ion.HydrogenBoundState(n, l) for n in range(test_states_bound_max_n + 1) for l in range(n)]
 
-        coulomb_state_energies = np.linspace(0, test_states_max_energy, test_states_free_per_l + 1)[1:]
+        coulomb_state_energies = np.linspace(0 * eV, test_states_max_energy, test_states_free_per_l + 1)
         d_energy = np.abs(coulomb_state_energies[1] - coulomb_state_energies[0])
         logger.info('d_energy: {} eV | {} J'.format(d_energy / eV, d_energy))
         coulomb_states = [ion.HydrogenCoulombState(energy = e, l = l) for e in coulomb_state_energies for l in range(test_states_l_points)]
@@ -77,7 +80,8 @@ if __name__ == '__main__':
         # SET UP SIM
         sim = ion.SphericalHarmonicSpecification(identifier,
                                                  r_bound = space_bound, r_points = r_points, l_points = l_points,
-                                                 time_initial = - time_bound, time_final = time_bound, time_step = dt,
+                                                 # time_initial = - time_bound, time_final = time_bound, time_step = dt,
+                                                 time_initial = 0, time_final = electric_field.period * 20, time_step = dt,
                                                  internal_potential = ion.Coulomb(),
                                                  electric_potential = electric_field,
                                                  initial_state = initial_state,
@@ -99,7 +103,7 @@ if __name__ == '__main__':
         logger.info(len(overlap_by_l))
         logger.info(len(overlap_by_state))
 
-        for s in coulomb_states:
+        for s in tqdm(coulomb_states):
             overlap = sim.mesh.state_overlap(s) * d_energy
             # overlap = sim.mesh.state_overlap(s) * d_energy / sim.mesh.state_overlap(s, s)
 

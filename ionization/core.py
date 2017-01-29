@@ -1265,7 +1265,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     @cp.utils.memoize
     def get_radial_g_for_state(self, state):
         """Return the radial g function evaluated on the radial mesh for a state that has a radial function."""
-        logger.debug('Calculating radial wavefunction for state {}'.format(state))
+        # logger.debug('Calculating radial wavefunction for state {}'.format(state))
         return state.radial_function(self.r) * self.g_factor
 
     def inner_product(self, a = None, b = None):
