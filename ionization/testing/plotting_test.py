@@ -14,9 +14,11 @@ CMAP = plt.cm.inferno
 
 def make_plots(spec):
     sim = ion.ElectricFieldSimulation(spec)
-    for unit in ('nm', 'bohr_radius'):
+    units = ('nm', 'bohr_radius')
+    for unit in units:
         sim.mesh.plot_g(name_postfix = '__' + unit, target_dir = OUT_DIR, colormap = CMAP, distance_unit = unit)
         # sim.mesh.plot_psi(name_postfix = '__' + unit, target_dir = OUT_DIR, colormap = CMAP, distance_unit = unit)
+        print(sim.spec.mesh_type.__name__, sim.spec.initial_state, unit)
 
 
 if __name__ == '__main__':

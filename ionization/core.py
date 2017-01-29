@@ -339,7 +339,7 @@ class LineMesh(QuantumMesh):
         self.g_mesh = self.get_g_for_state(self.spec.initial_state)
         self.g_factor = 1
 
-        self.free_evolution_prefactor = -1j * (hbar / (2 * self.spec.test_mass)) * (self.wavenumbers ** 2)
+        self.free_evolution_prefactor = -1j * (hbar / (2 * self.spec.test_mass)) * (self.wavenumbers ** 2)  # hbar^2/2m / hbar
 
     @property
     def r_mesh(self):
@@ -1258,16 +1258,14 @@ class SphericalHarmonicMesh(QuantumMesh):
             for s in state:
                 g[s.l, :] += self.get_radial_g_for_state(s)  # fill in g state-by-state to improve runtime
 
-            # for l in range(6):
-            #     print('l', l, g[l, :])
-
             return g
         else:
             raise NotImplementedError('States with non-definite angular momentum are not currently supported by SphericalHarmonicMesh')
 
-    # @cp.utils.memoize
+    @cp.utils.memoize
     def get_radial_g_for_state(self, state):
         """Return the radial g function evaluated on the radial mesh for a state that has a radial function."""
+        logger.debug('Calculating radial wavefunction for state {}'.format(state))
         return state.radial_function(self.r) * self.g_factor
 
     def inner_product(self, a = None, b = None):
@@ -1578,7 +1576,6 @@ class SphericalHarmonicMesh(QuantumMesh):
     @property
     @cp.utils.watcher(lambda s: s.sim.time)
     def space_g(self):
-        # print('hi')
         return self._reconstruct_spatial_mesh(self.g_mesh)
 
     @property

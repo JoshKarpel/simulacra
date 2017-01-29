@@ -15,55 +15,48 @@ if __name__ == '__main__':
         # free_state = ion.FreeSphericalWave(energy = 5 * eV, l = 0, m = 0)
         # free_state = ion.Superposition(*(ion.FreeSphericalWave(energy = e * eV, l = 1) for e in np.linspace(1, 20, 100)))
         # free_state = ion.HydrogenCoulombState(energy = 1 * eV, l = 0)
-        # free_state = ion.HydrogenCoulombState(energy = 50 * eV, l = 3)
-        #
-        # r = np.linspace(.01 * bohr_radius, 30 * bohr_radius, 1e3)
-        # # print(r)
-        #
-        # with cp.utils.Timer() as timer:
-        #     radial_function = free_state.radial_function(r)
-        # print(timer)
-        # # print(np.abs(r * radial_function) ** 2)
-        #
-        # print('mem usage: {}'.format(cp.utils.convert_bytes(radial_function.nbytes)))
-        #
-        # cp.utils.xy_plot('r_times_radial_function',
-        #                  r,
-        #                  np.abs(r * radial_function) ** 2,
-        #                  x_scale = 'bohr_radius', x_label = '$r$',
-        #                  y_label = r'$\left|r \, R(r) \right|^2$',
-        #                  target_dir = OUT_DIR)
-        #
-        # cp.utils.xy_plot('radial_function',
-        #                  r,
-        #                  np.abs(radial_function) ** 2,
-        #                  x_scale = 'bohr_radius', x_label = r'$r$',
-        #                  y_label = r'$\left|R(r) \right|^2$',
-        #                  target_dir = OUT_DIR)
-        #
-        # print(free_state)
-        # print(repr(free_state))
+        free_state = ion.HydrogenCoulombState(energy = 1 * eV, l = 3)
+        free_state = ion.HydrogenCoulombState.from_wavenumber(k = 10 / nm)
 
-        l = 1
-        sim = ion.SphericalHarmonicSpecification('bound_state_l={}__pre'.format(l),
-                                                 r_bound = 100 * bohr_radius, r_points = 100 * 4, l_points = 50,
-                                                 initial_state = ion.HydrogenBoundState(n = 6, l = l),
-                                                 ).to_simulation()
-        print(repr(sim.spec.initial_state))
-        sim.mesh.plot_g(target_dir = OUT_DIR)
+        # r = np.linspace(.01 * bohr_radius, 200 * bohr_radius, 1e4)
+        r = np.linspace(.01 * bohr_radius, 50 * bohr_radius, 1e4) + 5000 * bohr_radius
+
+        with cp.utils.Timer() as timer:
+            radial_function = free_state.radial_function(r)
+            print(radial_function)
+        print('full:', timer)
+
+        # with cp.utils.Timer() as timer:
+        #     radial_function_asymptotic = free_state.radial_function_asymptotic(r)
+        #     print(radial_function_asymptotic)
+        # print('full:', timer)
+
+        print('mem usage: {}'.format(cp.utils.convert_bytes(radial_function.nbytes)))
+
+        cp.utils.xy_plot('r_times_radial_function',
+                         r,
+                         np.abs(r * radial_function) ** 2,  # np.abs(r * radial_function_asymptotic) ** 2,
+                         # line_labels = ('exact', 'asymp'),
+                         x_scale = 'nm', x_label = '$r$',
+                         y_label = r'$\left|r \, R(r) \right|^2$',
+                         target_dir = OUT_DIR)
+        #
+        cp.utils.xy_plot('radial_function',
+                         r,
+                         np.abs(radial_function) ** 2,  # np.abs(radial_function_asymptotic) ** 2,
+                         # line_labels = ('exact', 'asymp'),
+                         x_scale = 'nm', x_label = r'$r$',
+                         y_label = r'$\left|R(r) \right|^2$',
+                         target_dir = OUT_DIR)
+
+        print(free_state)
+        print(repr(free_state))
 
         for l in range(6):
-            sim = ion.SphericalHarmonicSpecification('bound_state_l={}'.format(l),
+            sim = ion.SphericalHarmonicSpecification('coulomb_state_l={}'.format(l),
                                                      r_bound = 100 * bohr_radius, r_points = 100 * 4, l_points = 50,
-                                                     initial_state = ion.HydrogenBoundState(n = 6, l = l),
+                                                     internal_potential = ion.NoPotentialEnergy(),
+                                                     initial_state = ion.HydrogenCoulombState(energy = 50 * eV, l = l),
                                                      ).to_simulation()
             print(repr(sim.spec.initial_state))
             sim.mesh.plot_g(target_dir = OUT_DIR)
-
-            # sim = ion.SphericalHarmonicSpecification('coulomb_state_l={}'.format(l),
-            #                                          r_bound = 100 * bohr_radius, r_points = 100 * 4, l_points = 50,
-            #                                          internal_potential = ion.NoPotentialEnergy(),
-            #                                          initial_state = ion.HydrogenCoulombState(energy = 20 * eV, l = l),
-            #                                          ).to_simulation()
-            # print(repr(sim.spec.initial_state))
-            # sim.mesh.plot_g(target_dir = OUT_DIR)

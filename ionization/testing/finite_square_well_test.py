@@ -8,15 +8,15 @@ import ionization as ion
 from compy.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
-OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
+OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME, '_2000nm_1as_19')
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         mass = electron_mass
         pw = 200
 
-        space_bound = 1000 * nm
-        time_bound = 40
+        space_bound = 2000 * nm
+        time_bound = 30
 
         depth = 21.02 * eV
         width = 1.2632 * 2 * bohr_radius
@@ -57,14 +57,14 @@ if __name__ == '__main__':
         test_states = ion.FiniteSquareWellState.all_states_of_well_from_parameters(depth, width, mass)
 
         sim = ion.LineSpecification('fsw',
-                                    x_bound = space_bound, x_points = 2 ** 18,
+                                    x_bound = space_bound, x_points = 2 ** 19,
                                     internal_potential = pot,
                                     electric_potential = electric,
                                     test_mass = mass,
                                     test_states = test_states,
                                     dipole_gauges = (),
                                     initial_state = init,
-                                    time_initial = -pw * time_bound * asec, time_final = pw * (2 * time_bound) * asec, time_step = 1 * asec,
+                                    time_initial = -pw * time_bound * asec, time_final = pw * (3 * time_bound) * asec, time_step = 1 * asec,
                                     # mask = ion.RadialCosineMask(inner_radius = width * 100, outer_radius = width * 300),
                                     animators = ani
                                     ).to_simulation()

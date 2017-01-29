@@ -252,6 +252,10 @@ class HydrogenBoundState(QuantumState):
             IllegalQuantumState('|m| (|{}|) must be less than l ({})'.format(m, self.l))
 
     @property
+    def energy(self):
+        return -rydberg / (self.n ** 2)
+
+    @property
     def tuple(self):
         return self.n, self.l, self.m
 
@@ -310,7 +314,7 @@ class HydrogenBoundState(QuantumState):
 class HydrogenCoulombState(QuantumState):
     """A class that represents a hydrogenic free state."""
 
-    def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
+    def __init__(self, energy = 1 * eV, l = 0, m = 0, atomic_number = 1, amplitude = 1):
         """
         Construct a HydrogenCoulombState from its energy and angular momentum quantum numbers.
 
@@ -338,10 +342,34 @@ class HydrogenCoulombState(QuantumState):
         else:
             raise IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
 
-        self.eta = - (1) * (electron_charge ** 2) * (electron_mass_reduced) / (4 * pi * epsilon_0 * (hbar ** 2) * self.k)  # TODO: generalize
+        self.atomic_number = atomic_number
 
-        hgf = ft.partial(mpmath.hyp1f1, self.l + 1 - (1j * self.eta), 2 * (self.l + 1))  # construct a partial function, with a and b filled in
+        # self.epsilon = self.energy / rydberg
+        self.epsilon = self.energy / (rydberg * (self.atomic_number ** 2))
+        self.kappa = -1j / np.sqrt(self.epsilon)
+
+        self.a = self.l + 1 - self.kappa
+        self.b = 2 * (self.l + 1)
+
+        hgf = ft.partial(mpmath.hyp1f1, self.a, self.b)  # construct a partial function, with a and b filled in
         self.hgf = np.vectorize(hgf, otypes = [np.complex128])  # vectorize using numpy
+
+        self.normalization = np.sqrt(0j + (self.kappa ** ((-2 * self.l) - 1)) * special.gamma(self.l + self.kappa + 1) / special.gamma(self.kappa - self.l) / 2)
+        self.normalization *= (2 ** (self.l + 1)) / special.factorial((2 * self.l) + 1)
+        self.normalization *= np.sqrt(0j - self.atomic_number / (twopi * bohr_radius * np.sqrt(self.energy)))
+        # self.normalization *= np.sqrt(0j - self.atomic_number / (twopi * bohr_radius * self.energy))
+        # self.normalization *= np.sqrt(0j - self.atomic_number / (twopi * bohr_radius * rydberg))
+
+        logger.debug(cp.utils.field_str(self, 'epsilon', 'kappa', 'a', 'b', 'normalization'))
+
+        # self.eta = - (1) / (self.k * bohr_radius)  # TODO: generalize
+        # self.a = self.l + 1 - (1j * self.eta)
+        # self.b = 2 * (self.l + 1)
+        # hgf = ft.partial(mpmath.hyp1f1, self.a, self.b)  # construct a partial function, with a and b filled in
+        # self.hgf = np.vectorize(hgf, otypes = [np.complex128])  # vectorize using numpy
+        #
+        # self.normalization = (2 ** self.l) * np.exp(-pi * self.eta / 2) * np.abs(special.gamma(self.l + 1 + (1j * self.eta))) / special.factorial((2 * self.l) + 1) / (bohr_radius ** (3 / 2)) / np.sqrt(self.energy)
+
 
     @classmethod
     def from_wavenumber(cls, k, l = 0, m = 0):
@@ -396,13 +424,9 @@ class HydrogenCoulombState(QuantumState):
 
     def radial_function(self, r):
         """Return the radial part of the wavefunction R(r) evaluated at r."""
-        rho = self.k * r
+        x = -self.atomic_number * r / bohr_radius
 
-        normalization = (2 ** self.l) * np.exp(-pi * self.eta / 2) * np.abs(special.gamma(self.l + 1 + (1j * self.eta))) / special.factorial((2 * self.l) + 1)
-        radial_dependence = (rho ** (self.l + 1)) * np.exp(-1j * rho) / r
-        hypergeometric_function = self.hgf(2j * rho)
-
-        return normalization * radial_dependence * hypergeometric_function
+        return self.normalization * self.hgf(2 * x / self.kappa) * (x ** (self.l + 1)) * np.exp(-x / self.kappa) / r
 
     def __call__(self, r, theta, phi):
         """
