@@ -315,7 +315,7 @@ class HydrogenBoundState(QuantumState):
 class HydrogenCoulombState(QuantumState):
     """A class that represents a hydrogenic free state."""
 
-    def __init__(self, energy = 1 * eV, l = 0, m = 0, atomic_number = 1, amplitude = 1):
+    def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
         """
         Construct a HydrogenCoulombState from its energy and angular momentum quantum numbers.
 
@@ -343,71 +343,43 @@ class HydrogenCoulombState(QuantumState):
         else:
             raise IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
 
-        self.atomic_number = atomic_number
+        # generate the radial function that will be used to evaluate the state's wavefunction
+        epsilon = self.energy / rydberg
+        unit_prefactor = np.sqrt(1 / (bohr_radius * rydberg))
 
-        self.epsilon = self.energy / (rydberg * (self.atomic_number ** 2))
+        if epsilon > 0:
+            kappa = 1j / np.sqrt(epsilon)
 
-        unit_prefactor = np.sqrt(1 / (self.atomic_number * bohr_radius * rydberg))
+            a = self.l + 1 - kappa
+            b = 2 * (self.l + 1)
+            hgf = ft.partial(mpmath.hyp1f1, a, b)  # construct a partial function, with a and b filled in
+            hgf = np.vectorize(hgf, otypes = [np.complex128])  # vectorize using numpy
 
-        if self.epsilon > 0:
-            self.kappa = 1j / np.sqrt(self.epsilon)
-
-            self.a = self.l + 1 - self.kappa
-            self.b = 2 * (self.l + 1)
-            hgf = ft.partial(mpmath.hyp1f1, self.a, self.b)  # construct a partial function, with a and b filled in
-            self.hgf = np.vectorize(hgf, otypes = [np.complex128])  # vectorize using numpy
-
-            A = (self.kappa ** (-((2 * self.l) + 1))) * special.gamma(1 + self.l + self.kappa) / special.gamma(self.kappa - self.l)
-            B = A / (1 - np.exp(-twopi / np.sqrt(self.epsilon)))
+            A = (kappa ** (-((2 * self.l) + 1))) * special.gamma(1 + self.l + kappa) / special.gamma(kappa - self.l)
+            B = A / (1 - np.exp(-twopi / np.sqrt(epsilon)))
             s_prefactor = np.sqrt(B / 2)
 
             l_prefactor = (2 ** (self.l + 1)) / special.factorial((2 * self.l) + 1)
 
-            self.prefactor = s_prefactor * l_prefactor * unit_prefactor
+            prefactor = s_prefactor * l_prefactor * unit_prefactor
 
             def radial_function(self, r):
                 x = self.atomic_number * r / bohr_radius
 
-                return self.prefactor * self.hgf(2 * x / self.kappa) * (x ** (self.l + 1)) * np.exp(-x / self.kappa) / r
+                return prefactor * hgf(2 * x / kappa) * (x ** (self.l + 1)) * np.exp(-x / kappa) / r
 
-            logger.debug(cp.utils.field_str(self, ('energy', 'eV'), 'l', 'epsilon', 'kappa', 'a', 'b', 'prefactor'))
-        elif self.epsilon == 0:
+        elif epsilon == 0:
             bessel_order = (2 * self.l) + 1
-
-            A = 1
-            B = A
-            s_prefactor = np.sqrt(B / 2)
-
-            self.prefactor = s_prefactor * unit_prefactor
-
-            self.bessel = ft.partial(special.jv, bessel_order)
+            prefactor = unit_prefactor
+            bessel = ft.partial(special.jv, bessel_order)  # construct a partial function with the Bessel function order filled in
 
             def radial_function(self, r):
                 x = self.atomic_number * r / bohr_radius
 
-                return self.prefactor * self.bessel(np.sqrt(8 * x)) * np.sqrt(2 * x) / r
-        else:
-            raise IllegalQuantumState('Epsilon must be greater than zero')
-            # raise IllegalQuantumState('Epsilon must be greater than or equal to zero')
+                return prefactor * bessel(np.sqrt(8 * x)) * np.sqrt(x) / r
 
-        self.radial_function = types.MethodType(radial_function, self)
-
-
-
-        # self.normalization = np.sqrt(0j + (self.kappa ** ((-2 * self.l) - 1)) * special.gamma(self.l + self.kappa + 1) / special.gamma(self.kappa - self.l) / 2 / (1 - np.exp(-twopi / np.sqrt(self.epsilon))))
-        # self.normalization *= (2 ** (self.l + 1)) / special.factorial((2 * self.l) + 1)
-        # self.normalization *= np.sqrt(0j - self.atomic_number / (twopi * bohr_radius * np.sqrt(self.energy)))
-        # self.normalization *= np.sqrt(0j - self.atomic_number / (twopi * bohr_radius * self.energy))
-        # self.normalization *= np.sqrt(0j - self.atomic_number / (twopi * bohr_radius * rydberg))
-
-
-        # self.eta = - (1) / (self.k * bohr_radius)  # TODO: generalize
-        # self.a = self.l + 1 - (1j * self.eta)
-        # self.b = 2 * (self.l + 1)
-        # hgf = ft.partial(mpmath.hyp1f1, self.a, self.b)  # construct a partial function, with a and b filled in
-        # self.hgf = np.vectorize(hgf, otypes = [np.complex128])  # vectorize using numpy
-        #
-        # self.normalization = (2 ** self.l) * np.exp(-pi * self.eta / 2) * np.abs(special.gamma(self.l + 1 + (1j * self.eta))) / special.factorial((2 * self.l) + 1) / (bohr_radius ** (3 / 2)) / np.sqrt(self.energy)
+        radial_function.__doc__ = """Return the radial part of the wavefunction R(r) evaluated at r."""  # set a docstring for radial_function
+        self.radial_function = types.MethodType(radial_function, self)  # bind the method to the instance at runtime (necessary so that it can pick up self.l
 
     @classmethod
     def from_wavenumber(cls, k, l = 0, m = 0):
@@ -459,12 +431,6 @@ class HydrogenCoulombState(QuantumState):
     def tex_str(self):
         """Return a LaTeX-formatted string for the HydrogenCoulombState."""
         return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
-
-    # def radial_function(self, r):
-    #     """Return the radial part of the wavefunction R(r) evaluated at r."""
-    #     x = self.atomic_number * r / bohr_radius
-    #
-    #     return self.prefactor * self.hgf(2 * x / self.kappa) * (x ** (self.l + 1)) * np.exp(-x / self.kappa) / r
 
     def __call__(self, r, theta, phi):
         """
