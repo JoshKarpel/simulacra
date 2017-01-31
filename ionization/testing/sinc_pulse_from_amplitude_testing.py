@@ -32,7 +32,7 @@ if __name__ == '__main__':
         specs = []
         for phase in ('cos', 'sin'):
             for pw in pulse_widths:
-                sinc = ion.SincPulse.from_amplitude_density(pulse_width = pw * asec, amplitude_density = source.amplitude_density, phase = phase)
+                sinc = ion.SincPulse.from_amplitude_density(pulse_width = pw * asec, amplitude_density = source.amplitude_per_omega, phase = phase)
 
                 specs.append(ion.SphericalHarmonicSpecification('pw={}asec_phase={}'.format(pw, phase),
                                                                 r_bound = 150 * bohr_radius, r_points = 600, l_points = 100,

@@ -1977,7 +1977,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
                          **kwargs)
 
     def dipole_moment_vs_frequency(self, gauge = 'length', first_time = None, last_time = None):
-        logger.critical('ALERT: this method does not account for non-uniform time step!')
+        logger.critical('ALERT: dipole_momentum_vs_frequency does not account for non-uniform time step!')
 
         if first_time is None:
             first_time_index, first_time = 0, self.times[0]
