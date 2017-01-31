@@ -304,6 +304,7 @@ class LineSpecification(ElectricFieldSpecification):
     def __init__(self, name,
                  x_bound = 10 * nm,
                  x_points = 2 ** 9,
+                 fft_cutoff_energy = 1000 * eV,
                  **kwargs):
         super(LineSpecification, self).__init__(name, mesh_type = LineMesh,
                                                 evolution_method = 'S',
@@ -311,6 +312,9 @@ class LineSpecification(ElectricFieldSpecification):
 
         self.x_bound = x_bound
         self.x_points = int(x_points)
+
+        self.fft_cutoff_energy = fft_cutoff_energy
+        self.fft_cutoff_wavenumber = np.sqrt(2 * self.test_mass * self.fft_cutoff_energy) / hbar
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
@@ -340,10 +344,15 @@ class LineMesh(QuantumMesh):
         self.g_factor = 1
 
         self.free_evolution_prefactor = -1j * (hbar / (2 * self.spec.test_mass)) * (self.wavenumbers ** 2)  # hbar^2/2m / hbar
+        self.wavenumber_mask = np.where(np.abs(self.wavenumbers) < self.spec.fft_cutoff_wavenumber, 1, 0)
 
     @property
     def r_mesh(self):
         return self.x_mesh
+
+    @property
+    def energies(self):
+        return ((self.wavenumbers * hbar) ** 2) / (2 * self.spec.test_mass)
 
     @cp.utils.memoize
     def get_g_for_state(self, state):
@@ -352,7 +361,9 @@ class LineMesh(QuantumMesh):
     @property
     def energy_expectation_value(self):
         potential = self.inner_product(b = self.spec.internal_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh) * self.g_mesh)
-        kinetic = np.sum((((hbar * self.wavenumbers) ** 2) / (2 * self.spec.test_mass)) * (np.abs(self.fft(self.g_mesh)) ** 2)) / np.sum(np.abs(self.fft(self.g_mesh)) ** 2)
+
+        power_spectrum = np.abs(self.fft(self.g_mesh)) ** 2
+        kinetic = np.sum((((hbar * self.wavenumbers) ** 2) / (2 * self.spec.test_mass)) * power_spectrum) / np.sum(power_spectrum)
 
         return np.real(potential + kinetic)
 
@@ -374,7 +385,7 @@ class LineMesh(QuantumMesh):
         self.g_mesh *= np.exp(-1j * time_step * pot / hbar)
 
     def _evolve_free(self, time_step):
-        self.g_mesh = self.ifft(self.fft(self.g_mesh) * np.exp(self.free_evolution_prefactor * time_step))
+        self.g_mesh = self.ifft(self.fft(self.g_mesh) * np.exp(self.free_evolution_prefactor * time_step) * self.wavenumber_mask)
 
     def _evolve_S(self, time_step):
         self._evolve_potential(time_step / 2)

@@ -91,7 +91,8 @@ unit_names_to_values.update({'cm': cm,
                              'Pm': Pm,
                              'angstrom': angstrom,
                              'bohr_radius': bohr_radius,
-                             'inch': inch})
+                             'inch': inch,
+                             'per_nm': per_nm})
 unit_names_to_tex_strings.update({'cm': r'$\mathrm{cm}$',
                                   'cetimeter': r'$\mathrm{cm}$',
                                   'cetimeters': r'$\mathrm{cm}$',
@@ -121,7 +122,8 @@ unit_names_to_tex_strings.update({'cm': r'$\mathrm{cm}$',
                                   'Pm': r'$\mathrm{Pm}$',
                                   'angstrom': r'$\mathrm{\AA}$',
                                   'bohr_radius': r'$a_0$',
-                                  'inch': r'$\mathrm{in}$'})
+                                  'inch': r'$\mathrm{in}$',
+                                  'per_nm': r'$\mathrm{nm^{-1}}$'})
 
 # time
 msec = 1e-3 * s

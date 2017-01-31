@@ -48,6 +48,10 @@ def field_str(obj, *fields, digits = 3):
     return '{}({})'.format(obj.__class__.__name__, ', '.join(field_strings))
 
 
+def now_string():
+    return dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S')
+
+
 class Logger:
     """A context manager to easily set up logging."""
 
@@ -82,7 +86,7 @@ class Logger:
         self.file_level = file_level
 
         if file_name is None:
-            file_name = '{}__{}'.format('log', dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
+            file_name = '{}__{}'.format('log', now_string())
         self.file_name = file_name
         if not self.file_name.endswith('.log'):
             self.file_name += '.log'
@@ -525,6 +529,7 @@ def watcher(watcher):
     :param watcher: a function which is called to check whether to recompute the wrapped function
     :return: a Watcher decorator
     """
+
     class Watcher:
         __slots__ = ('func', 'cached', 'watched', '__doc__')
 

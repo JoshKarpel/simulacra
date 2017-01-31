@@ -12,7 +12,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
-        pw = 200
+        pw = 10
         flu = 1
 
         bound = 30
@@ -35,6 +35,9 @@ if __name__ == '__main__':
                                            frequency_upper_limit = sinc.frequency_cutoff * 20,
                                            frequency_points = 2 ** 15
                                            )
+
+        print('dt', generic.dt / asec)
+        print('df', generic.df / THz)
 
         # print('expected center', sinc.amplitude_per_frequency)
         # print('center', generic.complex_amplitude_vs_frequency[len(generic.complex_amplitude_vs_frequency) // 2])
