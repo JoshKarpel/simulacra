@@ -22,6 +22,7 @@ if __name__ == '__main__':
     shutil.copy2('ionization/scripts/run_sim.sh', 'deploy')
     shutil.copy2('ionization/scripts/sync_and_process.py', 'deploy')
     shutil.copy2('ionization/scripts/create_job_sinc.py', 'deploy')
+    shutil.copy2('ionization/scripts/create_job_sinc_phase_scan.py', 'deploy')
     # shutil.copy2('compy/scripts/tar.py', 'deploy')
 
     for path in (r'C:\Users\Josh\Dropbox\Research\deploy',

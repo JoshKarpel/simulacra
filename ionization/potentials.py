@@ -496,6 +496,8 @@ class GenericElectricField(UniformLinearlyPolarizedElectricField):
     def __init__(self, amplitude_function, phase_function = lambda f: 0,
                  frequency_upper_limit = 10000 * THz, frequency_points = 2 ** 18,
                  fluence = None,
+                 name = 'GenericElectricField',
+                 extra_information = None,
                  **kwargs):
         """
 
@@ -503,9 +505,13 @@ class GenericElectricField(UniformLinearlyPolarizedElectricField):
         :param phase_function:  real numbers only!
         :param frequency_upper_limit:
         :param frequency_points:
+        :param name: a name for the GenericElectricField
+        :param extra_information: a dictionary of extra info
         :param kwargs:
         """
         super().__init__(**kwargs)
+
+        self.name = name
 
         self.frequency = np.linspace(-frequency_upper_limit, frequency_upper_limit, frequency_points)
         self.df = np.abs(self.frequency[1] - self.frequency[0])
@@ -520,9 +526,14 @@ class GenericElectricField(UniformLinearlyPolarizedElectricField):
         self.complex_electric_field_vs_time = self.df * len(self.frequency) * nfft.fftshift(nfft.ifft(nfft.ifftshift(self.complex_amplitude_vs_frequency)))
         self.complex_electric_field_vs_time -= np.mean(self.complex_electric_field_vs_time)  # DC correction
         # TODO: better DC correction using specified end time
-
-
         # TODO: use fluence, if fluence none don't change, if fluence set make fluence equal to that while preserving shape of amplitude spectrum
+
+        self.extra_attributes = tuple(extra_information.keys())
+        for k, v in extra_information.items():
+            if k not in self.__dict__:
+                setattr(self, k, v)
+            else:
+                logger.warning('Key collision in extra_arguments of {}: an attribute named {} was already defined'.format(self.name, k))
 
     @property
     def angular_frequency(self):
@@ -535,6 +546,19 @@ class GenericElectricField(UniformLinearlyPolarizedElectricField):
     @property
     def power_vs_frequency(self):
         return np.abs(self.complex_amplitude_vs_frequency) ** 2
+
+    @property
+    def fluence(self):
+        from_field = epsilon_0 * c * np.sum(np.abs(self.complex_electric_field_vs_time) ** 2) * self.dt
+        from_spectrum = epsilon_0 * c * np.sum(np.abs(self.complex_amplitude_vs_frequency) ** 2) * self.df
+
+        return (from_field + from_spectrum) / 2
+
+    def __str__(self):
+        return cp.utils.field_str(self, 'name', 'fluence', *self.extra_attributes)
+
+    def __repr__(self):
+        return cp.utils.field_str(self, 'name', 'fluence', *self.extra_attributes)
 
     def get_electric_field_amplitude(self, t):
         try:
