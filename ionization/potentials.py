@@ -513,6 +513,9 @@ class GenericElectricField(UniformLinearlyPolarizedElectricField):
 
         self.name = name
 
+        self.amplitude_function = amplitude_function
+        self.phase_function = phase_function
+
         self.frequency = np.linspace(-frequency_upper_limit, frequency_upper_limit, frequency_points)
         self.df = np.abs(self.frequency[1] - self.frequency[0])
         amplitude_vs_frequency = amplitude_function(self.frequency)
