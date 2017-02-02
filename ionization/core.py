@@ -52,6 +52,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
+                 find_numerical_ground_state = False,
                  store_norm_by_l = False,
                  **kwargs):
         """
@@ -81,6 +82,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         :param checkpoint_dir: a directory path to store the checkpoint file in
         :param animators: a list of Animators which will be run during time evolution
         :param store_norm_by_l: if True, the Simulation will store the amount of norm in each spherical harmonic.
+        :param find_numerical_ground_state: if True, the Simulation will find the numerical ground state of the mesh via imaginary time evolution
         :param kwargs:
         """
         super(ElectricFieldSpecification, self).__init__(name, simulation_type = ElectricFieldSimulation, **kwargs)
@@ -118,6 +120,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.animators = tuple(animators)
 
         self.store_norm_by_l = store_norm_by_l
+        self.find_numerical_ground_state = find_numerical_ground_state
 
     def info(self):
         checkpoint = ['Checkpointing: ']
@@ -1690,8 +1693,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.mesh = None
         self.animators = self.spec.animators
 
-        self.initialize_mesh()
-
         total_time = self.spec.time_final - self.spec.time_initial
         self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
         if self.spec.time_final < self.spec.minimum_time_final:
@@ -1699,6 +1700,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
             self.times = np.concatenate((self.times, extra_times))
         self.time_index = 0
         self.time_steps = len(self.times)
+
+        self.initialize_mesh()
 
         # simulation data storage
         self.norm_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
@@ -1730,6 +1733,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
     def initialize_mesh(self):
         self.mesh = self.spec.mesh_type(self)
+
+        if self.spec.find_numerical_ground_state:
+            self.find_numerical_ground_state()
 
         logger.debug('Initialized mesh for {} {}'.format(self.__class__.__name__, self.name))
 
@@ -1780,11 +1786,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
         """
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
         try:
-            for animator in self.animators:
-                animator.initialize(self)
-
             self.status = 'running'
             logger.debug("{} {} ({}) status set to 'running'".format(self.__class__.__name__, self.name, self.file_name))
+
+            for animator in self.animators:
+                animator.initialize(self)
 
             while True:
                 self.store_data(self.time_index)
@@ -1821,6 +1827,15 @@ class ElectricFieldSimulation(cp.core.Simulation):
             # make sure the animators get cleaned up if there's some kind of error during time evolution
             for animator in self.animators:
                 animator.cleanup()
+
+    def find_numerical_ground_state(self):
+        logger.warning('find_numerical_ground_state can only find the ground state!')
+
+        for ii in range(self.spec.imaginary_time_evolution_steps):
+            self.mesh.evolve(-1j * self.spec.time_step)
+            self.mesh.g_mesh /= np.sqrt(self.mesh.norm)  # renormalize after each iteration to keep the norm under control
+
+        logger.debug('Performed Imaginary Time Evolution on {}'.format(self.__class__.__name__, self.name, self.file_name))
 
     def plot_wavefunction_vs_time(self, use_name = False, grayscale = False, log = False, x_scale = 'asec', **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
