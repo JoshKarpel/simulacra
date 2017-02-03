@@ -1324,6 +1324,42 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return r_kinetic, l_kinetic
 
+    def _get_kinetic_energy_matrix_operator_single_l(self, l):
+        # @cp.utils.memoize
+        def alpha(j):
+            x = (j ** 2) + (2 * j)
+            out = (x + 1) / (x + 0.75)
+
+            return out
+
+        # @cp.utils.memoize
+        def beta(j):
+            x = (2 * (j ** 2)) + (2 * j)
+            return (x + 1) / (x + 0.5)
+
+        r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
+        effective_potential = ((hbar ** 2) / (2 * electron_mass_reduced)) * l * (l + 1) / (self.r ** 2)
+
+        r_beta = beta(np.array(range(len(self.r)), dtype = np.complex128))
+        if l == 0:
+            dr = self.delta_r / bohr_radius
+            r_beta[0] += dr * (1 + dr) / 8
+        r_diagonal = (-2 * r_prefactor * r_beta) + effective_potential
+        # r_offdiagonal = -2 * r_prefactor * alpha(np.array(range(1, len(self.r)), dtype = np.complex128))
+        r_offdiagonal = r_prefactor * alpha(np.array(range(len(self.r) - 1), dtype = np.complex128))
+
+        return sparse.diags([r_offdiagonal, r_diagonal, r_offdiagonal], offsets = (-1, 0, 1))
+
+    def _get_internal_hamiltonian_matrix_operator_single_l(self, l):
+        r_kinetic = self._get_kinetic_energy_matrix_operator_single_l(l)
+        potential = self.spec.internal_potential(r = self.r, test_charge = self.spec.test_charge)
+
+        r_kinetic.data[1] += potential
+
+        return r_kinetic
+
+    # TODO: REFACTORRRRRRRRRR using tensor products
+
     def _get_kinetic_energy_matrix_operators_L(self):
         r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
         l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: ???

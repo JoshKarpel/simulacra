@@ -1,9 +1,13 @@
 import logging
 import os
 
+from tqdm import tqdm
+
 import numpy as np
+import scipy.sparse.linalg as sparsealg
 
 import compy as cp
+import compy.cy as cy
 import ionization as ion
 from compy.units import *
 
@@ -24,6 +28,8 @@ if __name__ == '__main__':
                        # 'electric_potential': ion.Rectangle(50 * asec, 100 * asec, amplitude = 1 * atomic_electric_field)
                        }
 
+        steps = [1, 10, 50, 100, 250, 500, 1000, 1500, 2000]
+
         differences = []
         fractional_differences = []
         labels = []
@@ -31,19 +37,41 @@ if __name__ == '__main__':
         pre_post_differences = []
         pre_post_fractional_differences = []
 
-        im_time_steps = [1, 10, 50, 100, 250, 500, 1000, 1500, 2000]
+        for step in steps:
+            sim = ion.SphericalHarmonicSpecification('ipm_{}'.format(step), **spec_kwargs).to_simulation()
 
-        for im_time_step in im_time_steps:
-            sim = ion.SphericalHarmonicSpecification('imag_{}'.format(im_time_step), **spec_kwargs, find_numerical_ground_state = True, imaginary_time_evolution_steps = im_time_step).to_simulation()
+            g_analytic = sim.spec.initial_state.radial_function(sim.mesh.r) * sim.mesh.r / sim.mesh.norm  # analytic mesh reference
+
+            h = sim.mesh._get_internal_hamiltonian_matrix_operator_single_l(l = 0)
+
+            h.data[1] -= sim.spec.initial_state.energy
+            h = h.tocsc()
+
+            with cp.utils.Timer() as t:
+                h_inv = sparsealg.inv(h)
+            print(t)
 
             g_discrete = sim.mesh.g_mesh[0, :] / sim.mesh.norm
-            g_analytic = sim.spec.initial_state.radial_function(sim.mesh.r) * sim.mesh.r / sim.mesh.norm
+
+            for ii in tqdm(range(step)):
+                # g_discrete = cy.tdma(h, g_discrete)
+
+                g_discrete = h_inv.dot(g_discrete)
+
+                g_discrete /= np.sqrt(np.sum(sim.mesh.inner_product_multiplier * np.abs(g_discrete) ** 2))
+
+            # cp.utils.xy_plot(sim.name + 'g_comparison',
+            #                  sim.mesh.r,
+            #                  np.abs(g_analytic) ** 2, np.abs(g_discrete) ** 2,
+            #                  x_scale = 'bohr_radius', x_label = r'$r$', y_label = r'$\left| g \right|^2$',
+            #                  target_dir = OUT_DIR)
 
             difference = np.abs(g_discrete - g_analytic)
-            differences.append(difference)
             fractional_difference = np.abs((g_discrete - g_analytic) / g_analytic)
+
+            differences.append(difference)
             fractional_differences.append(fractional_difference)
-            labels.append(str(im_time_step))
+            labels.append(str(step))
 
             g_pre = g_discrete
 
@@ -58,18 +86,37 @@ if __name__ == '__main__':
             pre_post_differences.append(pre_post_difference)
             pre_post_fractional_differences.append(pre_post_fractional_difference)
 
-            # cp.utils.xy_plot('g_fractional_difference_log_{}'.format(im_time_step),
-            #                  imag.mesh.r, fractional_difference,
+            # cp.utils.xy_plot('g_difference_{}'.format(step),
+            #                  sim.mesh.r, difference,
+            #                  x_scale = 'bohr_radius', x_label = r'$r$', y_label = r'$\left| g_{\mathrm{discrete}} - g_{\mathrm{analytic}} \right|$',
+            #                  y_log_axis = False, x_log_axis = False,
+            #                  target_dir = OUT_DIR)
+            #
+            # cp.utils.xy_plot('g_difference_log_lin_{}'.format(step),
+            #                  sim.mesh.r, difference,
+            #                  x_scale = 'bohr_radius', x_label = r'$r$', y_label = r'$\left| g_{\mathrm{discrete}} - g_{\mathrm{analytic}} \right|$',
+            #                  y_log_axis = False, x_log_axis = True,
+            #                  target_dir = OUT_DIR)
+            #
+            # cp.utils.xy_plot('g_difference_log_{}'.format(step),
+            #                  sim.mesh.r, difference,
+            #                  x_scale = 'bohr_radius', x_label = r'$r$', y_label = r'$\left| g_{\mathrm{discrete}} - g_{\mathrm{analytic}} \right|$',
+            #                  y_log_axis = True, x_log_axis = False,
+            #                  target_dir = OUT_DIR)
+            #
+            # cp.utils.xy_plot('g_fractional_difference_log_{}'.format(step),
+            #                  sim.mesh.r, fractional_difference,
             #                  x_scale = 'bohr_radius', x_label = r'$r$', y_label = r'$\left| \frac{g_{\mathrm{discrete}} - g_{\mathrm{analytic}}}{g_{\mathrm{analytic}}} \right|$',
             #                  y_log_axis = True, x_log_axis = False,
             #                  target_dir = OUT_DIR)
             #
-            # cp.utils.xy_plot('g_fractional_difference_log_log_{}'.format(im_time_step),
-            #                  imag.mesh.r, fractional_difference,
+            # cp.utils.xy_plot('g_fractional_difference_log_log_{}'.format(step),
+            #                  sim.mesh.r, fractional_difference,
             #                  x_scale = 'bohr_radius', x_label = r'$r$', y_label = r'$\left| \frac{g_{\mathrm{discrete}} - g_{\mathrm{analytic}}}{g_{\mathrm{analytic}}} \right|$',
             #                  y_log_axis = True, x_log_axis = True,
             #                  target_dir = OUT_DIR)
 
+        ## COMPARE TO ANALYTIC STATE
         cp.utils.xy_plot('g_difference_lin_log',
                          sim.mesh.r, *differences,
                          line_labels = labels,
@@ -140,22 +187,3 @@ if __name__ == '__main__':
                          x_scale = 'bohr_radius', x_label = r'$r$', y_label = r'$\frac{ \left| g_{\mathrm{pre}} \right|^2  - \left|g_{\mathrm{post}} \right|^2 }{\left| g_{\mathrm{pre}} \right|^2}$',
                          y_log_axis = True, x_log_axis = True,
                          target_dir = OUT_DIR)
-
-        # with open(os.path.join(OUT_DIR, 'results.txt'), mode = 'w') as f:
-        #     print('OVERLAPS BEFORE EVOLUTION', file = f)
-        #     print('Norm = ', '  |  '.join('({}) {}'.format(sim.name, sim.mesh.norm) for sim in sims), file = f)
-        #     for test_state in test_states:
-        #         s = '{}g> = '.format(test_state.bra)
-        #         s += '  |  '.join('({}) {}'.format(sim.name, sim.mesh.state_overlap(test_state)) for sim in sims)
-        #         print(s, file = f)
-        #
-        #     for sim in sims:
-        #         sim.run_simulation()
-        #         sim.plot_wavefunction_vs_time(target_dir = OUT_DIR, log = True)
-        #
-        #     print('OVERLAPS AFTER EVOLUTION', file = f)
-        #     print('Norm = ', '  |  '.join('({}) {}'.format(sim.name, sim.mesh.norm) for sim in sims), file = f)
-        #     for test_state in test_states:
-        #         s = '{}g> = '.format(test_state.bra)
-        #         s += '  |  '.join('({}) {}'.format(sim.name, sim.mesh.state_overlap(test_state)) for sim in sims)
-        #         print(s, file = f)
