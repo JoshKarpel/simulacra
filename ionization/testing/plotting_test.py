@@ -24,7 +24,7 @@ def make_plots(spec):
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization') as logger:
         n = 5
-        bound = 50
+        bounds = [10, 20, 50]
         angular_points = 100
 
         states = (ion.HydrogenBoundState(n, l) for n in range(n + 1) for l in range(n))
@@ -38,16 +38,17 @@ if __name__ == '__main__':
                                                x_bound = 30 * nm))
 
         for initial_state in states:
-            specs.append(ion.CylindricalSliceSpecification('cyl_slice__{}_{}'.format(initial_state.n, initial_state.l),
-                                                           initial_state = initial_state,
-                                                           z_bound = bound * bohr_radius, rho_bound = bound * bohr_radius))
+            for bound in bounds:
+                specs.append(ion.CylindricalSliceSpecification('cyl_slice__{}_{}__{}'.format(initial_state.n, initial_state.l, bound),
+                                                               initial_state = initial_state,
+                                                               z_bound = bound * bohr_radius, rho_bound = bound * bohr_radius))
 
-            specs.append(ion.SphericalSliceSpecification('sph_slice__{}_{}'.format(initial_state.n, initial_state.l),
-                                                         initial_state = initial_state,
-                                                         r_bound = bound * bohr_radius, theta_points = angular_points))
+                specs.append(ion.SphericalSliceSpecification('sph_slice__{}_{}__{}'.format(initial_state.n, initial_state.l, bound),
+                                                             initial_state = initial_state,
+                                                             r_bound = bound * bohr_radius, theta_points = angular_points))
 
-            specs.append(ion.SphericalHarmonicSpecification('sph_harms__{}_{}'.format(initial_state.n, initial_state.l),
-                                                            initial_state = initial_state,
-                                                            r_bound = bound * bohr_radius, l_points = angular_points))
+                specs.append(ion.SphericalHarmonicSpecification('sph_harms__{}_{}__{}'.format(initial_state.n, initial_state.l, bound),
+                                                                initial_state = initial_state,
+                                                                r_bound = bound * bohr_radius, l_points = angular_points))
 
         cp.utils.multi_map(make_plots, specs, processes = 2)

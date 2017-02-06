@@ -62,7 +62,7 @@ class MetricsAndElectricField(cp.AxisManager):
         legend_options = {'loc': 'lower left',
                           'fontsize': 20,
                           'fancybox': True,
-                          'framealpha': 0.75}
+                          'framealpha': .1}
         if self.legend_kwargs is not None:
             legend_options.update(self.legend_kwargs)
 
@@ -152,6 +152,105 @@ class MetricsAndElectricField(cp.AxisManager):
 
     def _update_metric_initial_state_overlap(self):
         self.initial_state_overlap_line.set_ydata(self.sim.state_overlaps_vs_time[self.sim.spec.initial_state])
+
+
+class TestStateStackplot(cp.AxisManager):
+    def __init__(self, axis, simulation,
+                 log_metrics = False, time_unit = 'asec',
+                 label_top = False, label_left = True, ticks_top = True, ticks_right = True, legend_kwargs = None):
+        self.time_unit_str = ''
+        if type(time_unit) == str:
+            self.time_unit_str = unit_names_to_tex_strings[time_unit]
+            time_unit = unit_names_to_values[time_unit]
+        self.time_unit = time_unit
+
+        self.log_metrics = log_metrics
+
+        self.label_top = label_top
+        self.label_left = label_left
+        self.ticks_top = ticks_top
+        self.ticks_right = ticks_right
+        self.legend_kwargs = legend_kwargs
+
+        super().__init__(axis, simulation)
+
+    def initialize(self):
+        self._initialize_stackplot()
+
+        self.time_line, = self.axis.plot([self.sim.times[self.sim.time_index] / self.time_unit,
+                                          self.sim.times[self.sim.time_index] / self.time_unit],
+                                         [0, 2],
+                                         color = 'gray',
+                                         animated = True)
+
+        self.redraw += [self.time_line]
+
+        legend_options = {'bbox_to_anchor': (1., -.2),
+                          'loc': 'upper right',
+                          'borderaxespad': 0.,
+                          'fontsize': 20,
+                          'fancybox': True,
+                          'framealpha': .1}
+        if self.legend_kwargs is not None:
+            legend_options.update(self.legend_kwargs)
+
+        self.legend = self.axis.legend(**legend_options)
+        self.redraw += [self.legend]
+
+        self.axis.grid(True, color = 'gray', linestyle = '--')
+
+        self.axis.set_xlabel(r'Time $t$ ({})'.format(self.time_unit_str), fontsize = 24)
+
+        # if self.label_left:
+        #     self.axis.set_ylabel('Wavefunction Metric', fontsize = 24)
+
+        if self.label_top:
+            self.axis.xaxis.set_label_position('top')
+
+        self.axis.tick_params(labeltop = self.ticks_top, labelright = self.ticks_right)
+
+        self.axis.set_xlim(self.sim.times[0] / self.time_unit, self.sim.times[-1] / self.time_unit)
+        if self.log_metrics:
+            self.axis.set_yscale('log')
+            self.axis.set_ylim(1e-8, 1)
+        else:
+            self.axis.set_ylim(0, 1.025)
+        self.axis.tick_params(axis = 'both', which = 'major', labelsize = 14)
+
+        self.redraw += [*self.axis.xaxis.get_gridlines(), *self.axis.yaxis.get_gridlines()]
+
+        super().initialize()
+
+    def _get_stackplot_data(self):
+        return [self.sim.state_overlaps_vs_time[state] for state in self.spec.test_states]
+
+    def _initialize_stackplot(self):
+        self.overlaps_stackplot = self.axis.stackplot(self.sim.times / self.time_unit,
+                                                      *self._get_stackplot_data(),
+                                                      labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states],
+                                                      animated = True)
+
+        self.redraw += [*self.overlaps_stackplot]
+
+    def _update_stackplot_lines(self):
+        for x in self.overlaps_stackplot:
+            self.redraw.remove(x)
+            x.remove()
+
+        self.axis.set_color_cycle(None)
+        self.overlaps_stackplot = self.axis.stackplot(self.sim.times / self.time_unit,
+                                                      *self._get_stackplot_data(),
+                                                      labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states],
+                                                      animated = True)
+
+        self.redraw = [*self.overlaps_stackplot] + self.redraw
+
+    def update(self):
+        self._update_stackplot_lines()
+
+        self.time_line.set_xdata([self.sim.times[self.sim.time_index] / self.time_unit, self.sim.times[self.sim.time_index] / self.time_unit])
+
+        super().update()
 
 
 class QuantumMeshAxis(cp.AxisManager):
@@ -468,19 +567,19 @@ class PhiSliceAnimator(WavefunctionSimulationAnimator):
 
         self.axis_managers += [self.ax_mesh, self.ax_metrics, self.ax_cbar]
 
-        plt.figtext(.85, .7, r'$|g|^2$', fontsize = 50)
+        plt.figtext(.1, .9, r'$|g|^2$', fontsize = 50)
 
-        plt.figtext(.8, .6, r'Initial State: ${}$'.format(self.spec.initial_state.tex_str), fontsize = 22)
+        # plt.figtext(.8, .6, r'Initial State: ${}$'.format(self.spec.initial_state.tex_str), fontsize = 22)
 
-        self.time_text = plt.figtext(.8, .49, r'$t = {}$ as'.format(uround(self.sim.time, asec, 3)), fontsize = 30, animated = True)
-        self.redraw += [self.time_text]
+        # self.time_text = plt.figtext(.8, .49, r'$t = {}$ as'.format(uround(self.sim.time, asec, 3)), fontsize = 30, animated = True)
+        # self.redraw += [self.time_text]
 
         super(PhiSliceAnimator, self)._initialize_figure()
 
     def _update_data(self):
         super(PhiSliceAnimator, self)._update_data()
 
-        self.time_text.set_text(r'$t = {}$ as'.format(uround(self.sim.time, asec, 3)))
+        # self.time_text.set_text(r'$t = {}$ as'.format(uround(self.sim.time, asec, 3)))
 
 
 class SphericalSliceAnimator(PhiSliceAnimator):
@@ -490,15 +589,17 @@ class SphericalSliceAnimator(PhiSliceAnimator):
 class SphericalHarmonicAnimator(PhiSliceAnimator):
     mesh_axis_type = SphericalHarmonicPhiSliceAxis
 
-    def __init__(self, renormalize_l_decomposition = True, **kwargs):
-        self.renormalize_l_decomposition = renormalize_l_decomposition
+    def __init__(self, top_right_axis_manager_type = AngularMomentumDecompositionAxis, top_right_axis_kwargs = None, **kwargs):
+        self.top_right_axis_manager_type = top_right_axis_manager_type
+        if top_right_axis_kwargs is None:
+            top_right_axis_kwargs = {}
+        self.top_right_axis_kwargs = top_right_axis_kwargs
 
         super(SphericalHarmonicAnimator, self).__init__(**kwargs)
 
     def _initialize_figure(self):
         super(SphericalHarmonicAnimator, self)._initialize_figure()
 
-        self.ax_ang_mom = AngularMomentumDecompositionAxis(self.fig.add_axes([.56, .84, .385, .125]), self.sim,
-                                                           renormalize_l_decomposition = self.renormalize_l_decomposition)
+        self.top_right_axis = self.top_right_axis_manager_type(self.fig.add_axes([.56, .84, .39, .125]), self.sim, **self.top_right_axis_kwargs)
 
-        self.axis_managers += [self.ax_ang_mom]
+        self.axis_managers += [self.top_right_axis]

@@ -1254,12 +1254,16 @@ class SphericalHarmonicMesh(QuantumMesh):
     def norm_by_l(self):
         return np.abs(np.sum(np.conj(self.g_mesh) * self.g_mesh, axis = 1) * self.delta_r)
 
-    def dipole_moment_expectation_value(self, gauge = 'length'):
+    def dipole_moment_expectation_value(self, mesh_a = None, mesh_b = None, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
+        if mesh_a is None:
+            mesh_a = self.g_mesh
+        if mesh_b is None:
+            mesh_b = self.g_mesh
         if gauge == 'length':
             _, operator = self._get_kinetic_energy_matrix_operators()
-            g = self.wrap_vector(operator.dot(self.flatten_mesh(self.g_mesh, 'l')), 'l')
-            return self.spec.test_charge * self.inner_product(b = g)
+            g = self.wrap_vector(operator.dot(self.flatten_mesh(mesh_b, 'l')), 'l')
+            return self.spec.test_charge * self.inner_product(a = mesh_a, b = g)
         elif gauge == 'velocity':
             raise NotImplementedError
 
@@ -1825,6 +1829,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
             self.status = 'running'
             logger.debug("{} {} ({}) status set to 'running'".format(self.__class__.__name__, self.name, self.file_name))
 
+            self.mesh.g_mesh /= np.sqrt(self.mesh.norm)
+
             for animator in self.animators:
                 animator.initialize(self)
 
@@ -1899,7 +1905,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         else:  # stackplot with all states broken out in full color
             overlaps = [self.state_overlaps_vs_time[state] for state in self.spec.test_states]
             num_colors = len(overlaps)
-            ax_overlaps.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
+            # ax_overlaps.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
             ax_overlaps.stackplot(self.times / x_scale_unit, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states])
 
         if log:

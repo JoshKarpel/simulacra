@@ -73,5 +73,6 @@ if __name__ == '__main__':
                               wait_after_success = dt.timedelta(hours = 3))
         except Exception as e:
             logger.exception(e)
+            raise e
         finally:
             resume_process(dropbox_process)

@@ -59,7 +59,7 @@ class QuantumState(cp.Summand):
     @property
     def tuple(self):
         """This property should return a tuple of unique information about the state, which will be used to hash it or perform comparison operations."""
-        return 0
+        return 0,
 
     def __hash__(self):
         return hash((self.__class__.__name__, self.__doc__) + self.tuple)
@@ -102,6 +102,10 @@ class Superposition(cp.Sum, QuantumState):
         super(Superposition, self).__init__(amplitude = 1)
         norm = np.sqrt(sum(s.norm for s in states))
         self.states = list(s / norm for s in states)  # note that the states are implicitly copied here
+
+    @property
+    def tuple(self):
+        return sum((s.tuple for s in self.states), tuple())
 
 
 class FreeSphericalWave(QuantumState):
@@ -224,7 +228,7 @@ class HydrogenBoundState(QuantumState):
     @n.setter
     def n(self, n):
         if 0 < n == int(n):
-            self._n = n
+            self._n = int(n)
         else:
             raise IllegalQuantumState('n ({}) must be an integer greater than zero'.format(n))
 
@@ -236,7 +240,7 @@ class HydrogenBoundState(QuantumState):
     @l.setter
     def l(self, l):
         if int(l) == l and 0 <= l < self.n:
-            self._l = l
+            self._l = int(l)
         else:
             raise IllegalQuantumState('l ({}) must be greater than or equal to zero and less than n ({})'.format(l, self.n))
 
@@ -248,7 +252,7 @@ class HydrogenBoundState(QuantumState):
     @m.setter
     def m(self, m):
         if int(m) == m and -self.l <= m <= self.l:
-            self._m = m
+            self._m = int(m)
         else:
             IllegalQuantumState('|m| (|{}|) must be less than l ({})'.format(m, self.l))
 
@@ -364,7 +368,7 @@ class HydrogenCoulombState(QuantumState):
             prefactor = s_prefactor * l_prefactor * unit_prefactor
 
             def radial_function(self, r):
-                x = self.atomic_number * r / bohr_radius
+                x = r / bohr_radius
 
                 return prefactor * hgf(2 * x / kappa) * (x ** (self.l + 1)) * np.exp(-x / kappa) / r
 
@@ -374,7 +378,7 @@ class HydrogenCoulombState(QuantumState):
             bessel = ft.partial(special.jv, bessel_order)  # construct a partial function with the Bessel function order filled in
 
             def radial_function(self, r):
-                x = self.atomic_number * r / bohr_radius
+                x = r / bohr_radius
 
                 return prefactor * bessel(np.sqrt(8 * x)) * np.sqrt(x) / r
 
