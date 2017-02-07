@@ -17,9 +17,9 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 if __name__ == '__main__':
     # test_states = [ion.HydrogenBoundState(n, l) for n in range(6) for l in range(n)]
 
-    l_points = 5
+    l_points = 1
     bound = 100
-    points_per_bohr_radius = 8
+    points_per_bohr_radius = 4
 
     spec_kwargs = {'r_bound': bound * bohr_radius,
                    'r_points': bound * points_per_bohr_radius,

@@ -10,6 +10,7 @@ import numpy as np
 import numpy.fft as nfft
 import scipy as sp
 import scipy.sparse as sparse
+import scipy.sparse.linalg as sparsealg
 import scipy.special as special
 from cycler import cycler
 
@@ -52,8 +53,6 @@ class ElectricFieldSpecification(cp.core.Specification):
                  minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
-                 find_numerical_ground_state = False,
-                 store_norm_by_l = False,
                  **kwargs):
         """
         Initialize an ElectricFieldSpecification instance from the given parameters.
@@ -118,9 +117,6 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.checkpoint_dir = checkpoint_dir
 
         self.animators = tuple(animators)
-
-        self.store_norm_by_l = store_norm_by_l
-        self.find_numerical_ground_state = find_numerical_ground_state
 
     def info(self):
         checkpoint = ['Checkpointing: ']
@@ -195,9 +191,8 @@ class QuantumMesh:
         """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
         return np.abs(self.inner_product(a, b)) ** 2
 
-    @property
-    def norm(self):
-        return np.abs(self.inner_product())
+    def norm(self, state = None):
+        return np.abs(self.inner_product(a = state, b = state))
 
     @property
     def energy_expectation_value(self):
@@ -207,7 +202,7 @@ class QuantumMesh:
         raise NotImplementedError
 
     def __abs__(self):
-        return self.norm
+        return self.norm()
 
     def copy(self):
         return deepcopy(self)
@@ -217,15 +212,15 @@ class QuantumMesh:
         return self.g_mesh / self.g_factor
 
     def evolve(self, time_step):
-        pre_evolve_norm = self.norm
+        pre_evolve_norm = self.norm()
         getattr(self, '_evolve_' + self.spec.evolution_method)(time_step)
-        norm_diff_evolve = pre_evolve_norm - self.norm
+        norm_diff_evolve = pre_evolve_norm - self.norm()
         if norm_diff_evolve / pre_evolve_norm > .001:
             logger.warning('Evolution may be dangerously non-unitary, norm decreased by {} ({} %) during evolution step'.format(norm_diff_evolve, norm_diff_evolve / pre_evolve_norm))
 
-        pre_mask_norm = self.norm
+        pre_mask_norm = self.norm()
         self.g_mesh *= self.spec.mask(r = self.r_mesh)
-        norm_diff_mask = pre_mask_norm - self.norm
+        norm_diff_mask = pre_mask_norm - self.norm()
         logger.debug('Applied mask {} to g_mesh for {} {}, removing {} norm'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name, norm_diff_mask))
         return norm_diff_mask
 
@@ -359,7 +354,11 @@ class LineMesh(QuantumMesh):
 
     @cp.utils.memoize
     def get_g_for_state(self, state):
-        return state(self.x_mesh)
+        g = state(self.x_mesh)
+        g /= np.sqrt(self.norm(g))
+        g *= state.amplitude
+
+        return g
 
     @property
     def energy_expectation_value(self):
@@ -526,7 +525,11 @@ class CylindricalSliceMesh(QuantumMesh):
 
     @cp.utils.memoize
     def get_g_for_state(self, state):
-        return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
+        g = self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
+        g /= np.sqrt(self.norm(g))
+        g *= state.amplitude
+
+        return g
 
     def dipole_moment_expectation_value(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
@@ -900,13 +903,13 @@ class SphericalSliceMesh(QuantumMesh):
 
         return np.abs(self.inner_product(mesh_a, b)) ** 2
 
-    @property
-    def norm(self):
-        return np.abs(self.inner_product())
-
     @cp.utils.memoize
     def get_g_for_state(self, state):
-        return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
+        g = self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
+        g /= np.sqrt(self.norm(g))
+        g *= state.amplitude
+
+        return g
 
     def dipole_moment_expectation_value(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
@@ -1148,11 +1151,15 @@ class SphericalSliceMesh(QuantumMesh):
 
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
     def __init__(self, name,
-                 r_bound = 20 * bohr_radius,
-                 r_points = 2 ** 9,
-                 l_points = 2 ** 5,
+                 r_bound = 100 * bohr_radius,
+                 r_points = 400,
+                 l_points = 100,
                  evolution_equations = 'L',
                  evolution_method = 'SO',
+                 store_norm_by_l = False,
+                 use_numeric_eigenstates_as_basis = False,
+                 numeric_eigenstate_l_max = 20,
+                 numeric_eigenstate_energy_max = 100 * eV,
                  **kwargs):
         """
         Specification for an ElectricFieldSimulation using a SphericalHarmonicMesh.
@@ -1174,6 +1181,12 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
 
         self.evolution_equations = evolution_equations
         self.evolution_method = evolution_method
+
+        self.store_norm_by_l = store_norm_by_l
+
+        self.use_numeric_eigenstates_as_basis = use_numeric_eigenstates_as_basis
+        self.numeric_eigenstate_l_max = numeric_eigenstate_l_max
+        self.numeric_eigenstate_energy_max = numeric_eigenstate_energy_max
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
@@ -1206,7 +1219,19 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.mesh_points = len(self.r) * len(self.l)
         self.mesh_shape = np.shape(self.r_mesh)
 
-        self.g_mesh = self.get_g_for_state(self.spec.initial_state)
+        self.numeric_basis = ()
+        self.analytic_to_numeric = {}
+
+        if self.spec.use_numeric_eigenstates_as_basis:
+            if len(self.spec.test_states) > 0:
+                logger.warning('Replaced test states for {} with numeric eigenbasis'.format(self))
+            self.analytic_to_numeric = self._get_numeric_eigenstate_basis(self.spec.numeric_eigenstate_energy_max, self.spec.numeric_eigenstate_l_max)
+            self.numeric_basis = sorted(list(self.analytic_to_numeric.values()), key = lambda x: x.energy)
+            g_initial = self.get_g_for_state(self.analytic_to_numeric[self.spec.initial_state])
+        else:
+            g_initial = self.get_g_for_state(self.spec.initial_state)
+
+        self.g_mesh = g_initial
 
     @property
     @cp.utils.memoize
@@ -1284,7 +1309,11 @@ class SphericalHarmonicMesh(QuantumMesh):
     def get_radial_g_for_state(self, state):
         """Return the radial g function evaluated on the radial mesh for a state that has a radial function."""
         # logger.debug('Calculating radial wavefunction for state {}'.format(state))
-        return state.radial_function(self.r) * self.g_factor
+        g = state.radial_function(self.r) * self.g_factor
+        g /= np.sqrt(self.norm(g))
+        g *= state.amplitude
+
+        return g
 
     def inner_product(self, a = None, b = None):
         if isinstance(a, states.QuantumState) and all(hasattr(s, 'spherical_harmonic') for s in a) and b is None:  # shortcut
@@ -1361,6 +1390,33 @@ class SphericalHarmonicMesh(QuantumMesh):
         r_kinetic.data[1] += potential
 
         return r_kinetic
+
+    def _get_numeric_eigenstate_basis(self, energy_max, l_max):
+        analytic_to_numeric = {}
+
+        for l in range(l_max):
+            h = self._get_internal_hamiltonian_matrix_operator_single_l(l = l)
+            eigenvalues, eigenvectors = sparsealg.eigsh(h, k = h.shape[0] - 2, which = 'SA')
+
+            for eigenvalue, eigenvector in zip(eigenvalues, eigenvectors.T):
+                eigenvector /= np.sqrt(self.inner_product_multiplier * np.sum(np.abs(eigenvector) ** 2))  # normalize
+                eigenvector /= self.g_factor  # go to u from R
+
+                if eigenvalue > energy_max:  # ignore eigenvalues that are too large
+                    continue
+                elif eigenvalue > 0:
+                    analytic_state = states.HydrogenCoulombState(energy = eigenvalue, l = l)
+                else:
+                    n_guess = round(np.sqrt(rydberg / np.abs(eigenvalue)))
+                    if n_guess == 0:
+                        n_guess = 1
+                    analytic_state = states.HydrogenBoundState(n = n_guess, l = l)
+
+                numeric_state = states.NumericSphericalHarmonicState(eigenvector, l, 0, eigenvalue, analytic_state)
+
+                analytic_to_numeric[analytic_state] = numeric_state
+
+        return analytic_to_numeric
 
     # TODO: REFACTORRRRRRRRRR using tensor products
 
@@ -1774,17 +1830,14 @@ class ElectricFieldSimulation(cp.core.Simulation):
     def initialize_mesh(self):
         self.mesh = self.spec.mesh_type(self)
 
-        if self.spec.find_numerical_ground_state:
-            self.find_numerical_ground_state()
-
         logger.debug('Initialized mesh for {} {}'.format(self.__class__.__name__, self.name))
 
-        if not (.99 < self.mesh.norm < 1.01):
-            logger.warning('Initial wavefunction for {} {} may not be normalized (norm = {})'.format(self.__class__.__name__, self.name, self.mesh.norm))
+        if not (.99 < self.mesh.norm() < 1.01):
+            logger.warning('Initial wavefunction for {} {} may not be normalized (norm = {})'.format(self.__class__.__name__, self.name, self.mesh.norm()))
 
     def store_data(self, time_index):
         """Update the time-indexed data arrays with the current values."""
-        norm = self.mesh.norm
+        norm = self.mesh.norm()
         self.norm_vs_time[time_index] = norm
         if norm > 1.001 * self.norm_vs_time[0]:
             logger.warning('Wavefunction norm ({}) has exceeded initial norm ({}) by more than .1% for {} {}'.format(norm, self.norm_vs_time[0], self.__class__.__name__, self.name))
@@ -1804,10 +1857,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.times[time_index])
 
-        if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:
+        if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:  # if spherical harmonic mesh and we want to do this
             norm_by_l = self.mesh.norm_by_l
             for sph_harm, l_norm in zip(self.spec.spherical_harmonics, norm_by_l):
-                self.norm_by_harmonic_vs_time[sph_harm][time_index] = l_norm  # TODO: extend to non-l storage meshes
+                self.norm_by_harmonic_vs_time[sph_harm][time_index] = l_norm
 
             largest_l = self.spec.spherical_harmonics[-1]
             norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][time_index]
@@ -1828,8 +1881,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         try:
             self.status = 'running'
             logger.debug("{} {} ({}) status set to 'running'".format(self.__class__.__name__, self.name, self.file_name))
-
-            self.mesh.g_mesh /= np.sqrt(self.mesh.norm)
 
             for animator in self.animators:
                 animator.initialize(self)
@@ -1869,15 +1920,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
             # make sure the animators get cleaned up if there's some kind of error during time evolution
             for animator in self.animators:
                 animator.cleanup()
-
-    def find_numerical_ground_state(self):
-        logger.warning('find_numerical_ground_state can only find the ground state!')
-
-        for ii in range(self.spec.imaginary_time_evolution_steps):
-            self.mesh.evolve(-1j * self.spec.time_step)
-            self.mesh.g_mesh /= np.sqrt(self.mesh.norm)  # renormalize after each iteration to keep the norm under control
-
-        logger.debug('Performed Imaginary Time Evolution on {}'.format(self.__class__.__name__, self.name, self.file_name))
 
     def plot_wavefunction_vs_time(self, use_name = False, grayscale = False, log = False, x_scale = 'asec', **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
