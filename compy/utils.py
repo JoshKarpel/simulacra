@@ -506,13 +506,16 @@ def method_dispatch(func):
     return wrapper
 
 
+def hash_args_kwargs(*args, **kwargs):
+    return hash(args + tuple(kwargs.items()))
+
 def memoize(function):
     """Memoize a function by storing a dictionary of {inputs: outputs}."""
     memo = {}
 
     @ft.wraps(function)
     def memoizer(*args, **kwargs):
-        key = str(args) + str(kwargs)
+        key = hash_args_kwargs(*args, **kwargs)
         if key not in memo:
             memo[key] = function(*args, **kwargs)
         return memo[key]
