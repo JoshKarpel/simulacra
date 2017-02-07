@@ -7,6 +7,7 @@ import logging
 import argparse
 import json
 import pickle
+import functools as ft
 
 import numpy as np
 
@@ -114,9 +115,17 @@ if __name__ == '__main__':
 
         number_of_phases = clu.ask_for_input('Number of phases?', default = 32, cast_to = int)
 
+
+        def amplitude_function(cutoff, amplitude, frequency):
+            return np.where(np.abs(frequency) < cutoff, amplitude, 0)
+
+
+        def phase_function(phase, frequency):
+            return np.where(frequency >= 0, phase, -phase)
+
         parameters.append(clu.Parameter(name = 'electric_potential',
-                                        value = tuple(ion.GenericElectricField(lambda f: np.where(np.abs(f) < sinc.frequency_cutoff, sinc.amplitude_per_frequency, 0),
-                                                                               lambda f: np.where(f >= 0, phase, -phase),
+                                        value = tuple(ion.GenericElectricField(ft.partial(amplitude_function, sinc.frequency_cutoff, sinc.amplitude_per_frequency),
+                                                                               ft.partial(phase_function, phase),
                                                                                frequency_upper_limit = sinc.frequency_cutoff * 20,
                                                                                frequency_points = 2 ** 15,
                                                                                name = 'pw={}asec_flu={}Jcm2_phase={}pi'.format(uround(sinc.pulse_width, asec),

@@ -22,13 +22,14 @@ if __name__ == '__main__':
                        'l_points': 100,
                        'initial_state': ion.HydrogenBoundState(1, 0),
                        'time_initial': 0 * asec,
-                       'time_final': 200 * asec,
+                       'time_final': 1000 * asec,
                        'time_step': 1 * asec,
                        'test_states': test_states,
                        # 'electric_potential': ion.Rectangle(50 * asec, 100 * asec, amplitude = 1 * atomic_electric_field)
                        }
 
-        steps = [1, 10, 50, 100, 250, 500, 1000, 1500, 2000]
+        steps = [1, 10, 50, 100, 500, 1000, 2000]
+        # steps = [1, 10, 50, 100, 250, 500, 1000, 1500, 2000]
 
         differences = []
         fractional_differences = []
@@ -37,10 +38,12 @@ if __name__ == '__main__':
         pre_post_differences = []
         pre_post_fractional_differences = []
 
+        pre_post_norm_differences = []
+
         for step in steps:
             sim = ion.SphericalHarmonicSpecification('ipm_{}'.format(step), **spec_kwargs).to_simulation()
 
-            g_analytic = sim.spec.initial_state.radial_function(sim.mesh.r) * sim.mesh.r / sim.mesh.norm  # analytic mesh reference
+            g_analytic = sim.spec.initial_state.radial_function(sim.mesh.r) * sim.mesh.r / np.sqrt(sim.mesh.norm)  # analytic mesh reference
 
             h = sim.mesh._get_internal_hamiltonian_matrix_operator_single_l(l = 0)
 
@@ -76,6 +79,7 @@ if __name__ == '__main__':
             g_pre = g_discrete
 
             sim.mesh.g_mesh[0, :] = g_discrete
+            norm_pre = sim.mesh.norm
             sim.run_simulation()
 
             g_post = sim.mesh.g_mesh[0, :]
@@ -85,6 +89,9 @@ if __name__ == '__main__':
 
             pre_post_differences.append(pre_post_difference)
             pre_post_fractional_differences.append(pre_post_fractional_difference)
+
+            pre_post_norm_difference = np.abs(norm_pre - sim.mesh.norm)
+            pre_post_norm_differences.append(pre_post_norm_difference)
 
             # cp.utils.xy_plot('g_difference_{}'.format(step),
             #                  sim.mesh.r, difference,
@@ -116,7 +123,7 @@ if __name__ == '__main__':
             #                  y_log_axis = True, x_log_axis = True,
             #                  target_dir = OUT_DIR)
 
-        ## COMPARE TO ANALYTIC STATE
+        # COMPARE TO ANALYTIC STATE
         cp.utils.xy_plot('g_difference_lin_log',
                          sim.mesh.r, *differences,
                          line_labels = labels,
@@ -185,5 +192,17 @@ if __name__ == '__main__':
                          sim.mesh.r, *pre_post_fractional_differences,
                          line_labels = labels,
                          x_scale = 'bohr_radius', x_label = r'$r$', y_label = r'$\frac{ \left| g_{\mathrm{pre}} \right|^2  - \left|g_{\mathrm{post}} \right|^2 }{\left| g_{\mathrm{pre}} \right|^2}$',
+                         y_log_axis = True, x_log_axis = True,
+                         target_dir = OUT_DIR)
+
+        print(steps)
+        print(pre_post_norm_differences)
+
+        cp.utils.xy_plot('norm_diff', steps, pre_post_norm_differences,
+                         y_label = r'|initial norm - final norm|',
+                         target_dir = OUT_DIR)
+
+        cp.utils.xy_plot('norm_diff_log_log', steps, pre_post_norm_differences,
+                         y_label = r'|initial norm - final norm|',
                          y_log_axis = True, x_log_axis = True,
                          target_dir = OUT_DIR)
