@@ -5,6 +5,7 @@ import numpy.fft as nfft
 import scipy.integrate as integ
 
 import compy as cp
+import compy.math as math
 from compy.units import *
 
 logger = logging.getLogger(__name__)
@@ -241,7 +242,7 @@ class UniformLinearlyPolarizedElectricField(PotentialEnergy):
         return np.cumsum(self.get_electric_field_amplitude(times)) * np.abs(times[1] - times[0])
 
     def get_fluence_numeric(self, times):
-        raise NotImplementedError
+        return epsilon_0 * c * np.sum(np.abs(self.get_electric_field_amplitude(times)) ** 2) * np.abs(times[1] - times[0])
 
 
 class NoElectricField(UniformLinearlyPolarizedElectricField):
@@ -486,6 +487,208 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
             amp = np.where(np.not_equal(t, 0),
                            (np.cos(self.omega_cutoff * (t - self.pulse_center)) - 1) / (t - self.pulse_center),
                            0)
+
+        return amp * self.electric_field_prefactor * super().get_electric_field_amplitude(t)
+
+
+class CarrierSincPulse(UniformLinearlyPolarizedElectricField):
+    def __init__(self, pulse_width = 200 * asec, omega_min = twopi * 350 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+                 **kwargs):
+        """
+
+        :param pulse_width:
+        :param fluence:
+        :param phase:
+        :param pulse_center:
+        :param kwargs:
+        """
+        super().__init__(**kwargs)
+
+        self.pulse_width = pulse_width
+        self.phase = phase
+
+        self.fluence = fluence
+        self.pulse_center = pulse_center
+
+        self.omega_cutoff = twopi / self.pulse_width
+        self.omega_min = omega_min
+        self.omega_carrier = omega_min + self.omega_cutoff
+
+        self.amplitude_per_omega = np.sqrt(self.fluence / (epsilon_0 * c * self.omega_cutoff))
+        self.electric_field_prefactor = np.sqrt(2 / pi) * self.amplitude_per_omega * self.omega_cutoff
+
+    @classmethod
+    def from_amplitude_density(cls, pulse_width = 100 * asec, amplitude_density = 7.7432868731566454e-06, phase = 'cos', pulse_center = 0 * asec, **kwargs):
+        omega_cutoff = twopi / pulse_width
+        fluence = (amplitude_density ** 2) * (2 * epsilon_0 * c * omega_cutoff)
+        return cls(pulse_width = pulse_width, fluence = fluence, phase = phase, pulse_center = pulse_center, **kwargs)
+
+    @property
+    def largest_photon_energy(self):
+        return hbar * self.omega_cutoff
+
+    @property
+    def frequency_cutoff(self):
+        return self.omega_cutoff / twopi
+
+    @property
+    def amplitude_per_frequency(self):
+        return np.sqrt(twopi) * self.amplitude_per_omega
+
+    def __str__(self):
+        out = cp.utils.field_str(self,
+                                 ('pulse_width', 'asec'),
+                                 ('pulse_center', 'asec'),
+                                 ('fluence', 'J/cm^2'),
+                                 'phase',
+                                 ('largest_photon_energy', 'eV')
+                                 )
+
+        return out + super().__str__()
+
+    def __repr__(self):
+        return cp.utils.field_str(self,
+                                  'pulse_width',
+                                  'pulse_center',
+                                  'fluence',
+                                  'phase',
+                                  'largest_photon_energy',
+                                  'dc_correction_time')
+
+    def get_electric_field_amplitude(self, t):
+        """Return the electric field amplitude at time t."""
+        tau = t - self.pulse_center
+        amp = math.sinc(self.omega_cutoff * tau) * np.cos((self.omega_carrier * tau) + self.phase)
+
+        return amp * self.electric_field_prefactor * super().get_electric_field_amplitude(t)
+
+
+class CarrierSechPulse(UniformLinearlyPolarizedElectricField):
+    def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 350 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+                 **kwargs):
+        """
+
+        :param pulse_width:
+        :param fluence:
+        :param phase:
+        :param pulse_center:
+        :param kwargs:
+        """
+        super().__init__(**kwargs)
+
+        self.pulse_width = pulse_width
+        self.phase = phase
+
+        self.fluence = fluence
+        self.pulse_center = pulse_center
+
+        self.omega_cutoff = twopi / self.pulse_width
+        self.omega_carrier = omega_carrier + self.omega_cutoff
+
+        self.amplitude_per_omega = np.sqrt(self.fluence / (2 * epsilon_0 * c * self.omega_cutoff))
+        self.electric_field_prefactor = np.sqrt(2 / pi) * self.amplitude_per_omega * self.omega_cutoff
+
+    @property
+    def largest_photon_energy(self):
+        return hbar * self.omega_cutoff
+
+    @property
+    def frequency_cutoff(self):
+        return self.omega_cutoff / twopi
+
+    @property
+    def amplitude_per_frequency(self):
+        return np.sqrt(twopi) * self.amplitude_per_omega
+
+    def __str__(self):
+        out = cp.utils.field_str(self,
+                                 ('pulse_width', 'asec'),
+                                 ('pulse_center', 'asec'),
+                                 ('fluence', 'J/cm^2'),
+                                 'phase',
+                                 ('largest_photon_energy', 'eV')
+                                 )
+
+        return out + super().__str__()
+
+    def __repr__(self):
+        return cp.utils.field_str(self,
+                                  'pulse_width',
+                                  'pulse_center',
+                                  'fluence',
+                                  'phase',
+                                  'largest_photon_energy',
+                                  'dc_correction_time')
+
+    def get_electric_field_amplitude(self, t):
+        """Return the electric field amplitude at time t."""
+        tau = t - self.pulse_center
+        amp = (1 / np.cosh(self.omega_cutoff * tau)) * np.cos((self.omega_carrier * tau) + self.phase)
+
+        return amp * self.electric_field_prefactor * super().get_electric_field_amplitude(t)
+
+
+class CarrierSechPulse(UniformLinearlyPolarizedElectricField):
+    def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 350 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+                 **kwargs):
+        """
+
+        :param pulse_width:
+        :param fluence:
+        :param phase:
+        :param pulse_center:
+        :param kwargs:
+        """
+        super().__init__(**kwargs)
+
+        self.pulse_width = pulse_width
+        self.phase = phase
+
+        self.fluence = fluence
+        self.pulse_center = pulse_center
+
+        self.omega_cutoff = twopi / self.pulse_width
+        self.omega_carrier = omega_carrier + self.omega_cutoff
+
+        self.amplitude_per_omega = np.sqrt(self.fluence / (2 * epsilon_0 * c * self.omega_cutoff))
+        self.electric_field_prefactor = np.sqrt(2 / pi) * self.amplitude_per_omega * self.omega_cutoff
+
+    @property
+    def largest_photon_energy(self):
+        return hbar * self.omega_cutoff
+
+    @property
+    def frequency_cutoff(self):
+        return self.omega_cutoff / twopi
+
+    @property
+    def amplitude_per_frequency(self):
+        return np.sqrt(twopi) * self.amplitude_per_omega
+
+    def __str__(self):
+        out = cp.utils.field_str(self,
+                                 ('pulse_width', 'asec'),
+                                 ('pulse_center', 'asec'),
+                                 ('fluence', 'J/cm^2'),
+                                 'phase',
+                                 ('largest_photon_energy', 'eV')
+                                 )
+
+        return out + super().__str__()
+
+    def __repr__(self):
+        return cp.utils.field_str(self,
+                                  'pulse_width',
+                                  'pulse_center',
+                                  'fluence',
+                                  'phase',
+                                  'largest_photon_energy',
+                                  'dc_correction_time')
+
+    def get_electric_field_amplitude(self, t):
+        """Return the electric field amplitude at time t."""
+        tau = t - self.pulse_center
+        amp = (1 / np.cosh(self.omega_cutoff * tau)) * np.cos((self.omega_carrier * tau) + self.phase)
 
         return amp * self.electric_field_prefactor * super().get_electric_field_amplitude(t)
 
