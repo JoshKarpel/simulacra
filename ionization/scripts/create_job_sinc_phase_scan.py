@@ -124,9 +124,9 @@ if __name__ == '__main__':
             return np.where(frequency >= 0, phase, -phase)
 
         parameters.append(clu.Parameter(name = 'electric_potential',
-                                        value = tuple(ion.GenericElectricField(ft.partial(amplitude_function, sinc.frequency_cutoff, sinc.amplitude_per_frequency),
+                                        value = tuple(ion.GenericElectricField(ft.partial(amplitude_function, sinc.frequency_max, sinc.amplitude_per_frequency),
                                                                                ft.partial(phase_function, phase),
-                                                                               frequency_upper_limit = sinc.frequency_cutoff * 20,
+                                                                               frequency_upper_limit = sinc.frequency_max * 20,
                                                                                frequency_points = 2 ** 15,
                                                                                name = 'pw={}asec_flu={}Jcm2_phase={}pi'.format(uround(sinc.pulse_width, asec),
                                                                                                                                uround(sinc.fluence, Jcm2),

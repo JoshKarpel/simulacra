@@ -20,7 +20,7 @@ if __name__ == '__main__':
         OUT_DIR = os.path.join(OUT_DIR, 'pw={}as_flu={}Jcm2'.format(pw, flu))
 
         sinc_plain = ion.SincPulse(pulse_width = pw * asec, fluence = flu * Jcm2)
-        sinc_with_carrier = ion.CarrierSincPulse(pulse_width = pw * asec, phase = 0)
+        sinc_with_carrier = ion.SincPulse(pulse_width = pw * asec, phase = 0)
         sech_with_carrier = ion.CarrierSechPulse(pulse_width = pw * asec, omega_carrier = sinc_with_carrier.omega_carrier)
 
         print('carrier f (THz):', sinc_with_carrier.omega_carrier / (twopi * THz))

@@ -24,22 +24,22 @@ if __name__ == '__main__':
         print(sinc.amplitude_per_omega)
         print(sinc.amplitude_per_omega ** 2)
 
-        print(2 * sinc.omega_cutoff * epsilon_0 * c * sinc.amplitude_per_omega ** 2 / Jcm2)
-        print(2 * sinc.frequency_cutoff * epsilon_0 * c * (np.sqrt(twopi) * sinc.amplitude_per_omega) ** 2 / Jcm2)
-        print(2 * sinc.frequency_cutoff * epsilon_0 * c * (sinc.amplitude_per_frequency) ** 2 / Jcm2)
+        print(2 * sinc.omega_max * epsilon_0 * c * sinc.amplitude_per_omega ** 2 / Jcm2)
+        print(2 * sinc.frequency_max * epsilon_0 * c * (np.sqrt(twopi) * sinc.amplitude_per_omega) ** 2 / Jcm2)
+        print(2 * sinc.frequency_max * epsilon_0 * c * (sinc.amplitude_per_frequency) ** 2 / Jcm2)
 
-        logger.info('Sinc cutoff frequency: {} THz'.format(uround(sinc.frequency_cutoff, THz)))
+        logger.info('Sinc cutoff frequency: {} THz'.format(uround(sinc.frequency_max, THz)))
 
-        generic = ion.GenericElectricField(lambda f: np.where(np.abs(f) < sinc.frequency_cutoff, sinc.amplitude_per_frequency, 0),
+        generic = ion.GenericElectricField(lambda f: np.where(np.abs(f) < sinc.frequency_max, sinc.amplitude_per_frequency, 0),
                                            lambda f: np.where(f >= 0, pi / 2, -pi / 2),
-                                           frequency_upper_limit = sinc.frequency_cutoff * 20,
+                                           frequency_upper_limit = sinc.frequency_max * 20,
                                            frequency_points = 2 ** 15
                                            )
 
         for ii, phase in enumerate(np.arange(0, twopi + 0.01, pi / 8)):
-            generic = ion.GenericElectricField(lambda f: np.where(np.abs(f) < sinc.frequency_cutoff, sinc.amplitude_per_frequency, 0),
+            generic = ion.GenericElectricField(lambda f: np.where(np.abs(f) < sinc.frequency_max, sinc.amplitude_per_frequency, 0),
                                                lambda f: np.where(f >= 0, phase, -phase),
-                                               frequency_upper_limit = sinc.frequency_cutoff * 20,
+                                               frequency_upper_limit = sinc.frequency_max * 20,
                                                frequency_points = 2 ** 15
                                                )
 

@@ -1383,6 +1383,8 @@ class SphericalHarmonicMesh(QuantumMesh):
         for r_index in range(self.mesh_points):
             j = r_index % self.spec.r_points
             r_diagonal[r_index] = beta(j)
+        dr = self.delta_r / bohr_radius
+        r_diagonal[0] += dr * (1 + dr) / 8
 
         for r_index in range(self.mesh_points - 1):
             if (r_index + 1) % self.spec.r_points != 0:  # TODO: should be possible to clean this if up

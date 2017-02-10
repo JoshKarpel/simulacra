@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import functools as ft
 
 from tqdm import tqdm
 import numpy as np
@@ -36,11 +37,11 @@ pgf_with_latex = {  # setup matplotlib to use latex for output
     "font.serif": [],  # blank entries should cause plots to inherit fonts from the document
     "font.sans-serif": [],
     "font.monospace": [],
-    "axes.labelsize": 10,  # LaTeX default is 10pt font.
-    "font.size": 10,
-    "legend.fontsize": 9,  # Make the legend/label fonts a little smaller
-    "xtick.labelsize": 7,
-    "ytick.labelsize": 7,
+    "axes.labelsize": 11,  # LaTeX default is 10pt font.
+    "font.size": 11,
+    "legend.fontsize": 10,  # Make the legend/label fonts a little smaller
+    "xtick.labelsize": 9,
+    "ytick.labelsize": 9,
     "figure.figsize": figsize(0.9),  # default fig size of 0.9 textwidth
     "pgf.preamble": [
         r"\usepackage[utf8x]{inputenc}",  # use utf8 fonts because your computer can handle it :)
@@ -75,9 +76,10 @@ def get_func_name():
 
 
 grid_kwargs = {
-    'dashes': [.5, .5],
+    # 'dashes': [.5, .5],
+    'linestyle': '-',
     'color': 'black',
-    'linewidth': .5,
+    'linewidth': .25,
     'alpha': 0.4
 }
 
@@ -96,10 +98,10 @@ def sinc_pulse_power_spectrum_full():
 
     delta_line_y_coord = .75
     plt.annotate(s = '', xy = (lower, delta_line_y_coord), xytext = (upper, delta_line_y_coord), textcoords = 'data', arrowprops = dict(arrowstyle = '<->'))
-    plt.text(c + .1 * (upper - c), delta_line_y_coord + .025, r'$\Delta$')
+    plt.text(c + .1 * (upper - c), delta_line_y_coord + .025, r'$\Delta_{\omega}$')
 
     plt.annotate(s = '', xy = (-lower, delta_line_y_coord), xytext = (-upper, delta_line_y_coord), textcoords = 'data', arrowprops = dict(arrowstyle = '<->'))
-    plt.text(-c - .1 * (lower - c), delta_line_y_coord + .025, r'$\Delta$')
+    plt.text(-c - .1 * (lower - c), delta_line_y_coord + .025, r'$\Delta_{\omega}$')
 
     ax.set_xlim(-1, 1)
     ax.set_ylim(0, 1.2)
@@ -129,7 +131,7 @@ def sinc_pulse_power_spectrum_full():
 
 
 def sinc_pulse_power_spectrum_half():
-    fig, ax = get_figure('half')
+    fig, ax = get_figure('full')
 
     lower = .15
     upper = .85
@@ -142,7 +144,7 @@ def sinc_pulse_power_spectrum_half():
 
     delta_line_y_coord = .75
     plt.annotate(s = '', xy = (lower, delta_line_y_coord), xytext = (upper, delta_line_y_coord), textcoords = 'data', arrowprops = dict(arrowstyle = '<->'))
-    plt.text(carrier + .1 * (upper - carrier), delta_line_y_coord + 0.25, r'$\Delta$')
+    plt.text(carrier + .1 * (upper - carrier), delta_line_y_coord + 0.025, r'$\Delta_{\omega}$')
 
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1.2)
@@ -164,37 +166,59 @@ def sinc_pulse_power_spectrum_half():
     save_figure(get_func_name())
 
 
-def sinc_pulse_electric_field():
+def sinc_pulse_electric_field(phase = 0):
     fig, ax = get_figure('half')
 
+    omega_min = twopi
+    omega_max = 20 * twopi
+
+    omega_c = (omega_min + omega_max) / 2
+    delta = omega_max - omega_min
+
     time = np.linspace(-1, 1, 1000)
-    field = cp.math.sinc(time) * np.cos(time)
+    field = cp.math.sinc(delta * time / 2) * np.cos(omega_c * time + phase * pi)
 
-    ax.plot(time, field, color = 'black', linewidth = 2)
+    ax.plot(time, field, color = 'black', linewidth = 1.5)
 
-    ax.set_xlim(-1, 1)
-    # ax.set_ylim(-1.2, 1.2)
+    ax.set_xlim(-.18, .18)
+    ax.set_ylim(-1.2, 1.2)
 
-    # ax.set_xlabel(r'$   \omega  $')
-    # ax.set_ylabel(r'$   \left|   \widehat{   \mathcal{E}    }(\omega)  \right|^2   $')
-    # ax.yaxis.set_label_coords(-.025, .5)
-    #
-    # ax.set_xticks([0, lower, c, upper])
-    # ax.set_xticklabels([r'$0$',
-    #                     r'$\omega_{\mathrm{min}}$',
-    #                     r'$\omega_{\mathrm{c}}$',
-    #                     r'$\omega_{\mathrm{max}}$'])
-    # ax.set_yticks([0, 1])
-    # ax.set_yticklabels([r'$0$', r'$\left|   \mathcal{E}_{\omega}      \right|^2$'])
+    ax.set_xlabel(r'$   t  $')
+    ax.set_ylabel(r'$   \mathcal{E}(t)   $')
+    ax.yaxis.set_label_coords(-.125, .5)
+
+    d = twopi / delta
+    ax.set_xticks([0, -3 * d, -2 * d, -d, d, 2 * d, 3 * d])
+    ax.set_xticklabels([r'$0$',
+                        r'$ -3 \frac{2\pi}{\Delta_{\omega}}  $',
+                        # r'$ -2 \frac{2\pi}{\Delta_{\omega}}   $',
+                        r'',
+                        r'$ - \frac{2\pi}{\Delta_{\omega}}   $',
+                        r'$  \frac{2\pi}{\Delta_{\omega}}   $',
+                        # r'$  2 \frac{2\pi}{\Delta_{\omega}}   $',
+                        r'',
+                        r'$  3 \frac{2\pi}{\Delta_{\omega}}   $',
+                        ])
+
+    ax.set_yticks([0, 1, 1 / np.sqrt(2), -1, -1 / np.sqrt(2)])
+    ax.set_yticklabels([
+        r'$0$',
+        r'$\mathcal{E}_{t} $',
+        r'$\mathcal{E}_{t} / \sqrt{2} $',
+        # r'$ \frac{ \mathcal{E}_{t} }{ \sqrt{2} } $',
+        r'$-\mathcal{E}_{t} $',
+        r'$-\mathcal{E}_{t} / \sqrt{2} $',
+        # r'$ -\frac{ \mathcal{E}_{t} }{ \sqrt{2} } $',
+    ])
 
     ax.grid(True, **grid_kwargs)
 
-    save_figure(get_func_name())
+    save_figure(get_func_name() + '_phase={}'.format(phase))
 
 
 def gaussian_pulse_power_spectrum_half():
     # TODO: er, be caereful, is delta for the power spectrum or the amplitude spectrum?
-    fig, ax = get_figure('half')
+    fig, ax = get_figure('full')
 
     carrier = .6
     sigma = .1
@@ -209,7 +233,7 @@ def gaussian_pulse_power_spectrum_half():
 
     delta_line_y_coord = .3
     plt.annotate(s = '', xy = (carrier - delta / 2, delta_line_y_coord), xytext = (carrier + delta / 2, delta_line_y_coord), textcoords = 'data', arrowprops = dict(arrowstyle = '<->'))
-    plt.text(carrier + sigma / 5, delta_line_y_coord - .1, r'$\Delta$')
+    plt.text(carrier + sigma / 5, delta_line_y_coord - .1, r'$\Delta_{\omega}$')
 
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1.2)
@@ -236,12 +260,49 @@ def gaussian_pulse_power_spectrum_half():
     save_figure(get_func_name())
 
 
+def finite_square_well():
+    fig, ax = get_figure('full')
+
+    a = .5
+    depth = -.5
+
+    x = np.linspace(-1, 1, 1000)
+    well = np.where(np.abs(x) < a, depth, 0)
+    ax.plot(x, well, linewidth = 1.5, color = 'black')
+
+    ax.set_xlim(-1, 1)
+    ax.set_ylim(-.75, .25)
+
+    ax.set_xlabel(r'$   x  $')
+    ax.set_ylabel(r'$   V(x)   $')
+    ax.yaxis.set_label_coords(-.05, .5)
+
+    ax.set_xticks([0, -a, a])
+    ax.set_xticklabels([r'$0$',
+                        r'$  -a $',
+                        r'$  a $',
+                        ])
+    ax.set_yticks([0, depth])
+    ax.set_yticklabels([
+        r'$0$',
+        r'$-V_0$',
+    ])
+
+    ax.grid(True, **grid_kwargs)
+
+    save_figure(get_func_name())
+
+
 if __name__ == '__main__':
     with log as logger:
         figures = [
-            # sinc_pulse_power_spectrum_full,
-            # sinc_pulse_power_spectrum_half,
-            # sinc_pulse_electric_field,
+            finite_square_well,
+            sinc_pulse_power_spectrum_full,
+            sinc_pulse_power_spectrum_half,
+            ft.partial(sinc_pulse_electric_field, phase = 0),
+            ft.partial(sinc_pulse_electric_field, phase = 1 / 4),
+            ft.partial(sinc_pulse_electric_field, phase = 1 / 2),
+            ft.partial(sinc_pulse_electric_field, phase = 1),
             gaussian_pulse_power_spectrum_half,
         ]
 
