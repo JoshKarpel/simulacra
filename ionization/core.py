@@ -1925,7 +1925,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         ax_field.set_xlabel('Time $t$ ({})'.format(x_scale_name), fontsize = 15)
         ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 15)
-        ax_field.set_ylabel('E-Field (a.u.)', fontsize = 11)
+        ax_field.set_ylabel('${}(t)$ (a.u.)'.format(str_efield), fontsize = 11)
 
         if grayscale:
             ax_overlaps.legend(loc = 'lower left', fontsize = 12)
@@ -2001,7 +2001,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if renormalize:
             y_label += r'$/\left\langle\psi|\psi\right\rangle$'
         ax_momentums.set_ylabel(y_label, fontsize = 15)
-        ax_field.set_ylabel('E-Field (a.u.)', fontsize = 11)
+        ax_field.set_ylabel('${}(t)$ (a.u.)'.format(str_efield), fontsize = 11)
 
         ax_momentums.legend(bbox_to_anchor = (1.1, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10, ncol = 1 + (len(self.spec.spherical_harmonics) // 17))
 

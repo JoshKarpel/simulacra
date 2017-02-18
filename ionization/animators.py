@@ -99,19 +99,19 @@ class MetricsAndElectricField(cp.AxisManager):
         y_limit = 1.05 * np.nanmax(np.abs(self.spec.electric_potential.get_electric_field_amplitude(self.sim.times))) / self.electric_field_unit
         self.axis_field.set_ylim(-y_limit, y_limit)
 
-        self.axis_field.set_ylabel(r'E-Field $E(t)$ ({})'.format(self.electric_field_unit_str),
-                                   fontsize = 24, color = 'red')
+        self.axis_field.set_ylabel(r'${}(t)$ ({})'.format(str_efield, self.electric_field_unit_str),
+                                   fontsize = 24, color = '#d62728')
         self.axis_field.yaxis.set_label_position('right')
         self.axis_field.tick_params(axis = 'both', which = 'major', labelsize = 14)
-        self.axis_field.grid(True, color = 'red', linestyle = ':')
+        self.axis_field.grid(True, color = '#d62728', linestyle = ':')
 
         for tick in self.axis_field.get_yticklabels():
-            tick.set_color('red')
+            tick.set_color('#d62728')
 
         self.electric_field_line, = self.axis_field.plot(self.sim.times / self.time_unit,
                                                          self.sim.electric_field_amplitude_vs_time / self.electric_field_unit,
                                                          label = r'$E(t)$ ({})'.format(self.electric_field_unit_str),
-                                                         color = 'red', linewidth = 3,
+                                                         color = '#d62728', linewidth = 3,
                                                          animated = True)
 
         self.redraw += [self.electric_field_line, *self.axis_field.xaxis.get_gridlines(), *self.axis_field.yaxis.get_gridlines()]
@@ -409,7 +409,7 @@ class PhiSliceAxis(QuantumMeshAxis):
         self.axis.set_theta_direction('clockwise')
         self.axis.set_rlabel_position(80)
 
-        self.axis.grid(True, color = core.GRID_COLOR, linestyle = ':', linewidth = 2)  # change grid color to make it show up against the colormesh
+        self.axis.grid(True, color = core.GRID_COLOR, linestyle = ':', linewidth = 2, alpha = 0.8)  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         self.axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
@@ -567,7 +567,7 @@ class PhiSliceAnimator(WavefunctionSimulationAnimator):
 
         self.axis_managers += [self.ax_mesh, self.ax_metrics, self.ax_cbar]
 
-        plt.figtext(.1, .9, r'$|g|^2$', fontsize = 50)
+        plt.figtext(.075, .9, r'$|g|^2$', fontsize = 50)
 
         # plt.figtext(.8, .6, r'Initial State: ${}$'.format(self.spec.initial_state.tex_str), fontsize = 22)
 
@@ -589,7 +589,7 @@ class SphericalSliceAnimator(PhiSliceAnimator):
 class SphericalHarmonicAnimator(PhiSliceAnimator):
     mesh_axis_type = SphericalHarmonicPhiSliceAxis
 
-    def __init__(self, top_right_axis_manager_type = AngularMomentumDecompositionAxis, top_right_axis_kwargs = None, **kwargs):
+    def __init__(self, top_right_axis_manager_type = TestStateStackplot, top_right_axis_kwargs = None, **kwargs):
         self.top_right_axis_manager_type = top_right_axis_manager_type
         if top_right_axis_kwargs is None:
             top_right_axis_kwargs = {}

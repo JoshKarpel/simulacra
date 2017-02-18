@@ -7,11 +7,18 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.NullHandler())
 
-import matplotlib
+import matplotlib as mpl
 
-matplotlib.use('Agg')
+mpl.use('Agg')
 
-matplotlib.rcParams['font.family'] = 'serif'
+mpl_rcParams_update = {
+    'font.family': 'serif',
+    'mathtext.fontset': 'cm',
+    'mathtext.rm': 'serif',
+}
+
+mpl.rcParams.update(mpl_rcParams_update)
+
 import matplotlib.pyplot as _plt
 
 _plt.set_cmap(_plt.cm.inferno)
@@ -21,6 +28,7 @@ _plt.set_cmap(_plt.cm.inferno)
 # set up platform-independent runtime cython compilation and imports
 import numpy as _np
 import pyximport
+
 pyx_dir = os.path.join(os.path.dirname(__file__), '.pyxbld')
 pyximport.install(setup_args = {"include_dirs": _np.get_include()},
                   build_dir = pyx_dir,

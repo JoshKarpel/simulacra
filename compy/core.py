@@ -181,7 +181,7 @@ class Animator:
     """
 
     def __init__(self, postfix = '', target_dir = None,
-                 length = 30, fps = 30,
+                 length = 60, fps = 30,
                  colormap = _plt.cm.inferno):
         """
         Construct an Animator instance.
