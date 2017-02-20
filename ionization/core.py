@@ -117,7 +117,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.checkpoint_every = checkpoint_every
         self.checkpoint_dir = checkpoint_dir
 
-        self.animators = tuple(animators)
+        self.animators = deepcopy(tuple(animators))
 
         self.store_norm_by_l = store_norm_by_l
         self.find_numerical_ground_state = find_numerical_ground_state
