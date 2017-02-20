@@ -5,6 +5,7 @@ import functools as ft
 
 from tqdm import tqdm
 import numpy as np
+import scipy.optimize as optimize
 
 import matplotlib
 
@@ -263,11 +264,11 @@ def gaussian_pulse_power_spectrum_half():
 def finite_square_well():
     fig, ax = get_figure('full')
 
-    a = .5
+    a_over_two = .5
     depth = -.5
 
     x = np.linspace(-1, 1, 1000)
-    well = np.where(np.abs(x) < a, depth, 0)
+    well = np.where(np.abs(x) < a_over_two, depth, 0)
     ax.plot(x, well, linewidth = 1.5, color = 'black')
 
     ax.set_xlim(-1, 1)
@@ -277,10 +278,10 @@ def finite_square_well():
     ax.set_ylabel(r'$   V(x)   $')
     ax.yaxis.set_label_coords(-.05, .5)
 
-    ax.set_xticks([0, -a, a])
+    ax.set_xticks([0, -a_over_two, a_over_two])
     ax.set_xticklabels([r'$0$',
-                        r'$  -a $',
-                        r'$  a $',
+                        r'$  -\frac{a}{2} $',
+                        r'$  \frac{a}{2} $',
                         ])
     ax.set_yticks([0, depth])
     ax.set_yticklabels([
@@ -293,10 +294,151 @@ def finite_square_well():
     save_figure(get_func_name())
 
 
+def finite_square_well_energies():
+    fig, ax = get_figure('full')
+
+    z_0 = 6 * pi / 2 + .5 * np.sqrt(1)  # must make it numpy data type so that the optimizer doesn't panic
+
+    z = np.linspace(0, z_0 + 5, 1000)
+
+    tan = np.tan(z)
+    cotan = -1 / np.tan(z)
+    sqrt = np.sqrt((z_0 / z) ** 2 - 1)
+    sqrt[-1] = 0
+
+    tan[tan < 0] = np.NaN
+    cotan[cotan < 0] = np.NaN
+
+    ax.plot(z, tan, color = 'C0', label = r'$\tan(z)$')
+    ax.plot(z, cotan, color = 'C1', label = r'$-\cot(z)$')
+    ax.plot(z, sqrt, color = 'black', label = r'$   \sqrt{  \left( \frac{z_0}{z} \right)^2  -1 }  $')
+
+    ax.set_xlabel(r'$   z  $')
+    # ax.set_ylabel(r'$   \sqrt{  \left( \frac{z_0}{z} \right)^2  -1 }  $')
+    # ax.yaxis.set_label_coords(-.05, .5)
+
+    ax.set_xticks([z_0] + list(np.arange(0, z_0 + 5, pi / 2)))
+    ax.set_xticklabels([r'$z_0$', r'$0$', r'$\frac{\pi}{2}$'] + [r'${} \frac{{\pi}}{{2}}$'.format(n) for n in range(2, int(z_0 + 5))])
+
+    intersections = []
+
+    for n in np.arange(1, z_0 / (pi / 2) + 1.1, 1):
+        left_bound = (n - 1) * pi / 2
+        right_bound = min(z_0, left_bound + (pi / 2))
+
+        if n % 2 != 0:  # n is odd
+            intersection = optimize.brentq(lambda x: np.tan(x) - np.sqrt(((z_0 / x) ** 2) - 1), left_bound, right_bound)
+        else:  # n is even
+            intersection = optimize.brentq(lambda x: (1 / np.tan(x)) + np.sqrt(((z_0 / x) ** 2) - 1), left_bound, right_bound)
+
+        intersections.append(intersection)
+
+    intersections = sorted(intersections)
+    intersections = np.sqrt((z_0 / intersections) ** 2 - 1)
+    ax.set_yticks(intersections)
+    ax.set_yticklabels([r'$n={}$'.format(n) for n in range(1, len(intersections) + 1)])
+
+    ax.set_xlim(0, round(z_0 + 2))
+    ax.set_ylim(0, 8)
+
+    ax.grid(True, **grid_kwargs)
+
+    ax.legend(loc = 'upper right', framealpha = 1)
+
+    save_figure(get_func_name())
+
+
+def a_alpha_v2_kernel_gaussian_continuum():
+    fig, ax = get_figure('full')
+
+    dt = np.linspace(-10, 10, 1000)
+    tau = .5
+    y = 1 / (1 + 1j * (dt / tau))
+
+    ax.plot(dt, np.abs(y), color = 'black', label = r"$\left| K(t-t') \right|$")
+    ax.plot(dt, np.real(y), color = 'C0', label = r"$  \mathrm{Re} \left\lbrace K(t-t') \right\rbrace  $")
+    ax.plot(dt, np.imag(y), color = 'C1', label = r"$  \mathrm{Im} \left\lbrace K(t-t') \right\rbrace   $")
+
+    ax.set_xlabel(r"$   t-t'  $")
+    ax.set_ylabel(r"$   K(t-t') = \left(1 + i \frac{t-t'}{\tau_{\alpha}}\right)^{-1}  $")
+    # ax.yaxis.set_label_coords(-., .5)
+
+    ax.set_xticks([0, tau, -tau, 2 * tau, -2 * tau])
+    ax.set_xticklabels([r'$0$',
+                        r'$\tau_{\alpha}$',
+                        r'$-\tau_{\alpha}$',
+                        r'$2\tau_{\alpha}$',
+                        r'$-2\tau_{\alpha}$',
+                        ])
+
+    ax.set_yticks([0, 1, -1, .5, -.5, 1 / np.sqrt(2)])
+    ax.set_yticklabels([r'$0$',
+                        r'$1$',
+                        r'$-1$',
+                        r'$1/2$',
+                        r'$-1/2$',
+                        r'$1/\sqrt{2}$',
+                        ])
+
+    ax.set_xlim(-3, 3)
+    ax.set_ylim(-.75, 1.4)
+
+    ax.grid(True, **grid_kwargs)
+
+    ax.legend(loc = 'upper right', framealpha = 1)
+
+    save_figure(get_func_name())
+
+
+def a_alpha_v2_kernel_gaussian_continuum_with_sqrt_gamma():
+    fig, ax = get_figure('full')
+
+    dt = np.linspace(-10, 10, 1000)
+    tau = .5
+    y = (1 + 1j * (dt / tau)) ** (-3 / 2)
+
+    ax.plot(dt, np.abs(y), color = 'black', label = r"$\left| K(t-t') \right|$")
+    ax.plot(dt, np.real(y), color = 'C0', label = r"$  \mathrm{Re} \left\lbrace K(t-t') \right\rbrace  $")
+    ax.plot(dt, np.imag(y), color = 'C1', label = r"$  \mathrm{Im} \left\lbrace K(t-t') \right\rbrace   $")
+
+    ax.set_xlabel(r"$   t-t'  $")
+    ax.set_ylabel(r"$   K(t-t') = \left(1 + i \frac{t-t'}{\tau_{\alpha}}\right)^{-3/2}  $")
+    # ax.yaxis.set_label_coords(-., .5)
+
+    ax.set_xticks([0, tau, -tau, 2 * tau, -2 * tau])
+    ax.set_xticklabels([r'$0$',
+                        r'$\tau_{\alpha}$',
+                        r'$-\tau_{\alpha}$',
+                        r'$2\tau_{\alpha}$',
+                        r'$-2\tau_{\alpha}$',
+                        ])
+
+    ax.set_yticks([0, 1, -1, .5, -.5, 1 / np.sqrt(2)])
+    ax.set_yticklabels([r'$0$',
+                        r'$1$',
+                        r'$-1$',
+                        r'$1/2$',
+                        r'$-1/2$',
+                        r'$1/\sqrt{2}$',
+                        ])
+
+    ax.set_xlim(-3, 3)
+    ax.set_ylim(-.75, 1.4)
+
+    ax.grid(True, **grid_kwargs)
+
+    ax.legend(loc = 'upper right', framealpha = 1)
+
+    save_figure(get_func_name())
+
+
 if __name__ == '__main__':
     with log as logger:
         figures = [
+            a_alpha_v2_kernel_gaussian_continuum,
+            a_alpha_v2_kernel_gaussian_continuum_with_sqrt_gamma,
             finite_square_well,
+            finite_square_well_energies,
             sinc_pulse_power_spectrum_full,
             sinc_pulse_power_spectrum_half,
             ft.partial(sinc_pulse_electric_field, phase = 0),
