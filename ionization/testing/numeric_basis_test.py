@@ -36,30 +36,36 @@ if __name__ == '__main__':
 
         analytic_test_states = [ion.HydrogenBoundState(n, l) for n in range(6) for l in range(n)]
 
-        sim = ion.SphericalHarmonicSpecification('eig', **spec_kwargs).to_simulation()
+        sims = [
+            ion.SphericalHarmonicSpecification('eig_1', store_data_every = 1, **spec_kwargs).to_simulation(),
+            ion.SphericalHarmonicSpecification('eig_5', store_data_every = 5, **spec_kwargs).to_simulation(),
+            ion.SphericalHarmonicSpecification('eig_10', store_data_every = 10, **spec_kwargs).to_simulation(),
+        ]
 
-        sim.run_simulation()
+        for sim in sims:
+            sim.run_simulation()
+            sim.save(target_dir = OUT_DIR, save_mesh = False)
 
-        plot_kwargs = dict(
-            target_dir = OUT_DIR,
-            img_format = 'pdf',
-            bound_state_max_n = 4,
-        )
+            plot_kwargs = dict(
+                target_dir = OUT_DIR,
+                img_format = 'pdf',
+                bound_state_max_n = 4,
+            )
 
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__no_grouping')
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__no_grouping__collapsed_l',
-                                      collapse_bound_state_angular_momentums = True)
+            sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__no_grouping')
+            sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__no_grouping__collapsed_l',
+                                          collapse_bound_state_angular_momentums = True)
 
-        grouped_states, group_labels = sim.group_free_states_by_continuous_attr('energy', divisions = 12, cutoff_value = 150 * eV, label_unit = 'eV')
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__energy',
-                                      grouped_free_states = grouped_states, group_labels = group_labels)
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__energy__collapsed_l',
-                                      collapse_bound_state_angular_momentums = True,
-                                      grouped_free_states = grouped_states, group_labels = group_labels)
+            grouped_states, group_labels = sim.group_free_states_by_continuous_attr('energy', divisions = 12, cutoff_value = 150 * eV, label_unit = 'eV')
+            sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__energy',
+                                          grouped_free_states = grouped_states, group_labels = group_labels)
+            sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__energy__collapsed_l',
+                                          collapse_bound_state_angular_momentums = True,
+                                          grouped_free_states = grouped_states, group_labels = group_labels)
 
-        grouped_states, group_labels = sim.group_free_states_by_discrete_attr('l', cutoff_value = 20)
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__l',
-                                      grouped_free_states = grouped_states, group_labels = group_labels)
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__l__collapsed_l',
-                                      collapse_bound_state_angular_momentums = True,
-                                      grouped_free_states = grouped_states, group_labels = group_labels)
+            grouped_states, group_labels = sim.group_free_states_by_discrete_attr('l', cutoff_value = 20)
+            sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__l',
+                                          grouped_free_states = grouped_states, group_labels = group_labels)
+            sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__l__collapsed_l',
+                                          collapse_bound_state_angular_momentums = True,
+                                          grouped_free_states = grouped_states, group_labels = group_labels)

@@ -488,8 +488,13 @@ class NumericSphericalHarmonicState(QuantumState):
     def __repr__(self):
         return repr(self.analytic_state)
 
-    def __getattr__(self, item):
-        return getattr(self.analytic_state, item)
+    @property
+    def n(self):
+        return self.analytic_state.n
+
+    @property
+    def k(self):
+        return self.analytic_state.k
 
     @property
     def tuple(self):

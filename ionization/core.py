@@ -38,7 +38,7 @@ def electron_energy_from_wavenumber(k):
 
 
 def electron_wavenumber_from_energy(energy):
-    return np.sqrt(2 * electron_mass * energy) / hbar
+    return np.sqrt(2 * electron_mass * energy + 0j) / hbar
 
 
 class ElectricFieldSpecification(cp.core.Specification):
@@ -62,6 +62,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
                  simulation_type = None,
+                 store_data_every = 1,
                  **kwargs):
         """
         Initialize an ElectricFieldSpecification instance from the given parameters.
@@ -128,6 +129,8 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.checkpoint_dir = checkpoint_dir
 
         self.animators = deepcopy(tuple(animators))
+
+        self.store_data_every = store_data_every
 
     def info(self):
         checkpoint = ['Checkpointing: ']
@@ -1898,7 +1901,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 animator.initialize(self)
 
             while True:
-                self.store_data(self.time_index)
+                if self.time_index == 0 or self.time_index == self.time_steps - 1 or self.time_index % self.spec.store_data_every == 0:
+                    self.store_data(self.time_index)
 
                 for animator in self.animators:
                     if self.time_index == 0 or self.time_index == self.time_steps or self.time_index % animator.decimation == 0:
