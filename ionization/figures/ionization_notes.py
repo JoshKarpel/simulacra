@@ -331,50 +331,7 @@ def finite_square_well_energies():
     save_figure(get_func_name())
 
 
-def a_alpha_v2_kernel_gaussian_continuum():
-    fig = cp.utils.get_figure('full')
-    ax = fig.add_subplot(111)
-
-    dt = np.linspace(-10, 10, 1000)
-    tau = .5
-    y = 1 / (1 + 1j * (dt / tau))
-
-    ax.plot(dt, np.abs(y), color = 'black', label = r"$\left| K(t-t') \right|$")
-    ax.plot(dt, np.real(y), color = 'C0', label = r"$  \mathrm{Re} \left\lbrace K(t-t') \right\rbrace  $")
-    ax.plot(dt, np.imag(y), color = 'C1', label = r"$  \mathrm{Im} \left\lbrace K(t-t') \right\rbrace   $")
-
-    ax.set_xlabel(r"$   t-t'  $")
-    ax.set_ylabel(r"$   K(t-t') = \left(1 + i \frac{t-t'}{\tau_{\alpha}}\right)^{-1}  $")
-    # ax.yaxis.set_label_coords(-., .5)
-
-    ax.set_xticks([0, tau, -tau, 2 * tau, -2 * tau])
-    ax.set_xticklabels([r'$0$',
-                        r'$\tau_{\alpha}$',
-                        r'$-\tau_{\alpha}$',
-                        r'$2\tau_{\alpha}$',
-                        r'$-2\tau_{\alpha}$',
-                        ])
-
-    ax.set_yticks([0, 1, -1, .5, -.5, 1 / np.sqrt(2)])
-    ax.set_yticklabels([r'$0$',
-                        r'$1$',
-                        r'$-1$',
-                        r'$1/2$',
-                        r'$-1/2$',
-                        r'$1/\sqrt{2}$',
-                        ])
-
-    ax.set_xlim(-3, 3)
-    ax.set_ylim(-.75, 1.4)
-
-    ax.grid(True, **grid_kwargs)
-
-    ax.legend(loc = 'upper right', framealpha = 1)
-
-    save_figure(get_func_name())
-
-
-def a_alpha_v2_kernel_gaussian_continuum_with_sqrt_gamma():
+def a_alpha_v2_kernel_gaussian():
     fig = cp.utils.get_figure('full')
     ax = fig.add_subplot(111)
 
@@ -420,8 +377,7 @@ def a_alpha_v2_kernel_gaussian_continuum_with_sqrt_gamma():
 if __name__ == '__main__':
     with log as logger:
         figures = [
-            a_alpha_v2_kernel_gaussian_continuum,
-            a_alpha_v2_kernel_gaussian_continuum_with_sqrt_gamma,
+            a_alpha_v2_kernel_gaussian,
             finite_square_well,
             finite_square_well_energies,
             sinc_pulse_power_spectrum_full,

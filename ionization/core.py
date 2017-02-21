@@ -1185,11 +1185,7 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
         :param evolution_method: 'SO' (recommended) or 'CN'
         :param kwargs:
         """
-        simulation_type = ElectricFieldSimulation
-        if use_numeric_eigenstates_as_basis:
-            simulation_type = NumericBasisElectricFieldSimulation
-
-        super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = SphericalHarmonicMesh, simulation_type = simulation_type, **kwargs)
+        super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = SphericalHarmonicMesh, **kwargs)
 
         self.r_bound = r_bound
         self.r_points = int(r_points)
@@ -1818,6 +1814,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.initialize_mesh()
 
         # simulation data storage
+        self.storage_mask = np.full(self.time_steps, False, dtype = bool)
         self.norm_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
         self.norm_diff_mask_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
         self.energy_expectation_value_vs_time_internal = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
@@ -1852,6 +1849,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
     def store_data(self, time_index):
         """Update the time-indexed data arrays with the current values."""
+        self.storage_mask[time_index] = True
+
         norm = self.mesh.norm()
         self.norm_vs_time[time_index] = norm
         if norm > 1.001 * self.norm_vs_time[0]:
@@ -1937,56 +1936,146 @@ class ElectricFieldSimulation(cp.core.Simulation):
             for animator in self.animators:
                 animator.cleanup()
 
-    def plot_wavefunction_vs_time(self, use_name = False, grayscale = False, log = False, x_scale = 'asec', **kwargs):
-        fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
+    @property
+    def bound_states(self):
+        return [s for s in self.spec.test_states if s.bound]
 
-        x_scale_unit = unit_names_to_values[x_scale]  # TODO: use the same names as in xy_plot()
-        x_scale_name = unit_names_to_tex_strings[x_scale]
+    @property
+    def free_states(self):
+        return [s for s in self.spec.test_states if not s.bound]
 
-        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [4, 1], hspace = 0.06)  # TODO: switch to fixed axis construction
+    def group_free_states_by_continuous_attr(self, attr, divisions = 10, cutoff_value = None,
+                                             label_format_str = r'\phi_{{    {} \; \mathrm{{to}} \; {} \, {}, \ell   }}', label_unit = None):
+        spectrum = set(getattr(s, attr) for s in self.free_states)
+        grouped_states = collections.defaultdict(list)
+        group_labels = {}
+
+        attr_min, attr_max = min(spectrum), max(spectrum)
+        if cutoff_value is None:
+            boundaries = np.linspace(attr_min, attr_max, num = divisions + 1)
+        else:
+            boundaries = np.linspace(attr_min, cutoff_value, num = divisions)
+            boundaries = np.concatenate((boundaries, [attr_max]))
+
+        label_unit, label_unit_str = unit_value_and_name_from_unit(label_unit)
+
+        free_states = list(self.free_states)
+
+        for ii, lower_boundary in enumerate(boundaries[:-1]):
+            upper_boundary = boundaries[ii + 1]
+
+            label = label_format_str.format(uround(lower_boundary, label_unit, 2), uround(upper_boundary, label_unit, 2), label_unit_str)
+            group_labels[(lower_boundary, upper_boundary)] = label
+
+            for s in copy(free_states):
+                if lower_boundary <= getattr(s, attr) <= upper_boundary:
+                    grouped_states[(lower_boundary, upper_boundary)].append(s)
+                    free_states.remove(s)
+
+        return grouped_states, group_labels
+
+    def group_free_states_by_discrete_attr(self, attr = 'l', cutoff_value = 9, label_format_str = r'\phi_{{ E, {} }}'):
+        grouped_states = collections.defaultdict(list)
+
+        cutoff = []
+
+        for s in self.free_states:
+            s_attr = getattr(s, attr)
+            if s_attr < cutoff_value:
+                grouped_states[getattr(s, attr)].append(s)
+            else:
+                cutoff.append(s)
+
+        group_labels = {k: label_format_str.format(int(k)) for k in grouped_states}
+
+        cutoff_key = max(grouped_states) + 1  # get max key, make sure cutoff key is larger for sorting purposes
+
+        grouped_states[cutoff_key] = cutoff
+        group_labels[cutoff_key] = label_format_str.format(r'\geq {}'.format(cutoff_value))
+
+        return grouped_states, group_labels
+
+    def plot_wavefunction_vs_time(self, log = False, x_scale = 'asec',
+                                  bound_state_max_n = 5,
+                                  collapse_bound_state_angular_momentums = False,
+                                  grouped_free_states = None,
+                                  group_labels = None,
+                                  **kwargs):
+        fig = cp.utils.get_figure('full')
+
+        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(x_scale)
+
+        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
         ax_overlaps = plt.subplot(grid_spec[0])
         ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
 
         if not isinstance(self.spec.electric_potential, potentials.NoPotentialEnergy):
-            ax_field.plot(self.times / x_scale_unit, self.electric_field_amplitude_vs_time / atomic_electric_field, color = 'black', linewidth = 2)
+            ax_field.plot(self.times[self.storage_mask] / x_scale_unit, self.electric_field_amplitude_vs_time[self.storage_mask] / atomic_electric_field, color = ELECTRIC_FIELD_COLOR, linewidth = 2)
 
-        ax_overlaps.plot(self.times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 3)
+        ax_overlaps.plot(self.times[self.storage_mask] / x_scale_unit, self.norm_vs_time[self.storage_mask], label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 2)
 
-        if grayscale:  # stackplot with two lines in grayscale (initial and non-initial)
-            initial_overlap = [self.state_overlaps_vs_time[self.spec.initial_state]]
-            non_initial_overlaps = [self.state_overlaps_vs_time[state] for state in self.spec.test_states if state != self.spec.initial_state]
-            total_non_initial_overlaps = functools.reduce(np.add, non_initial_overlaps)
-            overlaps = [initial_overlap, total_non_initial_overlaps]
-            ax_overlaps.stackplot(self.times / x_scale_unit, *overlaps, alpha = 1,
-                                  labels = [r'$\left| \left\langle \psi|\psi_{init} \right\rangle \right|^2$', r'$\left| \left\langle \psi|\psi_{n\leq5} \right\rangle \right|^2$'],
-                                  colors = ['.3', '.5'])
-        else:  # stackplot with all states broken out in full color
-            overlaps = [self.state_overlaps_vs_time[state] for state in self.spec.test_states]
-            num_colors = len(overlaps)
-            # ax_overlaps.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
-            ax_overlaps.stackplot(self.times / x_scale_unit, *overlaps, alpha = 1, labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states])
+        if grouped_free_states is None:
+            grouped_free_states, group_labels = self.group_free_states_by_discrete_attr('l')
+
+        overlaps = []
+        labels = []
+        colors = []
+
+        extra_bound_overlap = np.zeros(self.time_steps)
+        if collapse_bound_state_angular_momentums:
+            overlaps_by_n = {n: np.zeros(self.time_steps) for n in range(1, bound_state_max_n + 1)}  # prepare arrays to sum over angular momenta in, one for each n
+            for state in sorted(self.bound_states):
+                if state.n <= bound_state_max_n:
+                    overlaps_by_n[state.n] += self.state_overlaps_vs_time[state]
+                else:
+                    extra_bound_overlap += self.state_overlaps_vs_time[state]
+            overlaps += [overlap for n, overlap in sorted(overlaps_by_n.items())]
+            labels += [r'$\left| \left\langle \psi| \psi_{{ {}, \ell }} \right\rangle \right|^2$'.format(n) for n in sorted(overlaps_by_n)]
+            colors += [matplotlib.colors.to_rgba('C' + str(n - 1), alpha = 1) for n in sorted(overlaps_by_n)]
+        else:
+            for state in sorted(self.bound_states):
+                if state.n <= bound_state_max_n:
+                    overlaps.append(self.state_overlaps_vs_time[state])
+                    labels.append(r'$\left| \left\langle \psi| \psi_{{ {}, {} }} \right\rangle \right|^2$'.format(state.n, state.l))
+                    colors.append(matplotlib.colors.to_rgba('C' + str((state.n - 1) % 10), alpha = 1 - state.l / state.n))
+                else:
+                    extra_bound_overlap += self.state_overlaps_vs_time[state]
+
+        overlaps.append(extra_bound_overlap)
+        labels.append(r'$\left| \left\langle \psi| \psi_{{n \geq {} }}  \right\rangle \right|^2$'.format(bound_state_max_n + 1))
+        colors.append('.4')
+
+        free_state_color_cycle = it.cycle(['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f'])
+        for group, states in sorted(grouped_free_states.items()):
+            overlaps.append(np.sum(self.state_overlaps_vs_time[s] for s in states))
+            labels.append(r'$\left| \left\langle \psi| {}  \right\rangle \right|^2$'.format(group_labels[group]))
+            colors.append(free_state_color_cycle.__next__())
+
+        overlaps = [overlap[self.storage_mask] for overlap in overlaps]
+
+        ax_overlaps.stackplot(self.times[self.storage_mask] / x_scale_unit,
+                              *overlaps,
+                              labels = labels,
+                              colors = colors,
+                              )
 
         if log:
             ax_overlaps.set_yscale('log')
             min_overlap = np.min(self.state_overlaps_vs_time[self.spec.initial_state])
             ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-            ax_overlaps.grid(True, which = 'both')
+            ax_overlaps.grid(True, which = 'both', **GRID_KWARGS)
         else:
-            ax_overlaps.set_ylim(0, 1.0)
-            ax_overlaps.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
-            ax_overlaps.grid(True)
+            ax_overlaps.set_ylim(0.0, 1.0)
+            ax_overlaps.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+            ax_overlaps.grid(True, **GRID_KWARGS)
+
         ax_overlaps.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
-        ax_field.grid(True)
+        ax_field.set_xlabel('Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
+        ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 13)
+        ax_field.set_ylabel('${}(t)$ (a.u.)'.format(str_efield), fontsize = 13, color = ELECTRIC_FIELD_COLOR)
 
-        ax_field.set_xlabel('Time $t$ ({})'.format(x_scale_name), fontsize = 15)
-        ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 15)
-        ax_field.set_ylabel('${}(t)$ (a.u.)'.format(str_efield), fontsize = 11)
-
-        if grayscale:
-            ax_overlaps.legend(loc = 'lower left', fontsize = 12)
-        else:
-            ax_overlaps.legend(bbox_to_anchor = (1.1, 1), loc = 'upper left', borderaxespad = 0., fontsize = 10, ncol = 1 + (len(self.spec.test_states) // 17))
+        ax_overlaps.legend(bbox_to_anchor = (1.1, 1.1), loc = 'upper left', borderaxespad = 0.05, fontsize = 9, ncol = 1 + (len(overlaps) // 17))
 
         ax_overlaps.tick_params(labelright = True)
         ax_field.tick_params(labelright = True)
@@ -1996,7 +2085,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         plt.rcParams['ytick.major.pad'] = 5
 
         # Find at most n+1 ticks on the y-axis at 'nice' locations
-        max_yticks = 6
+        max_yticks = 4
         yloc = plt.MaxNLocator(max_yticks, prune = 'upper')
         ax_field.yaxis.set_major_locator(yloc)
 
@@ -2008,15 +2097,16 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_field.tick_params(axis = 'y', which = 'major', labelsize = 10)
         ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
+        ax_field.grid(True, **GRID_KWARGS)
+
         postfix = ''
-        if grayscale:
-            postfix += '_GS'
         if log:
-            postfix += '_log'
+            postfix += '__log'
         prefix = self.file_name
-        if use_name:
-            prefix = self.name
-        cp.utils.save_current_figure(name = prefix + '__wavefunction_vs_time{}'.format(postfix), **kwargs)
+
+        name = prefix + '__wavefunction_vs_time{}'.format(postfix)
+
+        cp.utils.save_current_figure(name = name, **kwargs)
 
         plt.close()
 
@@ -2163,178 +2253,3 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         return sim
 
-
-class NumericBasisElectricFieldSimulation(ElectricFieldSimulation):
-    def __init__(self, spec):
-        super().__init__(spec)
-
-    @property
-    def bound_states(self):
-        return [s for s in self.spec.test_states if s.bound]
-
-    @property
-    def free_states(self):
-        return [s for s in self.spec.test_states if not s.bound]
-
-    def group_free_states_by_continuous_attr(self, attr, divisions = 10, cutoff_value = None,
-                                             label_format_str = r'\phi_{{    {} \; \mathrm{{to}} \; {} \, {}, \ell   }}', label_unit = None):
-        spectrum = set(getattr(s, attr) for s in self.free_states)
-        grouped_states = collections.defaultdict(list)
-        group_labels = {}
-
-        attr_min, attr_max = min(spectrum), max(spectrum)
-        if cutoff_value is None:
-            boundaries = np.linspace(attr_min, attr_max, num = divisions + 1)
-        else:
-            boundaries = np.linspace(attr_min, cutoff_value, num = divisions)
-            boundaries = np.concatenate((boundaries, [attr_max]))
-
-        label_unit, label_unit_str = unit_value_and_name_from_unit(label_unit)
-
-        free_states = list(self.free_states)
-
-        for ii, lower_boundary in enumerate(boundaries[:-1]):
-            upper_boundary = boundaries[ii + 1]
-
-            label = label_format_str.format(uround(lower_boundary, label_unit, 2), uround(upper_boundary, label_unit, 2), label_unit_str)
-            group_labels[(lower_boundary, upper_boundary)] = label
-
-            for s in copy(free_states):
-                if lower_boundary <= getattr(s, attr) <= upper_boundary:
-                    grouped_states[(lower_boundary, upper_boundary)].append(s)
-                    free_states.remove(s)
-
-        return grouped_states, group_labels
-
-    def group_free_states_by_discrete_attr(self, attr = 'l', cutoff_value = 9, label_format_str = r'\phi_{{ E, {} }}'):
-        grouped_states = collections.defaultdict(list)
-
-        cutoff = []
-
-        for s in self.free_states:
-            s_attr = getattr(s, attr)
-            if s_attr < cutoff_value:
-                grouped_states[getattr(s, attr)].append(s)
-            else:
-                cutoff.append(s)
-
-        group_labels = {k: label_format_str.format(int(k)) for k in grouped_states}
-
-        cutoff_key = max(grouped_states) + 1  # get max key, make sure cutoff key is larger for sorting purposes
-
-        grouped_states[cutoff_key] = cutoff
-        group_labels[cutoff_key] = label_format_str.format(r'\geq {}'.format(cutoff_value))
-
-        return grouped_states, group_labels
-
-    def plot_wavefunction_vs_time(self, log = False, x_scale = 'asec',
-                                  bound_state_max_n = 5,
-                                  collapse_bound_state_angular_momentums = False,
-                                  grouped_free_states = None,
-                                  group_labels = None,
-                                  **kwargs):
-        fig = cp.utils.get_figure('full')
-
-        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(x_scale)
-
-        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
-        ax_overlaps = plt.subplot(grid_spec[0])
-        ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
-
-        if not isinstance(self.spec.electric_potential, potentials.NoPotentialEnergy):
-            ax_field.plot(self.times / x_scale_unit, self.electric_field_amplitude_vs_time / atomic_electric_field, color = ELECTRIC_FIELD_COLOR, linewidth = 2)
-
-        ax_overlaps.plot(self.times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 2)
-
-        if grouped_free_states is None:
-            grouped_free_states, group_labels = self.group_free_states_by_discrete_attr('l')
-
-        overlaps = []
-        labels = []
-        colors = []
-
-        extra_bound_overlap = np.zeros(self.time_steps)
-        if collapse_bound_state_angular_momentums:
-            overlaps_by_n = {n: np.zeros(self.time_steps) for n in range(1, bound_state_max_n + 1)}  # prepare arrays to sum over angular momenta in, one for each n
-            for state in sorted(self.bound_states):
-                if state.n <= bound_state_max_n:
-                    overlaps_by_n[state.n] += self.state_overlaps_vs_time[state]
-                else:
-                    extra_bound_overlap += self.state_overlaps_vs_time[state]
-            overlaps += [overlap for n, overlap in sorted(overlaps_by_n.items())]
-            labels += [r'$\left| \left\langle \psi| \psi_{{ {}, \ell }} \right\rangle \right|^2$'.format(n) for n in sorted(overlaps_by_n)]
-            colors += [matplotlib.colors.to_rgba('C' + str(n - 1), alpha = 1) for n in sorted(overlaps_by_n)]
-        else:
-            for state in sorted(self.bound_states):
-                if state.n <= bound_state_max_n:
-                    overlaps.append(self.state_overlaps_vs_time[state])
-                    labels.append(r'$\left| \left\langle \psi| \psi_{{ {}, {} }} \right\rangle \right|^2$'.format(state.n, state.l))
-                    colors.append(matplotlib.colors.to_rgba('C' + str((state.n - 1) % 10), alpha = 1 - state.l / state.n))
-                else:
-                    extra_bound_overlap += self.state_overlaps_vs_time[state]
-
-        overlaps.append(extra_bound_overlap)
-        labels.append(r'$\left| \left\langle \psi| \psi_{{n \geq {} }}  \right\rangle \right|^2$'.format(bound_state_max_n + 1))
-        colors.append('.4')
-
-        free_state_color_cycle = it.cycle(['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f'])
-        for group, states in sorted(grouped_free_states.items()):
-            labels.append(r'$\left| \left\langle \psi| {}  \right\rangle \right|^2$'.format(group_labels[group]))
-            overlaps.append(np.sum(self.state_overlaps_vs_time[s] for s in states))
-            colors.append(free_state_color_cycle.__next__())
-
-        ax_overlaps.stackplot(self.times / x_scale_unit, *overlaps,
-                              labels = labels,
-                              colors = colors,
-                              )
-
-        if log:
-            ax_overlaps.set_yscale('log')
-            min_overlap = np.min(self.state_overlaps_vs_time[self.spec.initial_state])
-            ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-            ax_overlaps.grid(True, which = 'both', **GRID_KWARGS)
-        else:
-            ax_overlaps.set_ylim(0.0, 1.0)
-            ax_overlaps.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-            ax_overlaps.grid(True, **GRID_KWARGS)
-
-        ax_overlaps.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
-
-        ax_field.set_xlabel('Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
-        ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 13)
-        ax_field.set_ylabel('${}(t)$ (a.u.)'.format(str_efield), fontsize = 13, color = ELECTRIC_FIELD_COLOR)
-
-        ax_overlaps.legend(bbox_to_anchor = (1.1, 1.1), loc = 'upper left', borderaxespad = 0.05, fontsize = 9, ncol = 1 + (len(overlaps) // 17))
-
-        ax_overlaps.tick_params(labelright = True)
-        ax_field.tick_params(labelright = True)
-        ax_overlaps.xaxis.tick_top()
-
-        plt.rcParams['xtick.major.pad'] = 5
-        plt.rcParams['ytick.major.pad'] = 5
-
-        # Find at most n+1 ticks on the y-axis at 'nice' locations
-        max_yticks = 4
-        yloc = plt.MaxNLocator(max_yticks, prune = 'upper')
-        ax_field.yaxis.set_major_locator(yloc)
-
-        max_xticks = 6
-        xloc = plt.MaxNLocator(max_xticks, prune = 'both')
-        ax_field.xaxis.set_major_locator(xloc)
-
-        ax_field.tick_params(axis = 'x', which = 'major', labelsize = 10)
-        ax_field.tick_params(axis = 'y', which = 'major', labelsize = 10)
-        ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
-
-        ax_field.grid(True, **GRID_KWARGS)
-
-        postfix = ''
-        if log:
-            postfix += '__log'
-        prefix = self.file_name
-
-        name = prefix + '__wavefunction_vs_time{}'.format(postfix)
-
-        cp.utils.save_current_figure(name = name, **kwargs)
-
-        plt.close()
