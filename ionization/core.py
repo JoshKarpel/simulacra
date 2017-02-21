@@ -1847,9 +1847,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         logger.debug('Initialized mesh for {} {}'.format(self.__class__.__name__, self.name))
 
-        if not (.99 < self.mesh.norm() < 1.01):
-            logger.warning('Initial wavefunction for {} {} may not be normalized (norm = {})'.format(self.__class__.__name__, self.name, self.mesh.norm()))
-
     def store_data(self, time_index):
         """Update the time-indexed data arrays with the current values."""
         norm = self.mesh.norm()
@@ -2161,10 +2158,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
             sim.initialize_mesh()
 
         return sim
-
-
-from tqdm import tqdm
-
 
 class NumericBasisElectricFieldSimulation(ElectricFieldSimulation):
     def __init__(self, spec):
