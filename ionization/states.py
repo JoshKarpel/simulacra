@@ -41,6 +41,17 @@ class QuantumState(cp.Summand):
         self.amplitude = amplitude
         self.summation_class = Superposition
 
+        self.bound = None
+        self.discrete_eigenvalues = None
+
+    @property
+    def free(self):
+        return not self.bound
+
+    @property
+    def continuous_eigenvalues(self):
+        return not self.discrete_eigenvalues
+
     @property
     def norm(self):
         return np.abs(self.amplitude) ** 2
@@ -59,7 +70,7 @@ class QuantumState(cp.Summand):
     @property
     def tuple(self):
         """This property should return a tuple of unique information about the state, which will be used to hash it or perform comparison operations."""
-        return 0,
+        raise NotImplementedError
 
     def __hash__(self):
         return hash((self.__class__.__name__, self.__doc__) + self.tuple)
@@ -112,6 +123,9 @@ class FreeSphericalWave(QuantumState):
     """A class that represents a free spherical wave."""
 
     energy = cp.utils.Checked('energy', check = lambda x: x > 0)
+
+    bound = False
+    discrete_eigenvalues = False
 
     def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
         """
@@ -204,7 +218,8 @@ class FreeSphericalWave(QuantumState):
 class HydrogenBoundState(QuantumState):
     """A class that represents a hydrogenic bound state."""
 
-    __slots__ = ('_n', '_l', '_m')
+    bound = True
+    discrete_eigenvalues = True
 
     def __init__(self, n = 1, l = 0, m = 0, amplitude = 1):
         """
@@ -302,7 +317,7 @@ class HydrogenBoundState(QuantumState):
         r_dep = np.exp(-r / (self.n * bohr_radius)) * ((2 * r / (self.n * bohr_radius)) ** self.l)
         lag_poly = special.eval_genlaguerre(self.n - self.l - 1, (2 * self.l) + 1, 2 * r / (self.n * bohr_radius))
 
-        return normalization * r_dep * lag_poly
+        return self.amplitude * normalization * r_dep * lag_poly
 
     def __call__(self, r, theta, phi):
         """
@@ -313,11 +328,14 @@ class HydrogenBoundState(QuantumState):
         :param phi: azimuthal coordinate
         :return: the value(s) of the wavefunction at (r, theta, phi)
         """
-        return self.amplitude * self.radial_function(r) * self.spherical_harmonic(theta, phi)
+        return self.radial_function(r) * self.spherical_harmonic(theta, phi)
 
 
 class HydrogenCoulombState(QuantumState):
     """A class that represents a hydrogenic free state."""
+
+    bound = False
+    discrete_eigenvalues = False
 
     def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
         """
@@ -370,7 +388,7 @@ class HydrogenCoulombState(QuantumState):
             def radial_function(self, r):
                 x = r / bohr_radius
 
-                return prefactor * hgf(2 * x / kappa) * (x ** (self.l + 1)) * np.exp(-x / kappa) / r
+                return self.amplitude * prefactor * hgf(2 * x / kappa) * (x ** (self.l + 1)) * np.exp(-x / kappa) / r
 
         elif epsilon == 0:
             bessel_order = (2 * self.l) + 1
@@ -380,7 +398,7 @@ class HydrogenCoulombState(QuantumState):
             def radial_function(self, r):
                 x = r / bohr_radius
 
-                return prefactor * bessel(np.sqrt(8 * x)) * np.sqrt(x) / r
+                return self.amplitude * prefactor * bessel(np.sqrt(8 * x)) * np.sqrt(x) / r
 
         radial_function.__doc__ = """Return the radial part of the wavefunction R(r) evaluated at r."""  # set a docstring for radial_function
         self.radial_function = types.MethodType(radial_function, self)  # bind the method to the instance at runtime (necessary so that it can pick up self.l
@@ -445,7 +463,61 @@ class HydrogenCoulombState(QuantumState):
         :param phi: azimuthal coordinate
         :return: the value(s) of the wavefunction at (r, theta, phi)
         """
-        return self.amplitude * self.radial_function(r) * self.spherical_harmonic(theta, phi)
+        return self.radial_function(r) * self.spherical_harmonic(theta, phi)
+
+
+class NumericSphericalHarmonicState(QuantumState):
+    discrete_eigenvalues = True
+
+    def __init__(self, radial_mesh, l, m, energy, analytic_state, bound = True, amplitude = 1):
+        super().__init__(amplitude = amplitude)
+
+        self.radial_mesh = radial_mesh
+
+        self.l = l
+        self.m = m
+        self.energy = energy
+
+        self.analytic_state = analytic_state
+
+        self.bound = bound
+
+    def __str__(self):
+        return str(self.analytic_state)
+
+    def __repr__(self):
+        return repr(self.analytic_state)
+
+    def __getattr__(self, item):
+        return getattr(self.analytic_state, item)
+
+    @property
+    def tuple(self):
+        return self.analytic_state.tuple
+
+    @property
+    def ket(self):
+        return self.analytic_state.ket
+
+    @property
+    def bra(self):
+        return self.analytic_state.bra
+
+    @property
+    def tex_str(self):
+        """Return a LaTeX-formatted string for the NumericSphericalHarmonicState."""
+        return self.analytic_state.tex_str
+
+    @property
+    def spherical_harmonic(self):
+        """Return the SphericalHarmonic for the state's angular momentum quantum numbers."""
+        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
+
+    def radial_function(self, r):
+        return self.radial_mesh
+
+    def __call__(self, r, theta, phi):
+        return self.radial_function(r) * self.spherical_harmonic(theta, phi)
 
 
 class OneDFreeParticle(QuantumState):

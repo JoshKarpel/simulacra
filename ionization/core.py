@@ -2,7 +2,8 @@ import datetime as dt
 import functools
 import logging
 import itertools as it
-from copy import deepcopy
+import collections
+from copy import copy, deepcopy
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -10,6 +11,7 @@ import numpy as np
 import numpy.fft as nfft
 import scipy as sp
 import scipy.sparse as sparse
+import scipy.sparse.linalg as sparsealg
 import scipy.special as special
 from cycler import cycler
 
@@ -21,7 +23,14 @@ from . import potentials, states
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-GRID_COLOR = 'dodgerblue'  # the color to use for the gridlines on colormesh plots
+ELECTRIC_FIELD_COLOR = '#d62728'  # the color to use on plots for the electric field
+COLORMESH_GRID_COLOR = 'dodgerblue'  # the color to use for the gridlines on colormesh plots
+GRID_KWARGS = {
+    'linestyle': '-',
+    'color': 'black',
+    'linewidth': .25,
+    'alpha': 0.4
+}
 
 
 def electron_energy_from_wavenumber(k):
@@ -52,8 +61,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
-                 find_numerical_ground_state = False,
-                 store_norm_by_l = False,
+                 simulation_type = None,
                  **kwargs):
         """
         Initialize an ElectricFieldSpecification instance from the given parameters.
@@ -82,10 +90,12 @@ class ElectricFieldSpecification(cp.core.Specification):
         :param checkpoint_dir: a directory path to store the checkpoint file in
         :param animators: a list of Animators which will be run during time evolution
         :param store_norm_by_l: if True, the Simulation will store the amount of norm in each spherical harmonic.
-        :param find_numerical_ground_state: if True, the Simulation will find the numerical ground state of the mesh via imaginary time evolution
         :param kwargs:
         """
-        super(ElectricFieldSpecification, self).__init__(name, simulation_type = ElectricFieldSimulation, **kwargs)
+        if simulation_type is None:
+            simulation_type = ElectricFieldSimulation
+
+        super(ElectricFieldSpecification, self).__init__(name, simulation_type = simulation_type, **kwargs)
 
         if mesh_type is None:
             raise ValueError('{} must have a mesh_type'.format(name))
@@ -118,9 +128,6 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.checkpoint_dir = checkpoint_dir
 
         self.animators = deepcopy(tuple(animators))
-
-        self.store_norm_by_l = store_norm_by_l
-        self.find_numerical_ground_state = find_numerical_ground_state
 
     def info(self):
         checkpoint = ['Checkpointing: ']
@@ -195,9 +202,8 @@ class QuantumMesh:
         """State overlap between two states. If either state is None, the state on the g_mesh is used for that state."""
         return np.abs(self.inner_product(a, b)) ** 2
 
-    @property
-    def norm(self):
-        return np.abs(self.inner_product())
+    def norm(self, state = None):
+        return np.abs(self.inner_product(a = state, b = state))
 
     @property
     def energy_expectation_value(self):
@@ -207,7 +213,7 @@ class QuantumMesh:
         raise NotImplementedError
 
     def __abs__(self):
-        return self.norm
+        return self.norm()
 
     def copy(self):
         return deepcopy(self)
@@ -217,15 +223,15 @@ class QuantumMesh:
         return self.g_mesh / self.g_factor
 
     def evolve(self, time_step):
-        pre_evolve_norm = self.norm
+        pre_evolve_norm = self.norm()
         getattr(self, '_evolve_' + self.spec.evolution_method)(time_step)
-        norm_diff_evolve = pre_evolve_norm - self.norm
+        norm_diff_evolve = pre_evolve_norm - self.norm()
         if norm_diff_evolve / pre_evolve_norm > .001:
             logger.warning('Evolution may be dangerously non-unitary, norm decreased by {} ({} %) during evolution step'.format(norm_diff_evolve, norm_diff_evolve / pre_evolve_norm))
 
-        pre_mask_norm = self.norm
+        pre_mask_norm = self.norm()
         self.g_mesh *= self.spec.mask(r = self.r_mesh)
-        norm_diff_mask = pre_mask_norm - self.norm
+        norm_diff_mask = pre_mask_norm - self.norm()
         logger.debug('Applied mask {} to g_mesh for {} {}, removing {} norm'.format(self.spec.mask, self.sim.__class__.__name__, self.sim.name, norm_diff_mask))
         return norm_diff_mask
 
@@ -359,7 +365,11 @@ class LineMesh(QuantumMesh):
 
     @cp.utils.memoize
     def get_g_for_state(self, state):
-        return state(self.x_mesh)
+        g = state(self.x_mesh)
+        g /= np.sqrt(self.norm(g))
+        g *= state.amplitude
+
+        return g
 
     @property
     def energy_expectation_value(self):
@@ -526,7 +536,11 @@ class CylindricalSliceMesh(QuantumMesh):
 
     @cp.utils.memoize
     def get_g_for_state(self, state):
-        return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
+        g = self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
+        g /= np.sqrt(self.norm(g))
+        g *= state.amplitude
+
+        return g
 
     def dipole_moment_expectation_value(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
@@ -780,7 +794,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         axis.axis('tight')  # removes blank space between color mesh and axes
 
-        axis.grid(True, color = GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = COLORMESH_GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
 
         axis.tick_params(labelright = True, labeltop = True)  # ticks on all sides
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
@@ -900,13 +914,13 @@ class SphericalSliceMesh(QuantumMesh):
 
         return np.abs(self.inner_product(mesh_a, b)) ** 2
 
-    @property
-    def norm(self):
-        return np.abs(self.inner_product())
-
     @cp.utils.memoize
     def get_g_for_state(self, state):
-        return self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
+        g = self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
+        g /= np.sqrt(self.norm(g))
+        g *= state.amplitude
+
+        return g
 
     def dipole_moment_expectation_value(self, gauge = 'length'):
         """Get the dipole moment in the specified gauge."""
@@ -1058,7 +1072,6 @@ class SphericalSliceMesh(QuantumMesh):
         g_vector = cy.tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'theta')
 
-
     @cp.utils.memoize
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
@@ -1118,12 +1131,12 @@ class SphericalSliceMesh(QuantumMesh):
         cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
         cbar.ax.tick_params(labelsize = 10)
 
-        axis.grid(True, color = GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = COLORMESH_GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
-        axis.tick_params(axis = 'y', which = 'major', colors = GRID_COLOR, pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'y', which = 'major', colors = COLORMESH_GRID_COLOR, pad = 3)  # make r ticks a color that shows up against the colormesh
         axis.tick_params(axis = 'both', which = 'both', length = 0)
 
         axis.set_rlabel_position(80)
@@ -1148,11 +1161,15 @@ class SphericalSliceMesh(QuantumMesh):
 
 class SphericalHarmonicSpecification(ElectricFieldSpecification):
     def __init__(self, name,
-                 r_bound = 20 * bohr_radius,
-                 r_points = 2 ** 9,
-                 l_points = 2 ** 5,
+                 r_bound = 100 * bohr_radius,
+                 r_points = 400,
+                 l_points = 100,
                  evolution_equations = 'L',
                  evolution_method = 'SO',
+                 store_norm_by_l = False,
+                 use_numeric_eigenstates_as_basis = False,
+                 numeric_eigenstate_l_max = 20,
+                 numeric_eigenstate_energy_max = 100 * eV,
                  **kwargs):
         """
         Specification for an ElectricFieldSimulation using a SphericalHarmonicMesh.
@@ -1165,7 +1182,11 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
         :param evolution_method: 'SO' (recommended) or 'CN'
         :param kwargs:
         """
-        super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = SphericalHarmonicMesh, **kwargs)
+        simulation_type = ElectricFieldSimulation
+        if use_numeric_eigenstates_as_basis:
+            simulation_type = NumericBasisElectricFieldSimulation
+
+        super(SphericalHarmonicSpecification, self).__init__(name, mesh_type = SphericalHarmonicMesh, simulation_type = simulation_type, **kwargs)
 
         self.r_bound = r_bound
         self.r_points = int(r_points)
@@ -1174,6 +1195,12 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
 
         self.evolution_equations = evolution_equations
         self.evolution_method = evolution_method
+
+        self.store_norm_by_l = store_norm_by_l
+
+        self.use_numeric_eigenstates_as_basis = use_numeric_eigenstates_as_basis
+        self.numeric_eigenstate_l_max = numeric_eigenstate_l_max
+        self.numeric_eigenstate_energy_max = numeric_eigenstate_energy_max
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
@@ -1206,7 +1233,16 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.mesh_points = len(self.r) * len(self.l)
         self.mesh_shape = np.shape(self.r_mesh)
 
-        self.g_mesh = self.get_g_for_state(self.spec.initial_state)
+        if self.spec.use_numeric_eigenstates_as_basis:
+            self.analytic_to_numeric = self._get_numeric_eigenstate_basis(self.spec.numeric_eigenstate_energy_max, self.spec.numeric_eigenstate_l_max)
+            self.spec.test_states = sorted(list(self.analytic_to_numeric.values()), key = lambda x: x.energy)
+            g_initial = self.get_g_for_state(self.analytic_to_numeric[self.spec.initial_state])
+
+            logger.warning('Replaced test states for {} with numeric eigenbasis'.format(self))
+        else:
+            g_initial = self.get_g_for_state(self.spec.initial_state)
+
+        self.g_mesh = g_initial
 
     @property
     @cp.utils.memoize
@@ -1284,7 +1320,11 @@ class SphericalHarmonicMesh(QuantumMesh):
     def get_radial_g_for_state(self, state):
         """Return the radial g function evaluated on the radial mesh for a state that has a radial function."""
         # logger.debug('Calculating radial wavefunction for state {}'.format(state))
-        return state.radial_function(self.r) * self.g_factor
+        g = state.radial_function(self.r) * self.g_factor
+        g /= np.sqrt(self.norm(g))
+        g *= state.amplitude
+
+        return g
 
     def inner_product(self, a = None, b = None):
         if isinstance(a, states.QuantumState) and all(hasattr(s, 'spherical_harmonic') for s in a) and b is None:  # shortcut
@@ -1361,6 +1401,35 @@ class SphericalHarmonicMesh(QuantumMesh):
         r_kinetic.data[1] += potential
 
         return r_kinetic
+
+    def _get_numeric_eigenstate_basis(self, energy_max, l_max):
+        analytic_to_numeric = {}
+
+        for l in range(l_max):
+            h = self._get_internal_hamiltonian_matrix_operator_single_l(l = l)
+            eigenvalues, eigenvectors = sparsealg.eigsh(h, k = h.shape[0] - 2, which = 'SA')
+
+            for eigenvalue, eigenvector in zip(eigenvalues, eigenvectors.T):
+                eigenvector /= np.sqrt(self.inner_product_multiplier * np.sum(np.abs(eigenvector) ** 2))  # normalize
+                eigenvector /= self.g_factor  # go to u from R
+
+                if eigenvalue > energy_max:  # ignore eigenvalues that are too large
+                    continue
+                elif eigenvalue > 0:
+                    analytic_state = states.HydrogenCoulombState(energy = eigenvalue, l = l)
+                    bound = False
+                else:
+                    n_guess = round(np.sqrt(rydberg / np.abs(eigenvalue)))
+                    if n_guess == 0:
+                        n_guess = 1
+                    analytic_state = states.HydrogenBoundState(n = n_guess, l = l)
+                    bound = True
+
+                numeric_state = states.NumericSphericalHarmonicState(eigenvector, l, 0, eigenvalue, analytic_state, bound = bound)
+
+                analytic_to_numeric[analytic_state] = numeric_state
+
+        return analytic_to_numeric
 
     # TODO: REFACTORRRRRRRRRR using tensor products
 
@@ -1700,12 +1769,12 @@ class SphericalHarmonicMesh(QuantumMesh):
         cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
         cbar.ax.tick_params(labelsize = 10)
 
-        axis.grid(True, color = GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = COLORMESH_GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
-        axis.tick_params(axis = 'y', which = 'major', colors = GRID_COLOR, pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'y', which = 'major', colors = COLORMESH_GRID_COLOR, pad = 3)  # make r ticks a color that shows up against the colormesh
         axis.tick_params(axis = 'both', which = 'both', length = 0)
 
         axis.set_rlabel_position(80)
@@ -1776,17 +1845,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
     def initialize_mesh(self):
         self.mesh = self.spec.mesh_type(self)
 
-        if self.spec.find_numerical_ground_state:
-            self.find_numerical_ground_state()
-
         logger.debug('Initialized mesh for {} {}'.format(self.__class__.__name__, self.name))
-
-        if not (.99 < self.mesh.norm < 1.01):
-            logger.warning('Initial wavefunction for {} {} may not be normalized (norm = {})'.format(self.__class__.__name__, self.name, self.mesh.norm))
 
     def store_data(self, time_index):
         """Update the time-indexed data arrays with the current values."""
-        norm = self.mesh.norm
+        norm = self.mesh.norm()
         self.norm_vs_time[time_index] = norm
         if norm > 1.001 * self.norm_vs_time[0]:
             logger.warning('Wavefunction norm ({}) has exceeded initial norm ({}) by more than .1% for {} {}'.format(norm, self.norm_vs_time[0], self.__class__.__name__, self.name))
@@ -1806,10 +1869,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.times[time_index])
 
-        if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:
+        if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:  # if spherical harmonic mesh and we want to do this
             norm_by_l = self.mesh.norm_by_l
             for sph_harm, l_norm in zip(self.spec.spherical_harmonics, norm_by_l):
-                self.norm_by_harmonic_vs_time[sph_harm][time_index] = l_norm  # TODO: extend to non-l storage meshes
+                self.norm_by_harmonic_vs_time[sph_harm][time_index] = l_norm
 
             largest_l = self.spec.spherical_harmonics[-1]
             norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][time_index]
@@ -1830,8 +1893,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         try:
             self.status = 'running'
             logger.debug("{} {} ({}) status set to 'running'".format(self.__class__.__name__, self.name, self.file_name))
-
-            self.mesh.g_mesh /= np.sqrt(self.mesh.norm)
 
             for animator in self.animators:
                 animator.initialize(self)
@@ -1871,15 +1932,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
             # make sure the animators get cleaned up if there's some kind of error during time evolution
             for animator in self.animators:
                 animator.cleanup()
-
-    def find_numerical_ground_state(self):
-        logger.warning('find_numerical_ground_state can only find the ground state!')
-
-        for ii in range(self.spec.imaginary_time_evolution_steps):
-            self.mesh.evolve(-1j * self.spec.time_step)
-            self.mesh.g_mesh /= np.sqrt(self.mesh.norm)  # renormalize after each iteration to keep the norm under control
-
-        logger.debug('Performed Imaginary Time Evolution on {}'.format(self.__class__.__name__, self.name, self.file_name))
 
     def plot_wavefunction_vs_time(self, use_name = False, grayscale = False, log = False, x_scale = 'asec', **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
@@ -2106,3 +2158,179 @@ class ElectricFieldSimulation(cp.core.Simulation):
             sim.initialize_mesh()
 
         return sim
+
+
+class NumericBasisElectricFieldSimulation(ElectricFieldSimulation):
+    def __init__(self, spec):
+        super().__init__(spec)
+
+    @property
+    def bound_states(self):
+        return [s for s in self.spec.test_states if s.bound]
+
+    @property
+    def free_states(self):
+        return [s for s in self.spec.test_states if not s.bound]
+
+    def group_free_states_by_continuous_attr(self, attr, divisions = 10, cutoff_value = None,
+                                             label_format_str = r'\phi_{{    {} \; \mathrm{{to}} \; {} \, {}, \ell   }}', label_unit = None):
+        spectrum = set(getattr(s, attr) for s in self.free_states)
+        grouped_states = collections.defaultdict(list)
+        group_labels = {}
+
+        attr_min, attr_max = min(spectrum), max(spectrum)
+        if cutoff_value is None:
+            boundaries = np.linspace(attr_min, attr_max, num = divisions + 1)
+        else:
+            boundaries = np.linspace(attr_min, cutoff_value, num = divisions)
+            boundaries = np.concatenate((boundaries, [attr_max]))
+
+        label_unit, label_unit_str = unit_value_and_name_from_unit(label_unit)
+
+        free_states = list(self.free_states)
+
+        for ii, lower_boundary in enumerate(boundaries[:-1]):
+            upper_boundary = boundaries[ii + 1]
+
+            label = label_format_str.format(uround(lower_boundary, label_unit, 2), uround(upper_boundary, label_unit, 2), label_unit_str)
+            group_labels[(lower_boundary, upper_boundary)] = label
+
+            for s in copy(free_states):
+                if lower_boundary <= getattr(s, attr) <= upper_boundary:
+                    grouped_states[(lower_boundary, upper_boundary)].append(s)
+                    free_states.remove(s)
+
+        return grouped_states, group_labels
+
+    def group_free_states_by_discrete_attr(self, attr = 'l', cutoff_value = 9, label_format_str = r'\phi_{{ E, {} }}'):
+        grouped_states = collections.defaultdict(list)
+
+        cutoff = []
+
+        for s in self.free_states:
+            s_attr = getattr(s, attr)
+            if s_attr < cutoff_value:
+                grouped_states[getattr(s, attr)].append(s)
+            else:
+                cutoff.append(s)
+
+        group_labels = {k: label_format_str.format(int(k)) for k in grouped_states}
+
+        cutoff_key = max(grouped_states) + 1  # get max key, make sure cutoff key is larger for sorting purposes
+
+        grouped_states[cutoff_key] = cutoff
+        group_labels[cutoff_key] = label_format_str.format(r'\geq {}'.format(cutoff_value))
+
+        return grouped_states, group_labels
+
+    def plot_wavefunction_vs_time(self, log = False, x_scale = 'asec',
+                                  bound_state_max_n = 5,
+                                  collapse_bound_state_angular_momentums = False,
+                                  grouped_free_states = None,
+                                  group_labels = None,
+                                  **kwargs):
+        fig = cp.utils.get_figure('full')
+
+        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(x_scale)
+
+        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
+        ax_overlaps = plt.subplot(grid_spec[0])
+        ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
+
+        if not isinstance(self.spec.electric_potential, potentials.NoPotentialEnergy):
+            ax_field.plot(self.times / x_scale_unit, self.electric_field_amplitude_vs_time / atomic_electric_field, color = ELECTRIC_FIELD_COLOR, linewidth = 2)
+
+        ax_overlaps.plot(self.times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 2)
+
+        if grouped_free_states is None:
+            grouped_free_states, group_labels = self.group_free_states_by_discrete_attr('l')
+
+        overlaps = []
+        labels = []
+        colors = []
+
+        extra_bound_overlap = np.zeros(self.time_steps)
+        if collapse_bound_state_angular_momentums:
+            overlaps_by_n = {n: np.zeros(self.time_steps) for n in range(1, bound_state_max_n + 1)}  # prepare arrays to sum over angular momenta in, one for each n
+            for state in sorted(self.bound_states):
+                if state.n <= bound_state_max_n:
+                    overlaps_by_n[state.n] += self.state_overlaps_vs_time[state]
+                else:
+                    extra_bound_overlap += self.state_overlaps_vs_time[state]
+            overlaps += [overlap for n, overlap in sorted(overlaps_by_n.items())]
+            labels += [r'$\left| \left\langle \psi| \psi_{{ {}, \ell }} \right\rangle \right|^2$'.format(n) for n in sorted(overlaps_by_n)]
+            colors += [matplotlib.colors.to_rgba('C' + str(n - 1), alpha = 1) for n in sorted(overlaps_by_n)]
+        else:
+            for state in sorted(self.bound_states):
+                if state.n <= bound_state_max_n:
+                    overlaps.append(self.state_overlaps_vs_time[state])
+                    labels.append(r'$\left| \left\langle \psi| \psi_{{ {}, {} }} \right\rangle \right|^2$'.format(state.n, state.l))
+                    colors.append(matplotlib.colors.to_rgba('C' + str((state.n - 1) % 10), alpha = 1 - state.l / state.n))
+                else:
+                    extra_bound_overlap += self.state_overlaps_vs_time[state]
+
+        overlaps.append(extra_bound_overlap)
+        labels.append(r'$\left| \left\langle \psi| \psi_{{n \geq {} }}  \right\rangle \right|^2$'.format(bound_state_max_n + 1))
+        colors.append('.4')
+
+        free_state_color_cycle = it.cycle(['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f'])
+        for group, states in sorted(grouped_free_states.items()):
+            labels.append(r'$\left| \left\langle \psi| {}  \right\rangle \right|^2$'.format(group_labels[group]))
+            overlaps.append(np.sum(self.state_overlaps_vs_time[s] for s in states))
+            colors.append(free_state_color_cycle.__next__())
+
+        ax_overlaps.stackplot(self.times / x_scale_unit, *overlaps,
+                              labels = labels,
+                              colors = colors,
+                              )
+
+        if log:
+            ax_overlaps.set_yscale('log')
+            min_overlap = np.min(self.state_overlaps_vs_time[self.spec.initial_state])
+            ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
+            ax_overlaps.grid(True, which = 'both', **GRID_KWARGS)
+        else:
+            ax_overlaps.set_ylim(0.0, 1.0)
+            ax_overlaps.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+            ax_overlaps.grid(True, **GRID_KWARGS)
+
+        ax_overlaps.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
+
+        ax_field.set_xlabel('Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
+        ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 13)
+        ax_field.set_ylabel('${}(t)$ (a.u.)'.format(str_efield), fontsize = 13, color = ELECTRIC_FIELD_COLOR)
+
+        ax_overlaps.legend(bbox_to_anchor = (1.1, 1.1), loc = 'upper left', borderaxespad = 0.05, fontsize = 9, ncol = 1 + (len(overlaps) // 17))
+
+        ax_overlaps.tick_params(labelright = True)
+        ax_field.tick_params(labelright = True)
+        ax_overlaps.xaxis.tick_top()
+
+        plt.rcParams['xtick.major.pad'] = 5
+        plt.rcParams['ytick.major.pad'] = 5
+
+        # Find at most n+1 ticks on the y-axis at 'nice' locations
+        max_yticks = 4
+        yloc = plt.MaxNLocator(max_yticks, prune = 'upper')
+        ax_field.yaxis.set_major_locator(yloc)
+
+        max_xticks = 6
+        xloc = plt.MaxNLocator(max_xticks, prune = 'both')
+        ax_field.xaxis.set_major_locator(xloc)
+
+        ax_field.tick_params(axis = 'x', which = 'major', labelsize = 10)
+        ax_field.tick_params(axis = 'y', which = 'major', labelsize = 10)
+        ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
+
+        ax_field.grid(True, **GRID_KWARGS)
+
+        postfix = ''
+        if log:
+            postfix += '__log'
+        prefix = self.file_name
+
+        name = prefix + '__wavefunction_vs_time{}'.format(postfix)
+
+        cp.utils.save_current_figure(name = name, **kwargs)
+
+        plt.close()

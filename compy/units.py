@@ -16,7 +16,10 @@ def uround(value, units = 1, digits = 3):
 
 def unit_value_and_name_from_unit(unit):
     """Return the (unit_value, unit_tex_string) pair from a unit name."""
-    if type(unit) == str:
+    if unit is None:
+        unit_value = 1
+        unit_tex_string = ''
+    elif type(unit) == str:
         unit_value = unit_names_to_values[unit]
         unit_tex_string = unit_names_to_tex_strings[unit]
     else:
@@ -36,10 +39,10 @@ unit_names_to_values.update({'alpha': alpha,
                              'pi': pi,
                              'twopi': twopi,
                              'e': e})
-unit_names_to_tex_strings.update({'alpha': r'$\alpha$',
-                                  'pi': '$\pi$',
-                                  'twopi': r'$2\pi$',
-                                  'e': '$e$'})
+unit_names_to_tex_strings.update({'alpha': r'\alpha',
+                                  'pi': '\pi',
+                                  'twopi': r'2\pi',
+                                  'e': 'e'})
 
 # base units
 m = 1
@@ -55,11 +58,11 @@ unit_names_to_values.update({'m': m,
                              'kg': kg,
                              'A': A,
                              'K': K})
-unit_names_to_tex_strings.update({'m': r'$\mathrm{m}$',
-                                  's': r'$\mathrm{s}$',
-                                  'kg': r'$\mathrm{kg}$',
-                                  'A': r'$\mathrm{A}$',
-                                  'K': r'$\mathrm{K}$'})
+unit_names_to_tex_strings.update({'m': r'\mathrm{m}',
+                                  's': r'\mathrm{s}',
+                                  'kg': r'\mathrm{kg}',
+                                  'A': r'\mathrm{A}',
+                                  'K': r'\mathrm{K}'})
 
 # distance
 cm = 1e-2 * m
@@ -93,37 +96,37 @@ unit_names_to_values.update({'cm': cm,
                              'bohr_radius': bohr_radius,
                              'inch': inch,
                              'per_nm': per_nm})
-unit_names_to_tex_strings.update({'cm': r'$\mathrm{cm}$',
-                                  'cetimeter': r'$\mathrm{cm}$',
-                                  'cetimeters': r'$\mathrm{cm}$',
-                                  'mm': r'$\mathrm{mm}$',
-                                  'millimeter': r'$\mathrm{mm}$',
-                                  'millimeters': r'$\mathrm{mm}$',
-                                  'um': r'$\mathrm{um}$',
-                                  'micrometer': r'$\mathrm{um}$',
-                                  'micrometers': r'$\mathrm{um}$',
-                                  'micron': r'$\mathrm{um}$',
-                                  'microns': r'$\mathrm{um}$',
-                                  'nm': r'$\mathrm{nm}$',
-                                  'nanometer': r'$\mathrm{nm}$',
-                                  'nanometers': r'$\mathrm{nm}$',
-                                  'pm': r'$\mathrm{pm}$',
-                                  'picometer': r'$\mathrm{pm}$',
-                                  'picometers': r'$\mathrm{pm}$',
-                                  'fm': r'$\mathrm{fm}$',
-                                  'femtometer': r'$\mathrm{fm}$',
-                                  'femtometers': r'$\mathrm{fm}$',
-                                  'km': r'$\mathrm{km}$',
-                                  'kilometer': r'$\mathrm{km}$',
-                                  'kilometers': r'$\mathrm{km}$',
-                                  'Mm': r'$\mathrm{Mm}$',
-                                  'Gm': r'$\mathrm{Gm}$',
-                                  'Tm': r'$\mathrm{Tm}$',
-                                  'Pm': r'$\mathrm{Pm}$',
-                                  'angstrom': r'$\mathrm{\AA}$',
-                                  'bohr_radius': r'$a_0$',
-                                  'inch': r'$\mathrm{in}$',
-                                  'per_nm': r'$\mathrm{nm^{-1}}$'})
+unit_names_to_tex_strings.update({'cm': r'\mathrm{cm}',
+                                  'cetimeter': r'\mathrm{cm}',
+                                  'cetimeters': r'\mathrm{cm}',
+                                  'mm': r'\mathrm{mm}',
+                                  'millimeter': r'\mathrm{mm}',
+                                  'millimeters': r'\mathrm{mm}',
+                                  'um': r'\mathrm{um}',
+                                  'micrometer': r'\mathrm{um}',
+                                  'micrometers': r'\mathrm{um}',
+                                  'micron': r'\mathrm{um}',
+                                  'microns': r'\mathrm{um}',
+                                  'nm': r'\mathrm{nm}',
+                                  'nanometer': r'\mathrm{nm}',
+                                  'nanometers': r'\mathrm{nm}',
+                                  'pm': r'\mathrm{pm}',
+                                  'picometer': r'\mathrm{pm}',
+                                  'picometers': r'\mathrm{pm}',
+                                  'fm': r'\mathrm{fm}',
+                                  'femtometer': r'\mathrm{fm}',
+                                  'femtometers': r'\mathrm{fm}',
+                                  'km': r'\mathrm{km}',
+                                  'kilometer': r'\mathrm{km}',
+                                  'kilometers': r'\mathrm{km}',
+                                  'Mm': r'\mathrm{Mm}',
+                                  'Gm': r'\mathrm{Gm}',
+                                  'Tm': r'\mathrm{Tm}',
+                                  'Pm': r'\mathrm{Pm}',
+                                  'angstrom': r'\mathrm{\AA}',
+                                  'bohr_radius': r'a_0',
+                                  'inch': r'\mathrm{in}',
+                                  'per_nm': r'\mathrm{nm^{-1}}'})
 
 # time
 msec = 1e-3 * s
@@ -160,28 +163,28 @@ unit_names_to_values.update({'ms': msec,
                              'weeks': week,
                              'year': year,
                              'years': year})
-unit_names_to_tex_strings.update({'ms': r'$\mathrm{ms}$',
-                                  'msec': r'$\mathrm{ms}$',
-                                  'us': r'$\mathrm{us}$',
-                                  'usec': r'$\mathrm{us}$',
-                                  'ns': r'$\mathrm{ns}$',
-                                  'nsec': r'$\mathrm{ns}$',
-                                  'ps': r'$\mathrm{ps}$',
-                                  'psec': r'$\mathrm{ps}$',
-                                  'fs': r'$\mathrm{fs}$',
-                                  'fsec': r'$\mathrm{fs}$',
-                                  'as': r'$\mathrm{as}$',
-                                  'asec': r'$\mathrm{as}$',
-                                  'minute': '$\mathrm{minutes}$',
-                                  'minutes': '$\mathrm{minutes}$',
-                                  'hour': '$\mathrm{hours}$',
-                                  'hours': '$\mathrm{hours}$',
-                                  'day': '$\mathrm{days}$',
-                                  'days': '$\mathrm{days}$',
-                                  'week': '$\mathrm{weeks}$',
-                                  'weeks': '$\mathrm{weeks}$',
-                                  'year': '$\mathrm{years}$',
-                                  'years': '$\mathrm{years}$'})
+unit_names_to_tex_strings.update({'ms': r'\mathrm{ms}',
+                                  'msec': r'\mathrm{ms}',
+                                  'us': r'\mathrm{us}',
+                                  'usec': r'\mathrm{us}',
+                                  'ns': r'\mathrm{ns}',
+                                  'nsec': r'\mathrm{ns}',
+                                  'ps': r'\mathrm{ps}',
+                                  'psec': r'\mathrm{ps}',
+                                  'fs': r'\mathrm{fs}',
+                                  'fsec': r'\mathrm{fs}',
+                                  'as': r'\mathrm{as}',
+                                  'asec': r'\mathrm{as}',
+                                  'minute': '\mathrm{minutes}',
+                                  'minutes': '\mathrm{minutes}',
+                                  'hour': '\mathrm{hours}',
+                                  'hours': '\mathrm{hours}',
+                                  'day': '\mathrm{days}',
+                                  'days': '\mathrm{days}',
+                                  'week': '\mathrm{weeks}',
+                                  'weeks': '\mathrm{weeks}',
+                                  'year': '\mathrm{years}',
+                                  'years': '\mathrm{years}'})
 
 # mass
 g = 1e-3 * kg
@@ -205,16 +208,16 @@ unit_names_to_values.update({'g': g,
                              'neutron_mass': neutron_mass,
                              'electron_mass': electron_mass,
                              'electron_mass_reduced': electron_mass_reduced})
-unit_names_to_tex_strings.update({'g': r'$\mathrm{g}$',
-                                  'mg': r'$\mathrm{mg}$',
-                                  'ug': r'$\mathrm{ug}$',
-                                  'ng': r'$\mathrm{ng}$',
-                                  'pg': r'$\mathrm{pg}$',
-                                  'fg': r'$\mathrm{fg}$',
-                                  'proton_mass': r'$m_p$',
-                                  'neutron_mass': r'$m_n$',
-                                  'electron_mass': r'$m_e$',
-                                  'electron_mass_reduced': r'$\mu_e$'})
+unit_names_to_tex_strings.update({'g': r'\mathrm{g}',
+                                  'mg': r'\mathrm{mg}',
+                                  'ug': r'\mathrm{ug}',
+                                  'ng': r'\mathrm{ng}',
+                                  'pg': r'\mathrm{pg}',
+                                  'fg': r'\mathrm{fg}',
+                                  'proton_mass': r'm_p',
+                                  'neutron_mass': r'm_n',
+                                  'electron_mass': r'm_e',
+                                  'electron_mass_reduced': r'\mu_e'})
 
 # frequency
 Hz = 1 / s
@@ -240,17 +243,17 @@ unit_names_to_values.update({'Hz': Hz,
                              'GHz': GHz,
                              'THz': THz,
                              'PHz': PHz})
-unit_names_to_tex_strings.update({'Hz': r'$\mathrm{Hz}$',
-                                  'mHz': r'$\mathrm{mHz}$',
-                                  'uHz': r'$\mathrm{uHz}$',
-                                  'nHz': r'$\mathrm{nHz}$',
-                                  'pHz': r'$\mathrm{pHz}$',
-                                  'fHz': r'$\mathrm{fHz}$',
-                                  'kHz': r'$\mathrm{kHz}$',
-                                  'MHz': r'$\mathrm{MHz}$',
-                                  'GHz': r'$\mathrm{GHz}$',
-                                  'THz': r'$\mathrm{THz}$',
-                                  'PHz': r'$\mathrm{PHz}$'})
+unit_names_to_tex_strings.update({'Hz': r'\mathrm{Hz}',
+                                  'mHz': r'\mathrm{mHz}',
+                                  'uHz': r'\mathrm{uHz}',
+                                  'nHz': r'\mathrm{nHz}',
+                                  'pHz': r'\mathrm{pHz}',
+                                  'fHz': r'\mathrm{fHz}',
+                                  'kHz': r'\mathrm{kHz}',
+                                  'MHz': r'\mathrm{MHz}',
+                                  'GHz': r'\mathrm{GHz}',
+                                  'THz': r'\mathrm{THz}',
+                                  'PHz': r'\mathrm{PHz}'})
 
 # electric charge
 C = 1 * A * s
@@ -280,19 +283,19 @@ unit_names_to_values.update({'C': C,
                              'PC': PC,
                              'proton_charge': proton_charge,
                              'electron_charge': electron_charge})
-unit_names_to_tex_strings.update({'C': r'$\mathrm{C}$',
-                                  'mC': r'$\mathrm{mC}$',
-                                  'uC': r'$\mathrm{uC}$',
-                                  'nC': r'$\mathrm{nC}$',
-                                  'pC': r'$\mathrm{pC}$',
-                                  'fC': r'$\mathrm{fC}$',
-                                  'kC': r'$\mathrm{kC}$',
-                                  'MC': r'$\mathrm{MC}$',
-                                  'GC': r'$\mathrm{GC}$',
-                                  'TC': r'$\mathrm{TC}$',
-                                  'PC': r'$\mathrm{PC}$',
-                                  'proton_charge': r'$e$',
-                                  'electron_charge': r'$-e$'})
+unit_names_to_tex_strings.update({'C': r'\mathrm{C}',
+                                  'mC': r'\mathrm{mC}',
+                                  'uC': r'\mathrm{uC}',
+                                  'nC': r'\mathrm{nC}',
+                                  'pC': r'\mathrm{pC}',
+                                  'fC': r'\mathrm{fC}',
+                                  'kC': r'\mathrm{kC}',
+                                  'MC': r'\mathrm{MC}',
+                                  'GC': r'\mathrm{GC}',
+                                  'TC': r'\mathrm{TC}',
+                                  'PC': r'\mathrm{PC}',
+                                  'proton_charge': r'e',
+                                  'electron_charge': r'-e'})
 
 # energy
 J = 1 * kg * ((m / s) ** 2)
@@ -324,19 +327,19 @@ unit_names_to_values.update({
     'Jcm2': Jcm2,
 })
 unit_names_to_tex_strings.update({
-    'J': r'$\mathrm{J}$',
-    'mJ': r'$\mathrm{mJ}$',
-    'uJ': r'$\mathrm{uJ}$',
-    'nJ': r'$\mathrm{nJ}$',
-    'pJ': r'$\mathrm{pJ}$',
-    'fJ': r'$\mathrm{fJ}$',
-    'kJ': r'$\mathrm{kJ}$',
-    'MJ': r'$\mathrm{MJ}$',
-    'GJ': r'$\mathrm{GJ}$',
-    'TJ': r'$\mathrm{TJ}$',
-    'PJ': r'$\mathrm{PJ}$',
-    'J/cm^2': r'$\mathrm{J/cm^2}$',
-    'Jcm2': r'$\mathrm{J/cm^2}$'
+    'J': r'\mathrm{J}',
+    'mJ': r'\mathrm{mJ}',
+    'uJ': r'\mathrm{uJ}',
+    'nJ': r'\mathrm{nJ}',
+    'pJ': r'\mathrm{pJ}',
+    'fJ': r'\mathrm{fJ}',
+    'kJ': r'\mathrm{kJ}',
+    'MJ': r'\mathrm{MJ}',
+    'GJ': r'\mathrm{GJ}',
+    'TJ': r'\mathrm{TJ}',
+    'PJ': r'\mathrm{PJ}',
+    'J/cm^2': r'\mathrm{J/cm^2}',
+    'Jcm2': r'\mathrm{J/cm^2}'
 })
 
 # voltage
@@ -363,17 +366,17 @@ unit_names_to_values.update({'V': V,
                              'GV': GV,
                              'TV': TV,
                              'PV': PV})
-unit_names_to_tex_strings.update({'V': r'$\mathrm{V}$',
-                                  'mV': r'$\mathrm{mV}$',
-                                  'uV': r'$\mathrm{uV}$',
-                                  'nV': r'$\mathrm{nV}$',
-                                  'pV': r'$\mathrm{pV}$',
-                                  'fV': r'$\mathrm{fV}$',
-                                  'kV': r'$\mathrm{kV}$',
-                                  'MV': r'$\mathrm{MV}$',
-                                  'GV': r'$\mathrm{GV}$',
-                                  'TV': r'$\mathrm{TV}$',
-                                  'PV': r'$\mathrm{PV}$'})
+unit_names_to_tex_strings.update({'V': r'\mathrm{V}',
+                                  'mV': r'\mathrm{mV}',
+                                  'uV': r'\mathrm{uV}',
+                                  'nV': r'\mathrm{nV}',
+                                  'pV': r'\mathrm{pV}',
+                                  'fV': r'\mathrm{fV}',
+                                  'kV': r'\mathrm{kV}',
+                                  'MV': r'\mathrm{MV}',
+                                  'GV': r'\mathrm{GV}',
+                                  'TV': r'\mathrm{TV}',
+                                  'PV': r'\mathrm{PV}'})
 
 # energies in electron-volts
 eV = proton_charge * V
@@ -389,12 +392,12 @@ unit_names_to_values.update({'eV': eV,
                              'GeV': GeV,
                              'TeV': TeV,
                              'PeV': PeV})
-unit_names_to_tex_strings.update({'eV': r'$\mathrm{eV}$',
-                                  'keV': r'$\mathrm{keV}$',
-                                  'MeV': r'$\mathrm{MeV}$',
-                                  'GeV': r'$\mathrm{GeV}$',
-                                  'TeV': r'$\mathrm{TeV}$',
-                                  'PeV': r'$\mathrm{PeV}$'})
+unit_names_to_tex_strings.update({'eV': r'\mathrm{eV}',
+                                  'keV': r'\mathrm{keV}',
+                                  'MeV': r'\mathrm{MeV}',
+                                  'GeV': r'\mathrm{GeV}',
+                                  'TeV': r'\mathrm{TeV}',
+                                  'PeV': r'\mathrm{PeV}'})
 
 # force
 N = 1 * m * kg / (s ** 2)
@@ -420,17 +423,17 @@ unit_names_to_values.update({'N': N,
                              'GN': GN,
                              'TN': TN,
                              'PN': PN})
-unit_names_to_tex_strings.update({'N': r'$\mathrm{N}$',
-                                  'mN': r'$\mathrm{mN}$',
-                                  'uN': r'$\mathrm{uN}$',
-                                  'nN': r'$\mathrm{nN}$',
-                                  'pN': r'$\mathrm{pN}$',
-                                  'fN': r'$\mathrm{fN}$',
-                                  'kN': r'$\mathrm{kN}$',
-                                  'MN': r'$\mathrm{MN}$',
-                                  'GN': r'$\mathrm{GN}$',
-                                  'TN': r'$\mathrm{TN}$',
-                                  'PN': r'$\mathrm{PN}$'})
+unit_names_to_tex_strings.update({'N': r'\mathrm{N}',
+                                  'mN': r'\mathrm{mN}',
+                                  'uN': r'\mathrm{uN}',
+                                  'nN': r'\mathrm{nN}',
+                                  'pN': r'\mathrm{pN}',
+                                  'fN': r'\mathrm{fN}',
+                                  'kN': r'\mathrm{kN}',
+                                  'MN': r'\mathrm{MN}',
+                                  'GN': r'\mathrm{GN}',
+                                  'TN': r'\mathrm{TN}',
+                                  'PN': r'\mathrm{PN}'})
 
 # power
 W = 1 * J / s
@@ -456,17 +459,17 @@ unit_names_to_values.update({'W': W,
                              'GW': GW,
                              'TW': TW,
                              'PW': PW})
-unit_names_to_tex_strings.update({'W': r'$\mathrm{W}$',
-                                  'mW': r'$\mathrm{mW}$',
-                                  'uW': r'$\mathrm{uW}$',
-                                  'nW': r'$\mathrm{nW}$',
-                                  'pW': r'$\mathrm{pW}$',
-                                  'fW': r'$\mathrm{fW}$',
-                                  'kW': r'$\mathrm{kW}$',
-                                  'MW': r'$\mathrm{MW}$',
-                                  'GW': r'$\mathrm{GW}$',
-                                  'TW': r'$\mathrm{TW}$',
-                                  'PW': r'$\mathrm{PW}$'})
+unit_names_to_tex_strings.update({'W': r'\mathrm{W}',
+                                  'mW': r'\mathrm{mW}',
+                                  'uW': r'\mathrm{uW}',
+                                  'nW': r'\mathrm{nW}',
+                                  'pW': r'\mathrm{pW}',
+                                  'fW': r'\mathrm{fW}',
+                                  'kW': r'\mathrm{kW}',
+                                  'MW': r'\mathrm{MW}',
+                                  'GW': r'\mathrm{GW}',
+                                  'TW': r'\mathrm{TW}',
+                                  'PW': r'\mathrm{PW}'})
 
 # current
 A = 1 * C / s
@@ -492,17 +495,17 @@ unit_names_to_values.update({'A': A,
                              'GA': GA,
                              'TA': TA,
                              'PA': PA})
-unit_names_to_tex_strings.update({'A': r'$\mathrm{A}$',
-                                  'mA': r'$\mathrm{mA}$',
-                                  'uA': r'$\mathrm{uA}$',
-                                  'nA': r'$\mathrm{nA}$',
-                                  'pA': r'$\mathrm{pA}$',
-                                  'fA': r'$\mathrm{fA}$',
-                                  'kA': r'$\mathrm{kA}$',
-                                  'MA': r'$\mathrm{MA}$',
-                                  'GA': r'$\mathrm{GA}$',
-                                  'TA': r'$\mathrm{TA}$',
-                                  'PA': r'$\mathrm{PA}$'})
+unit_names_to_tex_strings.update({'A': r'\mathrm{A}',
+                                  'mA': r'\mathrm{mA}',
+                                  'uA': r'\mathrm{uA}',
+                                  'nA': r'\mathrm{nA}',
+                                  'pA': r'\mathrm{pA}',
+                                  'fA': r'\mathrm{fA}',
+                                  'kA': r'\mathrm{kA}',
+                                  'MA': r'\mathrm{MA}',
+                                  'GA': r'\mathrm{GA}',
+                                  'TA': r'\mathrm{TA}',
+                                  'PA': r'\mathrm{PA}'})
 
 # quantum mechanics
 h = 6.626070040e-34 * J * s  # Planck's constant
@@ -514,10 +517,10 @@ unit_names_to_values.update({'h': h,
                              'hbar': hbar,
                              'rydberg': rydberg,
                              'hartree': hartree})
-unit_names_to_tex_strings.update({'h': r'$h$',
-                                  'hbar': r'$\hbar$',
-                                  'rydberg': r'$\mathrm{Ry}',
-                                  'hartree': r'$\mathrm{Ha}'})
+unit_names_to_tex_strings.update({'h': r'h',
+                                  'hbar': r'\hbar',
+                                  'rydberg': r'\mathrm{Ry}',
+                                  'hartree': r'\mathrm{Ha}'})
 
 # speed of light and E&M
 c = 299792458 * m / s
@@ -531,11 +534,11 @@ unit_names_to_values.update({'c': c,
                              'epsilon_0': epsilon_0,
                              'coulomb_force_constant': coulomb_force_constant,
                              'n_vacuum': n_vacuum})
-unit_names_to_tex_strings.update({'c': r'$c$',
-                                  'mu_0': r'$\mu_0$',
-                                  'epsilon_0': r'$\epsilon_0$',
-                                  'coulomb_force_constant': r'$k_e$',
-                                  'n_vacuum': r'$n_{\mathrm{vac}}$'})
+unit_names_to_tex_strings.update({'c': r'c',
+                                  'mu_0': r'\mu_0',
+                                  'epsilon_0': r'\epsilon_0',
+                                  'coulomb_force_constant': r'k_e',
+                                  'n_vacuum': r'n_{\mathrm{vac}}'})
 
 atomic_energy = hartree
 atomic_electric_field = coulomb_force_constant * proton_charge / (bohr_radius ** 2)
@@ -554,7 +557,7 @@ unit_names_to_values.update({'atomic_electric_field': atomic_electric_field,
 unit_names_to_tex_strings.update({'atomic_electric_field': r'a.u.',  # TODO: add these
                                   'AEF': r'a.u.',
                                   'atomic_electric_potential': r'a.u.',
-                                  'atomic_electric_dipole': r'$e \, a_0$',
+                                  'atomic_electric_dipole': r'e \, a_0',
                                   'atomic_velocity': r'a.u.',
                                   'atomic_momentum': r'a.u.'})
 

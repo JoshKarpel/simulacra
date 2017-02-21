@@ -21,16 +21,6 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 log = cp.utils.Logger('compy', 'ionization', stdout_level = logging.INFO)
 
 
-def figsize(scale):
-    fig_width_pt = 498.66258  # Get this from LaTeX using \the\textwidth
-    inches_per_pt = 1.0 / 72.27  # Convert pt to inch
-    golden_mean = (np.sqrt(5.0) - 1.0) / 2.0  # Aesthetic ratio (you could change this)
-    fig_width = fig_width_pt * inches_per_pt * scale  # width in inches
-    fig_height = fig_width * golden_mean  # height in inches
-    fig_size = [fig_width, fig_height]
-    return fig_size
-
-
 pgf_with_latex = {  # setup matplotlib to use latex for output
     "pgf.texsystem": "pdflatex",  # change this if using xetex or lautex
     "text.usetex": True,  # use LaTeX to write all text
@@ -43,7 +33,7 @@ pgf_with_latex = {  # setup matplotlib to use latex for output
     "legend.fontsize": 10,  # Make the legend/label fonts a little smaller
     "xtick.labelsize": 9,
     "ytick.labelsize": 9,
-    "figure.figsize": figsize(0.9),  # default fig size of 0.9 textwidth
+    "figure.figsize": cp.utils.figsize(0.95),  # default fig size of 0.95 \textwidth
     "pgf.preamble": [
         r"\usepackage[utf8x]{inputenc}",  # use utf8 fonts because your computer can handle it :)
         r"\usepackage[T1]{fontenc}",  # plots will be generated using this preamble
@@ -52,19 +42,6 @@ pgf_with_latex = {  # setup matplotlib to use latex for output
 matplotlib.rcParams.update(pgf_with_latex)
 
 import matplotlib.pyplot as plt
-
-
-# I make my own newfig and savefig functions
-def get_figure(width = 0.9):
-    if width == 'full':
-        width = 0.9
-    elif width == 'half':
-        width = .45
-
-    plt.clf()
-    fig = plt.figure(figsize = figsize(width))
-    ax = fig.add_subplot(111)
-    return fig, ax
 
 
 def save_figure(filename):
@@ -86,7 +63,8 @@ grid_kwargs = {
 
 
 def sinc_pulse_power_spectrum_full():
-    fig, ax = get_figure('full')
+    fig = cp.utils.get_figure('full')
+    ax = fig.add_subplot(111)
 
     lower = .15
     upper = .85
@@ -132,7 +110,8 @@ def sinc_pulse_power_spectrum_full():
 
 
 def sinc_pulse_power_spectrum_half():
-    fig, ax = get_figure('full')
+    fig = cp.utils.get_figure('full')
+    ax = fig.add_subplot(111)
 
     lower = .15
     upper = .85
@@ -168,7 +147,8 @@ def sinc_pulse_power_spectrum_half():
 
 
 def sinc_pulse_electric_field(phase = 0):
-    fig, ax = get_figure('half')
+    fig = cp.utils.get_figure('half')
+    ax = fig.add_subplot(111)
 
     omega_min = twopi
     omega_max = 20 * twopi
@@ -219,7 +199,8 @@ def sinc_pulse_electric_field(phase = 0):
 
 def gaussian_pulse_power_spectrum_half():
     # TODO: er, be caereful, is delta for the power spectrum or the amplitude spectrum?
-    fig, ax = get_figure('full')
+    fig = cp.utils.get_figure('full')
+    ax = fig.add_subplot(111)
 
     carrier = .6
     sigma = .1
@@ -262,7 +243,8 @@ def gaussian_pulse_power_spectrum_half():
 
 
 def finite_square_well():
-    fig, ax = get_figure('full')
+    fig = cp.utils.get_figure('full')
+    ax = fig.add_subplot(111)
 
     a_over_two = .5
     depth = -.5
@@ -295,7 +277,8 @@ def finite_square_well():
 
 
 def finite_square_well_energies():
-    fig, ax = get_figure('full')
+    fig = cp.utils.get_figure('full')
+    ax = fig.add_subplot(111)
 
     z_0 = 6 * pi / 2 + .5 * np.sqrt(1)  # must make it numpy data type so that the optimizer doesn't panic
 
@@ -349,7 +332,8 @@ def finite_square_well_energies():
 
 
 def a_alpha_v2_kernel_gaussian_continuum():
-    fig, ax = get_figure('full')
+    fig = cp.utils.get_figure('full')
+    ax = fig.add_subplot(111)
 
     dt = np.linspace(-10, 10, 1000)
     tau = .5
@@ -391,7 +375,8 @@ def a_alpha_v2_kernel_gaussian_continuum():
 
 
 def a_alpha_v2_kernel_gaussian_continuum_with_sqrt_gamma():
-    fig, ax = get_figure('full')
+    fig = cp.utils.get_figure('full')
+    ax = fig.add_subplot(111)
 
     dt = np.linspace(-10, 10, 1000)
     tau = .5
