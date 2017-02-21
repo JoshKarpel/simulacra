@@ -2159,6 +2159,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         return sim
 
+
 class NumericBasisElectricFieldSimulation(ElectricFieldSimulation):
     def __init__(self, spec):
         super().__init__(spec)
@@ -2260,7 +2261,7 @@ class NumericBasisElectricFieldSimulation(ElectricFieldSimulation):
             labels += [r'$\left| \left\langle \psi| \psi_{{ {}, \ell }} \right\rangle \right|^2$'.format(n) for n in sorted(overlaps_by_n)]
             colors += [matplotlib.colors.to_rgba('C' + str(n - 1), alpha = 1) for n in sorted(overlaps_by_n)]
         else:
-            for state in tqdm(sorted(self.bound_states)):
+            for state in sorted(self.bound_states):
                 if state.n <= bound_state_max_n:
                     overlaps.append(self.state_overlaps_vs_time[state])
                     labels.append(r'$\left| \left\langle \psi| \psi_{{ {}, {} }} \right\rangle \right|^2$'.format(state.n, state.l))
