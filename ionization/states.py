@@ -41,6 +41,17 @@ class QuantumState(cp.Summand):
         self.amplitude = amplitude
         self.summation_class = Superposition
 
+        self.bound = None
+        self.discrete_eigenvalues = None
+
+    @property
+    def free(self):
+        return not self.bound
+
+    @property
+    def continuous_eigenvalues(self):
+        return not self.discrete_eigenvalues
+
     @property
     def norm(self):
         return np.abs(self.amplitude) ** 2
@@ -112,6 +123,9 @@ class FreeSphericalWave(QuantumState):
     """A class that represents a free spherical wave."""
 
     energy = cp.utils.Checked('energy', check = lambda x: x > 0)
+
+    bound = False
+    discrete_eigenvalues = False
 
     def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
         """
@@ -204,7 +218,8 @@ class FreeSphericalWave(QuantumState):
 class HydrogenBoundState(QuantumState):
     """A class that represents a hydrogenic bound state."""
 
-    __slots__ = ('_n', '_l', '_m')
+    bound = True
+    discrete_eigenvalues = True
 
     def __init__(self, n = 1, l = 0, m = 0, amplitude = 1):
         """
@@ -318,6 +333,9 @@ class HydrogenBoundState(QuantumState):
 
 class HydrogenCoulombState(QuantumState):
     """A class that represents a hydrogenic free state."""
+
+    bound = False
+    discrete_eigenvalues = False
 
     def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
         """
@@ -449,7 +467,11 @@ class HydrogenCoulombState(QuantumState):
 
 
 class NumericSphericalHarmonicState(QuantumState):
-    def __init__(self, radial_mesh, l, m, energy, analytic_state, amplitude = 1):
+    discrete_eigenvalues = True
+
+    def __init__(self, radial_mesh, l, m, energy, analytic_state, bound = True, amplitude = 1):
+        super().__init__(amplitude = amplitude)
+
         self.radial_mesh = radial_mesh
 
         self.l = l
@@ -458,13 +480,16 @@ class NumericSphericalHarmonicState(QuantumState):
 
         self.analytic_state = analytic_state
 
-        super().__init__(amplitude = amplitude)
+        self.bound = bound
 
     def __str__(self):
         return str(self.analytic_state)
 
     def __repr__(self):
         return repr(self.analytic_state)
+
+    def __getattr__(self, item):
+        return getattr(self.analytic_state, item)
 
     @property
     def tuple(self):

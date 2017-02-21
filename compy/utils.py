@@ -263,7 +263,7 @@ def ensure_dir_exists(path):
         make_path = split_path[0]
     os.makedirs(make_path, exist_ok = True)
 
-    logger.debug('Ensured dir exists ({})'.format(make_path))
+    logger.debug('Ensured dir {} exists'.format(make_path))
 
 
 def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'png', img_scale = 1, transparent = True, colormap = plt.cm.inferno, **kwargs):
@@ -733,7 +733,7 @@ def try_loop(*functions_to_run,
 
 def grouper(iterable, n, fillvalue = None):
     """
-    Collect data into fixed-length chunks or blocks
+    Collect data from iterable into fixed-length chunks or blocks of length n
 
     See https://docs.python.org/3/library/itertools.html#itertools-recipes
 
@@ -753,3 +753,43 @@ def get_process_by_name(process_name):
             return proc
 
     raise ProcessLookupError('No process with name "{}" found'.format(process_name))
+
+
+def figsize(scale, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0):
+    """
+    Helper function for get_figure
+
+    :param scale:
+    :param fig_width_pts: get this from LaTeX using \the\textwidth
+    :param aspect_ratio: height = width * ratio, defaults to golden ratio
+    :return:
+    """
+    inches_per_pt = 1.0 / 72.27  # Convert pt to inch
+
+    fig_width = fig_width_pts * inches_per_pt * scale  # width in inches
+    fig_height = fig_width * aspect_ratio  # height in inches
+    fig_size = [fig_width, fig_height]
+
+    return fig_size
+
+
+def get_figure(scale = 0.9, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0):
+    """
+    Get a matplotlib figure object with the desired scale relative to a full-text-width LaTeX page.
+
+    scale = 'full' -> scale = 0.95
+    scale = 'half' -> scale = 0.475
+
+    :param scale: width of figure in LaTeX \textwidths
+    :param fig_width_pts: get this from LaTeX using \the\textwidth
+    :param aspect_ratio: height = width * ratio, defaults to golden ratio
+    :return:
+    """
+    if scale == 'full':
+        scale = 0.95
+    elif scale == 'half':
+        scale = .475
+
+    fig = plt.figure(figsize = figsize(scale, fig_width_pts = fig_width_pts, aspect_ratio = aspect_ratio))
+
+    return fig
