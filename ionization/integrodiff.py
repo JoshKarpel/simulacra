@@ -28,12 +28,15 @@ def gaussian_kernel(x, *, tau_alpha):
 
 
 class BoundStateIntegroDifferentialEquationSpecification(cp.Specification):
+    integration_method = cp.utils.RestrictedValues('integration_method', ('simpson', 'trapezoid'))
+
     def __init__(self, name,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
                  y_initial = 1,
                  prefactor = 1,
                  f = return_one, f_kwargs = None,
                  kernel = return_one, kernel_kwargs = None,
+                 integration_method = 'simpson',
                  **kwargs):
         """
         Initialize an IntegroDifferentialEquationSpecification from the given parameters.
@@ -68,14 +71,25 @@ class BoundStateIntegroDifferentialEquationSpecification(cp.Specification):
         if kernel_kwargs is not None:
             self.kernel_kwargs.update(kernel_kwargs)
 
-    def info(self):
-        time_evolution = ['Time Evolution:',
-                          '   Initial State: y = {}'.format(self.y_initial),
-                          '   Initial Time: {} as'.format(uround(self.time_initial, asec)),
-                          '   Final Time: {} as'.format(uround(self.time_final, asec)),
-                          '   Time Step: {} as'.format(uround(self.time_step, asec))]
+        self.integration_method = integration_method
 
-        return '\n'.join(time_evolution)
+    def info(self):
+        ide_parameters = [
+            "IDE Parameters: dy/dt = prefactor * f(t) * integral[ y(t') * f(t') * kernel(t - t')  ; {t', t_initial, t} ]",
+            '   Initial State: y = {}'.format(self.y_initial),
+            '   prefactor: {}'.format(self.prefactor),
+            '   f(t): {} with kwargs {}'.format(self.f.__name__, self.f_kwargs),
+            '   kernel(t): {} with kwargs {}'.format(self.kernel.__name__, self.kernel_kwargs),
+        ]
+        time_evolution = [
+            'Time Evolution:',
+            '   Initial Time: {} as'.format(uround(self.time_initial, asec)),
+            '   Final Time: {} as'.format(uround(self.time_final, asec)),
+            '   Time Step: {} as'.format(uround(self.time_step, asec)),
+            '   Integration Method: {}'.format(self.integration_method)
+        ]
+
+        return '\n'.join(ide_parameters + time_evolution)
 
 
 class BoundStateIntegroDifferentialEquationSimulation(cp.Simulation):
@@ -100,6 +114,9 @@ class BoundStateIntegroDifferentialEquationSimulation(cp.Simulation):
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
         self.status = 'running'
 
+        dydt = 0
+        integrand_previous = 0
+
         while self.time_index < self.time_steps - 1:
             dt = self.time - self.times[self.time_index - 1]
             # print('dt (as)', dt / asec)
@@ -113,8 +130,12 @@ class BoundStateIntegroDifferentialEquationSimulation(cp.Simulation):
 
             # integrate through the current time step
             integrand = self.f_eval[:self.time_index + 1] * self.y[:self.time_index + 1] * self.spec.kernel(time_difference, **self.spec.kernel_kwargs)
-            dydt = prefactor * integ.simps(y = integrand,
-                                           x = self.times[:self.time_index + 1])
+            if self.spec.integration_method == 'simpson':
+                dydt = prefactor * integ.simps(y = integrand,
+                                               x = self.times[:self.time_index + 1])
+            elif self.spec.integration_method == 'trapezoid' and self.time_index != 0:
+                dydt = prefactor * integ.trapz(y = integrand,
+                                               x = self.times[:self.time_index + 1])
 
             # print('integrand', integrand)
             # print('dy/dt', dydt)

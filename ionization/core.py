@@ -1922,9 +1922,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
                         self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
                         logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
 
-            self.end_time = dt.datetime.now()
-            self.elapsed_time = self.end_time - self.start_time
-
             self.status = 'finished'
 
             logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))

@@ -97,6 +97,9 @@ class Simulation(utils.Beet):
     @status.setter
     def status(self, s):
         self._status = s
+        if s == 'finished':
+            self.end_time = dt.datetime.now()
+            self.elapsed_time = self.end_time - self.start_time
         logger.debug("{} {} ({}) status set to {}".format(self.__class__.__name__, self.name, self.file_name, s))
 
     def save(self, target_dir = None, file_extension = '.sim'):
