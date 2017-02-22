@@ -266,7 +266,7 @@ def ensure_dir_exists(path):
     logger.debug('Ensured dir {} exists'.format(make_path))
 
 
-def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'png', img_scale = 1, transparent = True, colormap = plt.cm.inferno, **kwargs):
+def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'pdf', img_scale = 1, transparent = True, colormap = plt.cm.inferno, **kwargs):
     """Save the current matplotlib figure with the given name to the given folder."""
     plt.set_cmap(colormap)
 

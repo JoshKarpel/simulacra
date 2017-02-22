@@ -1894,7 +1894,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
         try:
             self.status = 'running'
-            logger.debug("{} {} ({}) status set to 'running'".format(self.__class__.__name__, self.name, self.file_name))
 
             for animator in self.animators:
                 animator.initialize(self)
@@ -1927,7 +1926,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             self.elapsed_time = self.end_time - self.start_time
 
             self.status = 'finished'
-            logger.debug("{} {} ({}) status set to 'finished'".format(self.__class__.__name__, self.name, self.file_name))
+
             logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
         except Exception as e:
             raise e

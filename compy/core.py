@@ -67,7 +67,7 @@ class Simulation(utils.Beet):
     Ideally, actual computation should be handed off to another object, while the Simulation itself stores the data produced by that object.
     """
 
-    status = utils.RestrictedValues('status', {'initialized', 'running', 'finished', 'paused'})
+    _status = utils.RestrictedValues('status', {'initialized', 'running', 'finished', 'paused'})
 
     def __init__(self, spec, initial_status = 'initialized'):
         """
@@ -77,7 +77,7 @@ class Simulation(utils.Beet):
         :param initial_status: an initial status for the simulation, defaults to 'initialized'
         """
         self.spec = spec
-        self.status = initial_status
+        self._status = initial_status
 
         super(Simulation, self).__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from spec
         self.spec.simulation_type = self.__class__
@@ -89,6 +89,15 @@ class Simulation(utils.Beet):
         self.elapsed_time = None
         self.latest_load_time = dt.datetime.now()
         self.run_time = dt.timedelta()
+
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, s):
+        self._status = s
+        logger.debug("{} {} ({}) status set to {}".format(self.__class__.__name__, self.name, self.file_name, s))
 
     def save(self, target_dir = None, file_extension = '.sim'):
         """
