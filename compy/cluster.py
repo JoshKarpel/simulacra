@@ -349,15 +349,18 @@ class JobProcessor(utils.Beet):
         for sim_name in sim_names:
             sim = self.load_sim(sim_name)
             if sim is not None:
-                self.collect_data_from_sim(sim_name, sim)
-                if individual_processing:
-                    self.process_sim(sim_name, sim)
-                self.unprocessed_sim_names.discard(sim_name)
+                try:
+                    self.collect_data_from_sim(sim_name, sim)
+                    if individual_processing:
+                        self.process_sim(sim_name, sim)
+                    self.unprocessed_sim_names.discard(sim_name)
+                except AttributeError as e:
+                    logger.exception('Exception encountered while processing simulation {}'.format(sim_name))
 
         self.write_to_txt()
 
         end_time = dt.datetime.now()
-        logger.info('Finished loading simulations from job {}. Failed to find {} / {} sims. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, end_time - start_time))
+        logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, end_time - start_time))
 
     def write_to_csv(self):
         raise NotImplementedError

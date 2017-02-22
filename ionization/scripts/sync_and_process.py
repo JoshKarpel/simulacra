@@ -70,7 +70,8 @@ if __name__ == '__main__':
                               ft.partial(synchronize_with_cluster, CI),
                               ft.partial(process_jobs, JOBS_DIR),
                               ft.partial(resume_process, dropbox_process),
-                              wait_after_success = dt.timedelta(hours = 3))
+                              wait_after_success = dt.timedelta(hours = 3),
+                              wait_after_failure = dt.timedelta(hours = 1))
         except Exception as e:
             logger.exception(e)
             raise e
