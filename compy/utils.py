@@ -24,6 +24,17 @@ logger.setLevel(logging.DEBUG)
 LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
 
+def dict_to_arrays(d):
+    key_list = []
+    val_list = []
+
+    for key, val in sorted(d.items()):
+        key_list.append(key)
+        val_list.append(val)
+
+    return np.array(key_list), np.array(val_list)
+
+
 def field_str(obj, *fields, digits = 3):
     """
     Generate a repr-like string from the object's attributes.
@@ -356,12 +367,12 @@ def make_xy_axis(axis,
 
     # determine if scale_x/y is a unit specifier or a number and set scale and labels accordingly
     if type(x_scale) == str:
-        scale_x_label = r' ({})'.format(unit_names_to_tex_strings[x_scale])
+        scale_x_label = r' (${}$)'.format(unit_names_to_tex_strings[x_scale])
         x_scale = unit_names_to_values[x_scale]
     else:
         scale_x_label = r''
     if type(y_scale) == str:
-        scale_y_label = r' ({})'.format(unit_names_to_tex_strings[y_scale])
+        scale_y_label = r' (${}$)'.format(unit_names_to_tex_strings[y_scale])
         y_scale = unit_names_to_values[y_scale]
     else:
         scale_y_label = r''
@@ -404,8 +415,7 @@ def make_xy_axis(axis,
     axis.set_xlim(left = x_lower_limit / x_scale, right = x_upper_limit / x_scale)
     axis.set_ylim(bottom = y_lower_limit / y_scale, top = y_upper_limit / y_scale)
 
-    # set up a grid of gray dotted lines
-    axis.grid(True, color = 'gray', linestyle = ':')
+    axis.grid(True, linestyle = '-', color = 'black', linewidth = .25, alpha = .4)
     axis.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
     axis.tick_params(labeltop = ticks_on_top)

@@ -506,6 +506,8 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
 
         self.omega_min = omega_min
         self.pulse_width = pulse_width
+        if phase == 'cos':
+            phase = pi / 2
         self.phase = phase
         self.fluence = fluence
         self.pulse_center = pulse_center
@@ -769,6 +771,31 @@ class GenericElectricField(UniformLinearlyPolarizedElectricField):
 #         raise NotImplementedError
 #
 #         # return amp * self.amplitude_prefactor * super(RandomizedSincPulse, self).get_amplitude(t)
+
+
+class RectangularTimeWindow(TimeWindow):
+    def __init__(self, on_time = 0 * asec, off_time = 50 * asec):
+        self.on_time = on_time
+        self.off_time = off_time
+
+        super().__init__()
+
+    def __str__(self):
+        return '{}(on at = {} as, off at = {} as)'.format(self.__class__.__name__,
+                                                          uround(self.on_time, asec, 3),
+                                                          uround(self.off_time, asec, 3))
+
+    def __repr__(self):
+        return '{}(on_time = {}, off_time = {})'.format(self.__class__.__name__,
+                                                        self.on_time,
+                                                        self.off_time)
+
+    def __call__(self, t):
+        cond = np.greater_equal(t, self.on_time) * np.less_equal(t, self.off_time)
+        on = 1
+        off = 0
+
+        return np.where(cond, on, off)
 
 
 class LinearRampTimeWindow(TimeWindow):

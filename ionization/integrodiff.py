@@ -106,6 +106,11 @@ class BoundStateIntegroDifferentialEquationSimulation(cp.Simulation):
         self.y = np.zeros(self.time_steps, dtype = np.complex128) * np.NaN
         self.y[0] = self.spec.y_initial
 
+        if self.spec.integration_method == 'simpson':
+            self.integrate = integ.simps
+        elif self.spec.integration_method == 'trapezoid':
+            self.integrate = integ.trapz
+
     @property
     def time(self):
         return self.times[self.time_index]
@@ -114,46 +119,65 @@ class BoundStateIntegroDifferentialEquationSimulation(cp.Simulation):
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
         self.status = 'running'
 
-        dydt = 0
-        integrand_previous = 0
-
         while self.time_index < self.time_steps - 1:
-            dt = self.time - self.times[self.time_index - 1]
+            dt = self.times[self.time_index + 1] - self.time
             # print('dt (as)', dt / asec)
 
-            time_difference = self.time - self.times[:self.time_index + 1]  # slice up to current time index
-            prefactor = self.spec.prefactor * self.f_eval[self.time_index]
+            times_curr = self.times[:self.time_index + 1]
+            # times_half = np.append(self.times[:self.time_index + 1], self.time + dt / 2)
+            # times_next = self.times[:self.time_index + 2]
 
-            # print('f at t', self.spec.f(self.time))
-            # print('time diffs', time_difference)
-            # print('current prefactor', prefactor)
+            time_difference_curr = self.time - times_curr  # slice up to current time index
+            # time_difference_half = (self.time + dt / 2) - times_half
+            # time_difference_next = self.times[self.time_index + 1] - times_next
+
+            kernel_curr = self.spec.kernel(time_difference_curr, **self.spec.kernel_kwargs)
+            # kernel_half = self.spec.kernel(time_difference_half, **self.spec.kernel_kwargs)
+            # kernel_next = self.spec.kernel(time_difference_next, **self.spec.kernel_kwargs)
+
+            f_curr = self.f_eval[self.time_index]
+            # f_half = self.spec.f(self.time + (dt / 2))
+            # f_next = self.f_eval[self.time_index + 1]
+
+            f_times_y_curr = self.f_eval[:self.time_index + 1] * self.y[:self.time_index + 1]
 
             # integrate through the current time step
-            integrand = self.f_eval[:self.time_index + 1] * self.y[:self.time_index + 1] * self.spec.kernel(time_difference, **self.spec.kernel_kwargs)
-            if self.spec.integration_method == 'simpson':
-                dydt = prefactor * integ.simps(y = integrand,
-                                               x = self.times[:self.time_index + 1])
-            elif self.spec.integration_method == 'trapezoid' and self.time_index != 0:
-                dydt = prefactor * integ.trapz(y = integrand,
-                                               x = self.times[:self.time_index + 1])
+            # integrand_for_k1 = f_times_y_curr * kernel_curr
+            # integral_for_k1 = self.integrate(y = integrand_for_k1, x = times_curr)
+            # k1 = self.spec.prefactor * f_curr * integral_for_k1
+            # y_midpoint_for_k2 = self.y[self.time_index] + (dt * k1 / 2)  # dt / 2 here because we moved forward to midpoint
+            #
+            # integrand_for_k2 = np.append(f_times_y_curr, f_half * y_midpoint_for_k2) * kernel_half
+            # integral_for_k2 = self.integrate(y = integrand_for_k2, x = times_half)
+            # k2 = self.spec.prefactor * f_half * integral_for_k2  # dt / 2 because it's half of an interval that we're integrating over
+            # y_midpoint_for_k3 = self.y[self.time_index] + (dt * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
+            #
+            # integrand_for_k3 = np.append(f_times_y_curr, f_half * y_midpoint_for_k3) * kernel_half
+            # integral_for_k3 = self.integrate(y = integrand_for_k3, x = times_half)
+            # k3 = self.spec.prefactor * f_half * integral_for_k3  # dt / 2 because it's half of an interval that we're integrating over
+            # y_end_for_k4 = self.y[self.time_index] + (dt * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
+            #
+            # integrand_for_k4 = np.append(f_times_y_curr, f_next * y_end_for_k4) * kernel_next
+            # integral_for_k4 = self.integrate(y = integrand_for_k4, x = times_next)
+            # k4 = self.spec.prefactor * f_half * integral_for_k4
 
-            # print('integrand', integrand)
-            # print('dy/dt', dydt)
-
-            k1 = dydt
-            y_midpoint_for_k2 = self.y[self.time_index] + (dt * k1 / 2)  # dt / 2 here because we moved forward to midpoint
-
-            k2 = dydt + (prefactor * dt * y_midpoint_for_k2 / 2)  # dt / 2 because it's half of an interval that we're integrating over
-            y_midpoint_for_k3 = self.y[self.time_index] + (dt * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
-
-            k3 = dydt + (prefactor * dt * y_midpoint_for_k3)  # estimate slope based on midpoint again
-            y_end_for_k4 = self.y[self.time_index] + (dt * k3)  # estimate next point based on estimate of slope at midpoint
-
-            k4 = dydt + (prefactor * dt * y_end_for_k4)  # estimate slope based on next point
-
+            # print(k1, k2, k3, k4)
+            # print(integral_through_current_step, (prefactor * dt * y_midpoint_for_k2 / 2))
             # print('dy', dt * (k1 + (2 * k2) + (2 * k3) + k4) / 6)
 
-            self.y[self.time_index + 1] = self.y[self.time_index] + dt * (k1 + (2 * k2) + (2 * k3) + k4) / 6  # estimate next point
+            # print()
+            # print('1', k1, np.abs(k1 / k1))
+            # print('2', k2, np.abs(k2 / k1))
+            # print('3', k3, np.abs(k3 / k1))
+            # print('4', k4, np.abs(k4 / k1))
+            # print('avg', ((k1 + (2 * k2) + (2 * k3) + k4) / 6), np.abs(((k1 + (2 * k2) + (2 * k3) + k4) / 6) / k1))
+            # print()
+            #
+            # self.y[self.time_index + 1] = self.y[self.time_index] + (dt * (k1 + (2 * k2) + (2 * k3) + k4) / 6)  # estimate next point
+
+            k = self.spec.prefactor * self.f_eval[self.time_index] * self.integrate(y = self.f_eval[:self.time_index + 1] * self.y[:self.time_index + 1] * self.spec.kernel(self.time - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
+                                                                                    x = self.times[:self.time_index + 1])
+            self.y[self.time_index + 1] = self.y[self.time_index] + (dt * k)  # estimate next point
 
             self.time_index += 1
 
