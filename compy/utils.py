@@ -402,6 +402,7 @@ def make_xy_axis(axis,
         axis.set_xscale('log')
     if y_log_axis:
         axis.set_yscale('log')
+        axis.grid(True, which = 'minor', linestyle = '-', color = 'black', linewidth = .25, alpha = .3)
 
     # set axis limits independently
     if x_lower_limit is None:

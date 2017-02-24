@@ -47,7 +47,7 @@ if __name__ == '__main__':
         # phases = np.array([0, 1, 2, 3]) * pi / 4
         phases = np.array([0, 1, 2, 3, 4]) * pi / 8
 
-        flu = 1
+        flu = 10
 
         t_bound_per_pw = 10
 
@@ -93,16 +93,17 @@ if __name__ == '__main__':
             x_label = r'Pulse Width $\tau$', x_scale = 'asec',
             y_label = r'$   \left|    a_{\alpha}  ( t_{ \mathrm{final} } )    \right|^2  $',
             line_labels = phase_labels,
+            vlines = [tau_alpha],
             target_dir = OUT_DIR,
         )
 
-        cp.utils.xy_plot('ivpw',
+        cp.utils.xy_plot(out_dir_extra + '__ivpw',
                          pulse_widths * asec, *y,
                          **ivpw_kwargs,
                          y_lower_limit = 0, y_upper_limit = 1,
                          )
 
-        cp.utils.xy_plot('ivpw_log',
+        cp.utils.xy_plot(out_dir_extra + '__ivpw_log',
                          pulse_widths * asec, *y,
                          y_log_axis = True,
                          **ivpw_kwargs,
