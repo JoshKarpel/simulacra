@@ -47,3 +47,15 @@ if __name__ == '__main__':
                           y_axis_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
                           f_axis_label = r'${}(t)$'.format(str_efield),
                           f_scale = 'AEF')
+
+        print(sim.times)
+        print(sim.time_steps_list)
+
+        cp.utils.xy_plot('time_step',
+                         sim.times,
+                         sim.time_steps_list,
+                         x_axis_label = r'Time $t$', x_scale = 'asec',
+                         y_axis_label = r'Time Step $\Delta t$', y_scale = 'asec',
+                         y_log_axis = True,
+                         target_dir = OUT_DIR,
+                         )

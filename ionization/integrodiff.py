@@ -105,8 +105,10 @@ class BoundStateIntegroDifferentialEquationSimulation(cp.Simulation):
             self.time_steps = np.NaN
 
             self.time_step = self.spec.time_step
+            self.minimum_time_step = self.time_step
 
             self.y = np.array([self.spec.y_initial])
+            self.time_steps_list = np.array([np.NaN])
         else:
             total_time = self.spec.time_final - self.spec.time_initial
             self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
@@ -211,21 +213,15 @@ class BoundStateIntegroDifferentialEquationSimulation(cp.Simulation):
 
     def evolve_ARK4(self):
         times_curr = self.times
-        times_quarter = np.append(self.times[:self.time_index + 1], self.time + self.time_step / 4)
         times_half = np.append(self.times[:self.time_index + 1], self.time + self.time_step / 2)
-        times_three_quarter = np.append(self.times[:self.time_index + 1], self.time + 3 * self.time_step / 4)
         times_next = np.append(self.times[:self.time_index + 1], self.time + self.time_step)
 
         time_difference_curr = self.time - times_curr  # slice up to current time index
-        time_difference_quarter = (self.time + self.time_step / 4) - times_quarter
         time_difference_half = (self.time + self.time_step / 2) - times_half
-        time_difference_three_quarter = (self.time + 3 * self.time_step / 4) - times_three_quarter
         time_difference_next = self.time + self.time_step - times_next
 
         kernel_curr = self.spec.kernel(time_difference_curr, **self.spec.kernel_kwargs)
-        kernel_quarter = self.spec.kernel(time_difference_quarter, **self.spec.kernel_kwargs)
         kernel_half = self.spec.kernel(time_difference_half, **self.spec.kernel_kwargs)
-        kernel_three_quarter = self.spec.kernel(time_difference_three_quarter, **self.spec.kernel_kwargs)
         kernel_next = self.spec.kernel(time_difference_next, **self.spec.kernel_kwargs)
 
         f_curr = self.spec.f(self.time)
@@ -260,6 +256,18 @@ class BoundStateIntegroDifferentialEquationSimulation(cp.Simulation):
 
         # CALCULATE DOUBLE HALF STEP ESTIMATE
 
+        times_quarter = np.append(self.times[:self.time_index + 1], self.time + self.time_step / 4)
+        times_three_quarter = np.append(np.append(self.times[:self.time_index + 1], self.time + self.time_step / 2), self.time + 3 * self.time_step / 4)
+        times_next = np.append(np.append(self.times[:self.time_index + 1], self.time + self.time_step / 2), self.time + self.time_step)
+
+        time_difference_quarter = (self.time + self.time_step / 4) - times_quarter
+        time_difference_three_quarter = (self.time + 3 * self.time_step / 4) - times_three_quarter
+        time_difference_next = self.time + self.time_step - times_next
+
+        kernel_quarter = self.spec.kernel(time_difference_quarter, **self.spec.kernel_kwargs)
+        kernel_three_quarter = self.spec.kernel(time_difference_three_quarter, **self.spec.kernel_kwargs)
+        kernel_next = self.spec.kernel(time_difference_next, **self.spec.kernel_kwargs)
+
         # k1 is identical from above
         # integrand_for_k1 = f_times_y_curr * kernel_curr
         # integral_for_k1 = self.integrate(y = integrand_for_k1, x = times_curr)
@@ -268,29 +276,25 @@ class BoundStateIntegroDifferentialEquationSimulation(cp.Simulation):
 
         integrand_for_k2 = np.append(f_times_y_curr, f_quarter * y_midpoint_for_k2) * kernel_quarter
         integral_for_k2 = self.integrate(y = integrand_for_k2, x = times_quarter)
-        k2 = self.spec.prefactor * f_half * integral_for_k2  # self.time_step / 2 because it's half of an interval that we're integrating over
+        k2 = self.spec.prefactor * f_quarter * integral_for_k2  # self.time_step / 2 because it's half of an interval that we're integrating over
         y_midpoint_for_k3 = self.y[self.time_index] + (self.time_step * k2 / 4)  # estimate midpoint based on estimate of slope at midpoint
 
         integrand_for_k3 = np.append(f_times_y_curr, f_quarter * y_midpoint_for_k3) * kernel_quarter
         integral_for_k3 = self.integrate(y = integrand_for_k3, x = times_quarter)
-        k3 = self.spec.prefactor * f_half * integral_for_k3  # self.time_step / 2 because it's half of an interval that we're integrating over
+        k3 = self.spec.prefactor * f_quarter * integral_for_k3  # self.time_step / 2 because it's half of an interval that we're integrating over
         y_end_for_k4 = self.y[self.time_index] + (self.time_step * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
 
         integrand_for_k4 = np.append(f_times_y_curr, f_half * y_end_for_k4) * kernel_half
         integral_for_k4 = self.integrate(y = integrand_for_k4, x = times_half)
         k4 = self.spec.prefactor * f_half * integral_for_k4
 
-        y_half = self.y[self.time_index] + (self.time_step * (k1 + (2 * k2) + (2 * k3) + k4) / 6)
-        f_times_y_half = np.append(f_times_y_curr * kernel_curr, f_half * y_half)
+        y_half = self.y[self.time_index] + ((self.time_step / 2) * (k1 + (2 * k2) + (2 * k3) + k4) / 6)
+        f_times_y_half = np.append(f_times_y_curr, f_half * y_half)
 
         integrand_for_k1 = f_times_y_half * kernel_half
         integral_for_k1 = self.integrate(y = integrand_for_k1, x = times_half)
         k1 = self.spec.prefactor * f_half * integral_for_k1
         y_midpoint_for_k2 = y_half + (self.time_step * k1 / 4)  # self.time_step / 4 here because we moved forward to midpoint of midpoint
-
-        # THE PROBLEM IS THAT KERNEL_THREE_QUARTERS DOESNT INCLUDE THE HALFWAY POINT
-        # OH MY GOD THIS IS AWFUL
-        # MAYBE I SHOULD JUST DO THE BETTER METHOD THEY DESCRIBE
 
         integrand_for_k2 = np.append(f_times_y_half, f_three_quarter * y_midpoint_for_k2) * kernel_three_quarter
         integral_for_k2 = self.integrate(y = integrand_for_k2, x = times_three_quarter)
@@ -306,23 +310,38 @@ class BoundStateIntegroDifferentialEquationSimulation(cp.Simulation):
         integral_for_k4 = self.integrate(y = integrand_for_k4, x = times_next)
         k4 = self.spec.prefactor * f_next * integral_for_k4
 
-        double_half_step_estimate = self.y[self.time_index] + (self.time_step * (k1 + (2 * k2) + (2 * k3) + k4) / 6)
+        deriv_estimate = (k1 + (2 * k2) + (2 * k3) + k4) / 6
+        double_half_step_estimate = y_half + ((self.time_step / 2) * deriv_estimate)
 
         ##########################
 
         delta_1 = double_half_step_estimate - full_step_estimate
 
-        delta_0 = 1e-3 * self.time_step * double_half_step_estimate
+        # print('d1', np.abs(delta_1))
+        # print('d0', np.abs(self.time_step * deriv_estimate), np.abs(self.y[self.time_index]))
 
-        s = 0.95
+        delta_0 = 1e-3 * self.time_step * deriv_estimate
+        # delta_0 = 1e-3 * self.y[self.time_index]
 
-        if delta_0 >= delta_1:  # step was ok
-            self.time_step = s * self.time_step * np.abs(delta_0 / delta_1) ** (1 / 5)
-            logger.debug('Accepted RK4 step. Increased time step to {}'.format(self.time_step))
-            np.append(self.y, double_half_step_estimate + (delta_1 / 15))
+        s = 0.98
+
+        if np.abs(delta_0 / delta_1) >= 1:  # step was ok
+            self.times = np.append(self.times, self.time + self.time_step)
+            self.time_steps_list = np.append(self.time_steps_list, self.time_step)
+            self.y = np.append(self.y, double_half_step_estimate + (delta_1 / 15))
+
+            old_step = self.time_step
+            if delta_1 != 0:
+                self.time_step = s * self.time_step * (np.abs(delta_0 / delta_1) ** (1 / 5))
+
+            self.time_step = min(1 * asec, self.time_step)
+            self.minimum_time_step = min(self.time_step, self.minimum_time_step)
+
+            logger.debug('Accepted RK4 step to {} as. Increased time step to {} as from {} as'.format(uround(self.times[-1], 'asec', 5), uround(self.time_step, 'asec', 5), uround(old_step, 'asec', 5)))
         else:  # reject step
-            self.time_step = s * self.time_step * np.abs(delta_0 / delta_1) ** (1 / 4)
-            logger.debug('Rejected RK4 step. Decreased time step to {}'.format(self.time_step))
+            old_step = self.time_step
+            self.time_step = s * self.time_step * (np.abs(delta_0 / delta_1) ** (1 / 4))
+            logger.debug('Rejected RK4 step. Decreased time step to {} as from {} as'.format(uround(self.time_step, 'asec', 6), uround(old_step, 'asec', 6)))
             self.evolve_ARK4()
 
     def run_simulation(self):
@@ -350,7 +369,7 @@ class BoundStateIntegroDifferentialEquationSimulation(cp.Simulation):
         ax_y = plt.subplot(grid_spec[0])
         ax_f = plt.subplot(grid_spec[1], sharex = ax_y)
 
-        ax_f.plot(self.times / x_scale_unit, self.f_eval / f_scale_unit, color = core.ELECTRIC_FIELD_COLOR, linewidth = 2)
+        ax_f.plot(self.times / x_scale_unit, self.spec.f(self.times, **self.spec.f_kwargs) / f_scale_unit, color = core.ELECTRIC_FIELD_COLOR, linewidth = 2)
         if abs_squared:
             y = np.abs(self.y) ** 2
         else:
