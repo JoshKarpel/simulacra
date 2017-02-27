@@ -30,14 +30,15 @@ if __name__ == '__main__':
         dt = 1
         t_bound = 1000
 
-        sim = ide.BoundStateIntegroDifferentialEquationSpecification('ark',
-                                                                     time_initial = -t_bound * asec, time_final = t_bound * asec, time_step = dt * asec,
-                                                                     prefactor = prefactor,
-                                                                     f = electric_field.get_electric_field_amplitude,
-                                                                     kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha),
-                                                                     evolution_method = 'ARK4',
-                                                                     integration_method = 'simpson',
-                                                                     ).to_simulation()
+        sim = ide.AdaptiveIntegroDifferentialEquationSpecification('ark',
+                                                                   time_initial = -t_bound * asec, time_final = t_bound * asec, time_step = dt * asec,
+                                                                   prefactor = prefactor,
+                                                                   f = electric_field.get_electric_field_amplitude,
+                                                                   kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha),
+                                                                   evolution_method = 'ARK4',
+                                                                   integration_method = 'simpson',
+                                                                   maximum_time_step = 1 * asec,
+                                                                   ).to_simulation()
 
         logger.debug(sim.info())
         sim.run_simulation()
@@ -48,14 +49,14 @@ if __name__ == '__main__':
                           f_axis_label = r'${}(t)$'.format(str_efield),
                           f_scale = 'AEF')
 
-        print(sim.times)
-        print(sim.time_steps_list)
-
         cp.utils.xy_plot('time_step',
                          sim.times,
-                         sim.time_steps_list,
+                         sim.time_steps_by_times,
                          x_axis_label = r'Time $t$', x_scale = 'asec',
                          y_axis_label = r'Time Step $\Delta t$', y_scale = 'asec',
                          y_log_axis = True,
                          target_dir = OUT_DIR,
                          )
+
+        print(sim.time_index)
+        print(sim.computed_time_steps)

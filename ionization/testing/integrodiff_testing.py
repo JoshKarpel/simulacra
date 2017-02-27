@@ -28,12 +28,12 @@ if __name__ == '__main__':
         dt = 20
         t_bound = 1000
 
-        spec = ide.BoundStateIntegroDifferentialEquationSpecification('ide_test__{}__dt={}as'.format(electric_field.__class__.__name__, dt),
-                                                                      time_initial = -t_bound * asec, time_final = t_bound * asec, time_step = dt * asec,
-                                                                      prefactor = prefactor,
-                                                                      f = electric_field.get_electric_field_amplitude,
-                                                                      kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha)
-                                                                      )
+        spec = ide.IntegroDifferentialEquationSpecification('ide_test__{}__dt={}as'.format(electric_field.__class__.__name__, dt),
+                                                            time_initial = -t_bound * asec, time_final = t_bound * asec, time_step = dt * asec,
+                                                            prefactor = prefactor,
+                                                            f = electric_field.get_electric_field_amplitude,
+                                                            kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha)
+                                                            )
 
         sim = spec.to_simulation()
 

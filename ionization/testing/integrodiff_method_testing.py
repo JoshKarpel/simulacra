@@ -58,14 +58,14 @@ if __name__ == '__main__':
         # int_methods = ['trapezoid', 'simpson']
         evol_methods = ['FE', 'BE', 'RK4', 'TRAP']
 
-        ark4 = ide.BoundStateIntegroDifferentialEquationSpecification('int={}__evol={}'.format('simpson', 'ARK4'),
-                                                                      time_initial = -t_bound * asec, time_final = t_bound * asec, time_step = 1 * asec,
-                                                                      prefactor = prefactor,
-                                                                      f = electric_field.get_electric_field_amplitude,
-                                                                      kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha),
-                                                                      evolution_method = 'ARK4',
-                                                                      integration_method = 'simpson',
-                                                                      ).to_simulation()
+        ark4 = ide.AdaptiveIntegroDifferentialEquationSpecification('int={}__evol={}'.format('simpson', 'ARK4'),
+                                                                    time_initial = -t_bound * asec, time_final = t_bound * asec, time_step = 1 * asec,
+                                                                    prefactor = prefactor,
+                                                                    f = electric_field.get_electric_field_amplitude,
+                                                                    kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha),
+                                                                    evolution_method = 'ARK4',
+                                                                    integration_method = 'simpson',
+                                                                    ).to_simulation()
         ark4.run_simulation()
 
         cp.utils.xy_plot('time_step',
@@ -82,14 +82,14 @@ if __name__ == '__main__':
 
             for evol_method in evol_methods:
                 for int_method in int_methods:
-                    specs.append(ide.BoundStateIntegroDifferentialEquationSpecification('int={}__evol={}'.format(int_method, evol_method),
-                                                                                        time_initial = -t_bound * asec, time_final = t_bound * asec, time_step = dt * asec,
-                                                                                        prefactor = prefactor,
-                                                                                        f = electric_field.get_electric_field_amplitude,
-                                                                                        kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha),
-                                                                                        evolution_method = evol_method,
-                                                                                        integration_method = int_method,
-                                                                                        ))
+                    specs.append(ide.IntegroDifferentialEquationSpecification('int={}__evol={}'.format(int_method, evol_method),
+                                                                              time_initial = -t_bound * asec, time_final = t_bound * asec, time_step = dt * asec,
+                                                                              prefactor = prefactor,
+                                                                              f = electric_field.get_electric_field_amplitude,
+                                                                              kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha),
+                                                                              evolution_method = evol_method,
+                                                                              integration_method = int_method,
+                                                                              ))
 
             results = cp.utils.multi_map(run, specs, processes = 5)
 

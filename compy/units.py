@@ -8,6 +8,8 @@ unit_names_to_tex_strings = {}
 
 def uround(value, units = 1, digits = 3):
     """Round value to the number of digits, represented in the given units (by name or value)."""
+    if value is None:
+        return None
     if type(units) == str:
         units = unit_names_to_values[units]
 
