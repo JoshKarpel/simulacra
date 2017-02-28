@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
         # flu = .5
 
-        t_bound_per_pw = 30
+        t_bound_per_pw = 10
         eps = 1e-3
         # eps_on = 'y'
         eps_on = 'dydt'
@@ -65,20 +65,23 @@ if __name__ == '__main__':
         method_str = 'min_dt_per_pw={}__TperPW={}__eps={}_on_{}'.format(min_dt_per_pw, t_bound_per_pw, eps, eps_on)
 
         for flu in [.1, .5, 1, 5, 10, 20]:
-            physics_str = 'lambda={}_flu={}__pw={}asto{}as__{}pws__phases={}'.format(l,
-                                                                                     round(flu, 3),
-                                                                                     round(np.min(pulse_widths), 1),
-                                                                                     round(np.max(pulse_widths), 1),
-                                                                                     len(pulse_widths),
-                                                                                     len(phases))
+            physics_str = 'gaussian__lambda={}_flu={}__pw={}asto{}as__{}pws__phases={}'.format(
+                l,
+                round(flu, 3),
+                round(np.min(pulse_widths), 1),
+                round(np.max(pulse_widths), 1),
+                len(pulse_widths),
+                len(phases))
 
             # OUT_DIR = os.path.join(OUT_DIR, method_str, physics_str)
 
             specs = []
             for pw in pulse_widths:
                 for phase in phases:
-                    electric_field = ion.SincPulse(pulse_width = pw * asec, fluence = flu * Jcm2, phase = phase,
-                                                   window = ion.SymmetricExponentialTimeWindow(window_time = (t_bound_per_pw - 1) * pw * asec, window_width = .5 * pw * asec))
+                    sinc = ion.SincPulse(pulse_width = pw * asec, fluence = flu * Jcm2, phase = phase)
+
+                    electric_field = ion.GaussianPulse(pulse_width = pw * asec, fluence = flu * Jcm2, phase = phase, omega_carrier = sinc.omega_carrier,
+                                                       window = ion.SymmetricExponentialTimeWindow(window_time = (t_bound_per_pw - 1) * pw * asec, window_width = .5 * pw * asec))
 
                     specs.append(ide.AdaptiveIntegroDifferentialEquationSpecification('flu={}jcm2_pw={}as_phi={}'.format(round(flu, 3), round(pw, 3), round(phase, 3)),
                                                                                       time_initial = -t_bound_per_pw * pw * asec, time_final = t_bound_per_pw * pw * asec,

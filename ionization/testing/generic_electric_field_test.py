@@ -15,17 +15,17 @@ if __name__ == '__main__':
         pw = 200
         flu = 1
 
-        bound = 10
+        bound = 30
 
         times = np.linspace(-pw * bound * asec, pw * bound * asec, 1e4)
         dt = np.abs(times[1] - times[0])
         sinc = ion.SincPulse(pw * asec, fluence = flu * Jcm2, phase = 'cos')
 
-        print(sinc.amplitude_per_omega)
-        print(sinc.amplitude_per_omega ** 2)
+        print(sinc.amplitude_omega)
+        print(sinc.amplitude_omega ** 2)
 
-        print(2 * sinc.omega_max * epsilon_0 * c * sinc.amplitude_per_omega ** 2 / Jcm2)
-        print(2 * sinc.frequency_max * epsilon_0 * c * (np.sqrt(twopi) * sinc.amplitude_per_omega) ** 2 / Jcm2)
+        print(2 * sinc.omega_max * epsilon_0 * c * sinc.amplitude_omega ** 2 / Jcm2)
+        print(2 * sinc.frequency_max * epsilon_0 * c * (np.sqrt(twopi) * sinc.amplitude_omega) ** 2 / Jcm2)
         print(2 * sinc.frequency_max * epsilon_0 * c * (sinc.amplitude_per_frequency) ** 2 / Jcm2)
 
         logger.info('Sinc cutoff frequency: {} THz'.format(uround(sinc.frequency_max, THz)))

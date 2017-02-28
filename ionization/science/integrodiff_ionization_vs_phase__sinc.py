@@ -65,12 +65,13 @@ if __name__ == '__main__':
 
         # flu = 5
         for flu in [.1, .5, 1, 5, 10, 20]:
-            physics_str = 'lambda={}br_flu={}__pw={}asto{}as__{}pws'.format(l,
-                                                                            round(flu, 3),
-                                                                            round(np.min(pulse_widths), 1),
-                                                                            round(np.max(pulse_widths), 1),
-                                                                            len(pulse_widths),
-                                                                            )
+            physics_str = 'sinc__{}__lambda={}br_flu={}__pw={}asto{}as__{}pws'.format(
+                l,
+                round(flu, 3),
+                round(np.min(pulse_widths), 1),
+                round(np.max(pulse_widths), 1),
+                len(pulse_widths),
+            )
 
             specs = []
 
