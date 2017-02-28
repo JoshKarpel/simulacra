@@ -1894,7 +1894,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
         try:
             self.status = 'running'
-            logger.debug("{} {} ({}) status set to 'running'".format(self.__class__.__name__, self.name, self.file_name))
 
             for animator in self.animators:
                 animator.initialize(self)
@@ -1923,11 +1922,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
                         self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
                         logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
 
-            self.end_time = dt.datetime.now()
-            self.elapsed_time = self.end_time - self.start_time
-
             self.status = 'finished'
-            logger.debug("{} {} ({}) status set to 'finished'".format(self.__class__.__name__, self.name, self.file_name))
+
             logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
         except Exception as e:
             raise e
