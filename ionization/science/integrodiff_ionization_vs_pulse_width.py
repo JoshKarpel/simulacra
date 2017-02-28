@@ -36,9 +36,11 @@ def run(spec):
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO) as logger:
+        l = 1
+
         q = electron_charge
         m = electron_mass_reduced
-        L = bohr_radius
+        L = l * bohr_radius
 
         tau_alpha = 4 * m * (L ** 2) / hbar
         prefactor = -np.sqrt(pi) * (L ** 2) * ((q / hbar) ** 2)
@@ -49,74 +51,76 @@ if __name__ == '__main__':
         # phases = np.array([0, 1, 2, 3]) * pi / 4
         phases = np.array([0, 1, 2, 3, 4]) * pi / 8
 
-        flu = 1
+        # flu = .5
 
         t_bound_per_pw = 30
-        eps = 1e-6
+        eps = 1e-3
         # eps_on = 'y'
         eps_on = 'dydt'
 
         # max_dt = 10
         # method_str = 'max_dt={}as__TperPW={}__eps={}_on_{}'.format(max_dt, t_bound_per_pw, eps, eps_on)
 
-        min_dt_per_pw = 10
+        min_dt_per_pw = 20
         method_str = 'min_dt_per_pw={}__TperPW={}__eps={}_on_{}'.format(min_dt_per_pw, t_bound_per_pw, eps, eps_on)
 
-        physics_str = 'flu={}__pw={}asto{}as__{}pws__phases={}'.format(round(flu, 3),
-                                                                       round(np.min(pulse_widths), 1),
-                                                                       round(np.max(pulse_widths), 1),
-                                                                       len(pulse_widths),
-                                                                       len(phases))
+        for flu in [.1, .5, 1, 5, 10, 20]:
+            physics_str = 'lambda={}_flu={}__pw={}asto{}as__{}pws__phases={}'.format(l,
+                                                                                     round(flu, 3),
+                                                                                     round(np.min(pulse_widths), 1),
+                                                                                     round(np.max(pulse_widths), 1),
+                                                                                     len(pulse_widths),
+                                                                                     len(phases))
 
-        # OUT_DIR = os.path.join(OUT_DIR, method_str, physics_str)
+            # OUT_DIR = os.path.join(OUT_DIR, method_str, physics_str)
 
-        specs = []
-        for pw in pulse_widths:
-            for phase in phases:
-                electric_field = ion.SincPulse(pulse_width = pw * asec, fluence = flu * Jcm2, phase = phase,
-                                               window = ion.SymmetricExponentialTimeWindow(window_time = (t_bound_per_pw - 1) * pw * asec, window_width = .5 * pw * asec))
+            specs = []
+            for pw in pulse_widths:
+                for phase in phases:
+                    electric_field = ion.SincPulse(pulse_width = pw * asec, fluence = flu * Jcm2, phase = phase,
+                                                   window = ion.SymmetricExponentialTimeWindow(window_time = (t_bound_per_pw - 1) * pw * asec, window_width = .5 * pw * asec))
 
-                specs.append(ide.AdaptiveIntegroDifferentialEquationSpecification('flu={}jcm2_pw={}as_phi={}'.format(round(flu, 3), round(pw, 3), round(phase, 3)),
-                                                                                  time_initial = -t_bound_per_pw * pw * asec, time_final = t_bound_per_pw * pw * asec,
-                                                                                  time_step = .01 * asec,
-                                                                                  # maximum_time_step = max_dt * asec,
-                                                                                  maximum_time_step = (pw / min_dt_per_pw) * asec,
-                                                                                  prefactor = prefactor,
-                                                                                  f = electric_field.get_electric_field_amplitude,
-                                                                                  kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha),
-                                                                                  pulse_width = pw * asec,
-                                                                                  phase = phase,
-                                                                                  out_dir = OUT_DIR,
-                                                                                  ))
+                    specs.append(ide.AdaptiveIntegroDifferentialEquationSpecification('flu={}jcm2_pw={}as_phi={}'.format(round(flu, 3), round(pw, 3), round(phase, 3)),
+                                                                                      time_initial = -t_bound_per_pw * pw * asec, time_final = t_bound_per_pw * pw * asec,
+                                                                                      time_step = .01 * asec,
+                                                                                      # maximum_time_step = max_dt * asec,
+                                                                                      maximum_time_step = (pw / min_dt_per_pw) * asec,
+                                                                                      prefactor = prefactor,
+                                                                                      f = electric_field.get_electric_field_amplitude,
+                                                                                      kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha),
+                                                                                      pulse_width = pw * asec,
+                                                                                      phase = phase,
+                                                                                      out_dir = OUT_DIR,
+                                                                                      ))
 
-        results = cp.utils.multi_map(run, specs, processes = 3)
+            results = cp.utils.multi_map(run, specs, processes = 3)
 
-        a_alpha_final = {phase: dict() for phase in phases}
-        for r in results:
-            a_alpha_final[r.spec.phase][r.spec.pulse_width] = r.y[-1]
+            a_alpha_final = {phase: dict() for phase in phases}
+            for r in results:
+                a_alpha_final[r.spec.phase][r.spec.pulse_width] = r.y[-1]
 
-        phase_labels = list(r'$\varphi = {}\pi$'.format(round(phase / pi, 3)) for phase in sorted(a_alpha_final))
-        y = [cp.utils.dict_to_arrays(d) for phase, d in sorted(a_alpha_final.items())]
-        x = y[0][0]
-        y = [np.abs(x[1]) ** 2 for x in y]
+            phase_labels = list(r'$\varphi = {}\pi$'.format(round(phase / pi, 3)) for phase in sorted(a_alpha_final))
+            y = [cp.utils.dict_to_arrays(d) for phase, d in sorted(a_alpha_final.items())]
+            x = y[0][0]
+            y = [np.abs(x[1]) ** 2 for x in y]
 
-        ivpw_kwargs = dict(
-            x_label = r'Pulse Width $\tau$', x_scale = 'asec',
-            y_label = r'$   \left|    a_{\alpha}  ( t_{ \mathrm{final} } )    \right|^2  $',
-            line_labels = phase_labels,
-            vlines = [tau_alpha],
-            target_dir = OUT_DIR,
-        )
+            ivpw_kwargs = dict(
+                x_label = r'Pulse Width $\tau$', x_scale = 'asec',
+                y_label = r'$   \left|    a_{\alpha}  ( t_{ \mathrm{final} } )    \right|^2  $',
+                line_labels = phase_labels,
+                vlines = [tau_alpha],
+                target_dir = OUT_DIR,
+            )
 
-        cp.utils.xy_plot(method_str + '__' + physics_str + '__ivpw',
-                         pulse_widths * asec, *y,
-                         **ivpw_kwargs,
-                         y_lower_limit = 0, y_upper_limit = 1,
-                         )
+            cp.utils.xy_plot(method_str + '__' + physics_str + '__ivpw',
+                             pulse_widths * asec, *y,
+                             **ivpw_kwargs,
+                             y_lower_limit = 0, y_upper_limit = 1,
+                             )
 
-        cp.utils.xy_plot(method_str + '__' + physics_str + '__ivpw_log',
-                         pulse_widths * asec, *y,
-                         y_log_axis = True,
-                         **ivpw_kwargs,
-                         y_upper_limit = 1,
-                         )
+            cp.utils.xy_plot(method_str + '__' + physics_str + '__ivpw_log',
+                             pulse_widths * asec, *y,
+                             y_log_axis = True,
+                             **ivpw_kwargs,
+                             y_upper_limit = 1,
+                             )
