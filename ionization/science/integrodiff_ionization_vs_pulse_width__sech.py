@@ -45,7 +45,15 @@ if __name__ == '__main__':
         tau_alpha = 4 * m * (L ** 2) / hbar
         prefactor = -np.sqrt(pi) * (L ** 2) * ((q / hbar) ** 2)
 
-        t_bound_per_pw = 30
+        pulse_widths = np.linspace(50, 800, 200)
+
+        # phases = [0, pi / 2]
+        # phases = np.array([0, 1, 2, 3]) * pi / 4
+        phases = np.array([0, 1, 2, 3, 4]) * pi / 8
+
+        # flu = .5
+
+        t_bound_per_pw = 10
         eps = 1e-3
         # eps_on = 'y'
         eps_on = 'dydt'
@@ -56,33 +64,28 @@ if __name__ == '__main__':
         min_dt_per_pw = 20
         method_str = 'min_dt_per_pw={}__TperPW={}__eps={}_on_{}'.format(min_dt_per_pw, t_bound_per_pw, eps, eps_on)
 
-        # pulse_widths = np.array()
-        # pulse_widths = np.array([140, 142.5, 145, 147.5, 150], dtype = np.float64)
-        # pulse_widths = np.array([50, 100, 150, 200, 250, 300, tau_alpha / asec, 1.5 * tau_alpha / asec], dtype = np.float64)
-        pulse_widths = np.array([50, 100, 150, 200, 250, 300, 400, 600, 800], dtype = np.float64)
-
-        phases = np.linspace(0, pi, 100)
-
-        # flu = 5
         for flu in [.1, .5, 1, 5, 10, 20]:
-            physics_str = 'sinc__lambda={}br_flu={}__pw={}asto{}as__{}pws'.format(
+            physics_str = 'sech__lambda={}_flu={}__pw={}asto{}as__{}pws__phases={}'.format(
                 l,
                 round(flu, 3),
                 round(np.min(pulse_widths), 1),
                 round(np.max(pulse_widths), 1),
                 len(pulse_widths),
-            )
+                len(phases))
+
+            # OUT_DIR = os.path.join(OUT_DIR, method_str, physics_str)
 
             specs = []
-
             for pw in pulse_widths:
                 for phase in phases:
-                    electric_field = ion.SincPulse(pulse_width = pw * asec, fluence = flu * Jcm2, phase = phase,
+                    sinc = ion.SincPulse(pulse_width = pw * asec, fluence = flu * Jcm2, phase = phase)
+
+                    electric_field = ion.SechPulse(pulse_width = pw * asec, fluence = flu * Jcm2, phase = phase, omega_carrier = sinc.omega_carrier,
                                                    window = ion.SymmetricExponentialTimeWindow(window_time = (t_bound_per_pw - 1) * pw * asec, window_width = .5 * pw * asec))
 
                     specs.append(ide.AdaptiveIntegroDifferentialEquationSpecification('flu={}jcm2_pw={}as_phi={}'.format(round(flu, 3), round(pw, 3), round(phase, 3)),
                                                                                       time_initial = -t_bound_per_pw * pw * asec, time_final = t_bound_per_pw * pw * asec,
-                                                                                      time_step = .1 * asec,
+                                                                                      time_step = .01 * asec,
                                                                                       # maximum_time_step = max_dt * asec,
                                                                                       maximum_time_step = (pw / min_dt_per_pw) * asec,
                                                                                       prefactor = prefactor,
@@ -95,55 +98,32 @@ if __name__ == '__main__':
 
             results = cp.utils.multi_map(run, specs, processes = 3)
 
-            a_alpha_final = {pw: dict() for pw in pulse_widths * asec}
+            a_alpha_final = {phase: dict() for phase in phases}
             for r in results:
-                a_alpha_final[r.spec.pulse_width][r.spec.phase] = r.y[-1]
+                a_alpha_final[r.spec.phase][r.spec.pulse_width] = r.y[-1]
 
-            pw_labels = list(r'$\tau$ = {} $\mathrm{{as}}$'.format(uround(pw, asec, 3)) for pw in sorted(a_alpha_final))
-            y = [cp.utils.dict_to_arrays(d) for pw, d in sorted(a_alpha_final.items())]
+            phase_labels = list(r'$\varphi = {}\pi$'.format(round(phase / pi, 3)) for phase in sorted(a_alpha_final))
+            y = [cp.utils.dict_to_arrays(d) for phase, d in sorted(a_alpha_final.items())]
             x = y[0][0]
             y = [np.abs(x[1]) ** 2 for x in y]
 
-            IvPhase_kwargs = dict(
-                x_label = r'Carrier-Envelope Phase $\varphi / \pi$',
-                x_scale = pi,
+            ivpw_kwargs = dict(
+                x_label = r'Pulse Width $\tau$', x_scale = 'asec',
                 y_label = r'$   \left|    a_{\alpha}  ( t_{ \mathrm{final} } )    \right|^2  $',
-                line_labels = pw_labels,
+                line_labels = phase_labels,
+                vlines = [tau_alpha],
                 target_dir = OUT_DIR,
             )
 
-            cp.utils.xy_plot(method_str + '__' + physics_str + '__IvPhase',
-                             phases, *y,
-                             **IvPhase_kwargs,
+            cp.utils.xy_plot(method_str + '__' + physics_str + '__ivpw',
+                             pulse_widths * asec, *y,
+                             **ivpw_kwargs,
                              y_lower_limit = 0, y_upper_limit = 1,
                              )
 
-            cp.utils.xy_plot(method_str + '__' + physics_str + '__IvPhase_log',
-                             phases, *y,
+            cp.utils.xy_plot(method_str + '__' + physics_str + '__ivpw_log',
+                             pulse_widths * asec, *y,
                              y_log_axis = True,
-                             **IvPhase_kwargs,
+                             **ivpw_kwargs,
                              y_upper_limit = 1,
-                             )
-
-            IvPhaseRel_kwargs = dict(
-                x_label = r'Carrier-Envelope Phase $\varphi / \pi$',
-                x_scale = pi,
-                y_label = r'$   \left|    a^{\varphi}_{\alpha}  ( t_{ \mathrm{final} } )    \right|^2 /  \left|    a^{0}_{\alpha}  ( t_{ \mathrm{final} } )    \right|^2  $',
-                line_labels = pw_labels,
-                target_dir = OUT_DIR,
-            )
-
-            y_rel = [yy / yy[0] for yy in y]
-
-            cp.utils.xy_plot(method_str + '__' + physics_str + '__IvPhase_rel',
-                             phases, *y_rel,
-                             **IvPhaseRel_kwargs,
-                             # y_lower_limit = 0, y_upper_limit = 1,
-                             )
-
-            cp.utils.xy_plot(method_str + '__' + physics_str + '__IvPhase_rel_log',
-                             phases, *y_rel,
-                             y_log_axis = True,
-                             **IvPhaseRel_kwargs,
-                             # y_upper_limit = 1,
                              )

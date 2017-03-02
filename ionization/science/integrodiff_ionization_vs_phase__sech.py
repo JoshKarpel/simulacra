@@ -45,7 +45,7 @@ if __name__ == '__main__':
         tau_alpha = 4 * m * (L ** 2) / hbar
         prefactor = -np.sqrt(pi) * (L ** 2) * ((q / hbar) ** 2)
 
-        t_bound_per_pw = 30
+        t_bound_per_pw = 10
         eps = 1e-3
         # eps_on = 'y'
         eps_on = 'dydt'
@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
         # flu = 5
         for flu in [.1, .5, 1, 5, 10, 20]:
-            physics_str = 'sinc__lambda={}br_flu={}__pw={}asto{}as__{}pws'.format(
+            physics_str = 'sech__lambda={}br_flu={}__pw={}asto{}as__{}pws'.format(
                 l,
                 round(flu, 3),
                 round(np.min(pulse_widths), 1),
@@ -77,7 +77,9 @@ if __name__ == '__main__':
 
             for pw in pulse_widths:
                 for phase in phases:
-                    electric_field = ion.SincPulse(pulse_width = pw * asec, fluence = flu * Jcm2, phase = phase,
+                    sinc = ion.SincPulse(pulse_width = pw * asec, fluence = flu * Jcm2, phase = phase)
+
+                    electric_field = ion.SechPulse(pulse_width = pw * asec, fluence = flu * Jcm2, phase = phase, omega_carrier = sinc.omega_carrier,
                                                    window = ion.SymmetricExponentialTimeWindow(window_time = (t_bound_per_pw - 1) * pw * asec, window_width = .5 * pw * asec))
 
                     specs.append(ide.AdaptiveIntegroDifferentialEquationSpecification('flu={}jcm2_pw={}as_phi={}'.format(round(flu, 3), round(pw, 3), round(phase, 3)),
