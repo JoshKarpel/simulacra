@@ -432,6 +432,14 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
         self.amplitude_omega = np.sqrt(self.fluence / (2 * epsilon_0 * c * self.delta_omega))
         self.amplitude_time = np.sqrt(self.fluence * self.delta_omega / (pi * epsilon_0 * c))
 
+    @classmethod
+    def from_omega_carrier(cls, pulse_width = 200 * asec, omega_carrier = twopi * 20000 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+                           **kwargs):
+        delta_omega = twopi / pulse_width
+        omega_min = omega_carrier - delta_omega / 2
+
+        return cls(pulse_width = pulse_width, omega_min = omega_min, fluence = fluence, phase = phase, pulse_center = pulse_center, **kwargs)
+
     # @classmethod
     # def from_amplitude_density(cls, pulse_width = 100 * asec, amplitude_density = 7.7432868731566454e-06, phase = 0, pulse_center = 0 * asec, **kwargs):
     #     omega_cutoff = twopi / pulse_width

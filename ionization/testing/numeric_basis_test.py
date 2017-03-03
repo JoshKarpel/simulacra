@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
         sims = [
             # ion.SphericalHarmonicSpecification('eig_1', store_data_every = 1, **spec_kwargs).to_simulation(),
-            ion.SphericalHarmonicSpecification('eig_5', store_data_every = 5, **spec_kwargs).to_simulation(),
+            # ion.SphericalHarmonicSpecification('eig_5', store_data_every = 5, **spec_kwargs).to_simulation(),
             ion.SphericalHarmonicSpecification('eig_10', store_data_every = 10, **spec_kwargs).to_simulation(),
         ]
 

@@ -18,7 +18,7 @@ if __name__ == '__main__':
     with log as logger:
         fluence = 1
 
-        bound = 30
+        bound = 20
 
         for pulse_width in (50, 100, 200, 500, 1000):
             times = np.linspace(-bound * pulse_width * asec, bound * pulse_width * asec, 1e4)
@@ -30,14 +30,31 @@ if __name__ == '__main__':
                 fluence = fluence * Jcm2,
             )
 
-            sinc_cos = ion.SincPulse(**efield_kwargs, phase = 0)
-            sinc_sin = ion.SincPulse(**efield_kwargs, phase = pi / 2)
+            omega_c = twopi * 20000 * THz
 
-            gaus_cos = ion.GaussianPulse(**efield_kwargs, phase = 0, omega_carrier = 5 * sinc_cos.omega_carrier)
-            gaus_sin = ion.GaussianPulse(**efield_kwargs, phase = pi / 2, omega_carrier = 5 * sinc_cos.omega_carrier)
+            # sinc_cos = ion.SincPulse(**efield_kwargs, phase = 0)
+            # sinc_sin = ion.SincPulse(**efield_kwargs, phase = pi / 2)
+            #
+            # gaus_cos = ion.GaussianPulse(**efield_kwargs, phase = 0, omega_carrier = 2 * sinc_cos.omega_carrier)
+            # gaus_sin = ion.GaussianPulse(**efield_kwargs, phase = pi / 2, omega_carrier = 2 * sinc_cos.omega_carrier)
+            #
+            # sech_cos = ion.SechPulse(**efield_kwargs, phase = 0, omega_carrier = 2 * sinc_cos.omega_carrier)
+            # sech_sin = ion.SechPulse(**efield_kwargs, phase = pi / 2, omega_carrier = 2 * sinc_cos.omega_carrier)
 
-            sech_cos = ion.SechPulse(**efield_kwargs, phase = 0, omega_carrier = 5 * sinc_cos.omega_carrier)
-            sech_sin = ion.SechPulse(**efield_kwargs, phase = pi / 2, omega_carrier = 5 * sinc_cos.omega_carrier)
+            sinc_cos = ion.SincPulse.from_omega_carrier(**efield_kwargs, phase = 0, omega_carrier = omega_c)
+            sinc_sin = ion.SincPulse.from_omega_carrier(**efield_kwargs, phase = pi / 2, omega_carrier = omega_c)
+
+            print('delta', sinc_cos.delta_omega / (twopi * THz))
+            print('min', sinc_cos.omega_min / (twopi * THz))
+            print('carrier', sinc_cos.omega_carrier / (twopi * THz))
+            print('max', sinc_cos.omega_max / (twopi * THz))
+            print()
+
+            gaus_cos = ion.GaussianPulse(**efield_kwargs, phase = 0, omega_carrier = omega_c)
+            gaus_sin = ion.GaussianPulse(**efield_kwargs, phase = pi / 2, omega_carrier = omega_c)
+
+            sech_cos = ion.SechPulse(**efield_kwargs, phase = 0, omega_carrier = omega_c)
+            sech_sin = ion.SechPulse(**efield_kwargs, phase = pi / 2, omega_carrier = omega_c)
 
             field_prefactor = electron_charge  # convert to momentum
 
@@ -57,12 +74,12 @@ if __name__ == '__main__':
                                             r'Sech $\varphi = \pi/2$',
                                             ),
                              line_kwargs = (
-                                 dict(color = 'C0', linestyle = '-'),
-                                 dict(color = 'C0', linestyle = '--'),
-                                 dict(color = 'C1', linestyle = '-'),
-                                 dict(color = 'C1', linestyle = '--'),
-                                 dict(color = 'C2', linestyle = '-'),
-                                 dict(color = 'C2', linestyle = '--'),
+                                 dict(color = 'C0', linestyle = '-', linewidth = 0.5),
+                                 dict(color = 'C0', linestyle = '--', linewidth = 0.5),
+                                 dict(color = 'C1', linestyle = '-', linewidth = 0.5),
+                                 dict(color = 'C1', linestyle = '--', linewidth = 0.5),
+                                 dict(color = 'C2', linestyle = '-', linewidth = 0.5),
+                                 dict(color = 'C2', linestyle = '--', linewidth = 0.5),
                              ),
                              x_scale = 'asec', y_scale = 'atomic_electric_field',
                              x_label = r'Time $t$', y_label = r'Electric Field $E(t)$',
@@ -84,12 +101,12 @@ if __name__ == '__main__':
                                             r'Sech $\varphi = \pi/2$',
                                             ),
                              line_kwargs = (
-                                 dict(color = 'C0', linestyle = '-'),
-                                 dict(color = 'C0', linestyle = '--'),
-                                 dict(color = 'C1', linestyle = '-'),
-                                 dict(color = 'C1', linestyle = '--'),
-                                 dict(color = 'C2', linestyle = '-'),
-                                 dict(color = 'C2', linestyle = '--'),
+                                 dict(color = 'C0', linestyle = '-', linewidth = 0.5),
+                                 dict(color = 'C0', linestyle = '--', linewidth = 0.5),
+                                 dict(color = 'C1', linestyle = '-', linewidth = 0.5),
+                                 dict(color = 'C1', linestyle = '--', linewidth = 0.5),
+                                 dict(color = 'C2', linestyle = '-', linewidth = 0.5),
+                                 dict(color = 'C2', linestyle = '--', linewidth = 0.5),
                              ),
                              x_scale = 'asec', y_scale = 'atomic_momentum',
                              x_label = r'Time $t$', y_label = r'$e \, \int_{-\infty}^{t} E(\tau) \, \mathrm{d}\tau$',

@@ -14,9 +14,9 @@ if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG):
         pw = 200
         flu = 1
-        phase = 0
+        phase = pi / 2
 
-        bound = 20
+        bound = 10
 
         prefix = 'pw={}as_flu={}Jcm2'.format(pw, flu)
 
@@ -26,12 +26,19 @@ if __name__ == '__main__':
             phase = phase,
         )
 
-        sinc = ion.SincPulse(**pulse_kwargs)
-        # gaus = ion.GaussianPulse(**pulse_kwargs, omega_carrier = twopi * 10000 * THz)
+        # omega_c = twopi * 50000 * THz
+
+        sinc = ion.SincPulse(**pulse_kwargs, omega_min = twopi * 1000 * THz)
+        # sinc = ion.SincPulse.from_omega_carrier(**pulse_kwargs, omega_carrier = omega_c)
+        # gaus = ion.GaussianPulse(**pulse_kwargs, omega_carrier = omega_c)
         gaus = ion.GaussianPulse(**pulse_kwargs, omega_carrier = sinc.omega_carrier)
         sech = ion.SechPulse(**pulse_kwargs, omega_carrier = sinc.omega_carrier)
+        # sech = ion.SechPulse(**pulse_kwargs, omega_carrier = omega_c)
 
-        print('carrier f (THz):', sinc.omega_carrier / (twopi * THz))
+        print('carrier f (THz):', )
+        print(sinc.omega_carrier / (twopi * THz))
+        print(gaus.omega_carrier / (twopi * THz))
+        print(sech.omega_carrier / (twopi * THz))
 
         times = np.linspace(-bound * pw, bound * pw, bound * pw * 50) * asec
 
@@ -47,7 +54,7 @@ if __name__ == '__main__':
             'y_scale': 'AEF',
             'target_dir': OUT_DIR}
 
-        cp.utils.xy_plot('pulse_comparison',
+        cp.utils.xy_plot(prefix + '__pulse_comparison',
                          times,
                          sinc.get_electric_field_amplitude(times),
                          gaus.get_electric_field_amplitude(times),
