@@ -331,7 +331,7 @@ def xy_plot(name,
             x_log_axis = False, y_log_axis = False,
             x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None,
             vlines = (), vline_kwargs = (), hlines = (), hline_kwargs = (),
-            x_extra_ticks = (), y_extra_ticks = (), x_extra_tick_labels = (), y_extra_tick_labels = (),
+            x_extra_ticks = None, y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
             title = None, x_label = None, y_label = None,
             font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10, font_size_legend = 12,
             ticks_on_top = True, ticks_on_right = True, legend_on_right = False,
@@ -469,15 +469,17 @@ def xy_plot(name,
 
     fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
-    ax.set_xticks(list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_scale))  # append the extra tick labels, scaled appropriately
-    x_tick_labels = list(ax.get_xticklabels())
-    x_tick_labels[-len(x_extra_ticks):] = x_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
-    ax.set_xticklabels(x_tick_labels)
+    if x_extra_ticks is not None and x_extra_tick_labels is not None:
+        ax.set_xticks(list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_scale))  # append the extra tick labels, scaled appropriately
+        x_tick_labels = list(ax.get_xticklabels())
+        x_tick_labels[-len(x_extra_ticks):] = x_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+        ax.set_xticklabels(x_tick_labels)
 
-    ax.set_yticks(list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_scale))  # append the extra tick labels, scaled appropriately
-    y_tick_labels = list(ax.get_yticklabels())
-    y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
-    ax.set_yticklabels(y_tick_labels)
+    if y_extra_ticks is not None and y_extra_tick_labels is not None:
+        ax.set_yticks(list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_scale))  # append the extra tick labels, scaled appropriately
+        y_tick_labels = list(ax.get_yticklabels())
+        y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+        ax.set_yticklabels(y_tick_labels)
 
     # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
     ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)

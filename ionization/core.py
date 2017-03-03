@@ -1428,6 +1428,8 @@ class SphericalHarmonicMesh(QuantumMesh):
 
                 analytic_to_numeric[analytic_state] = numeric_state
 
+        logger.debug('Generated numerical eigenbasis for l <= {}, energy <= {} eV. Found {} states.'.format(l_max, uround(energy_max, 'eV', 3), len(analytic_to_numeric)))
+
         return analytic_to_numeric
 
     # TODO: REFACTORRRRRRRRRR using tensor products
@@ -1934,11 +1936,13 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
     @property
     def bound_states(self):
-        return [s for s in self.spec.test_states if s.bound]
+        # return [s for s in self.spec.test_states if s.bound]
+        yield from [s for s in self.spec.test_states if s.bound]
 
     @property
     def free_states(self):
-        return [s for s in self.spec.test_states if not s.bound]
+        # return [s for s in self.spec.test_states if not s.bound]
+        yield from [s for s in self.spec.test_states if not s.bound]
 
     def group_free_states_by_continuous_attr(self, attr, divisions = 10, cutoff_value = None,
                                              label_format_str = r'\phi_{{    {} \; \mathrm{{to}} \; {} \, {}, \ell   }}', label_unit = None):
@@ -2017,25 +2021,27 @@ class ElectricFieldSimulation(cp.core.Simulation):
         labels = []
         colors = []
 
+        state_overlaps = self.state_overlaps_vs_time  # it's a property that would otherwise get evaluated every time we asked for it
+
         extra_bound_overlap = np.zeros(self.time_steps)
         if collapse_bound_state_angular_momentums:
             overlaps_by_n = {n: np.zeros(self.time_steps) for n in range(1, bound_state_max_n + 1)}  # prepare arrays to sum over angular momenta in, one for each n
             for state in sorted(self.bound_states):
                 if state.n <= bound_state_max_n:
-                    overlaps_by_n[state.n] += self.state_overlaps_vs_time[state]
+                    overlaps_by_n[state.n] += state_overlaps[state]
                 else:
-                    extra_bound_overlap += self.state_overlaps_vs_time[state]
+                    extra_bound_overlap += state_overlaps[state]
             overlaps += [overlap for n, overlap in sorted(overlaps_by_n.items())]
             labels += [r'$\left| \left\langle \psi| \psi_{{ {}, \ell }} \right\rangle \right|^2$'.format(n) for n in sorted(overlaps_by_n)]
             colors += [matplotlib.colors.to_rgba('C' + str(n - 1), alpha = 1) for n in sorted(overlaps_by_n)]
         else:
             for state in sorted(self.bound_states):
                 if state.n <= bound_state_max_n:
-                    overlaps.append(self.state_overlaps_vs_time[state])
+                    overlaps.append(state_overlaps[state])
                     labels.append(r'$\left| \left\langle \psi| \psi_{{ {}, {} }} \right\rangle \right|^2$'.format(state.n, state.l))
                     colors.append(matplotlib.colors.to_rgba('C' + str((state.n - 1) % 10), alpha = 1 - state.l / state.n))
                 else:
-                    extra_bound_overlap += self.state_overlaps_vs_time[state]
+                    extra_bound_overlap += state_overlaps[state]
 
         overlaps.append(extra_bound_overlap)
         labels.append(r'$\left| \left\langle \psi| \psi_{{n \geq {} }}  \right\rangle \right|^2$'.format(bound_state_max_n + 1))
@@ -2043,7 +2049,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         free_state_color_cycle = it.cycle(['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f'])
         for group, states in sorted(grouped_free_states.items()):
-            overlaps.append(np.sum(self.state_overlaps_vs_time[s] for s in states))
+            overlaps.append(np.sum(state_overlaps[s] for s in states))
             labels.append(r'$\left| \left\langle \psi| {}  \right\rangle \right|^2$'.format(group_labels[group]))
             colors.append(free_state_color_cycle.__next__())
 
@@ -2057,7 +2063,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if log:
             ax_overlaps.set_yscale('log')
-            min_overlap = np.min(self.state_overlaps_vs_time[self.spec.initial_state])
+            min_overlap = np.min(state_overlaps[self.spec.initial_state])
             ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
             ax_overlaps.grid(True, which = 'both', **GRID_KWARGS)
         else:
@@ -2105,6 +2111,72 @@ class ElectricFieldSimulation(cp.core.Simulation):
         cp.utils.save_current_figure(name = name, **kwargs)
 
         plt.close()
+
+    def plot_energy_spectrum(self,
+                             states = 'all',
+                             time_index = -1,
+                             energy_scale = 'eV',
+                             bins = 100,
+                             log = False,
+                             energy_lower_bound = None, energy_upper_bound = None,
+                             **kwargs):
+        if states == 'all':
+            state_list = self.spec.test_states
+        elif states == 'bound':
+            state_list = self.bound_states
+        elif states == 'free':
+            state_list = self.free_states
+        else:
+            raise ValueError("states must be one of 'all', 'bound', or 'free'")
+
+        state_overlaps = self.state_overlaps_vs_time
+        state_overlaps = {k: state_overlaps[k] for k in state_list}  # filter down to just states in state_list
+
+        overlap_by_energy = collections.defaultdict(float)
+        for state, overlap_vs_time in state_overlaps.items():
+            overlap_by_energy[state.energy] += overlap_vs_time[time_index]
+
+        energies, overlaps = cp.utils.dict_to_arrays(overlap_by_energy)
+
+        fig = cp.utils.get_figure('full')
+        ax = fig.add_subplot(111)
+
+        energy_scale, x_scale_str = unit_value_and_name_from_unit(energy_scale)
+
+        if energy_lower_bound is None:
+            energy_lower_bound = np.nanmin(energies)
+        if energy_upper_bound is None:
+            energy_upper_bound = np.nanmax(energies)
+
+        hist_n, hist_bins, hist_patches = ax.hist(x = energies / energy_scale, weights = overlaps,
+                                                  bins = bins,
+                                                  stacked = True,
+                                                  log = log,
+                                                  range = (energy_lower_bound / energy_scale, energy_upper_bound / energy_scale),
+                                                  )
+
+        # ax.set_xlim(energy_lower_bound / energy_scale, energy_upper_bound / energy_scale)
+        # ax.set_ylim(0, 1)
+        # ax.set_ylim(0, np.nanmax(hist_n) * 1.2)
+
+        postfix = '__{}_states__index={}'.format(states, time_index)
+        if log:
+            postfix += '__log'
+        prefix = self.file_name
+
+        name = prefix + '__energy_spectrum{}'.format(postfix)
+
+        cp.utils.save_current_figure(name = name, **kwargs)
+
+        plt.close()
+
+        # cp.utils.xy_plot(name,
+        #                  x, y,
+        #                  x_label = 'State Energy',
+        #                  y_label = 'State Overlap',
+        #                  x_scale = x_scale,
+        #                  **kwargs
+        #                  )
 
     def plot_angular_momentum_vs_time(self, use_name = False, log = False, renormalize = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
@@ -2248,4 +2320,3 @@ class ElectricFieldSimulation(cp.core.Simulation):
             sim.initialize_mesh()
 
         return sim
-
