@@ -1,5 +1,5 @@
 import datetime as dt
-import functools
+import functools as ft
 import logging
 import itertools as it
 import collections
@@ -1936,12 +1936,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
     @property
     def bound_states(self):
-        # return [s for s in self.spec.test_states if s.bound]
         yield from [s for s in self.spec.test_states if s.bound]
 
     @property
     def free_states(self):
-        # return [s for s in self.spec.test_states if not s.bound]
         yield from [s for s in self.spec.test_states if not s.bound]
 
     def group_free_states_by_continuous_attr(self, attr, divisions = 10, cutoff_value = None,
@@ -2063,7 +2061,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if log:
             ax_overlaps.set_yscale('log')
-            min_overlap = np.min(state_overlaps[self.spec.initial_state])
+            min_overlap = min([np.min(overlap) for overlap in state_overlaps.values()])
             ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
             ax_overlaps.grid(True, which = 'both', **GRID_KWARGS)
         else:
@@ -2119,7 +2117,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
                              bins = 100,
                              log = False,
                              energy_lower_bound = None, energy_upper_bound = None,
+                             group_angular_momentum = True, angular_momentum_cutoff = None,
                              **kwargs):
+        energy_scale, x_scale_str = unit_value_and_name_from_unit(energy_scale)
+
         if states == 'all':
             state_list = self.spec.test_states
         elif states == 'bound':
@@ -2132,36 +2133,82 @@ class ElectricFieldSimulation(cp.core.Simulation):
         state_overlaps = self.state_overlaps_vs_time
         state_overlaps = {k: state_overlaps[k] for k in state_list}  # filter down to just states in state_list
 
-        overlap_by_energy = collections.defaultdict(float)
-        for state, overlap_vs_time in state_overlaps.items():
-            overlap_by_energy[state.energy] += overlap_vs_time[time_index]
+        if group_angular_momentum:
+            overlap_by_angular_momentum_by_energy = collections.defaultdict(ft.partial(collections.defaultdict, float))
 
-        energies, overlaps = cp.utils.dict_to_arrays(overlap_by_energy)
+            for state, overlap_vs_time in state_overlaps.items():
+                overlap_by_angular_momentum_by_energy[state.l][state.energy] += overlap_vs_time[time_index]
+
+            energies = []
+            overlaps = []
+            cutoff_energies = np.array([])
+            cutoff_overlaps = np.array([])
+            for l, overlap_by_energy in sorted(overlap_by_angular_momentum_by_energy.items()):
+                if l < angular_momentum_cutoff:
+                    e, o = cp.utils.dict_to_arrays(overlap_by_energy)
+                    energies.append(e / energy_scale)
+                    overlaps.append(o)
+                else:
+                    e, o = cp.utils.dict_to_arrays(overlap_by_energy)
+                    cutoff_energies = np.append(cutoff_energies, e)
+                    cutoff_overlaps = np.append(cutoff_overlaps, o)
+                    print(l, e, o)
+
+            if len(cutoff_energies) != 0:
+                energies.append(cutoff_energies)
+                overlaps.append(cutoff_overlaps)
+
+            for e in energies:
+                print(e)
+
+            if energy_lower_bound is None:
+                energy_lower_bound = min([np.nanmin(e) for e in energies])
+            if energy_upper_bound is None:
+                energy_upper_bound = max([np.nanmax(e) for e in energies])
+
+            labels = [r'$\ell = {}$'.format(l) for l in range(angular_momentum_cutoff)] + [r'$\ell \geq {}$'.format(angular_momentum_cutoff)]
+            print(labels)
+        else:
+            overlap_by_energy = collections.defaultdict(float)
+            for state, overlap_vs_time in state_overlaps.items():
+                overlap_by_energy[state.energy] += overlap_vs_time[time_index]
+
+            energies, overlaps = cp.utils.dict_to_arrays(overlap_by_energy)
+            energies /= energy_scale
+
+            if energy_lower_bound is None:
+                energy_lower_bound = np.nanmin(energies)
+            if energy_upper_bound is None:
+                energy_upper_bound = np.nanmax(energies)
+
+            labels = None
 
         fig = cp.utils.get_figure('full')
         ax = fig.add_subplot(111)
 
-        energy_scale, x_scale_str = unit_value_and_name_from_unit(energy_scale)
-
-        if energy_lower_bound is None:
-            energy_lower_bound = np.nanmin(energies)
-        if energy_upper_bound is None:
-            energy_upper_bound = np.nanmax(energies)
-
-        hist_n, hist_bins, hist_patches = ax.hist(x = energies / energy_scale, weights = overlaps,
+        hist_n, hist_bins, hist_patches = ax.hist(x = energies, weights = overlaps,
                                                   bins = bins,
                                                   stacked = True,
                                                   log = log,
-                                                  range = (energy_lower_bound / energy_scale, energy_upper_bound / energy_scale),
+                                                  range = (energy_lower_bound, energy_upper_bound),
+                                                  label = labels,
                                                   )
 
-        # ax.set_xlim(energy_lower_bound / energy_scale, energy_upper_bound / energy_scale)
+        ax.grid(True, **GRID_KWARGS)
+
+        x_range = energy_upper_bound - energy_lower_bound
+        ax.set_xlim(energy_lower_bound - .05 * x_range, energy_upper_bound + .05 * x_range)
         # ax.set_ylim(0, 1)
         # ax.set_ylim(0, np.nanmax(hist_n) * 1.2)
+
+        if group_angular_momentum:
+            ax.legend(loc = 'best', ncol = 1 + len(energies) // 8)
 
         postfix = '__{}_states__index={}'.format(states, time_index)
         if log:
             postfix += '__log'
+        if group_angular_momentum:
+            postfix += '__grouped'
         prefix = self.file_name
 
         name = prefix + '__energy_spectrum{}'.format(postfix)
