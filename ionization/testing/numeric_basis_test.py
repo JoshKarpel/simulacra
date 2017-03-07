@@ -94,9 +94,7 @@ if __name__ == '__main__':
             out_dir = OUT_DIR,
         )
 
-        analytic_test_states = [ion.HydrogenBoundState(n, l) for n in range(6) for l in range(n)]
-
         every = [1, 5, 10, 100, 600]
         specs = [ion.SphericalHarmonicSpecification('eig_{}'.format(e), store_data_every = e, **spec_kwargs) for e in every]
 
-        cp.utils.multi_map(run, specs, processes = 4)
+        cp.utils.multi_map(run, specs, processes = 2)

@@ -38,7 +38,7 @@ def electron_energy_from_wavenumber(k):
 
 
 def electron_wavenumber_from_energy(energy):
-    return np.sqrt(2 * electron_mass * energy + 0j) / hbar
+    return np.sqrt(2 * electron_mass * energy) / hbar
 
 
 class ElectricFieldSpecification(cp.core.Specification):
@@ -1114,7 +1114,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
 
-        fig = plt.figure(figsize = (7, 7), dpi = 600)
+        fig = cp.utils.get_figure('full')
         fig.set_tight_layout(True)
         axis = plt.subplot(111, projection = 'polar')
         axis.set_theta_zero_location('N')
@@ -1335,6 +1335,20 @@ class SphericalHarmonicMesh(QuantumMesh):
             return ip * self.inner_product_multiplier
         else:
             return super().inner_product(a, b)
+
+    def inner_product_with_plane_wave(self, k, theta):
+        """
+        Return the inner product with a plane wave with propagation direction theta in the x-z plane and wavenumber k.
+
+        :param k: wavenumber of the plane wave
+        :param theta: direction of the plane wave relative to the z-axis
+        :return:
+        """
+
+        summand = (1j ** self.l_mesh) * special.spherical_jn(self.l_mesh, np.real(k * self.r_mesh)) * cp.math.SphericalHarmonic(self.l_mesh, 0)(theta, 0)
+        # if you don't make sure the bessel argument is real you get a memory access violation (windows error 0xC0000005)
+
+        return 4 * pi * self.inner_product_multiplier * np.sum(np.conj(summand) * self.g_mesh)
 
     @cp.utils.memoize
     def _get_kinetic_energy_matrix_operators(self):
@@ -2047,9 +2061,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         free_state_color_cycle = it.cycle(['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f'])
         for group, states in sorted(grouped_free_states.items()):
-            overlaps.append(np.sum(state_overlaps[s] for s in states))
-            labels.append(r'$\left| \left\langle \psi| {}  \right\rangle \right|^2$'.format(group_labels[group]))
-            colors.append(free_state_color_cycle.__next__())
+            if len(states) != 0:
+                overlaps.append(np.sum(state_overlaps[s] for s in states))
+                labels.append(r'$\left| \left\langle \psi| {}  \right\rangle \right|^2$'.format(group_labels[group]))
+                colors.append(free_state_color_cycle.__next__())
 
         overlaps = [overlap[self.storage_mask] for overlap in overlaps]
 
@@ -2152,14 +2167,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
                     e, o = cp.utils.dict_to_arrays(overlap_by_energy)
                     cutoff_energies = np.append(cutoff_energies, e)
                     cutoff_overlaps = np.append(cutoff_overlaps, o)
-                    print(l, e, o)
 
             if len(cutoff_energies) != 0:
                 energies.append(cutoff_energies)
                 overlaps.append(cutoff_overlaps)
-
-            for e in energies:
-                print(e)
 
             if energy_lower_bound is None:
                 energy_lower_bound = min([np.nanmin(e) for e in energies])
@@ -2167,7 +2178,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 energy_upper_bound = max([np.nanmax(e) for e in energies])
 
             labels = [r'$\ell = {}$'.format(l) for l in range(angular_momentum_cutoff)] + [r'$\ell \geq {}$'.format(angular_momentum_cutoff)]
-            print(labels)
         else:
             overlap_by_energy = collections.defaultdict(float)
             for state, overlap_vs_time in state_overlaps.items():
@@ -2216,14 +2226,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         cp.utils.save_current_figure(name = name, **kwargs)
 
         plt.close()
-
-        # cp.utils.xy_plot(name,
-        #                  x, y,
-        #                  x_label = 'State Energy',
-        #                  y_label = 'State Overlap',
-        #                  x_scale = x_scale,
-        #                  **kwargs
-        #                  )
 
     def plot_angular_momentum_vs_time(self, use_name = False, log = False, renormalize = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
