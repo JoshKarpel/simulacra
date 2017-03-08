@@ -323,9 +323,34 @@ GRID_KWARGS = {
 }
 
 
+class FigureManager:
+    def __init__(self, name, name_postfix = '',
+                 fig_scale = 0.95, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0,
+                 target_dir = None, img_format = 'pdf', img_scale = 1,
+                 ):
+        self.name = name
+        self.name_postfix = name_postfix
+
+        self.fig_scale = fig_scale
+        self.fig_width_pts = fig_width_pts
+        self.aspect_ratio = aspect_ratio
+
+        self.target_dir = target_dir
+        self.img_format = img_format
+        self.img_scale = img_scale
+
+    def __enter__(self):
+        self.fig = get_figure(fig_scale = self.fig_scale, fig_width_pts = self.fig_width_pts, aspect_ratio = self.aspect_ratio)
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.path = save_current_figure(name = self.name, name_postfix = self.name_postfix, target_dir = self.target_dir, img_format = self.img_format, img_scale = self.img_scale)
+        plt.close()
+
+
 def xy_plot(name,
             x_data, *y_data,
-            fig_scale = 'full', aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0,
             line_labels = (), line_kwargs = (),
             x_scale = 1, y_scale = 1,
             x_log_axis = False, y_log_axis = False,
@@ -376,123 +401,122 @@ def xy_plot(name,
     :param legend_on_right:
     :param grid_kwargs:
     :param save_csv: if True, save x_data and y_data to a CSV file
-    :param kwargs: kwargs are passed to save_current_figure()
+    :param kwargs: kwargs are passed to a FigureManager context manager
     :return: the path the plot was saved to
     """
     # set up figure and axis
-    fig = get_figure(fig_scale, aspect_ratio = aspect_ratio)
-    ax = plt.subplot(111)
+    with FigureManager(name, **kwargs) as fm:
+        fig = fm.fig
+        ax = plt.subplot(111)
 
-    # ensure data is in numpy arrays
-    x_data = np.array(x_data)
-    y_data = [np.array(y) for y in y_data]
-    line_labels = tuple(line_labels)
-    line_kwargs = tuple(line_kwargs)
+        # ensure data is in numpy arrays
+        x_data = np.array(x_data)
+        y_data = [np.array(y) for y in y_data]
+        line_labels = tuple(line_labels)
+        line_kwargs = tuple(line_kwargs)
 
-    # determine if scale_x/y is a unit specifier or a number and set scale and labels accordingly
-    if type(x_scale) == str:
-        scale_x_label = r' (${}$)'.format(unit_names_to_tex_strings[x_scale])
-        x_scale = unit_names_to_values[x_scale]
-    else:
-        scale_x_label = r''
-    if type(y_scale) == str:
-        scale_y_label = r' (${}$)'.format(unit_names_to_tex_strings[y_scale])
-        y_scale = unit_names_to_values[y_scale]
-    else:
-        scale_y_label = r''
+        # determine if scale_x/y is a unit specifier or a number and set scale and labels accordingly
+        if type(x_scale) == str:
+            scale_x_label = r' (${}$)'.format(unit_names_to_tex_strings[x_scale])
+            x_scale = unit_names_to_values[x_scale]
+        else:
+            scale_x_label = r''
+        if type(y_scale) == str:
+            scale_y_label = r' (${}$)'.format(unit_names_to_tex_strings[y_scale])
+            y_scale = unit_names_to_values[y_scale]
+        else:
+            scale_y_label = r''
 
-    # zip together each set of y data with its plotting options
-    lines = []
-    for y, lab, kw in it.zip_longest(y_data, line_labels, line_kwargs):
-        if kw is None:  # means there are no kwargs for this y data
-            kw = {}
-        lines.append(plt.plot(x_data / x_scale, y / y_scale, label = lab, **kw)[0])
+        # zip together each set of y data with its plotting options
+        lines = []
+        for y, lab, kw in it.zip_longest(y_data, line_labels, line_kwargs):
+            if kw is None:  # means there are no kwargs for this y data
+                kw = {}
+            lines.append(plt.plot(x_data / x_scale, y / y_scale, label = lab, **kw)[0])
 
-    # make any horizontal and vertical lines
-    for vl, vkw in it.zip_longest(vlines, vline_kwargs):
-        if vkw is None:
-            vkw = {}
-        kw = {'color': 'black', 'linestyle': '-'}
-        kw.update(vkw)
-        ax.axvline(x = vl / x_scale, **kw)
-    for hl, hkw in it.zip_longest(hlines, hline_kwargs):
-        if hkw is None:
-            hkw = {}
-        kw = {'color': 'black', 'linestyle': '-'}
-        kw.update(hkw)
-        ax.axhline(y = hl / y_scale, **kw)
+        # make any horizontal and vertical lines
+        for vl, vkw in it.zip_longest(vlines, vline_kwargs):
+            if vkw is None:
+                vkw = {}
+            kw = {'color': 'black', 'linestyle': '-'}
+            kw.update(vkw)
+            ax.axvline(x = vl / x_scale, **kw)
+        for hl, hkw in it.zip_longest(hlines, hline_kwargs):
+            if hkw is None:
+                hkw = {}
+            kw = {'color': 'black', 'linestyle': '-'}
+            kw.update(hkw)
+            ax.axhline(y = hl / y_scale, **kw)
 
-    if grid_kwargs is not None:
-        grid_kwargs = GRID_KWARGS.update(grid_kwargs)
-    else:
-        grid_kwargs = GRID_KWARGS
+        if grid_kwargs is not None:
+            grid_kwargs = GRID_KWARGS.update(grid_kwargs)
+        else:
+            grid_kwargs = GRID_KWARGS
 
-    if x_log_axis:
-        ax.set_xscale('log')
-    if y_log_axis:
-        ax.set_yscale('log')
-        minor_grid_kwargs = grid_kwargs.copy()
-        minor_grid_kwargs['alpha'] -= .1
-        ax.grid(True, which = 'minor', **ion.minor_grid_kwargs)
+        if x_log_axis:
+            ax.set_xscale('log')
+        if y_log_axis:
+            ax.set_yscale('log')
+            minor_grid_kwargs = grid_kwargs.copy()
+            minor_grid_kwargs['alpha'] -= .1
+            ax.grid(True, which = 'minor', **minor_grid_kwargs)
 
-    # set axis limits
-    if x_lower_limit is None:
-        x_lower_limit = np.nanmin(x_data)
-    if x_upper_limit is None:
-        x_upper_limit = np.nanmax(x_data)
-    if y_lower_limit is None and y_upper_limit is None:
-        y_lower_limit = min([np.nanmin(y) for y in y_data])
-        y_upper_limit = max([np.nanmax(y) for y in y_data])
-        y_range = np.abs(y_upper_limit - y_lower_limit)
-        y_lower_limit -= .05 * y_range
-        y_upper_limit += .05 * y_range
-    ax.set_xlim(left = x_lower_limit / x_scale, right = x_upper_limit / x_scale)
-    ax.set_ylim(bottom = y_lower_limit / y_scale, top = y_upper_limit / y_scale)
+        # set axis limits
+        if x_lower_limit is None:
+            x_lower_limit = np.nanmin(x_data)
+        if x_upper_limit is None:
+            x_upper_limit = np.nanmax(x_data)
+        if y_lower_limit is None and y_upper_limit is None:
+            y_lower_limit = min([np.nanmin(y) for y in y_data])
+            y_upper_limit = max([np.nanmax(y) for y in y_data])
+            y_range = np.abs(y_upper_limit - y_lower_limit)
+            y_lower_limit -= .05 * y_range
+            y_upper_limit += .05 * y_range
+        ax.set_xlim(left = x_lower_limit / x_scale, right = x_upper_limit / x_scale)
+        ax.set_ylim(bottom = y_lower_limit / y_scale, top = y_upper_limit / y_scale)
 
-    ax.grid(True, which = 'major', **grid_kwargs)
+        ax.grid(True, which = 'major', **grid_kwargs)
 
-    ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
+        ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
-    # make title, axis labels, and legend
-    if title is not None:
-        title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
-        title.set_y(1.06)  # move title up a little
-    if x_label is not None:
-        x_label = ax.set_xlabel(r'{}'.format(x_label) + scale_x_label, fontsize = font_size_axis_labels)
-    if y_label is not None:
-        y_label = ax.set_ylabel(r'{}'.format(y_label) + scale_y_label, fontsize = font_size_axis_labels)
-    if len(line_labels) > 0:
-        if not legend_on_right:
-            legend = ax.legend(loc = 'best', fontsize = font_size_legend)
-        if legend_on_right:
-            legend = ax.legend(bbox_to_anchor = (1.05, 1), loc = 'upper left', borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17))
+        # make title, axis labels, and legend
+        if title is not None:
+            title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
+            title.set_y(1.06)  # move title up a little
+        if x_label is not None:
+            x_label = ax.set_xlabel(r'{}'.format(x_label) + scale_x_label, fontsize = font_size_axis_labels)
+        if y_label is not None:
+            y_label = ax.set_ylabel(r'{}'.format(y_label) + scale_y_label, fontsize = font_size_axis_labels)
+        if len(line_labels) > 0:
+            if not legend_on_right:
+                legend = ax.legend(loc = 'best', fontsize = font_size_legend)
+            if legend_on_right:
+                legend = ax.legend(bbox_to_anchor = (1.05, 1), loc = 'upper left', borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17))
 
-    fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
+        fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
-    if x_extra_ticks is not None and x_extra_tick_labels is not None:
-        ax.set_xticks(list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_scale))  # append the extra tick labels, scaled appropriately
-        x_tick_labels = list(ax.get_xticklabels())
-        x_tick_labels[-len(x_extra_ticks):] = x_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
-        ax.set_xticklabels(x_tick_labels)
+        if x_extra_ticks is not None and x_extra_tick_labels is not None:
+            ax.set_xticks(list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_scale))  # append the extra tick labels, scaled appropriately
+            x_tick_labels = list(ax.get_xticklabels())
+            x_tick_labels[-len(x_extra_ticks):] = x_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            ax.set_xticklabels(x_tick_labels)
 
-    if y_extra_ticks is not None and y_extra_tick_labels is not None:
-        ax.set_yticks(list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_scale))  # append the extra tick labels, scaled appropriately
-        y_tick_labels = list(ax.get_yticklabels())
-        y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
-        ax.set_yticklabels(y_tick_labels)
+        if y_extra_ticks is not None and y_extra_tick_labels is not None:
+            ax.set_yticks(list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_scale))  # append the extra tick labels, scaled appropriately
+            y_tick_labels = list(ax.get_yticklabels())
+            y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            ax.set_yticklabels(y_tick_labels)
 
-    # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-    ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
+        # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
+        ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
 
-    path = save_current_figure(name, **kwargs)
+    path = fm.path
 
     if save_csv:
         csv_path = os.path.splitext(path)[0] + '.csv'
         np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
 
         logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
-
-    plt.close()
 
     return path
 
@@ -809,7 +833,7 @@ def get_fig_dims(fig_scale, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5
     return fig_dims
 
 
-def get_figure(fig_scale = 0.9, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0):
+def get_figure(fig_scale = 0.95, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0):
     """
     Get a matplotlib figure object with the desired scale relative to a full-text-width LaTeX page.
 
