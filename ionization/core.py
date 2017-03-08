@@ -38,7 +38,7 @@ def electron_energy_from_wavenumber(k):
 
 
 def electron_wavenumber_from_energy(energy):
-    return np.sqrt(2 * electron_mass * energy) / hbar
+    return np.sqrt(2 * electron_mass * energy + 0j) / hbar
 
 
 class ElectricFieldSpecification(cp.core.Specification):
@@ -1106,7 +1106,7 @@ class SphericalSliceMesh(QuantumMesh):
         raise NotImplementedError
 
     def plot_mesh(self, mesh,
-                  name = '', target_dir = None, img_format = 'png', title = None,
+                  name = '', title = None,
                   overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
                   distance_unit = 'nm',
                   **kwargs):
@@ -1152,12 +1152,12 @@ class SphericalSliceMesh(QuantumMesh):
 
         tick_labels = axis.get_yticklabels()
         for t in tick_labels:
-            t.set_text(t.get_text() + r'{}'.format(unit_name))
+            t.set_text(t.get_text() + r'${}$'.format(unit_name))
         axis.set_yticklabels(tick_labels)
 
         axis.set_rmax((self.r_max - (self.delta_r / 2)) / unit_value)
 
-        cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
+        cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), **kwargs)
 
         plt.close()
 
@@ -1336,19 +1336,93 @@ class SphericalHarmonicMesh(QuantumMesh):
         else:
             return super().inner_product(a, b)
 
-    def inner_product_with_plane_wave(self, k, theta):
+    def inner_product_with_plane_wave(self, wavenumber, theta):
         """
         Return the inner product with a plane wave with propagation direction theta in the x-z plane and wavenumber k.
 
-        :param k: wavenumber of the plane wave
+        :param wavenumber: wavenumber of the plane wave
         :param theta: direction of the plane wave relative to the z-axis
         :return:
         """
 
-        summand = (1j ** self.l_mesh) * special.spherical_jn(self.l_mesh, np.real(k * self.r_mesh)) * cp.math.SphericalHarmonic(self.l_mesh, 0)(theta, 0)
+        l_mesh = self.l_mesh
+
+        summand = (-1j ** (l_mesh % 4)) * special.spherical_jn(l_mesh, np.real(wavenumber * self.r_mesh)) * self.g_factor * special.sph_harm(0, l_mesh, 0, theta)
         # if you don't make sure the bessel argument is real you get a memory access violation (windows error 0xC0000005)
 
-        return 4 * pi * self.inner_product_multiplier * np.sum(np.conj(summand) * self.g_mesh)
+        return np.sqrt(2 / pi) * self.inner_product_multiplier * np.sum(summand * self.g_mesh)
+
+    def inner_product_with_plane_waves__single_wavenumber(self, wavenumber, thetas = None):
+        """
+
+        :param wavenumber: magnitude of k
+        :param thetas: list of thetas to evaluate inner product at
+        :return:
+        """
+        if thetas is None:
+            thetas = np.linspace(0, twopi, 100)
+
+        l_mesh = self.l_mesh
+
+        everything_but_sph_harm = special.spherical_jn(l_mesh, np.real(wavenumber * self.r_mesh)) * np.sqrt(2 / pi) * self.g_factor * (-1j ** (l_mesh % 4)) * self.inner_product_multiplier * self.g_mesh
+
+        inner_products = np.zeros(np.shape(thetas), dtype = np.complex128) * np.NaN
+
+        for ii, theta in enumerate(thetas):
+            inner_products[ii] = np.sum(everything_but_sph_harm * special.sph_harm(0, l_mesh, 0, theta))
+
+        return inner_products
+
+    def inner_product_with_plane_waves__single_theta(self, theta, wavenumbers = None):
+        """
+
+        :param theta: angle of k in x-z plane
+        :param wavenumbers: list of wavenumbers to evaluate inner product at
+        :return:
+        """
+        if wavenumbers is None:
+            wavenumbers = np.linspace(.1 * per_nm, 50 * per_nm, 100)
+
+        l_mesh = self.l_mesh
+
+        everything_but_bessel = special.sph_harm(0, l_mesh, 0, theta) * np.sqrt(2 / pi) * self.g_factor * (-1j ** (l_mesh % 4)) * self.inner_product_multiplier * self.g_mesh
+
+        inner_products = np.zeros(np.shape(wavenumbers), dtype = np.complex128) * np.NaN
+
+        for ii, wavenumber in enumerate(wavenumbers):
+            inner_products[ii] = np.sum(everything_but_bessel * special.spherical_jn(l_mesh, np.real(wavenumber * self.r_mesh)))
+
+        return inner_products
+
+    def inner_product_with_plane_waves(self, thetas, wavenumbers):
+        """
+
+        :param wavenumbers:
+        :param thetas:
+        :return:
+        """
+
+        l_mesh = self.l_mesh
+
+        multiplier = np.sqrt(2 / pi) * self.g_factor * (-1j ** (l_mesh % 4)) * self.inner_product_multiplier * self.g_mesh
+
+        theta_mesh, wavenumber_mesh = np.meshgrid(thetas, wavenumbers, indexing = 'ij')
+
+        inner_product_mesh = np.zeros(np.shape(wavenumber_mesh), dtype = np.complex128)
+
+        @cp.utils.memoize
+        def sph_harm(theta):
+            return special.sph_harm(0, l_mesh, 0, theta)
+
+        @cp.utils.memoize
+        def bessel(wavenumber):
+            return special.spherical_jn(l_mesh, np.real(wavenumber * self.r_mesh))
+
+        for ii, theta in enumerate(thetas):
+            for jj, wavenumber in enumerate(wavenumbers):
+                inner_product_mesh[ii, jj] = np.sum(multiplier * sph_harm(theta) * bessel(wavenumber))
+
+        return theta_mesh, wavenumber_mesh, inner_product_mesh
 
     @cp.utils.memoize
     def _get_kinetic_energy_matrix_operators(self):
@@ -1755,7 +1829,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         raise NotImplementedError
 
     def plot_mesh(self, mesh,
-                  name = '', target_dir = None, img_format = 'png', title = None,
+                  name = '', title = None,
                   overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
                   color_map_min = 0,
                   distance_unit = 'bohr_radius',
@@ -1802,12 +1876,12 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         tick_labels = axis.get_yticklabels()
         for t in tick_labels:
-            t.set_text(t.get_text() + r'{}'.format(unit_name))
+            t.set_text(t.get_text() + r'${}$'.format(unit_name))
         axis.set_yticklabels(tick_labels)
 
         axis.set_rmax((self.r_max - (self.delta_r / 2)) / unit_value)
 
-        cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, img_format = img_format, **kwargs)
+        cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), **kwargs)
 
         plt.close()
 

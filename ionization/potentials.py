@@ -406,7 +406,7 @@ class SineWave(UniformLinearlyPolarizedElectricField):
 
 
 class SincPulse(UniformLinearlyPolarizedElectricField):
-    def __init__(self, pulse_width = 200 * asec, omega_min = twopi * 350 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+    def __init__(self, pulse_width = 200 * asec, omega_min = twopi * 500 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
                  **kwargs):
         """
 
@@ -433,7 +433,7 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
         self.amplitude_time = np.sqrt(self.fluence * self.delta_omega / (pi * epsilon_0 * c))
 
     @classmethod
-    def from_omega_carrier(cls, pulse_width = 200 * asec, omega_carrier = twopi * 20000 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+    def from_omega_carrier(cls, pulse_width = 200 * asec, omega_carrier = twopi * 3000 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
                            **kwargs):
         delta_omega = twopi / pulse_width
         omega_min = omega_carrier - delta_omega / 2
@@ -501,7 +501,7 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
 
 
 class GaussianPulse(UniformLinearlyPolarizedElectricField):
-    def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 2850 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+    def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 3000 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
                  **kwargs):
         """
 
@@ -556,7 +556,7 @@ class GaussianPulse(UniformLinearlyPolarizedElectricField):
 
 
 class SechPulse(UniformLinearlyPolarizedElectricField):
-    def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 2850 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+    def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 3000 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
                  **kwargs):
         """
 

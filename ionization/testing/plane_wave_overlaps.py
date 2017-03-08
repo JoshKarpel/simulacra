@@ -4,13 +4,12 @@ import os
 from tqdm import tqdm
 
 import numpy as np
-import scipy.sparse.linalg as sparsealg
-import matplotlib.pyplot as plt
 
 import compy as cp
-import compy.cy as cy
 import ionization as ion
 from compy.units import *
+
+import matplotlib.pyplot as plt
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -40,6 +39,8 @@ if __name__ == '__main__':
 
         sim.run_simulation()
         print(sim.info())
+
+        sim.mesh.plot_g(target_dir = OUT_DIR)
 
         plot_kwargs = dict(
             target_dir = OUT_DIR,
@@ -91,36 +92,66 @@ if __name__ == '__main__':
 
         # 1d tests along various theta first
 
-        thetas = np.array([0, .5, 1, 1.5, 2])
-        energies = np.linspace(.01, 50, 100) * eV
-        wavenumbers = ion.electron_wavenumber_from_energy(energies)
-        inner_products = np.zeros(len(wavenumbers), dtype = np.complex128) * np.NaN
-
-        for theta in thetas:
-            for ii, k in enumerate(wavenumbers):
-                inner_products[ii] = sim.mesh.inner_product_with_plane_wave(k, theta * pi)
-
-            cp.utils.xy_plot('plane_wave_overlaps__theta={}pi'.format(theta),
-                             wavenumbers,
-                             np.abs(inner_products) ** 2,
-                             x_scale = 'per_nm',
-                             target_dir = OUT_DIR)
+        # thetas = np.array([0, .5, 1, 1.5, 2])
+        # energies = np.linspace(.01, 50, 100) * eV
+        # wavenumbers = ion.electron_wavenumber_from_energy(energies)
+        # inner_products = np.zeros(len(wavenumbers), dtype = np.complex128) * np.NaN
+        #
+        # for theta in thetas:
+        #     for ii, k in enumerate(wavenumbers):
+        #         inner_products[ii] = sim.mesh.inner_product_with_plane_wave(k, theta * pi)
+        #
+        #     cp.utils.xy_plot('plane_wave_overlaps__theta={}pi'.format(theta),
+        #                      wavenumbers,
+        #                      np.abs(inner_products) ** 2,
+        #                      x_scale = 'per_nm',
+        #                      target_dir = OUT_DIR)
 
         # then do 2d plot for all theta
 
         unit_value, unit_name = unit_value_and_name_from_unit('per_nm')
 
         thetas = np.linspace(0, twopi, 100)
+        wavenumbers = np.linspace(50, .1, 100) * per_nm
 
-        theta_mesh, wavenumber_mesh = np.meshgrid(thetas, wavenumbers, indexing = 'ij')
+        # theta_mesh, wavenumber_mesh = np.meshgrid(thetas, wavenumbers, indexing = 'ij')
 
-        inner_product_mesh = np.zeros(np.shape(theta_mesh), dtype = np.complex128)
-        for ii, theta in enumerate(thetas):
-            for jj, wavenumber in enumerate(wavenumbers):
-                print(ii, jj)
-                inner_product_mesh[ii, jj] = sim.mesh.inner_product_with_plane_wave(wavenumber, theta)
+        # inner_product_mesh = np.zeros(np.shape(theta_mesh), dtype = np.complex128)
 
-        fig = cp.utils.get_figure('full')
+        # with cp.utils.Timer() as t:
+        #     for ii, theta in enumerate(thetas):
+        #         for jj, wavenumber in enumerate(wavenumbers):
+        #             print(ii, jj)
+        #             inner_product_mesh[ii, jj] = sim.mesh.inner_product_with_plane_wave(wavenumber, theta)
+        # print(t)
+
+        # with cp.utils.Timer() as t:
+        #     for jj, wavenumber in enumerate(wavenumbers):
+        #         print(jj)
+        #         inner_product_mesh[:, jj] = sim.mesh.inner_product_with_plane_waves_k(wavenumber, thetas)
+        # print(t)
+
+        # with cp.utils.Timer() as t:
+        #     for ii, theta in enumerate(thetas):
+        #         print(ii)
+        #         inner_product_mesh[ii, :] = sim.mesh.inner_product_with_plane_waves_theta(theta, wavenumbers)
+        # print(t)
+
+        with cp.utils.Timer() as t:
+            theta_mesh, wavenumber_mesh, inner_product_mesh = sim.mesh.inner_product_with_plane_waves(thetas, wavenumbers)
+        print(t)
+
+        print(np.sum(np.abs(inner_product_mesh) ** 2))
+
+        print('dtheta', thetas[1] - thetas[0])
+        print('dk', wavenumbers[1] - wavenumbers[0])
+
+        d_theta = np.abs(thetas[1] - thetas[0])
+        d_k = np.abs(wavenumbers[1] - wavenumbers[0])
+        print('norm = ', sim.mesh.norm())
+        print('norm?', pi * d_theta * d_k * np.sum(np.abs(np.sin(theta_mesh)) * (wavenumber_mesh ** 2) * (np.abs(inner_product_mesh) ** 2)))
+
+        fig = cp.utils.get_figure('full', aspect_ratio = 1)
         fig.set_tight_layout(True)
 
         axis = plt.subplot(111, projection = 'polar')
