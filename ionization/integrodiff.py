@@ -222,7 +222,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         ax_y = plt.subplot(grid_spec[0])
         ax_f = plt.subplot(grid_spec[1], sharex = ax_y)
 
-        ax_f.plot(self.times / x_scale_unit, self.spec.f(self.times, **self.spec.f_kwargs) / f_scale_unit, color = core.ELECTRIC_FIELD_COLOR, linewidth = 2)
+        ax_f.plot(self.times / x_scale_unit, self.spec.f(self.times, **self.spec.f_kwargs) / f_scale_unit, color = core.RED, linewidth = 2)
         if abs_squared:
             y = np.abs(self.y) ** 2
         else:
@@ -247,7 +247,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         ax_y.set_ylabel(y_axis_label, fontsize = 13)
         if f_axis_label is None:
             f_axis_label = r'$f(t)$'.format(f_scale_name)
-        ax_f.set_ylabel(r'{} (${}$)'.format(f_axis_label, f_scale_name), fontsize = 13, color = core.ELECTRIC_FIELD_COLOR)
+        ax_f.set_ylabel(r'{} (${}$)'.format(f_axis_label, f_scale_name), fontsize = 13, color = core.RED)
 
         ax_y.tick_params(labelright = True)
         ax_f.tick_params(labelright = True)

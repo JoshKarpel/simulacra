@@ -23,14 +23,26 @@ from . import potentials, states
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-ELECTRIC_FIELD_COLOR = '#d62728'  # the color to use on plots for the electric field
-COLORMESH_GRID_COLOR = 'dodgerblue'  # the color to use for the gridlines on colormesh plots
+RED = '#d62728'  # the color to use on plots for the electric field
+BLUE = '#1f77b4'
+ORANGE = '#ff7f0e'
+GREEN = '#2ca02c'
+
+COLOR_ELECTRIC_FIELD = RED
+COLOR_OPPOSITE_PLASMA = GREEN
+COLOR_OPPOSITE_VIRIDIS = RED
+
 GRID_KWARGS = {
     'linestyle': '-',
     'color': 'black',
     'linewidth': .25,
     'alpha': 0.4
 }
+
+COLORMESH_GRID_KWARGS = dict(
+    linestyle = '--',
+    linewidth = .75,
+)
 
 
 def electron_energy_from_wavenumber(k):
@@ -797,7 +809,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         axis.axis('tight')  # removes blank space between color mesh and axes
 
-        axis.grid(True, color = COLORMESH_GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = COLOR_OPPOSITE_PLASMA, linestyle = ':')  # change grid color to make it show up against the colormesh
 
         axis.tick_params(labelright = True, labeltop = True)  # ticks on all sides
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
@@ -1134,12 +1146,12 @@ class SphericalSliceMesh(QuantumMesh):
         cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
         cbar.ax.tick_params(labelsize = 10)
 
-        axis.grid(True, color = COLORMESH_GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = COLOR_OPPOSITE_PLASMA, **COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
-        axis.tick_params(axis = 'y', which = 'major', colors = COLORMESH_GRID_COLOR, pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'y', which = 'major', colors = COLOR_OPPOSITE_PLASMA, pad = 3)  # make r ticks a color that shows up against the colormesh
         axis.tick_params(axis = 'both', which = 'both', length = 0)
 
         axis.set_rlabel_position(80)
@@ -1858,12 +1870,12 @@ class SphericalHarmonicMesh(QuantumMesh):
         cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
         cbar.ax.tick_params(labelsize = 10)
 
-        axis.grid(True, color = COLORMESH_GRID_COLOR, linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = COLOR_OPPOSITE_PLASMA, linestyle = ':')  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
-        axis.tick_params(axis = 'y', which = 'major', colors = COLORMESH_GRID_COLOR, pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'y', which = 'major', colors = COLOR_OPPOSITE_PLASMA, pad = 3)  # make r ticks a color that shows up against the colormesh
         axis.tick_params(axis = 'both', which = 'both', length = 0)
 
         axis.set_rlabel_position(80)
@@ -1879,11 +1891,94 @@ class SphericalHarmonicMesh(QuantumMesh):
             t.set_text(t.get_text() + r'${}$'.format(unit_name))
         axis.set_yticklabels(tick_labels)
 
-        axis.set_rmax((self.r_max - (self.delta_r / 2)) / unit_value)
+        if plot_limit is not None:
+            axis.set_rmax(plot_limit / unit_value)
+        else:
+            axis.set_rmax((self.r_max - (self.delta_r / 2)) / unit_value)
 
         cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), **kwargs)
 
         plt.close()
+
+    def plot_electron_spectrum(self, r_type = 'wavenumber', r_scale = 'per_nm', r_lower_lim = twopi * .01 * per_nm, r_upper_lim = twopi * 10 * per_nm, r_points = 100,
+                               theta_points = 360,
+                               log = False,
+                               **kwargs):
+        if r_type not in ('wavenumber', 'energy'):
+            raise ValueError("Invalid argument to plot_electron_spectrum: r_type must be either 'wavenumber' or 'energy'")
+
+        thetas = np.linspace(0, twopi, theta_points)
+        r = np.linspace(r_lower_lim, r_upper_lim, r_points)
+
+        r_unit_value, r_unit_name = unit_value_and_name_from_unit(r_scale)
+
+        plot_kwargs = {**dict(aspect_ratio = 1), **kwargs}
+
+        with cp.utils.FigureManager(self.sim.name + '__electron_spectrum', **plot_kwargs) as figman:
+            if r_type == 'wavenumber':
+                wavenumbers = r
+                figman.name += '__wavenumber'
+            elif r_type == 'energy':
+                wavenumbers = electron_wavenumber_from_energy(r)
+                figman.name += '__energy'
+
+            theta_mesh, wavenumber_mesh, inner_product_mesh = self.inner_product_with_plane_waves(thetas, wavenumbers)
+
+            if r_type == 'wavenumber':
+                r_mesh = wavenumber_mesh
+            elif r_type == 'energy':
+                r_mesh = electron_energy_from_wavenumber(wavenumber_mesh)
+
+            r_mesh = np.real(r_mesh)
+            overlap_mesh = np.abs(inner_product_mesh) ** 2
+
+            fig = figman.fig
+
+            fig.set_tight_layout(True)
+
+            axis = plt.subplot(111, projection = 'polar')
+            axis.set_theta_zero_location('N')
+            axis.set_theta_direction('clockwise')
+
+            norm = None
+            if log:
+                norm = matplotlib.colors.LogNorm(vmin = np.nanmin(overlap_mesh), vmax = np.nanmax(overlap_mesh))
+                figman.name += '__log'
+
+            color_mesh = axis.pcolormesh(theta_mesh,
+                                         r_mesh / r_unit_value,
+                                         overlap_mesh,
+                                         shading = 'gouraud',
+                                         norm = norm,
+                                         cmap = 'viridis')
+
+            # make a colorbar
+            cbar_axis = fig.add_axes([1.01, .1, .04, .8])  # add a new axis for the cbar so that the old axis can stay square
+            cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
+            cbar.ax.tick_params(labelsize = 10)
+
+            axis.grid(True, color = COLOR_OPPOSITE_VIRIDIS, **COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
+            angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
+            axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
+
+            axis.tick_params(axis = 'both', which = 'major', labelsize = 8)  # increase size of tick labels
+            axis.tick_params(axis = 'y', which = 'major', colors = COLOR_OPPOSITE_VIRIDIS, pad = 3)  # make r ticks a color that shows up against the colormesh
+            axis.tick_params(axis = 'both', which = 'both', length = 0)
+
+            axis.set_rlabel_position(80)
+
+            max_yticks = 5
+            yloc = plt.MaxNLocator(max_yticks, symmetric = False, prune = 'both')
+            axis.yaxis.set_major_locator(yloc)
+
+            fig.canvas.draw()  # must draw early to modify the axis text
+
+            tick_labels = axis.get_yticklabels()
+            for t in tick_labels:
+                t.set_text(t.get_text() + r'${}$'.format(r_unit_name))
+            axis.set_yticklabels(tick_labels)
+
+            axis.set_rmax(np.nanmax(r_mesh) / r_unit_value)
 
 
 class ElectricFieldSimulation(cp.core.Simulation):
@@ -2096,7 +2191,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
 
         if not isinstance(self.spec.electric_potential, potentials.NoPotentialEnergy):
-            ax_field.plot(self.times[self.storage_mask] / x_scale_unit, self.electric_field_amplitude_vs_time[self.storage_mask] / atomic_electric_field, color = ELECTRIC_FIELD_COLOR, linewidth = 2)
+            ax_field.plot(self.times[self.storage_mask] / x_scale_unit, self.electric_field_amplitude_vs_time[self.storage_mask] / atomic_electric_field, color = COLOR_ELECTRIC_FIELD, linewidth = 2)
 
         ax_overlaps.plot(self.times[self.storage_mask] / x_scale_unit, self.norm_vs_time[self.storage_mask], label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 2)
 
@@ -2162,7 +2257,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         ax_field.set_xlabel('Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
         ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 13)
-        ax_field.set_ylabel('${}(t)$ (a.u.)'.format(str_efield), fontsize = 13, color = ELECTRIC_FIELD_COLOR)
+        ax_field.set_ylabel('${}(t)$ (a.u.)'.format(str_efield), fontsize = 13, color = COLOR_ELECTRIC_FIELD)
 
         ax_overlaps.legend(bbox_to_anchor = (1.1, 1.1), loc = 'upper left', borderaxespad = 0.05, fontsize = 9, ncol = 1 + (len(overlaps) // 17))
 
@@ -2182,8 +2277,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         xloc = plt.MaxNLocator(max_xticks, prune = 'both')
         ax_field.xaxis.set_major_locator(xloc)
 
-        ax_field.tick_params(axis = 'x', which = 'major', labelsize = 10)
-        ax_field.tick_params(axis = 'y', which = 'major', labelsize = 10)
+        ax_field.tick_params(axis = 'both', which = 'major', labelsize = 10)
         ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
         ax_field.grid(True, **GRID_KWARGS)
@@ -2203,12 +2297,14 @@ class ElectricFieldSimulation(cp.core.Simulation):
                              states = 'all',
                              time_index = -1,
                              energy_scale = 'eV',
+                             time_scale = 'asec',
                              bins = 100,
                              log = False,
                              energy_lower_bound = None, energy_upper_bound = None,
                              group_angular_momentum = True, angular_momentum_cutoff = None,
                              **kwargs):
-        energy_scale, x_scale_str = unit_value_and_name_from_unit(energy_scale)
+        energy_unit, energy_unit_str = unit_value_and_name_from_unit(energy_scale)
+        time_unit, time_unit_str = unit_value_and_name_from_unit(time_scale)
 
         if states == 'all':
             state_list = self.spec.test_states
@@ -2235,7 +2331,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             for l, overlap_by_energy in sorted(overlap_by_angular_momentum_by_energy.items()):
                 if l < angular_momentum_cutoff:
                     e, o = cp.utils.dict_to_arrays(overlap_by_energy)
-                    energies.append(e / energy_scale)
+                    energies.append(e / energy_unit)
                     overlaps.append(o)
                 else:
                     e, o = cp.utils.dict_to_arrays(overlap_by_energy)
@@ -2258,7 +2354,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 overlap_by_energy[state.energy] += overlap_vs_time[time_index]
 
             energies, overlaps = cp.utils.dict_to_arrays(overlap_by_energy)
-            energies /= energy_scale
+            energies /= energy_unit
 
             if energy_lower_bound is None:
                 energy_lower_bound = np.nanmin(energies)
@@ -2267,39 +2363,38 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
             labels = None
 
-        fig = cp.utils.get_figure('full')
-        ax = fig.add_subplot(111)
+        with cp.utils.FigureManager(self.name + '__energy_spectrum', **kwargs) as figman:
+            fig = figman.fig
+            ax = fig.add_subplot(111)
 
-        hist_n, hist_bins, hist_patches = ax.hist(x = energies, weights = overlaps,
-                                                  bins = bins,
-                                                  stacked = True,
-                                                  log = log,
-                                                  range = (energy_lower_bound, energy_upper_bound),
-                                                  label = labels,
-                                                  )
+            hist_n, hist_bins, hist_patches = ax.hist(x = energies, weights = overlaps,
+                                                      bins = bins,
+                                                      stacked = True,
+                                                      log = log,
+                                                      range = (energy_lower_bound, energy_upper_bound),
+                                                      label = labels,
+                                                      )
 
-        ax.grid(True, **GRID_KWARGS)
+            ax.grid(True, **GRID_KWARGS)
 
-        x_range = energy_upper_bound - energy_lower_bound
-        ax.set_xlim(energy_lower_bound - .05 * x_range, energy_upper_bound + .05 * x_range)
-        # ax.set_ylim(0, 1)
-        # ax.set_ylim(0, np.nanmax(hist_n) * 1.2)
+            x_range = energy_upper_bound - energy_lower_bound
+            ax.set_xlim(energy_lower_bound - .05 * x_range, energy_upper_bound + .05 * x_range)
 
-        if group_angular_momentum:
-            ax.legend(loc = 'best', ncol = 1 + len(energies) // 8)
+            ax.set_xlabel('Energy $E$ (${}$)'.format(energy_unit_str))
+            ax.set_ylabel('Wavefunction Overlap'.format(energy_unit_str))
+            ax.set_title('Wavefunction Overlap by Energy at $t={} \, {}$'.format(uround(self.times[time_index], time_unit, 3), time_unit_str))
 
-        postfix = '__{}_states__index={}'.format(states, time_index)
-        if log:
-            postfix += '__log'
-        if group_angular_momentum:
-            postfix += '__grouped'
-        prefix = self.file_name
+            if group_angular_momentum:
+                ax.legend(loc = 'best', ncol = 1 + len(energies) // 8)
 
-        name = prefix + '__energy_spectrum{}'.format(postfix)
+            ax.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
-        cp.utils.save_current_figure(name = name, **kwargs)
+            figman.name += '__{}_states__index={}'.format(states, time_index)
 
-        plt.close()
+            if log:
+                figman.name += '__log'
+            if group_angular_momentum:
+                figman.name += '__grouped'
 
     def plot_angular_momentum_vs_time(self, use_name = False, log = False, renormalize = False, **kwargs):
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)

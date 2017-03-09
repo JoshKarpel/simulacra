@@ -820,7 +820,8 @@ class SymmetricExponentialTimeWindow(TimeWindow):
                                                                                     self.window_center)
 
     def __call__(self, t):
-        return np.abs(1 / (1 + np.exp(-((t - self.window_center) + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-((t - self.window_center) - self.window_time) / self.window_width)))
+        tau = t - self.window_center
+        return np.abs(1 / (1 + np.exp(-(tau + self.window_time) / self.window_width)) - 1 / (1 + np.exp(-(tau - self.window_time) / self.window_width)))
 
 
 class RadialCosineMask(Mask):

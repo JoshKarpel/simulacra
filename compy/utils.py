@@ -327,7 +327,7 @@ class FigureManager:
     def __init__(self, name, name_postfix = '',
                  fig_scale = 0.95, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0,
                  target_dir = None, img_format = 'pdf', img_scale = 1,
-                 ):
+                 **kwargs):
         self.name = name
         self.name_postfix = name_postfix
 
@@ -338,6 +338,9 @@ class FigureManager:
         self.target_dir = target_dir
         self.img_format = img_format
         self.img_scale = img_scale
+
+        if len(kwargs) > 0:
+            logger.debug('FigureManager for figure {} absorbed extraneous kwargs: {}'.format(self.name, kwargs))
 
     def __enter__(self):
         self.fig = get_figure(fig_scale = self.fig_scale, fig_width_pts = self.fig_width_pts, aspect_ratio = self.aspect_ratio)
