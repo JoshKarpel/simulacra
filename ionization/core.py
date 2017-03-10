@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.fft as nfft
 import scipy as sp
+import scipy.integrate as integrate
 import scipy.sparse as sparse
 import scipy.sparse.linalg as sparsealg
 import scipy.special as special
@@ -67,6 +68,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  dipole_gauges = ('length',),
                  internal_potential = potentials.Coulomb(charge = proton_charge),
                  electric_potential = potentials.NoElectricField(),
+                 electric_potential_dc_correction = False,
                  mask = potentials.NoMask(),
                  evolution_method = 'CN', evolution_equations = 'H',
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
@@ -124,6 +126,7 @@ class ElectricFieldSpecification(cp.core.Specification):
 
         self.internal_potential = internal_potential
         self.electric_potential = electric_potential
+        self.electric_potential_dc_correction = electric_potential_dc_correction
         self.mask = mask
 
         self.evolution_method = evolution_method
@@ -2012,6 +2015,12 @@ class ElectricFieldSimulation(cp.core.Simulation):
             self.times = np.concatenate((self.times, extra_times))
         self.time_index = 0
         self.time_steps = len(self.times)
+
+        if self.spec.electric_potential_dc_correction:
+            electric_field_vs_time = self.spec.electric_potential.get_electric_field_amplitude(self.times)
+            average_electric_field = integrate.simps(electric_field_vs_time) / total_time
+
+            self.spec.electric_potential += potentials.Rectangle(start_time = self.times[0], end_time = self.times[-1], amplitude = -average_electric_field)
 
         self.initialize_mesh()
 

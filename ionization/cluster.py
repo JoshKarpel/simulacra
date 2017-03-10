@@ -97,9 +97,9 @@ class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
 class SincPulseJobProcessor(ElectricFieldJobProcessor):
     def collect_data_from_sim(self, sim_name, sim):
         self.data[sim_name].update({
-            'pulse_width': sim.spec.electric_potential.pulse_width,
-            'fluence': sim.spec.electric_potential.fluence,
-            'phase': sim.spec.electric_potential.phase,
+            'pulse_width': sim.spec.pulse_width,
+            'fluence': sim.spec.fluence,
+            'phase': sim.spec.phase,
         })
 
         super(SincPulseJobProcessor, self).collect_data_from_sim(sim_name, sim)

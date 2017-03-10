@@ -136,8 +136,9 @@ if __name__ == '__main__':
                              time_initial = -time_bound, time_final = time_bound,
                              **mesh_kwargs, **spec_kwargs)
 
-            if spec.electric_potential.phase == 'cos':
-                spec.electric_potential.dc_correction_time = spec.time_final
+            spec.pulse_width = spec_kwargs['electric_potential'].pulse_width
+            spec.fluence = spec_kwargs['electric_potential'].fluence
+            spec.phase = spec_kwargs['electric_potential'].phase
 
             specs.append(spec)
 
