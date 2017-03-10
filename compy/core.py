@@ -30,10 +30,12 @@ class Specification(utils.Beet):
         Any number of additional keyword arguments can be passed. They will be stored in an attribute called extra_args.
 
         :param name: the internal name of the Specification
+        :type name: str
         :param file_name: the desired external name, used for pickling. Illegal characters are stripped before use.
+        :type file_name: str
         :param kwargs: extra arguments, stored as attributes
         """
-        super(Specification, self).__init__(name, file_name = file_name)
+        super().__init__(name, file_name = file_name)
 
         self.simulation_type = simulation_type
 
@@ -46,7 +48,9 @@ class Specification(utils.Beet):
         Atomically pickle the Specification to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
 
         :param target_dir: directory to save the Specification to
+        :type target_dir: str
         :param file_extension: file extension to name the Specification with
+        :type file_extension: str
         :return: the path to the saved Simulation
         """
         return super(Specification, self).save(target_dir, file_extension)
@@ -59,6 +63,12 @@ class Specification(utils.Beet):
         return ''
 
 
+STATUS_INI = 'initialized'
+STATUS_RUN = 'running'
+STATUS_FIN = 'finished'
+STATUS_PAU = 'paused'
+
+
 class Simulation(utils.Beet):
     """
     A class that represents a simulation.
@@ -67,28 +77,30 @@ class Simulation(utils.Beet):
     Ideally, actual computation should be handed off to another object, while the Simulation itself stores the data produced by that object.
     """
 
-    _status = utils.RestrictedValues('status', {'initialized', 'running', 'finished', 'paused'})
+    _status = utils.RestrictedValues('status', {STATUS_INI, STATUS_RUN, STATUS_FIN, STATUS_PAU})
 
-    def __init__(self, spec, initial_status = 'initialized'):
+    def __init__(self, spec):
         """
         Construct a Simulation from a Specification.
 
         :param spec: the Specification for the Simulation
-        :param initial_status: an initial status for the simulation, defaults to 'initialized'
+        :type spec: Specification
+        :type str:
         """
-        self.spec = spec
-        self._status = initial_status
+        super().__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from spec
 
-        super(Simulation, self).__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from spec
-        self.spec.simulation_type = self.__class__
+        self.spec = spec
 
         # diagnostic data
-        self.restarts = 0
-        self.start_time = dt.datetime.now()
+        self.runs = 0
+        self.init_time = None
+        self.start_time = None
         self.end_time = None
         self.elapsed_time = None
-        self.latest_load_time = dt.datetime.now()
-        self.run_time = dt.timedelta()
+        self.latest_run_time = dt.datetime.now()
+        self.running_time = dt.timedelta()
+
+        self.status = STATUS_INI
 
     @property
     def status(self):
@@ -96,10 +108,25 @@ class Simulation(utils.Beet):
 
     @status.setter
     def status(self, s):
+        if s == self.status:
+            raise ValueError('Tried to set status of {} to its current status'.format(self.name))
+
+        now = dt.datetime.now()
+
+        if s == STATUS_INI:
+            self.init_time = now
+        elif s == STATUS_RUN:
+            self.latest_run_time = now
+            self.runs += 1
+        elif s == STATUS_PAU:
+            self.running_time += now - self.latest_run_time
+        elif s == STATUS_FIN:
+            self.running_time += now - self.latest_run_time
+            self.end_time = now
+            self.elapsed_time = self.end_time - self.init_time
+
         self._status = s
-        if s == 'finished':
-            self.end_time = dt.datetime.now()
-            self.elapsed_time = self.end_time - self.start_time
+
         logger.debug("{} {} ({}) status set to {}".format(self.__class__.__name__, self.name, self.file_name, s))
 
     def save(self, target_dir = None, file_extension = '.sim'):
@@ -110,9 +137,8 @@ class Simulation(utils.Beet):
         :param file_extension: file extension to name the Simulation with
         :return: None
         """
-        if self.status != 'finished':
-            self.run_time += dt.datetime.now() - self.latest_load_time
-            self.latest_load_time = dt.datetime.now()
+        if self.status != STATUS_FIN:
+            self.status = STATUS_PAU
 
         return super(Simulation, self).save(target_dir, file_extension)
 
@@ -125,10 +151,6 @@ class Simulation(utils.Beet):
         :return: the loaded Simulation
         """
         sim = super(Simulation, cls).load(file_path)
-
-        sim.latest_load_time = dt.datetime.now()
-        if sim.status != 'finished':
-            sim.restarts += 1
 
         return sim
 
@@ -145,11 +167,11 @@ class Simulation(utils.Beet):
     def info(self):
         """Return a nicely-formatted string containing information about the Simulation."""
         diag = ['Status: {}'.format(self.status),
-                '   Start Time: {}'.format(self.start_time),
-                '   Latest Load Time: {}'.format(self.latest_load_time),
+                '   Start Time: {}'.format(self.init_time),
+                '   Latest Load Time: {}'.format(self.latest_run_time),
                 '   End Time: {}'.format(self.end_time),
                 '   Elapsed Time: {}'.format(self.elapsed_time),
-                '   Run Time: {}'.format(self.run_time)]
+                '   Run Time: {}'.format(self.running_time)]
 
         return '\n'.join((str(self), *diag, self.spec.info()))
 

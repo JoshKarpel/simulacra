@@ -606,7 +606,7 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
             logger.debug('Propagated {} through {} ({}/{} optics)'.format(self.name, optic, ii + 1, len(self.spec.optics)))
 
         self.end_time = dt.datetime.now()
-        self.elapsed_time = self.end_time - self.start_time
+        self.elapsed_time = self.end_time - self.init_time
 
         self.status = 'finished'
         logger.debug("Simulation status set to 'finished'")
