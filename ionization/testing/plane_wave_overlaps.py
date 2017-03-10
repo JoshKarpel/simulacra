@@ -21,6 +21,15 @@ if __name__ == '__main__':
 
         t_bound = 1000
 
+        # efield = ion.SineWave.from_photon_energy(rydberg + 20 * eV, amplitude = .05 * atomic_electric_field,
+        #                                                          window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec))
+
+        efield = ion.SineWave.from_photon_energy(rydberg + 20 * eV, amplitude = .05 * atomic_electric_field,
+                                                 window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec))
+
+        efield += ion.SineWave.from_photon_energy(rydberg + 30 * eV, amplitude = .05 * atomic_electric_field,
+                                                  window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec))
+
         spec_kwargs = dict(
             r_bound = bound * bohr_radius,
             r_points = bound * points_per_bohr_radius,
@@ -32,8 +41,7 @@ if __name__ == '__main__':
             use_numeric_eigenstates_as_basis = True,
             numeric_eigenstate_energy_max = 80 * eV,
             numeric_eigenstate_l_max = 20,
-            electric_potential = ion.SineWave.from_photon_energy(rydberg + 20 * eV, amplitude = .05 * atomic_electric_field,
-                                                                 window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec)),
+            electric_potential = efield,
             mask = ion.RadialCosineMask(inner_radius = .8 * bound * bohr_radius, outer_radius = bound * bohr_radius),
             store_data_every = 50,
         )
@@ -112,16 +120,20 @@ if __name__ == '__main__':
 
         spectrum_kwargs = dict(
             target_dir = OUT_DIR,
-            r_points = 400,
+            r_points = 500,
         )
 
         for log in (True, False):
-            sim.mesh.plot_electron_spectrum(r_type = 'energy', r_scale = 'eV', r_lower_lim = .1 * eV, r_upper_lim = 50 * eV,
-                                            log = log,
-                                            **spectrum_kwargs)
-            sim.mesh.plot_electron_spectrum(r_type = 'wavenumber',
-                                            log = log,
-                                            **spectrum_kwargs)
+            sim.mesh.plot_electron_momentum_spectrum(r_type = 'energy', r_scale = 'eV', r_lower_lim = .1 * eV, r_upper_lim = 50 * eV,
+                                                     log = log,
+                                                     **spectrum_kwargs)
+            sim.mesh.plot_electron_momentum_spectrum(r_type = 'wavenumber',
+                                                     r_upper_lim = 40 * per_nm,
+                                                     log = log,
+                                                     **spectrum_kwargs)
+            sim.mesh.plot_electron_momentum_spectrum(r_type = 'momentum', r_scale = 'atomic_momentum', r_lower_lim = .01 * atomic_momentum, r_upper_lim = 2.5 * atomic_momentum,
+                                                     log = log,
+                                                     **spectrum_kwargs)
 
             # unit_value, unit_name = unit_value_and_name_from_unit('per_nm')
             #
@@ -151,9 +163,9 @@ if __name__ == '__main__':
             # #         inner_product_mesh[ii, :] = sim.mesh.inner_product_with_plane_waves_theta(theta, wavenumbers)
             # # print(t)
             #
-        # with cp.utils.Timer() as t:
+            # with cp.utils.Timer() as t:
             #     theta_mesh, wavenumber_mesh, inner_product_mesh = sim.mesh.inner_product_with_plane_waves(thetas, wavenumbers)
-        # print(t)
+            # print(t)
             #
             # print(np.sum(np.abs(inner_product_mesh) ** 2))
             #
@@ -211,6 +223,6 @@ if __name__ == '__main__':
             #
             # plt.close()
 
-        # or should I keep it as kx, kz?
+            # or should I keep it as kx, kz?
 
-        # or both as options...
+            # or both as options...

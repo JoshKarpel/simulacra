@@ -327,6 +327,8 @@ class FigureManager:
     def __init__(self, name, name_postfix = '',
                  fig_scale = 0.95, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0,
                  target_dir = None, img_format = 'pdf', img_scale = 1,
+                 close_before = True, close_after = True,
+                 save = True, show = False,
                  **kwargs):
         self.name = name
         self.name_postfix = name_postfix
@@ -342,14 +344,31 @@ class FigureManager:
         if len(kwargs) > 0:
             logger.debug('FigureManager for figure {} absorbed extraneous kwargs: {}'.format(self.name, kwargs))
 
+        self.close_before = close_before
+        self.close_after = close_after
+
+        self.save = save
+        self.show = show
+
+        self.path = None
+
     def __enter__(self):
+        if self.close_before:
+            plt.close()
+
         self.fig = get_figure(fig_scale = self.fig_scale, fig_width_pts = self.fig_width_pts, aspect_ratio = self.aspect_ratio)
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.path = save_current_figure(name = self.name, name_postfix = self.name_postfix, target_dir = self.target_dir, img_format = self.img_format, img_scale = self.img_scale)
-        plt.close()
+        if self.show:
+            plt.show()
+
+        if self.save:
+            self.path = save_current_figure(name = self.name, name_postfix = self.name_postfix, target_dir = self.target_dir, img_format = self.img_format, img_scale = self.img_scale)
+
+        if self.close_after:
+            plt.close()
 
 
 def xy_plot(name,

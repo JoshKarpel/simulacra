@@ -1846,66 +1846,77 @@ class SphericalHarmonicMesh(QuantumMesh):
                   color_map_min = 0,
                   distance_unit = 'bohr_radius',
                   **kwargs):
-        plt.close()  # close any old figures
-
         unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
 
-        fig = plt.figure(figsize = (7, 7), dpi = 600)
-        fig.set_tight_layout(True)
-        axis = plt.subplot(111, projection = 'polar')
-        axis.set_theta_zero_location('N')
-        axis.set_theta_direction('clockwise')
+        with cp.utils.FigureManager(self.sim.name + '__' + name, **kwargs) as figman:
+            fig = figman.fig
 
-        color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit, color_map_min = color_map_min, distance_unit = distance_unit)
-        if overlay_probability_current:
-            quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit, distance_unit = distance_unit)
+            fig.set_tight_layout(True)
+            axis = plt.subplot(111, projection = 'polar')
+            axis.set_theta_zero_location('N')
+            axis.set_theta_direction('clockwise')
 
-        if title is not None:
-            title = axis.set_title(title, fontsize = 15)
-            title.set_x(.03)  # move title to the upper left corner
-            title.set_y(.97)
+            color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit, color_map_min = color_map_min, distance_unit = distance_unit)
+            if overlay_probability_current:
+                quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit, distance_unit = distance_unit)
 
-        # make a colorbar
-        cbar_axis = fig.add_axes([1.01, .1, .04, .8])  # add a new axis for the cbar so that the old axis can stay square
-        cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
-        cbar.ax.tick_params(labelsize = 10)
+            if title is not None:
+                title = axis.set_title(title, fontsize = 15)
+                title.set_x(.03)  # move title to the upper left corner
+                title.set_y(.97)
 
-        axis.grid(True, color = COLOR_OPPOSITE_PLASMA, linestyle = ':')  # change grid color to make it show up against the colormesh
-        angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
-        axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
+            # make a colorbar
+            cbar_axis = fig.add_axes([1.01, .1, .04, .8])  # add a new axis for the cbar so that the old axis can stay square
+            cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
+            cbar.ax.tick_params(labelsize = 10)
 
-        axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
-        axis.tick_params(axis = 'y', which = 'major', colors = COLOR_OPPOSITE_PLASMA, pad = 3)  # make r ticks a color that shows up against the colormesh
-        axis.tick_params(axis = 'both', which = 'both', length = 0)
+            axis.grid(True, color = COLOR_OPPOSITE_PLASMA, linestyle = ':')  # change grid color to make it show up against the colormesh
+            angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
+            axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
-        axis.set_rlabel_position(80)
+            axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
+            axis.tick_params(axis = 'y', which = 'major', colors = COLOR_OPPOSITE_PLASMA, pad = 3)  # make r ticks a color that shows up against the colormesh
+            axis.tick_params(axis = 'both', which = 'both', length = 0)
 
-        max_yticks = 5
-        yloc = plt.MaxNLocator(max_yticks, symmetric = False, prune = 'both')
-        axis.yaxis.set_major_locator(yloc)
+            axis.set_rlabel_position(80)
 
-        fig.canvas.draw()  # must draw early to modify the axis text
+            max_yticks = 5
+            yloc = plt.MaxNLocator(max_yticks, symmetric = False, prune = 'both')
+            axis.yaxis.set_major_locator(yloc)
 
-        tick_labels = axis.get_yticklabels()
-        for t in tick_labels:
-            t.set_text(t.get_text() + r'${}$'.format(unit_name))
-        axis.set_yticklabels(tick_labels)
+            fig.canvas.draw()  # must draw early to modify the axis text
 
-        if plot_limit is not None:
-            axis.set_rmax(plot_limit / unit_value)
-        else:
-            axis.set_rmax((self.r_max - (self.delta_r / 2)) / unit_value)
+            tick_labels = axis.get_yticklabels()
+            for t in tick_labels:
+                t.set_text(t.get_text() + r'${}$'.format(unit_name))
+            axis.set_yticklabels(tick_labels)
 
-        cp.utils.save_current_figure(name = '{}_{}'.format(self.spec.name, name), **kwargs)
+            if plot_limit is not None:
+                axis.set_rmax(plot_limit / unit_value)
+            else:
+                axis.set_rmax((self.r_max - (self.delta_r / 2)) / unit_value)
 
-        plt.close()
+    def plot_electron_momentum_spectrum(self, r_type = 'wavenumber', r_scale = 'per_nm', r_lower_lim = twopi * .01 * per_nm, r_upper_lim = twopi * 10 * per_nm, r_points = 100,
+                                        theta_points = 360,
+                                        log = False,
+                                        **kwargs):
+        """
+        Generate a polar plot of the wavefunction decomposed into plane waves.
 
-    def plot_electron_spectrum(self, r_type = 'wavenumber', r_scale = 'per_nm', r_lower_lim = twopi * .01 * per_nm, r_upper_lim = twopi * 10 * per_nm, r_points = 100,
-                               theta_points = 360,
-                               log = False,
-                               **kwargs):
-        if r_type not in ('wavenumber', 'energy'):
-            raise ValueError("Invalid argument to plot_electron_spectrum: r_type must be either 'wavenumber' or 'energy'")
+        The radial dimension can be displayed in wavenumbers, energy, or momentum. The angle is the angle of the plane wave in the z-x plane (because m=0, the decomposition is symmetric in the x-y plane).
+
+        :param r_type: type of unit for the radial axis ('wavenumber', 'energy', or 'momentum')
+        :param r_scale: unit specification for the radial dimension
+        :param r_lower_lim: lower limit for the radial dimension
+        :param r_upper_lim: upper limit for the radial dimension
+        :param r_points: number of points for the radial dimension
+        :param theta_points: number of points for the angular dimension
+        :param log: True to displayed logged data, False otherwise (default: False)
+        :param kwargs: kwargs are passed to compy.utils.FigureManager
+        :return: the FigureManager generated during plot creation
+        """
+        if r_type not in ('wavenumber', 'energy', 'momentum'):
+            raise ValueError("Invalid argument to plot_electron_spectrum: r_type must be either 'wavenumber', 'energy', or 'momentum'")
 
         thetas = np.linspace(0, twopi, theta_points)
         r = np.linspace(r_lower_lim, r_upper_lim, r_points)
@@ -1917,10 +1928,10 @@ class SphericalHarmonicMesh(QuantumMesh):
         with cp.utils.FigureManager(self.sim.name + '__electron_spectrum', **plot_kwargs) as figman:
             if r_type == 'wavenumber':
                 wavenumbers = r
-                figman.name += '__wavenumber'
             elif r_type == 'energy':
                 wavenumbers = electron_wavenumber_from_energy(r)
-                figman.name += '__energy'
+            elif r_type == 'momentum':
+                wavenumbers = r / hbar
 
             theta_mesh, wavenumber_mesh, inner_product_mesh = self.inner_product_with_plane_waves(thetas, wavenumbers)
 
@@ -1928,6 +1939,8 @@ class SphericalHarmonicMesh(QuantumMesh):
                 r_mesh = wavenumber_mesh
             elif r_type == 'energy':
                 r_mesh = electron_energy_from_wavenumber(wavenumber_mesh)
+            elif r_type == 'momentum':
+                r_mesh = wavenumber_mesh * hbar
 
             r_mesh = np.real(r_mesh)
             overlap_mesh = np.abs(inner_product_mesh) ** 2
@@ -1939,6 +1952,8 @@ class SphericalHarmonicMesh(QuantumMesh):
             axis = plt.subplot(111, projection = 'polar')
             axis.set_theta_zero_location('N')
             axis.set_theta_direction('clockwise')
+
+            figman.name += '__{}'.format(r_type)
 
             norm = None
             if log:
@@ -1979,6 +1994,8 @@ class SphericalHarmonicMesh(QuantumMesh):
             axis.set_yticklabels(tick_labels)
 
             axis.set_rmax(np.nanmax(r_mesh) / r_unit_value)
+
+        return figman
 
 
 class ElectricFieldSimulation(cp.core.Simulation):
@@ -2499,7 +2516,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
         prefix = self.file_name
         if use_name:
             prefix = self.name
+
         frequency, dipole_moment = self.dipole_moment_vs_frequency(gauge = gauge, first_time = first_time, last_time = last_time)
+
         cp.utils.xy_plot(prefix + '__dipole_moment_vs_frequency',
                          frequency, np.abs(dipole_moment) ** 2,
                          x_scale = 'THz', y_scale = atomic_electric_dipole ** 2,

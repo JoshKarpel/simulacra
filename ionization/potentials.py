@@ -24,6 +24,9 @@ class PotentialEnergySum(cp.Sum, PotentialEnergy):
 
     container_name = 'potentials'
 
+    def get_electric_field_amplitude(self, t):
+        return sum(x.get_electric_field_amplitude(t) for x in self._container)
+
 
 class NoPotentialEnergy(PotentialEnergy):
     """A class representing no potential energy from any source."""
@@ -403,6 +406,99 @@ class SineWave(UniformLinearlyPolarizedElectricField):
 
     def get_peak_power_density(self):
         return 0.5 * c * epsilon_0 * (np.abs(self.amplitude) ** 2)  # TODO: check factor of 1/2 here
+
+
+class SumOfSinesPulse(UniformLinearlyPolarizedElectricField):
+    def __init__(self, pulse_width = 200 * asec, pulse_frequency_ratio = 5, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+                 number_of_modes = 71,
+                 **kwargs):
+        """
+
+        :param pulse_width:
+        :param omega_min:
+        :param fluence:
+        :param phase:
+        :param pulse_center:
+        :param kwargs:
+        """
+        super().__init__(**kwargs)
+
+        if phase != 0:
+            raise ValueError('phase != 0 not implemented for SumOfSinesPulse')
+
+        self.pulse_width = pulse_width
+
+        self.number_of_modes = number_of_modes
+        self.mode_spacing = twopi / (self.number_of_modes * self.pulse_width)
+        self.pulse_frequency_ratio = pulse_frequency_ratio
+
+        self.omega_min = self.pulse_frequency_ratio * self.mode_spacing
+
+        # self.phase = phase
+        self.fluence = fluence
+        self.pulse_center = pulse_center
+
+        self.delta_omega = twopi / self.pulse_width
+        self.omega_max = self.omega_min + self.delta_omega
+        # self.omega_carrier = (self.omega_min + self.omega_max) / 2
+
+        self.amplitude_omega = np.sqrt(self.fluence * self.delta_omega / (twopi * number_of_modes * c * epsilon_0))
+        self.amplitude_time = self.amplitude_omega
+
+        self.cycle_period = twopi / self.mode_spacing
+
+    @property
+    def smallest_photon_energy(self):
+        return hbar * self.omega_min
+
+    @property
+    def largest_photon_energy(self):
+        return hbar * self.omega_max
+
+    @property
+    def frequency_min(self):
+        return self.omega_min / twopi
+
+    @property
+    def frequency_max(self):
+        return self.omega_max / twopi
+
+    @property
+    def delta_frequency(self):
+        return self.delta_omega / twopi
+
+    @property
+    def amplitude_per_frequency(self):
+        return np.sqrt(twopi) * self.amplitude_omega
+
+    def __str__(self):
+        out = cp.utils.field_str(self,
+                                 ('pulse_width', 'asec'),
+                                 ('pulse_center', 'asec'),
+                                 ('fluence', 'J/cm^2'),
+                                 'phase',
+                                 ('smallest_photon_energy', 'eV'),
+                                 ('largest_photon_energy', 'eV'),
+                                 )
+
+        return out + super().__str__()
+
+    def __repr__(self):
+        return cp.utils.field_str(self,
+                                  'pulse_width',
+                                  'pulse_center',
+                                  'fluence',
+                                  'phase',
+                                  'smallest_photon_energy',
+                                  'largest_photon_energy',
+                                  )
+
+    def get_electric_field_amplitude(self, t):
+        """Return the electric field amplitude at time t."""
+        tau = t - self.pulse_center
+        amp = np.real(np.exp(-1j * self.pulse_frequency_ratio * self.mode_spacing * tau) * (1 - np.exp(-1j * self.mode_spacing * self.number_of_modes * tau)) / (1 - np.exp(-1j * self.mode_spacing * tau)))
+
+        return amp * self.amplitude_time * super().get_electric_field_amplitude(t)
 
 
 class SincPulse(UniformLinearlyPolarizedElectricField):
