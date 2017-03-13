@@ -32,7 +32,7 @@ if __name__ == '__main__':
         # efield += ion.SineWave.from_photon_energy(rydberg + 30 * eV, amplitude = .05 * atomic_electric_field,
         #                                           window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec))
 
-        efield = ion.SumOfSinesPulse(pulse_width = 200 * asec, pulse_frequency_ratio = 5, number_of_modes = 71, fluence = .1 * Jcm2,
+        efield = ion.SumOfSinesPulse(pulse_width = 50 * asec, pulse_frequency_ratio = 20, number_of_modes = 71, fluence = .1 * Jcm2,
                                      window = window)
 
         spec_kwargs = dict(
@@ -58,7 +58,7 @@ if __name__ == '__main__':
         print(sim.info())
 
         sim.mesh.plot_g(target_dir = OUT_DIR)
-        sim.mesh.plot_g(target_dir = OUT_DIR, name_postfix = '_25', plot_limit = 25 * bohr_radius)
+        sim.mesh.plot_g(target_dir = OUT_DIR, name_postfix = '_25', plot_limit = 50 * bohr_radius)
 
         plot_kwargs = dict(
             target_dir = OUT_DIR,
@@ -130,14 +130,14 @@ if __name__ == '__main__':
         )
 
         for log in (True, False):
-            sim.mesh.plot_electron_momentum_spectrum(r_type = 'energy', r_scale = 'eV', r_lower_lim = .1 * eV, r_upper_lim = 50 * eV,
+            sim.mesh.plot_electron_momentum_spectrum(r_type = 'energy', r_scale = 'eV', r_lower_lim = .1 * eV, r_upper_lim = 100 * eV,
                                                      log = log,
                                                      **spectrum_kwargs)
             sim.mesh.plot_electron_momentum_spectrum(r_type = 'wavenumber',
-                                                     r_upper_lim = 40 * per_nm,
+                                                     r_upper_lim = 100 * per_nm,
                                                      log = log,
                                                      **spectrum_kwargs)
-            sim.mesh.plot_electron_momentum_spectrum(r_type = 'momentum', r_scale = 'atomic_momentum', r_lower_lim = .01 * atomic_momentum, r_upper_lim = 2.5 * atomic_momentum,
+            sim.mesh.plot_electron_momentum_spectrum(r_type = 'momentum', r_scale = 'atomic_momentum', r_lower_lim = .01 * atomic_momentum, r_upper_lim = 5 * atomic_momentum,
                                                      log = log,
                                                      **spectrum_kwargs)
 

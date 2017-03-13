@@ -480,7 +480,7 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
 
         ratio = np.abs(delta_0 / delta_1)
 
-        if ratio >= 1 or np.isinf(ratio) or np.isnan(ratio):  # step was ok
+        if ratio >= 1 or np.isinf(ratio) or np.isnan(ratio) or self.time_step == self.spec.minimum_time_step:  # step was ok
             self.times = np.append(self.times, self.time + self.time_step)
             self.time_steps_by_times = np.append(self.time_steps_by_times, self.time_step)
             self.y = np.append(self.y, double_half_step_estimate + (delta_1 / 15))

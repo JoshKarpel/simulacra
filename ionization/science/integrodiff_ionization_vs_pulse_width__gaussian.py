@@ -86,6 +86,7 @@ if __name__ == '__main__':
                     specs.append(ide.AdaptiveIntegroDifferentialEquationSpecification('flu={}jcm2_pw={}as_phi={}'.format(round(flu, 3), round(pw, 3), round(phase, 3)),
                                                                                       time_initial = -t_bound_per_pw * pw * asec, time_final = t_bound_per_pw * pw * asec,
                                                                                       time_step = .01 * asec,
+                                                                                      error_on = eps_on, eps = eps,
                                                                                       # maximum_time_step = max_dt * asec,
                                                                                       maximum_time_step = (pw / min_dt_per_pw) * asec,
                                                                                       prefactor = prefactor,
