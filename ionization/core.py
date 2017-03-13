@@ -92,6 +92,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         :param dipole_gauges: a list of dipole gauges to check the expectation value of during time evolution
         :param internal_potential: the time-independent part of the potential the particle experiences
         :param electric_potential: the electric field (possibly time-dependent) that the particle experiences
+        :param electric_potential_dc_correction: if True, perform DC correction on the electric field
         :param mask: a mask function to be applied to the QuantumMesh after every time step
         :param evolution_method: which evolution method to use. Options are 'CN' (Crank-Nicolson), 'SO' (Split-Operator), and 'S' (Spectral). Only certain options are available for certain meshes.
         :param evolution_equations: which form of the evolution equations to use. Options are 'L' (Lagrangian) and 'H' (Hamiltonian). Most meshes use 'H'.
@@ -1531,6 +1532,8 @@ class SphericalHarmonicMesh(QuantumMesh):
 
                 analytic_to_numeric[analytic_state] = numeric_state
 
+            logger.debug('Generated numerical eigenbasis for l = {}, energy <= {} eV'.format(l, uround(energy_max, 'eV', 3)))
+
         logger.debug('Generated numerical eigenbasis for l <= {}, energy <= {} eV. Found {} states.'.format(l_max, uround(energy_max, 'eV', 3), len(analytic_to_numeric)))
 
         return analytic_to_numeric
@@ -1871,13 +1874,13 @@ class SphericalHarmonicMesh(QuantumMesh):
             # make a colorbar
             cbar_axis = fig.add_axes([1.01, .1, .04, .8])  # add a new axis for the cbar so that the old axis can stay square
             cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
-            cbar.ax.tick_params(labelsize = 10)
+            cbar.ax.tick_params(labelsize = 8)
 
             axis.grid(True, color = COLOR_OPPOSITE_PLASMA, linestyle = ':')  # change grid color to make it show up against the colormesh
             angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
             axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
-            axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
+            axis.tick_params(axis = 'both', which = 'major', labelsize = 8)  # increase size of tick labels
             axis.tick_params(axis = 'y', which = 'major', colors = COLOR_OPPOSITE_PLASMA, pad = 3)  # make r ticks a color that shows up against the colormesh
             axis.tick_params(axis = 'both', which = 'both', length = 0)
 
@@ -2018,9 +2021,13 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if self.spec.electric_potential_dc_correction:
             electric_field_vs_time = self.spec.electric_potential.get_electric_field_amplitude(self.times)
-            average_electric_field = integrate.simps(electric_field_vs_time) / total_time
+            average_electric_field = integrate.simps(electric_field_vs_time, x = self.times) / total_time
+
+            old_pot = self.spec.electric_potential
 
             self.spec.electric_potential += potentials.Rectangle(start_time = self.times[0], end_time = self.times[-1], amplitude = -average_electric_field)
+
+            logger.warning('Replaced electric potential {} --> {} for {} {}'.format(old_pot, self.spec.electric_potential, self.__class__.__name__, self.name))
 
         self.initialize_mesh()
 

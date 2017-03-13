@@ -77,7 +77,7 @@ class Simulation(utils.Beet):
     Ideally, actual computation should be handed off to another object, while the Simulation itself stores the data produced by that object.
     """
 
-    _status = utils.RestrictedValues('status', {STATUS_INI, STATUS_RUN, STATUS_FIN, STATUS_PAU})
+    _status = utils.RestrictedValues('status', {'', STATUS_INI, STATUS_RUN, STATUS_FIN, STATUS_PAU})
 
     def __init__(self, spec):
         """
@@ -87,9 +87,9 @@ class Simulation(utils.Beet):
         :type spec: Specification
         :type str:
         """
-        super().__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from spec
-
         self.spec = spec
+
+        super().__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from spec
 
         # diagnostic data
         self.runs = 0
@@ -100,6 +100,7 @@ class Simulation(utils.Beet):
         self.latest_run_time = dt.datetime.now()
         self.running_time = dt.timedelta()
 
+        self._status = ''
         self.status = STATUS_INI
 
     @property

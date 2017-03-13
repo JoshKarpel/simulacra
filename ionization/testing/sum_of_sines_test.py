@@ -45,7 +45,7 @@ if __name__ == '__main__':
             time_step = 1 * asec,
             use_numeric_eigenstates_as_basis = True,
             numeric_eigenstate_energy_max = 100 * eV,
-            numeric_eigenstate_l_max = 30,
+            numeric_eigenstate_l_max = 50,
             electric_potential = efield,
             electric_potential_dc_correction = True,
             mask = ion.RadialCosineMask(inner_radius = .8 * bound * bohr_radius, outer_radius = bound * bohr_radius),

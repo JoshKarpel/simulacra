@@ -409,7 +409,7 @@ class SineWave(UniformLinearlyPolarizedElectricField):
 
 
 class SumOfSinesPulse(UniformLinearlyPolarizedElectricField):
-    def __init__(self, pulse_width = 200 * asec, pulse_frequency_ratio = 5, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+    def __init__(self, pulse_width = 200 * asec, pulse_frequency_ratio = 5, fluence = 1 * Jcm2, phase = 0, pulse_center = 0 * asec,
                  number_of_modes = 71,
                  **kwargs):
         """
@@ -476,7 +476,7 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricField):
                                  ('pulse_width', 'asec'),
                                  ('pulse_center', 'asec'),
                                  ('fluence', 'J/cm^2'),
-                                 'phase',
+                                 # 'phase',
                                  ('smallest_photon_energy', 'eV'),
                                  ('largest_photon_energy', 'eV'),
                                  )
@@ -488,7 +488,7 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricField):
                                   'pulse_width',
                                   'pulse_center',
                                   'fluence',
-                                  'phase',
+                                  # 'phase',
                                   'smallest_photon_energy',
                                   'largest_photon_energy',
                                   )
@@ -496,7 +496,13 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricField):
     def get_electric_field_amplitude(self, t):
         """Return the electric field amplitude at time t."""
         tau = t - self.pulse_center
-        amp = np.real(np.exp(-1j * self.pulse_frequency_ratio * self.mode_spacing * tau) * (1 - np.exp(-1j * self.mode_spacing * self.number_of_modes * tau)) / (1 - np.exp(-1j * self.mode_spacing * tau)))
+
+        cond = np.not_equal(tau, 0)
+
+        on = np.real(np.exp(-1j * self.pulse_frequency_ratio * self.mode_spacing * tau) * (1 - np.exp(-1j * self.mode_spacing * self.number_of_modes * tau)) / (1 - np.exp(-1j * self.mode_spacing * tau)))
+        off = self.number_of_modes
+
+        amp = np.where(cond, on, off)
 
         return amp * self.amplitude_time * super().get_electric_field_amplitude(t)
 
