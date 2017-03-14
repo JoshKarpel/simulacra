@@ -2031,6 +2031,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             extra_times = np.delete(np.linspace(self.spec.time_final, self.spec.minimum_time_final, ((self.spec.minimum_time_final - self.spec.time_final) / self.spec.extra_time_step) + 1), 0)
             self.times = np.concatenate((self.times, extra_times))
         self.time_index = 0
+        self.data_time_index = 0
         self.time_steps = len(self.times)
 
         if self.spec.electric_potential_dc_correction:
@@ -2046,17 +2047,21 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.initialize_mesh()
 
         # simulation data storage
-        self.storage_mask = np.full(self.time_steps, False, dtype = bool)
-        self.norm_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
-        self.norm_diff_mask_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
-        self.energy_expectation_value_vs_time_internal = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
-        self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
-        self.electric_field_amplitude_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
-        self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
+        time_indices = np.array(range(0, self.time_steps))
+        self.data_mask = np.equal(time_indices, 0) + np.equal(time_indices, self.time_steps - 1) + np.equal(time_indices % self.spec.store_data_every, 0)
+        self.data_times = self.times[self.data_mask]
+        self.data_indices = time_indices[self.data_mask]
+        self.data_time_steps = len(self.data_times)
+        self.norm_vs_time = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
+        self.norm_diff_mask_vs_time = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
+        self.energy_expectation_value_vs_time_internal = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
+        self.inner_products_vs_time = {state: np.zeros(self.data_time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
+        self.electric_field_amplitude_vs_time = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
+        self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.data_time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
 
         # optional data storage
         if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:
-            self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps, dtype = np.float64) * np.NaN for sph_harm in self.spec.spherical_harmonics}
+            self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN for sph_harm in self.spec.spherical_harmonics}
 
         for time in self.spec.snapshot_times:
             time_index, _, _ = cp.utils.find_nearest_entry(self.times, time)
@@ -2087,39 +2092,37 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
     def store_data(self):
         """Update the time-indexed data arrays with the current values."""
-        self.storage_mask[self.time_index] = True
-
         norm = self.mesh.norm()
-        self.norm_vs_time[self.time_index] = norm
+        self.norm_vs_time[self.data_time_index] = norm
         if norm > 1.001 * self.norm_vs_time[0]:
             logger.warning('Wavefunction norm ({}) has exceeded initial norm ({}) by more than .1% for {} {}'.format(norm, self.norm_vs_time[0], self.__class__.__name__, self.name))
         try:
-            if norm > 1.001 * self.norm_vs_time[self.time_index - 1]:
-                logger.warning('Wavefunction norm ({}) at time_index = {} has exceeded norm from previous time step ({}) by more than .1% for {} {}'.format(norm, self.time_index, self.norm_vs_time[self.time_index - 1], self.__class__.__name__, self.name))
+            if norm > 1.001 * self.norm_vs_time[self.data_time_index - 1]:
+                logger.warning('Wavefunction norm ({}) at time_index = {} has exceeded norm from previous time step ({}) by more than .1% for {} {}'.format(norm, self.data_time_index, self.norm_vs_time[self.data_time_index - 1], self.__class__.__name__, self.name))
         except IndexError:
             pass
 
-        self.energy_expectation_value_vs_time_internal[self.time_index] = self.mesh.energy_expectation_value
+        self.energy_expectation_value_vs_time_internal[self.data_time_index] = self.mesh.energy_expectation_value
 
         for gauge in self.spec.dipole_gauges:
-            self.electric_dipole_moment_vs_time[gauge][self.time_index] = self.mesh.dipole_moment_expectation_value(gauge = gauge)
+            self.electric_dipole_moment_vs_time[gauge][self.data_time_index] = self.mesh.dipole_moment_expectation_value(gauge = gauge)
 
         for state in self.spec.test_states:
-            self.inner_products_vs_time[state][self.time_index] = self.mesh.inner_product(self.mesh.get_g_for_state(state))
+            self.inner_products_vs_time[state][self.data_time_index] = self.mesh.inner_product(self.mesh.get_g_for_state(state))
 
-        self.electric_field_amplitude_vs_time[self.time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.times[self.time_index])
+        self.electric_field_amplitude_vs_time[self.data_time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.data_times[self.data_time_index])
 
         if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:  # if spherical harmonic mesh and we want to do this
             norm_by_l = self.mesh.norm_by_l
             for sph_harm, l_norm in zip(self.spec.spherical_harmonics, norm_by_l):
-                self.norm_by_harmonic_vs_time[sph_harm][self.time_index] = l_norm
+                self.norm_by_harmonic_vs_time[sph_harm][self.data_time_index] = l_norm
 
             largest_l = self.spec.spherical_harmonics[-1]
-            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][self.time_index]
-            if norm_in_largest_l > self.norm_vs_time[self.self.time_index] / 1000:
+            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][self.data_time_index]
+            if norm_in_largest_l > self.norm_vs_time[self.data_time_index] / 1000:
                 logger.warning('Wavefunction norm in largest angular momentum state is large (l = {}, norm = {}), consider increasing l bound'.format(largest_l, norm_in_largest_l))
 
-        logger.debug('{} {} stored data for time index {}'.format(self.__class__.__name__, self.name, self.time_index))
+        logger.debug('{} {} stored data for time index {} (data time index {})'.format(self.__class__.__name__, self.name, self.time_index, self.data_time_index))
 
     def take_snapshot(self):
         snapshot = Snapshot(self, self.time_index)
@@ -2142,8 +2145,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 animator.initialize(self)
 
             while True:
-                if self.time_index == 0 or self.time_index == self.time_steps - 1 or self.time_index % self.spec.store_data_every == 0:
+                if self.time in self.data_times:
                     self.store_data()
+                    self.data_time_index += 1
 
                 if self.time_index in self.spec.snapshot_indices:
                     self.take_snapshot()
@@ -2158,7 +2162,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 self.time_index += 1
 
                 norm_diff_mask = self.mesh.evolve(self.times[self.time_index] - self.times[self.time_index - 1])  # evolve the mesh forward to the next time step
-                self.norm_diff_mask_vs_time[self.time_index] = norm_diff_mask  # move to store data so it has the right index?
+                self.norm_diff_mask_vs_time[self.data_time_index] = norm_diff_mask  # move to store data so it has the right index?
 
                 logger.debug('{} {} ({}) evolved to time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.file_name, self.time_index, self.time_steps - 1,
                                                                                      np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
@@ -2230,7 +2234,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         group_labels = {k: label_format_str.format(int(k)) for k in grouped_states}
 
-        cutoff_key = max(grouped_states) + 1  # get max key, make sure cutoff key is larger for sorting purposes
+        try:
+            cutoff_key = max(grouped_states) + 1  # get max key, make sure cutoff key is larger for sorting purposes
+        except ValueError:
+            cutoff_key = ''
 
         grouped_states[cutoff_key] = cutoff
         group_labels[cutoff_key] = label_format_str.format(r'\geq {}'.format(cutoff_value))
@@ -2252,9 +2259,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
 
         if not isinstance(self.spec.electric_potential, potentials.NoPotentialEnergy):
-            ax_field.plot(self.times[self.storage_mask] / x_scale_unit, self.electric_field_amplitude_vs_time[self.storage_mask] / atomic_electric_field, color = COLOR_ELECTRIC_FIELD, linewidth = 2)
+            ax_field.plot(self.data_times / x_scale_unit, self.electric_field_amplitude_vs_time / atomic_electric_field, color = COLOR_ELECTRIC_FIELD, linewidth = 2)
 
-        ax_overlaps.plot(self.times[self.storage_mask] / x_scale_unit, self.norm_vs_time[self.storage_mask], label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 2)
+        ax_overlaps.plot(self.data_times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 2)
 
         if grouped_free_states is None:
             grouped_free_states, group_labels = self.group_free_states_by_discrete_attr('l')
@@ -2265,7 +2272,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         state_overlaps = self.state_overlaps_vs_time  # it's a property that would otherwise get evaluated every time we asked for it
 
-        extra_bound_overlap = np.zeros(self.time_steps)
+        extra_bound_overlap = np.zeros(self.data_time_steps)
         if collapse_bound_state_angular_momentums:
             overlaps_by_n = {n: np.zeros(self.time_steps) for n in range(1, bound_state_max_n + 1)}  # prepare arrays to sum over angular momenta in, one for each n
             for state in sorted(self.bound_states):
@@ -2296,9 +2303,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 labels.append(r'$\left| \left\langle \psi| {}  \right\rangle \right|^2$'.format(group_labels[group]))
                 colors.append(free_state_color_cycle.__next__())
 
-        overlaps = [overlap[self.storage_mask] for overlap in overlaps]
+        overlaps = [overlap for overlap in overlaps]
 
-        ax_overlaps.stackplot(self.times[self.storage_mask] / x_scale_unit,
+        ax_overlaps.stackplot(self.data_times / x_scale_unit,
                               *overlaps,
                               labels = labels,
                               colors = colors,

@@ -29,6 +29,9 @@ class IllegalQuantumState(cp.CompyException):
 class QuantumState(cp.Summand):
     """A class that represents a quantum state, with an amplitude and some basic multiplication/addition rules. Can be summed to form a Superposition."""
 
+    bound = None
+    discrete_eigenvalues = None
+
     def __init__(self, amplitude = 1):
         """
         Construct a QuantumState with a given amplitude.
@@ -40,9 +43,6 @@ class QuantumState(cp.Summand):
         super(QuantumState, self).__init__()
         self.amplitude = amplitude
         self.summation_class = Superposition
-
-        self.bound = None
-        self.discrete_eigenvalues = None
 
     @property
     def free(self):
