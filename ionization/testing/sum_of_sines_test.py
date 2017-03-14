@@ -19,37 +19,38 @@ if __name__ == '__main__':
         bound = 200
         points_per_bohr_radius = 4
 
-        t_bound = 1000
+
 
         window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec)
 
-        # efield = ion.SineWave.from_photon_energy(rydberg + 20 * eV, amplitude = .05 * atomic_electric_field,
-        #                                                          window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec))
+        ani = [
+            ion.animators.SphericalHarmonicAnimator(top_right_axis_manager_type = ion.animators.AngularMomentumDecompositionAxis)
+        ]
+        # ani = None
 
-        # efield = ion.SineWave.from_photon_energy(rydberg + 20 * eV, amplitude = .05 * atomic_electric_field,
-        #                                          window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec))
-        #
-        # efield += ion.SineWave.from_photon_energy(rydberg + 30 * eV, amplitude = .05 * atomic_electric_field,
-        #                                           window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec))
-
-        efield = ion.SumOfSinesPulse(pulse_width = 50 * asec, pulse_frequency_ratio = 20, number_of_modes = 71, fluence = .1 * Jcm2,
+        pw = 100
+        efield = ion.SumOfSinesPulse(pulse_width = pw * asec, pulse_frequency_ratio = 20, number_of_modes = 71, fluence = 1 * Jcm2,
                                      window = window)
+
+        t_bound = 20 * pw
 
         spec_kwargs = dict(
             r_bound = bound * bohr_radius,
             r_points = bound * points_per_bohr_radius,
-            l_points = 200,
+            l_points = 100,
             initial_state = ion.HydrogenBoundState(1, 0),
             time_initial = -t_bound * asec,
             time_final = t_bound * asec,
             time_step = 1 * asec,
             use_numeric_eigenstates_as_basis = True,
-            numeric_eigenstate_energy_max = 100 * eV,
-            numeric_eigenstate_l_max = 50,
+            numeric_eigenstate_energy_max = 50 * eV,
+            numeric_eigenstate_l_max = 20,
             electric_potential = efield,
             electric_potential_dc_correction = True,
             mask = ion.RadialCosineMask(inner_radius = .8 * bound * bohr_radius, outer_radius = bound * bohr_radius),
-            store_data_every = 25,
+            store_norm_by_l = True,
+            store_data_every = 1,
+            animators = ani,
         )
 
         sim = ion.SphericalHarmonicSpecification('PWTest', **spec_kwargs).to_simulation()

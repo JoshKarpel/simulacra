@@ -31,6 +31,12 @@ def run(spec):
                           f_axis_label = r'${}(t)$'.format(str_efield),
                           f_scale = 'AEF')
 
+        cp.utils.xy_plot(sim.name + '_RI',
+                         sim.times,
+                         np.real(sim.y), np.imag(sim.y), np.abs(sim.y), np.angle(sim.y),
+                         line_labels = ('Real', 'Imag', 'Abs', 'Arg'),
+                         target_dir = OUT_DIR)
+
         return sim
 
 
@@ -46,7 +52,7 @@ if __name__ == '__main__':
         prefactor = -np.sqrt(pi) * (L ** 2) * ((q / hbar) ** 2)
 
         t_bound_per_pw = 30
-        eps = 1e-6
+        eps = 1e-3
         # eps_on = 'y'
         eps_on = 'dydt'
 
@@ -61,10 +67,9 @@ if __name__ == '__main__':
         # pulse_widths = np.array([50, 100, 150, 200, 250, 300, tau_alpha / asec, 1.5 * tau_alpha / asec], dtype = np.float64)
 
         # flu = 5
-        flu = 8.3
-        pw = 403
-
-        phi = .96 * pi
+        flu = .62
+        pw = 367
+        phi = .65 * pi
         phases = [phi, pi + phi, pi - phi, - phi]
 
         physics_str = 'flu={}jcm2_pw={}as_phi={}pi__eps={}'.format(flu, pw, round(phi / pi, 3), eps)

@@ -77,6 +77,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  animators = tuple(),
                  simulation_type = None,
                  store_data_every = 1,
+                 snapshot_times = (), snapshot_indices = (),
                  **kwargs):
         """
         Initialize an ElectricFieldSpecification instance from the given parameters.
@@ -147,6 +148,9 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.animators = deepcopy(tuple(animators))
 
         self.store_data_every = store_data_every
+
+        self.snapshot_times = set(snapshot_times)
+        self.snapshot_indices = set(snapshot_indices)
 
     def info(self):
         checkpoint = ['Checkpointing: ']
@@ -2004,6 +2008,16 @@ class SphericalHarmonicMesh(QuantumMesh):
         return figman
 
 
+class Snapshot:
+    def __init__(self, simulation, time_index):
+        self.sim = simulation
+        self.time_index = time_index
+
+    @property
+    def time(self):
+        return self.sim.times[self.time_index]
+
+
 class ElectricFieldSimulation(cp.core.Simulation):
     def __init__(self, spec):
         super(ElectricFieldSimulation, self).__init__(spec)
@@ -2044,6 +2058,12 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:
             self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps, dtype = np.float64) * np.NaN for sph_harm in self.spec.spherical_harmonics}
 
+        for time in self.spec.snapshot_times:
+            time_index, _, _ = cp.utils.find_nearest_entry(self.times, time)
+            self.spec.snapshot_indices.add(time_index)
+
+        self.snapshots = dict()
+
     @property
     def available_animation_frames(self):
         return self.time_steps
@@ -2065,41 +2085,46 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         logger.debug('Initialized mesh for {} {}'.format(self.__class__.__name__, self.name))
 
-    def store_data(self, time_index):
+    def store_data(self):
         """Update the time-indexed data arrays with the current values."""
-        self.storage_mask[time_index] = True
+        self.storage_mask[self.time_index] = True
 
         norm = self.mesh.norm()
-        self.norm_vs_time[time_index] = norm
+        self.norm_vs_time[self.time_index] = norm
         if norm > 1.001 * self.norm_vs_time[0]:
             logger.warning('Wavefunction norm ({}) has exceeded initial norm ({}) by more than .1% for {} {}'.format(norm, self.norm_vs_time[0], self.__class__.__name__, self.name))
         try:
-            if norm > 1.001 * self.norm_vs_time[time_index - 1]:
-                logger.warning('Wavefunction norm ({}) at time_index = {} has exceeded norm from previous time step ({}) by more than .1% for {} {}'.format(norm, time_index, self.norm_vs_time[time_index - 1], self.__class__.__name__, self.name))
+            if norm > 1.001 * self.norm_vs_time[self.time_index - 1]:
+                logger.warning('Wavefunction norm ({}) at time_index = {} has exceeded norm from previous time step ({}) by more than .1% for {} {}'.format(norm, self.time_index, self.norm_vs_time[self.time_index - 1], self.__class__.__name__, self.name))
         except IndexError:
             pass
 
-        self.energy_expectation_value_vs_time_internal[time_index] = self.mesh.energy_expectation_value
+        self.energy_expectation_value_vs_time_internal[self.time_index] = self.mesh.energy_expectation_value
 
         for gauge in self.spec.dipole_gauges:
-            self.electric_dipole_moment_vs_time[gauge][time_index] = self.mesh.dipole_moment_expectation_value(gauge = gauge)
+            self.electric_dipole_moment_vs_time[gauge][self.time_index] = self.mesh.dipole_moment_expectation_value(gauge = gauge)
 
         for state in self.spec.test_states:
-            self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(self.mesh.get_g_for_state(state))
+            self.inner_products_vs_time[state][self.time_index] = self.mesh.inner_product(self.mesh.get_g_for_state(state))
 
-        self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.times[time_index])
+        self.electric_field_amplitude_vs_time[self.time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.times[self.time_index])
 
         if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:  # if spherical harmonic mesh and we want to do this
             norm_by_l = self.mesh.norm_by_l
             for sph_harm, l_norm in zip(self.spec.spherical_harmonics, norm_by_l):
-                self.norm_by_harmonic_vs_time[sph_harm][time_index] = l_norm
+                self.norm_by_harmonic_vs_time[sph_harm][self.time_index] = l_norm
 
             largest_l = self.spec.spherical_harmonics[-1]
-            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][time_index]
-            if norm_in_largest_l > self.norm_vs_time[self.time_index] / 1000:
+            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][self.time_index]
+            if norm_in_largest_l > self.norm_vs_time[self.self.time_index] / 1000:
                 logger.warning('Wavefunction norm in largest angular momentum state is large (l = {}, norm = {}), consider increasing l bound'.format(largest_l, norm_in_largest_l))
 
-        logger.debug('{} {} stored data for time index {}'.format(self.__class__.__name__, self.name, time_index))
+        logger.debug('{} {} stored data for time index {}'.format(self.__class__.__name__, self.name, self.time_index))
+
+    def take_snapshot(self):
+        snapshot = Snapshot(self, self.time_index)
+
+        self.snapshots[self.time_index] = snapshot
 
     def run_simulation(self, store_intermediate_meshes = False):
         """
@@ -2118,7 +2143,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
             while True:
                 if self.time_index == 0 or self.time_index == self.time_steps - 1 or self.time_index % self.spec.store_data_every == 0:
-                    self.store_data(self.time_index)
+                    self.store_data()
+
+                if self.time_index in self.spec.snapshot_indices:
+                    self.take_snapshot()
 
                 for animator in self.animators:
                     if self.time_index == 0 or self.time_index == self.time_steps or self.time_index % animator.decimation == 0:
