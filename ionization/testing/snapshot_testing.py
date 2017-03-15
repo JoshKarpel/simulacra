@@ -1,6 +1,8 @@
 import os
 import logging
 
+import numpy as np
+
 import compy as cp
 import ionization as ion
 from compy.units import *
@@ -11,25 +13,36 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 log = cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
 
 
-def run(spec):
-    with log as logger:
-        sim = spec.to_simulation()
-
-        sim.run_simulation()
-
-        sim.save(target_dir = OUT_DIR)
-
-
 if __name__ == '__main__':
     with log as logger:
-        specs = []
 
-        for store in [1, 2, 5, 10, 20, 50]:
-            specs.append(ion.SphericalHarmonicSpecification('store={}'.format(store),
-                                                            time_initial = 0 * asec, time_final = 10000 * asec, time_step = 1 * asec,
-                                                            store_data_every = store,
-                                                            r_bound = 100 * bohr_radius, r_points = 100 * 4, l_points = 100,
-                                                            use_numeric_eigenstates_as_basis = True, numeric_eigenstate_energy_max = 50 * eV, numeric_eigenstate_l_max = 20,
-                                                            ))
+        thetas = np.linspace(0, twopi, 100)
+        wavenumbers = np.linspace(.1, 50, 100) * per_nm
 
-        cp.utils.multi_map(run, specs, processes = 2)
+        sim = ion.SphericalHarmonicSpecification('snapshots',
+                                                 time_initial = 0 * asec, time_final = 100 * asec, time_step = 1 * asec,
+                                                 store_data_every = 5,
+                                                 r_bound = 50 * bohr_radius, r_points = 50 * 4, l_points = 50,
+                                                 use_numeric_eigenstates_as_basis = True, numeric_eigenstate_energy_max = 50 * eV, numeric_eigenstate_l_max = 10,
+                                                 snapshot_indices = [50, -1], snapshot_times = [10 * asec],
+                                                 snapshot_methods = [['norm', (), dict()], ['inner_product_with_plane_waves', (thetas, wavenumbers), dict()]],
+                                                 ).to_simulation()
+
+        print(sim.spec.snapshot_methods)
+
+        sim.run_simulation()
+        sim.save(target_dir = OUT_DIR)
+
+        print(sim.info())
+
+        sim.mesh.plot_electron_momentum_spectrum(target_dir = OUT_DIR, name_postfix = '__from_sim_directly')
+
+        for time_index, snapshot in sim.snapshots.items():
+            print(time_index, snapshot, repr(snapshot))
+            for method_name, result in snapshot.data.items():
+                print(method_name, result)
+
+            theta, wavenumber, ip = snapshot.data['inner_product_with_plane_waves']
+            sim.mesh.plot_electron_momentum_spectrum_from_meshes(theta, wavenumber, ip, 'wavenumber', 'per_nm', target_dir = OUT_DIR, name_postfix = '__snapshot_index={}'.format(snapshot.time_index))
+
+            print()
