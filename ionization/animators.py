@@ -46,8 +46,8 @@ class MetricsAndElectricField(cp.AxisManager):
         super(MetricsAndElectricField, self).__init__(axis, simulation)
 
     def initialize(self):
-        self.time_line, = self.axis.plot([self.sim.times[self.sim.time_index] / self.time_unit,
-                                          self.sim.times[self.sim.time_index] / self.time_unit],
+        self.time_line, = self.axis.plot([self.sim.data_times[self.sim.data_time_index] / self.time_unit,
+                                          self.sim.data_times[self.sim.data_time_index] / self.time_unit],
                                          [0, 2],
                                          color = 'gray',
                                          animated = True)
@@ -81,7 +81,7 @@ class MetricsAndElectricField(cp.AxisManager):
 
         self.axis.tick_params(labeltop = self.ticks_top)
 
-        self.axis.set_xlim(self.sim.times[0] / self.time_unit, self.sim.times[-1] / self.time_unit)
+        self.axis.set_xlim(self.sim.data_times[0] / self.time_unit, self.sim.data_times[-1] / self.time_unit)
         if self.log_metrics:
             self.axis.set_yscale('log')
             self.axis.set_ylim(1e-8, 1)
@@ -96,10 +96,10 @@ class MetricsAndElectricField(cp.AxisManager):
     def _initialize_electric_field(self):
         self.axis_field = self.axis.twinx()
 
-        y_limit = 1.05 * np.nanmax(np.abs(self.spec.electric_potential.get_electric_field_amplitude(self.sim.times))) / self.electric_field_unit
+        y_limit = 1.05 * np.nanmax(np.abs(self.spec.electric_potential.get_electric_field_amplitude(self.sim.data_times))) / self.electric_field_unit
         self.axis_field.set_ylim(-y_limit, y_limit)
 
-        self.axis_field.set_ylabel(r'${}(t)$ ({})'.format(str_efield, self.electric_field_unit_str),
+        self.axis_field.set_ylabel(r'${}(t)$ (${}$)'.format(str_efield, self.electric_field_unit_str),
                                    fontsize = 24, color = '#d62728')
         self.axis_field.yaxis.set_label_position('right')
         self.axis_field.tick_params(axis = 'both', which = 'major', labelsize = 14)
@@ -108,7 +108,7 @@ class MetricsAndElectricField(cp.AxisManager):
         for tick in self.axis_field.get_yticklabels():
             tick.set_color('#d62728')
 
-        self.electric_field_line, = self.axis_field.plot(self.sim.times / self.time_unit,
+        self.electric_field_line, = self.axis_field.plot(self.sim.data_times / self.time_unit,
                                                          self.sim.electric_field_amplitude_vs_time / self.electric_field_unit,
                                                          label = r'$E(t)$ ({})'.format(self.electric_field_unit_str),
                                                          color = core.COLOR_ELECTRIC_FIELD, linewidth = 3,
@@ -117,7 +117,7 @@ class MetricsAndElectricField(cp.AxisManager):
         self.redraw += [self.electric_field_line, *self.axis_field.xaxis.get_gridlines(), *self.axis_field.yaxis.get_gridlines()]
 
     def _initialize_metric_norm(self):
-        self.norm_line, = self.axis.plot(self.sim.times / self.time_unit,
+        self.norm_line, = self.axis.plot(self.sim.data_times / self.time_unit,
                                          self.sim.norm_vs_time,
                                          label = r'$\left\langle \psi|\psi \right\rangle$',
                                          color = 'black', linewidth = 3,
@@ -126,7 +126,7 @@ class MetricsAndElectricField(cp.AxisManager):
         self.redraw += [self.norm_line]
 
     def _initialize_metric_initial_state_overlap(self):
-        self.initial_state_overlap_line, = self.axis.plot(self.sim.times / self.time_unit,
+        self.initial_state_overlap_line, = self.axis.plot(self.sim.data_times / self.time_unit,
                                                           self.sim.state_overlaps_vs_time[self.sim.spec.initial_state],
                                                           label = r'$\left| \left\langle \psi|{} \right\rangle \right|^2$'.format(self.sim.spec.initial_state.tex_str),
                                                           color = 'blue', linewidth = '3',
@@ -140,7 +140,7 @@ class MetricsAndElectricField(cp.AxisManager):
         for metric in self.metrics:
             self.__getattribute__('_update_metric_' + metric)()
 
-        self.time_line.set_xdata([self.sim.times[self.sim.time_index] / self.time_unit, self.sim.times[self.sim.time_index] / self.time_unit])
+        self.time_line.set_xdata([self.sim.data_times[self.sim.data_time_index] / self.time_unit, self.sim.data_times[self.sim.data_time_index] / self.time_unit])
 
         super(MetricsAndElectricField, self).update()
 
@@ -177,8 +177,8 @@ class TestStateStackplot(cp.AxisManager):
     def initialize(self):
         self._initialize_stackplot()
 
-        self.time_line, = self.axis.plot([self.sim.times[self.sim.time_index] / self.time_unit,
-                                          self.sim.times[self.sim.time_index] / self.time_unit],
+        self.time_line, = self.axis.plot([self.sim.data_times[self.sim.data_time_index] / self.time_unit,
+                                          self.sim.data_times[self.sim.data_time_index] / self.time_unit],
                                          [0, 2],
                                          color = 'gray',
                                          animated = True)
@@ -209,7 +209,7 @@ class TestStateStackplot(cp.AxisManager):
 
         self.axis.tick_params(labeltop = self.ticks_top, labelright = self.ticks_right)
 
-        self.axis.set_xlim(self.sim.times[0] / self.time_unit, self.sim.times[-1] / self.time_unit)
+        self.axis.set_xlim(self.sim.data_times[0] / self.time_unit, self.sim.data_times[-1] / self.time_unit)
         if self.log_metrics:
             self.axis.set_yscale('log')
             self.axis.set_ylim(1e-8, 1)
@@ -225,7 +225,7 @@ class TestStateStackplot(cp.AxisManager):
         return [self.sim.state_overlaps_vs_time[state] for state in self.spec.test_states]
 
     def _initialize_stackplot(self):
-        self.overlaps_stackplot = self.axis.stackplot(self.sim.times / self.time_unit,
+        self.overlaps_stackplot = self.axis.stackplot(self.sim.data_times / self.time_unit,
                                                       *self._get_stackplot_data(),
                                                       labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states],
                                                       animated = True)
@@ -238,7 +238,7 @@ class TestStateStackplot(cp.AxisManager):
             x.remove()
 
         self.axis.set_color_cycle(None)
-        self.overlaps_stackplot = self.axis.stackplot(self.sim.times / self.time_unit,
+        self.overlaps_stackplot = self.axis.stackplot(self.sim.data_times / self.time_unit,
                                                       *self._get_stackplot_data(),
                                                       labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(state.tex_str) for state in self.spec.test_states],
                                                       animated = True)
@@ -248,7 +248,7 @@ class TestStateStackplot(cp.AxisManager):
     def update(self):
         self._update_stackplot_lines()
 
-        self.time_line.set_xdata([self.sim.times[self.sim.time_index] / self.time_unit, self.sim.times[self.sim.time_index] / self.time_unit])
+        self.time_line.set_xdata([self.sim.data_times[self.sim.data_time_index] / self.time_unit, self.sim.data_times[self.sim.data_time_index] / self.time_unit])
 
         super().update()
 
@@ -305,7 +305,7 @@ class LineAxis(QuantumMeshAxis):
 
         self.axis.grid(True, color = core.COLOR_OPPOSITE_PLASMA, linestyle = ':')  # change grid color to make it show up against the colormesh
 
-        self.axis.set_xlabel(r'$x$ ({})'.format(unit_name), fontsize = 24)
+        self.axis.set_xlabel(r'$x$ (${}$)'.format(unit_name), fontsize = 24)
         self.axis.set_ylabel(r'$\left|\psi\right|^2$', fontsize = 30)
 
         self.axis.tick_params(axis = 'both', which = 'major', labelsize = 20)
@@ -374,11 +374,6 @@ class CylindricalSliceAxis(QuantumMeshAxis):
     def update(self):
         self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
 
-        try:
-            self.sim.mesh.update_probability_current_quiver(self.quiver, plot_limit = self.plot_limit)
-        except AttributeError:
-            pass
-
         super(CylindricalSliceAxis, self).update()
 
 
@@ -427,7 +422,7 @@ class PhiSliceAxis(QuantumMeshAxis):
         if not self.initialized:
             tick_labels = self.axis.get_yticklabels()
             for t in tick_labels:
-                t.set_text(t.get_text() + r'{}'.format(unit_name))
+                t.set_text(t.get_text() + r'${}$'.format(unit_name))
                 self.axis.set_yticklabels(tick_labels)
 
         self.axis.set_rmax((self.sim.mesh.r_max - (self.sim.mesh.delta_r / 2)) / unit_value)
@@ -452,11 +447,6 @@ class SphericalSlicePhiSliceAxis(PhiSliceAxis):
     def update(self):
         self.sim.mesh.update_g_mesh(self.mesh, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
         self.sim.mesh.update_g_mesh(self.mesh_mirror, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit)
-
-        try:
-            self.sim.mesh.update_probability_current_quiver(self.quiver)
-        except AttributeError:
-            pass
 
         super(SphericalSlicePhiSliceAxis, self).update()
 
@@ -489,7 +479,7 @@ class AngularMomentumDecompositionAxis(cp.AxisManager):
     def initialize(self):
         l_plot = self.sim.mesh.norm_by_l
         if self.renormalize_l_decomposition:
-            l_plot /= self.sim.mesh.norm
+            l_plot /= self.sim.mesh.norm()
         self.ang_mom_bar = self.axis.bar(self.sim.mesh.l, l_plot,
                                          align = 'center', color = '.5',
                                          animated = True)
@@ -518,7 +508,7 @@ class AngularMomentumDecompositionAxis(cp.AxisManager):
     def update(self):
         l_plot = self.sim.mesh.norm_by_l
         if self.renormalize_l_decomposition:
-            l_plot /= self.sim.norm_vs_time[self.sim.time_index]
+            l_plot /= self.sim.norm_vs_time[self.sim.data_time_index]
         for bar, height in zip(self.ang_mom_bar, l_plot):
             bar.set_height(height)
 
@@ -600,6 +590,6 @@ class SphericalHarmonicAnimator(PhiSliceAnimator):
     def _initialize_figure(self):
         super(SphericalHarmonicAnimator, self)._initialize_figure()
 
-        self.top_right_axis = self.top_right_axis_manager_type(self.fig.add_axes([.56, .84, .39, .125]), self.sim, **self.top_right_axis_kwargs)
+        self.top_right_axis = self.top_right_axis_manager_type(self.fig.add_axes([.56, .84, .39, .11]), self.sim, **self.top_right_axis_kwargs)
 
         self.axis_managers += [self.top_right_axis]

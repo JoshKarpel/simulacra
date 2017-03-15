@@ -77,7 +77,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  animators = tuple(),
                  simulation_type = None,
                  store_data_every = 1,
-                 snapshot_times = (), snapshot_indices = (), snapshot_methods = (),
+                 snapshot_times = (), snapshot_indices = (), snapshot_type = None, snapshot_kwargs = None,
                  **kwargs):
         """
         Initialize an ElectricFieldSpecification instance from the given parameters.
@@ -109,7 +109,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         :param store_norm_by_l: if True, the Simulation will store the amount of norm in each spherical harmonic.
         :param snapshot_times:
         :param snapshot_indices:
-        :param snapshot_methods: sequence of tuples (mesh_method_name, args, kwargs), args and kwargs are passed to the method call
+        :param snapshot_types:
         :param kwargs:
         """
         if simulation_type is None:
@@ -154,7 +154,11 @@ class ElectricFieldSpecification(cp.core.Specification):
 
         self.snapshot_times = set(snapshot_times)
         self.snapshot_indices = set(snapshot_indices)
-        self.snapshot_methods = snapshot_methods
+        if snapshot_type is None:
+            snapshot_type = Snapshot
+        self.snapshot_type = snapshot_type
+        if snapshot_kwargs is None:
+            snapshot_kwargs = dict()
 
     def info(self):
         checkpoint = ['Checkpointing: ']
@@ -2050,7 +2054,6 @@ class Snapshot:
         self.spec = self.sim.spec
         self.time_index = time_index
 
-        self.args = dict()
         self.data = dict()
 
     @property
@@ -2063,9 +2066,40 @@ class Snapshot:
     def __repr__(self):
         return cp.utils.field_str(self, 'sim', 'time_index')
 
-    def collect(self, mesh_method_name, args, kwargs):
-        self.args[mesh_method_name] = (args, kwargs)
-        self.data[mesh_method_name] = getattr(self.sim.mesh, mesh_method_name)(*args, **kwargs)
+    def take_snapshot(self):
+        self.collect_norm()
+
+    def collect_norm(self):
+        self.data['norm'] = self.sim.mesh.norm()
+
+
+class SphericalHarmonicSnapshot(Snapshot):
+    def __init__(self, simulation, time_index,
+                 plane_wave_overlap__max_wavenumber = 50 * per_nm, plane_wave_overlap__wavenumber_points = 500, plane_wave_overlap__theta_points = 200, ):
+        super().__init__(simulation, time_index)
+
+        self.plane_wave_overlap__max_wavenumber = plane_wave_overlap__max_wavenumber
+        self.plane_wave_overlap__wavenumber_points = plane_wave_overlap__wavenumber_points
+        self.plane_wave_overlap__theta_points = plane_wave_overlap__theta_points
+
+    def take_snapshot(self):
+        super().take_snapshot()
+
+        for free_only in (True, False):
+            self.collect_inner_product_with_plane_waves(free_only = free_only)
+
+    def collect_inner_product_with_plane_waves(self, free_only = False):
+        thetas = np.linspace(0, twopi, self.plane_wave_overlap__theta_points)
+        wavenumbers = np.delete(np.linspace(0, self.plane_wave_overlap__max_wavenumber, self.plane_wave_overlap__wavenumber_points + 1), 0)
+
+        if free_only:
+            key = 'inner_product_with_plane_waves__free_only'
+            g_mesh = self.sim.mesh.get_g_with_states_removed(self.sim.bound_states)
+        else:
+            key = 'inner_product_with_plane_waves'
+            g_mesh = None
+
+        self.data[key] = self.sim.mesh.inner_product_with_plane_waves(thetas, wavenumbers, g_mesh = g_mesh)
 
 
 class ElectricFieldSimulation(cp.core.Simulation):
@@ -2181,10 +2215,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
         logger.debug('{} {} stored data for time index {} (data time index {})'.format(self.__class__.__name__, self.name, self.time_index, self.data_time_index))
 
     def take_snapshot(self):
-        snapshot = Snapshot(self, self.time_index)
+        snapshot = self.spec.snapshot_type(self, self.time_index)
 
-        for method_name, method_args, method_kwargs in self.spec.snapshot_methods:
-            snapshot.collect(method_name, method_args, method_kwargs)
+        snapshot.take_snapshot()
 
         self.snapshots[self.time_index] = snapshot
 
@@ -2208,7 +2241,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
             while True:
                 if self.time in self.data_times:
                     self.store_data()
-                    self.data_time_index += 1
 
                 if self.time in self.snapshot_times:
                     self.take_snapshot()
@@ -2216,6 +2248,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 for animator in self.animators:
                     if self.time_index == 0 or self.time_index == self.time_steps or self.time_index % animator.decimation == 0:
                         animator.send_frame_to_ffmpeg()
+
+                if self.time in self.data_times:  # having to repeat this is clunky, but I need the data for the animators to work and I can't change the data index until the animators are done
+                    self.data_time_index += 1
 
                 if self.time_index == self.time_steps - 1:
                     break
@@ -2652,6 +2687,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if not save_mesh:
             mesh = self.mesh.copy()
             self.mesh = None
+
+        if len(self.animators) > 0:
+            raise cp.CompyException('Cannot pickle Simulation with Animators')
 
         out = super(ElectricFieldSimulation, self).save(target_dir = target_dir, file_extension = file_extension)
 

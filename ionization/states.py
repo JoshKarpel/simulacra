@@ -365,43 +365,6 @@ class HydrogenCoulombState(QuantumState):
         else:
             raise IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
 
-        # generate the radial function that will be used to evaluate the state's wavefunction
-        epsilon = self.energy / rydberg
-        unit_prefactor = np.sqrt(1 / (bohr_radius * rydberg))
-
-        if epsilon > 0:
-            kappa = 1j / np.sqrt(epsilon)
-
-            a = self.l + 1 - kappa
-            b = 2 * (self.l + 1)
-            hgf = ft.partial(mpmath.hyp1f1, a, b)  # construct a partial function, with a and b filled in
-            hgf = np.vectorize(hgf, otypes = [np.complex128])  # vectorize using numpy
-
-            A = (kappa ** (-((2 * self.l) + 1))) * special.gamma(1 + self.l + kappa) / special.gamma(kappa - self.l)
-            B = A / (1 - np.exp(-twopi / np.sqrt(epsilon)))
-            s_prefactor = np.sqrt(B / 2)
-
-            l_prefactor = (2 ** (self.l + 1)) / special.factorial((2 * self.l) + 1)
-
-            prefactor = s_prefactor * l_prefactor * unit_prefactor
-
-            def radial_function(self, r):
-                x = r / bohr_radius
-
-                return self.amplitude * prefactor * hgf(2 * x / kappa) * (x ** (self.l + 1)) * np.exp(-x / kappa) / r
-
-        elif epsilon == 0:
-            bessel_order = (2 * self.l) + 1
-            prefactor = unit_prefactor
-            bessel = ft.partial(special.jv, bessel_order)  # construct a partial function with the Bessel function order filled in
-
-            def radial_function(self, r):
-                x = r / bohr_radius
-
-                return self.amplitude * prefactor * bessel(np.sqrt(8 * x)) * np.sqrt(x) / r
-
-        radial_function.__doc__ = """Return the radial part of the wavefunction R(r) evaluated at r."""  # set a docstring for radial_function
-        self.radial_function = types.MethodType(radial_function, self)  # bind the method to the instance at runtime (necessary so that it can pick up self.l
 
     @classmethod
     def from_wavenumber(cls, k, l = 0, m = 0):
@@ -453,6 +416,36 @@ class HydrogenCoulombState(QuantumState):
     def tex_str(self):
         """Return a LaTeX-formatted string for the HydrogenCoulombState."""
         return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
+
+    def radial_function(self, r):
+        x = r / bohr_radius
+        epsilon = self.energy / rydberg
+        unit_prefactor = np.sqrt(1 / (bohr_radius * rydberg))
+
+        if epsilon > 0:
+            kappa = 1j / np.sqrt(epsilon)
+
+            a = self.l + 1 - kappa
+            b = 2 * (self.l + 1)
+            hgf = ft.partial(mpmath.hyp1f1, a, b)  # construct a partial function, with a and b filled in
+            hgf = np.vectorize(hgf, otypes = [np.complex128])  # vectorize using numpy
+
+            A = (kappa ** (-((2 * self.l) + 1))) * special.gamma(1 + self.l + kappa) / special.gamma(kappa - self.l)
+            B = A / (1 - np.exp(-twopi / np.sqrt(epsilon)))
+            s_prefactor = np.sqrt(B / 2)
+
+            l_prefactor = (2 ** (self.l + 1)) / special.factorial((2 * self.l) + 1)
+
+            prefactor = s_prefactor * l_prefactor * unit_prefactor
+
+            return self.amplitude * prefactor * hgf(2 * x / kappa) * (x ** (self.l + 1)) * np.exp(-x / kappa) / r
+
+        elif epsilon == 0:
+            bessel_order = (2 * self.l) + 1
+            prefactor = unit_prefactor
+            bessel = ft.partial(special.jv, bessel_order)  # construct a partial function with the Bessel function order filled in
+
+            return self.amplitude * prefactor * bessel(np.sqrt(8 * x)) * np.sqrt(x) / r
 
     def __call__(self, r, theta, phi):
         """
