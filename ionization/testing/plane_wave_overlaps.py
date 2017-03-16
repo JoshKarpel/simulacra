@@ -26,30 +26,33 @@ if __name__ == '__main__':
         # efield = ion.SineWave.from_photon_energy(rydberg + 20 * eV, amplitude = .05 * atomic_electric_field,
         #                                                          window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec))
 
-        efield = ion.SineWave.from_photon_energy(rydberg + 20 * eV, amplitude = .05 * atomic_electric_field,
+        efield = ion.SineWave.from_photon_energy(rydberg + 20 * eV, amplitude = .05 * atomic_electric_field, phase = pi,
                                                  window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec))
         #
         # efield += ion.SineWave.from_photon_energy(rydberg + 30 * eV, amplitude = .05 * atomic_electric_field,
         #                                           window = ion.SymmetricExponentialTimeWindow(window_time = .9 * t_bound * asec, window_width = 10 * asec))
 
+        # efield = ion.SineWave(twopi * (c / (800 * nm)), amplitude = .01 * atomic_electric_field,
+        #                       window = window)
+
         spec_kwargs = dict(
             r_bound = bound * bohr_radius,
             r_points = bound * points_per_bohr_radius,
-            l_points = 100,
+            l_points = 50,
             initial_state = ion.HydrogenBoundState(1, 0),
             time_initial = -t_bound * asec,
             time_final = t_bound * asec,
             time_step = 1 * asec,
             use_numeric_eigenstates_as_basis = True,
             numeric_eigenstate_energy_max = 50 * eV,
-            numeric_eigenstate_l_max = 30,
+            numeric_eigenstate_l_max = 20,
             electric_potential = efield,
             electric_potential_dc_correction = True,
             mask = ion.RadialCosineMask(inner_radius = .8 * bound * bohr_radius, outer_radius = bound * bohr_radius),
             store_data_every = 25,
         )
 
-        sim = ion.SphericalHarmonicSpecification('PWTest', **spec_kwargs).to_simulation()
+        sim = ion.SphericalHarmonicSpecification('PWTest_phase=pi', **spec_kwargs).to_simulation()
 
         sim.run_simulation()
         print(sim.info())
@@ -108,6 +111,23 @@ if __name__ == '__main__':
         )
 
         for log in (True, False):
+            thetas, wavenumbers, along_z = sim.mesh.inner_product_with_plane_waves(thetas = [0], wavenumbers = np.linspace(.1, 50, 500) * per_nm,
+                                                                                   g_mesh = sim.mesh.get_g_with_states_removed(sim.bound_states))
+
+            cp.utils.xy_plot('along_theta=0__log={}__wavenumber'.format(log),
+                             wavenumbers[0],
+                             np.abs(along_z[0]) ** 2,
+                             x_scale = 'per_nm', x_label = 'Wavenumber $k$',
+                             y_log_axis = log,
+                             target_dir = OUT_DIR)
+
+            cp.utils.xy_plot('along_theta=0__log={}__momentum'.format(log),
+                             wavenumbers[0] * hbar,
+                             np.abs(along_z[0]) ** 2,
+                             x_scale = 'atomic_momentum', x_label = 'Momentum $p$',
+                             y_log_axis = log,
+                             target_dir = OUT_DIR)
+
             sim.mesh.plot_electron_momentum_spectrum(r_type = 'energy', r_scale = 'eV', r_lower_lim = .1 * eV, r_upper_lim = 50 * eV,
                                                      log = log,
                                                      **spectrum_kwargs)

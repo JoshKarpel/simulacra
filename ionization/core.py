@@ -1416,6 +1416,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         multiplier = np.sqrt(2 / pi) * self.g_factor * (-1j ** (l_mesh % 4)) * self.inner_product_multiplier * g_mesh
 
+        thetas, wavenumbers = np.array(thetas), np.array(wavenumbers)
         theta_mesh, wavenumber_mesh = np.meshgrid(thetas, wavenumbers, indexing = 'ij')
 
         inner_product_mesh = np.zeros(np.shape(wavenumber_mesh), dtype = np.complex128)
