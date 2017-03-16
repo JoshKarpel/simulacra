@@ -77,6 +77,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  animators = tuple(),
                  simulation_type = None,
                  store_data_every = 1,
+                 snapshot_times = (), snapshot_indices = (), snapshot_type = None, snapshot_kwargs = None,
                  **kwargs):
         """
         Initialize an ElectricFieldSpecification instance from the given parameters.
@@ -106,6 +107,9 @@ class ElectricFieldSpecification(cp.core.Specification):
         :param checkpoint_dir: a directory path to store the checkpoint file in
         :param animators: a list of Animators which will be run during time evolution
         :param store_norm_by_l: if True, the Simulation will store the amount of norm in each spherical harmonic.
+        :param snapshot_times:
+        :param snapshot_indices:
+        :param snapshot_types:
         :param kwargs:
         """
         if simulation_type is None:
@@ -147,6 +151,14 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.animators = deepcopy(tuple(animators))
 
         self.store_data_every = store_data_every
+
+        self.snapshot_times = set(snapshot_times)
+        self.snapshot_indices = set(snapshot_indices)
+        if snapshot_type is None:
+            snapshot_type = Snapshot
+        self.snapshot_type = snapshot_type
+        if snapshot_kwargs is None:
+            snapshot_kwargs = dict()
 
     def info(self):
         checkpoint = ['Checkpointing: ']
@@ -212,6 +224,23 @@ class QuantumMesh:
             return self.get_g_for_state(state_or_mesh)
         else:
             return state_or_mesh
+
+    def get_g_with_states_removed(self, states, g_mesh = None):
+        """
+        Get a g mesh with the contributions from the states removed.
+
+        :param states: a list of states to remove from g_mesh
+        :param g_mesh: a g_mesh to remove the state contributions from. Defaults to self.g_mesh
+        :return:
+        """
+        if g_mesh is None:
+            g_mesh = self.g_mesh.copy()
+
+        for state in states:
+            ip = self.inner_product(state, g_mesh)
+            g_mesh -= ip * self.get_g_for_state(state)
+
+        return g_mesh
 
     def inner_product(self, a = None, b = None):
         """Inner product between two meshes. If either mesh is None, the state on the g_mesh is used for that state."""
@@ -1292,6 +1321,12 @@ class SphericalHarmonicMesh(QuantumMesh):
             return mesh
 
     def wrap_vector(self, mesh, wrap_along):
+        """
+
+        :param mesh:
+        :param wrap_along:
+        :return:
+        """
         if wrap_along == 'l':
             wrap = 'F'
         elif wrap_along == 'r':
@@ -1319,6 +1354,11 @@ class SphericalHarmonicMesh(QuantumMesh):
             raise NotImplementedError
 
     def get_g_for_state(self, state):
+        """
+
+        :param state:
+        :return:
+        """
         # don't memoize this, instead rely on the memoization in get_radial_function_for_state, more compact in memory (at the cost of some runtime in having to reassemble g occasionally)
 
         if all(hasattr(s, 'spherical_harmonic') for s in state):
@@ -1342,6 +1382,15 @@ class SphericalHarmonicMesh(QuantumMesh):
         return g
 
     def inner_product(self, a = None, b = None):
+        """
+        Return the inner product between two states (a and b) on the mesh.
+
+        a and b can be QuantumStates or g_meshes.
+
+        :param a: a QuantumState or g_mesh
+        :param b: a QuantumState or g_mesh
+        :return: the inner product between a and b
+        """
         if isinstance(a, states.QuantumState) and all(hasattr(s, 'spherical_harmonic') for s in a) and b is None:  # shortcut
             ip = 0
 
@@ -1352,76 +1401,22 @@ class SphericalHarmonicMesh(QuantumMesh):
         else:
             return super().inner_product(a, b)
 
-    def inner_product_with_plane_wave(self, wavenumber, theta):
+    def inner_product_with_plane_waves(self, thetas, wavenumbers, g_mesh = None):
         """
-        Return the inner product with a plane wave with propagation direction theta in the x-z plane and wavenumber k.
-
-        :param wavenumber: wavenumber of the plane wave
-        :param theta: direction of the plane wave relative to the z-axis
-        :return:
-        """
-
-        l_mesh = self.l_mesh
-
-        summand = (-1j ** (l_mesh % 4)) * special.spherical_jn(l_mesh, np.real(wavenumber * self.r_mesh)) * self.g_factor * special.sph_harm(0, l_mesh, 0, theta)
-        # if you don't make sure the bessel argument is real you get a memory access violation (windows error 0xC0000005)
-
-        return np.sqrt(2 / pi) * self.inner_product_multiplier * np.sum(summand * self.g_mesh)
-
-    def inner_product_with_plane_waves__single_wavenumber(self, wavenumber, thetas = None):
-        """
-
-        :param wavenumber: magnitude of k
-        :param thetas: list of thetas to evaluate inner product at
-        :return:
-        """
-        if thetas is None:
-            thetas = np.linspace(0, twopi, 100)
-
-        l_mesh = self.l_mesh
-
-        everything_but_sph_harm = special.spherical_jn(l_mesh, np.real(wavenumber * self.r_mesh)) * np.sqrt(2 / pi) * self.g_factor * (-1j ** (l_mesh % 4)) * self.inner_product_multiplier * self.g_mesh
-
-        inner_products = np.zeros(np.shape(thetas), dtype = np.complex128) * np.NaN
-
-        for ii, theta in enumerate(thetas):
-            inner_products[ii] = np.sum(everything_but_sph_harm * special.sph_harm(0, l_mesh, 0, theta))
-
-        return inner_products
-
-    def inner_product_with_plane_waves__single_theta(self, theta, wavenumbers = None):
-        """
-
-        :param theta: angle of k in x-z plane
-        :param wavenumbers: list of wavenumbers to evaluate inner product at
-        :return:
-        """
-        if wavenumbers is None:
-            wavenumbers = np.linspace(.1 * per_nm, 50 * per_nm, 100)
-
-        l_mesh = self.l_mesh
-
-        everything_but_bessel = special.sph_harm(0, l_mesh, 0, theta) * np.sqrt(2 / pi) * self.g_factor * (-1j ** (l_mesh % 4)) * self.inner_product_multiplier * self.g_mesh
-
-        inner_products = np.zeros(np.shape(wavenumbers), dtype = np.complex128) * np.NaN
-
-        for ii, wavenumber in enumerate(wavenumbers):
-            inner_products[ii] = np.sum(everything_but_bessel * special.spherical_jn(l_mesh, np.real(wavenumber * self.r_mesh)))
-
-        return inner_products
-
-    def inner_product_with_plane_waves(self, thetas, wavenumbers):
-        """
+        Return the inner products for each plane wave state in the Cartesian product of thetas and wavenumbers.
 
         :param wavenumbers:
         :param thetas:
         :return:
         """
+        if g_mesh is None:
+            g_mesh = self.g_mesh
 
         l_mesh = self.l_mesh
 
-        multiplier = np.sqrt(2 / pi) * self.g_factor * (-1j ** (l_mesh % 4)) * self.inner_product_multiplier * self.g_mesh
+        multiplier = np.sqrt(2 / pi) * self.g_factor * (-1j ** (l_mesh % 4)) * self.inner_product_multiplier * g_mesh
 
+        thetas, wavenumbers = np.array(thetas), np.array(wavenumbers)
         theta_mesh, wavenumber_mesh = np.meshgrid(thetas, wavenumbers, indexing = 'ij')
 
         inner_product_mesh = np.zeros(np.shape(wavenumber_mesh), dtype = np.complex128)
@@ -1833,6 +1828,16 @@ class SphericalHarmonicMesh(QuantumMesh):
         return out
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, color_map_min = 0, distance_unit = 'bohr_radius', **kwargs):
+        """
+
+        :param axis:
+        :param mesh:
+        :param plot_limit:
+        :param color_map_min:
+        :param distance_unit:
+        :param kwargs:
+        :return:
+        """
         unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
 
         color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer_spatial(plot_limit)],
@@ -1852,6 +1857,19 @@ class SphericalHarmonicMesh(QuantumMesh):
                   color_map_min = 0,
                   distance_unit = 'bohr_radius',
                   **kwargs):
+        """
+
+        :param mesh:
+        :param name:
+        :param title:
+        :param overlay_probability_current:
+        :param probability_current_time_step:
+        :param plot_limit:
+        :param color_map_min:
+        :param distance_unit:
+        :param kwargs:
+        :return:
+        """
         unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
 
         with cp.utils.FigureManager(self.sim.name + '__' + name, **kwargs) as figman:
@@ -1902,10 +1920,56 @@ class SphericalHarmonicMesh(QuantumMesh):
             else:
                 axis.set_rmax((self.r_max - (self.delta_r / 2)) / unit_value)
 
-    def plot_electron_momentum_spectrum(self, r_type = 'wavenumber', r_scale = 'per_nm', r_lower_lim = twopi * .01 * per_nm, r_upper_lim = twopi * 10 * per_nm, r_points = 100,
+    def plot_electron_momentum_spectrum(self, r_type = 'wavenumber', r_scale = 'per_nm',
+                                        r_lower_lim = twopi * .01 * per_nm, r_upper_lim = twopi * 10 * per_nm, r_points = 100,
                                         theta_points = 360,
-                                        log = False,
+                                        g_mesh = None,
                                         **kwargs):
+        """
+
+        :param r_type:
+        :param r_scale:
+        :param r_lower_lim:
+        :param r_upper_lim:
+        :param r_points:
+        :param theta_points:
+        :param g_mesh:
+        :param kwargs:
+        :return:
+        """
+        if r_type not in ('wavenumber', 'energy', 'momentum'):
+            raise ValueError("Invalid argument to plot_electron_spectrum: r_type must be either 'wavenumber', 'energy', or 'momentum'")
+
+        thetas = np.linspace(0, twopi, theta_points)
+        r = np.linspace(r_lower_lim, r_upper_lim, r_points)
+
+        if r_type == 'wavenumber':
+            wavenumbers = r
+        elif r_type == 'energy':
+            wavenumbers = electron_wavenumber_from_energy(r)
+        elif r_type == 'momentum':
+            wavenumbers = r / hbar
+
+        if g_mesh is None:
+            g_mesh = self.g_mesh
+
+        theta_mesh, wavenumber_mesh, inner_product_mesh = self.inner_product_with_plane_waves(thetas, wavenumbers, g_mesh = g_mesh)
+
+        if r_type == 'wavenumber':
+            r_mesh = wavenumber_mesh
+        elif r_type == 'energy':
+            r_mesh = electron_energy_from_wavenumber(wavenumber_mesh)
+        elif r_type == 'momentum':
+            r_mesh = wavenumber_mesh * hbar
+
+        return self.plot_electron_momentum_spectrum_from_meshes(theta_mesh, r_mesh, inner_product_mesh,
+                                                                r_type, r_scale,
+                                                                **kwargs)
+
+    def plot_electron_momentum_spectrum_from_meshes(self, theta_mesh, r_mesh, inner_product_mesh,
+                                                    r_type, r_scale,
+                                                    log = False,
+                                                    **kwargs):
         """
         Generate a polar plot of the wavefunction decomposed into plane waves.
 
@@ -1924,33 +1988,14 @@ class SphericalHarmonicMesh(QuantumMesh):
         if r_type not in ('wavenumber', 'energy', 'momentum'):
             raise ValueError("Invalid argument to plot_electron_spectrum: r_type must be either 'wavenumber', 'energy', or 'momentum'")
 
-        thetas = np.linspace(0, twopi, theta_points)
-        r = np.linspace(r_lower_lim, r_upper_lim, r_points)
-
         r_unit_value, r_unit_name = unit_value_and_name_from_unit(r_scale)
 
         plot_kwargs = {**dict(aspect_ratio = 1), **kwargs}
 
+        r_mesh = np.real(r_mesh)
+        overlap_mesh = np.abs(inner_product_mesh) ** 2
+
         with cp.utils.FigureManager(self.sim.name + '__electron_spectrum', **plot_kwargs) as figman:
-            if r_type == 'wavenumber':
-                wavenumbers = r
-            elif r_type == 'energy':
-                wavenumbers = electron_wavenumber_from_energy(r)
-            elif r_type == 'momentum':
-                wavenumbers = r / hbar
-
-            theta_mesh, wavenumber_mesh, inner_product_mesh = self.inner_product_with_plane_waves(thetas, wavenumbers)
-
-            if r_type == 'wavenumber':
-                r_mesh = wavenumber_mesh
-            elif r_type == 'energy':
-                r_mesh = electron_energy_from_wavenumber(wavenumber_mesh)
-            elif r_type == 'momentum':
-                r_mesh = wavenumber_mesh * hbar
-
-            r_mesh = np.real(r_mesh)
-            overlap_mesh = np.abs(inner_product_mesh) ** 2
-
             fig = figman.fig
 
             fig.set_tight_layout(True)
@@ -2004,6 +2049,60 @@ class SphericalHarmonicMesh(QuantumMesh):
         return figman
 
 
+class Snapshot:
+    def __init__(self, simulation, time_index):
+        self.sim = simulation
+        self.spec = self.sim.spec
+        self.time_index = time_index
+
+        self.data = dict()
+
+    @property
+    def time(self):
+        return self.sim.times[self.time_index]
+
+    def __str__(self):
+        return 'Snapshot of {} at time {} as (time index = {})'.format(self.sim.name, uround(self.sim.times[self.time_index], asec, 3), self.time_index)
+
+    def __repr__(self):
+        return cp.utils.field_str(self, 'sim', 'time_index')
+
+    def take_snapshot(self):
+        self.collect_norm()
+
+    def collect_norm(self):
+        self.data['norm'] = self.sim.mesh.norm()
+
+
+class SphericalHarmonicSnapshot(Snapshot):
+    def __init__(self, simulation, time_index,
+                 plane_wave_overlap__max_wavenumber = 50 * per_nm, plane_wave_overlap__wavenumber_points = 500, plane_wave_overlap__theta_points = 200, ):
+        super().__init__(simulation, time_index)
+
+        self.plane_wave_overlap__max_wavenumber = plane_wave_overlap__max_wavenumber
+        self.plane_wave_overlap__wavenumber_points = plane_wave_overlap__wavenumber_points
+        self.plane_wave_overlap__theta_points = plane_wave_overlap__theta_points
+
+    def take_snapshot(self):
+        super().take_snapshot()
+
+        for free_only in (True, False):
+            self.collect_inner_product_with_plane_waves(free_only = free_only)
+
+    def collect_inner_product_with_plane_waves(self, free_only = False):
+        thetas = np.linspace(0, twopi, self.plane_wave_overlap__theta_points)
+        wavenumbers = np.delete(np.linspace(0, self.plane_wave_overlap__max_wavenumber, self.plane_wave_overlap__wavenumber_points + 1), 0)
+
+        if free_only:
+            key = 'inner_product_with_plane_waves__free_only'
+            g_mesh = self.sim.mesh.get_g_with_states_removed(self.sim.bound_states)
+        else:
+            key = 'inner_product_with_plane_waves'
+            g_mesh = None
+
+        self.data[key] = self.sim.mesh.inner_product_with_plane_waves(thetas, wavenumbers, g_mesh = g_mesh)
+
+
 class ElectricFieldSimulation(cp.core.Simulation):
     def __init__(self, spec):
         super(ElectricFieldSimulation, self).__init__(spec)
@@ -2017,6 +2116,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             extra_times = np.delete(np.linspace(self.spec.time_final, self.spec.minimum_time_final, ((self.spec.minimum_time_final - self.spec.time_final) / self.spec.extra_time_step) + 1), 0)
             self.times = np.concatenate((self.times, extra_times))
         self.time_index = 0
+        self.data_time_index = 0
         self.time_steps = len(self.times)
 
         if self.spec.electric_potential_dc_correction:
@@ -2032,17 +2132,33 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.initialize_mesh()
 
         # simulation data storage
-        self.storage_mask = np.full(self.time_steps, False, dtype = bool)
-        self.norm_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
-        self.norm_diff_mask_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
-        self.energy_expectation_value_vs_time_internal = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
-        self.inner_products_vs_time = {state: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
-        self.electric_field_amplitude_vs_time = np.zeros(self.time_steps, dtype = np.float64) * np.NaN
-        self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
+        time_indices = np.array(range(0, self.time_steps))
+        self.data_mask = np.equal(time_indices, 0) + np.equal(time_indices, self.time_steps - 1) + np.equal(time_indices % self.spec.store_data_every, 0)
+        self.data_times = self.times[self.data_mask]
+        self.data_indices = time_indices[self.data_mask]
+        self.data_time_steps = len(self.data_times)
+        self.norm_vs_time = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
+        self.norm_diff_mask_vs_time = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
+        self.energy_expectation_value_vs_time_internal = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
+        self.inner_products_vs_time = {state: np.zeros(self.data_time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
+        self.electric_field_amplitude_vs_time = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
+        self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.data_time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
 
         # optional data storage
         if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:
-            self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.time_steps, dtype = np.float64) * np.NaN for sph_harm in self.spec.spherical_harmonics}
+            self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN for sph_harm in self.spec.spherical_harmonics}
+
+        # populate the snapshot times from the two ways of entering snapshot times in the spec (by index or by time)
+        self.snapshot_times = set()
+
+        for time in self.spec.snapshot_times:
+            time_index, time_target, _ = cp.utils.find_nearest_entry(self.times, time)
+            self.snapshot_times.add(time_target)
+
+        for index in self.spec.snapshot_indices:
+            self.snapshot_times.add(self.times[index])
+
+        self.snapshots = dict()
 
     @property
     def available_animation_frames(self):
@@ -2065,41 +2181,48 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         logger.debug('Initialized mesh for {} {}'.format(self.__class__.__name__, self.name))
 
-    def store_data(self, time_index):
+    def store_data(self):
         """Update the time-indexed data arrays with the current values."""
-        self.storage_mask[time_index] = True
-
         norm = self.mesh.norm()
-        self.norm_vs_time[time_index] = norm
+        self.norm_vs_time[self.data_time_index] = norm
         if norm > 1.001 * self.norm_vs_time[0]:
             logger.warning('Wavefunction norm ({}) has exceeded initial norm ({}) by more than .1% for {} {}'.format(norm, self.norm_vs_time[0], self.__class__.__name__, self.name))
         try:
-            if norm > 1.001 * self.norm_vs_time[time_index - 1]:
-                logger.warning('Wavefunction norm ({}) at time_index = {} has exceeded norm from previous time step ({}) by more than .1% for {} {}'.format(norm, time_index, self.norm_vs_time[time_index - 1], self.__class__.__name__, self.name))
+            if norm > 1.001 * self.norm_vs_time[self.data_time_index - 1]:
+                logger.warning('Wavefunction norm ({}) at time_index = {} has exceeded norm from previous time step ({}) by more than .1% for {} {}'.format(norm, self.data_time_index, self.norm_vs_time[self.data_time_index - 1], self.__class__.__name__, self.name))
         except IndexError:
             pass
 
-        self.energy_expectation_value_vs_time_internal[time_index] = self.mesh.energy_expectation_value
+        self.energy_expectation_value_vs_time_internal[self.data_time_index] = self.mesh.energy_expectation_value
 
         for gauge in self.spec.dipole_gauges:
-            self.electric_dipole_moment_vs_time[gauge][time_index] = self.mesh.dipole_moment_expectation_value(gauge = gauge)
+            self.electric_dipole_moment_vs_time[gauge][self.data_time_index] = self.mesh.dipole_moment_expectation_value(gauge = gauge)
 
         for state in self.spec.test_states:
-            self.inner_products_vs_time[state][time_index] = self.mesh.inner_product(self.mesh.get_g_for_state(state))
+            self.inner_products_vs_time[state][self.data_time_index] = self.mesh.inner_product(self.mesh.get_g_for_state(state))
 
-        self.electric_field_amplitude_vs_time[time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.times[time_index])
+        self.electric_field_amplitude_vs_time[self.data_time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.data_times[self.data_time_index])
 
         if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:  # if spherical harmonic mesh and we want to do this
             norm_by_l = self.mesh.norm_by_l
             for sph_harm, l_norm in zip(self.spec.spherical_harmonics, norm_by_l):
-                self.norm_by_harmonic_vs_time[sph_harm][time_index] = l_norm
+                self.norm_by_harmonic_vs_time[sph_harm][self.data_time_index] = l_norm
 
             largest_l = self.spec.spherical_harmonics[-1]
-            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][time_index]
-            if norm_in_largest_l > self.norm_vs_time[self.time_index] / 1000:
+            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][self.data_time_index]
+            if norm_in_largest_l > self.norm_vs_time[self.data_time_index] / 1000:
                 logger.warning('Wavefunction norm in largest angular momentum state is large (l = {}, norm = {}), consider increasing l bound'.format(largest_l, norm_in_largest_l))
 
-        logger.debug('{} {} stored data for time index {}'.format(self.__class__.__name__, self.name, time_index))
+        logger.debug('{} {} stored data for time index {} (data time index {})'.format(self.__class__.__name__, self.name, self.time_index, self.data_time_index))
+
+    def take_snapshot(self):
+        snapshot = self.spec.snapshot_type(self, self.time_index)
+
+        snapshot.take_snapshot()
+
+        self.snapshots[self.time_index] = snapshot
+
+        logger.info('Stored Snapshot of {} at time {} as (time index {})'.format(self.name, uround(self.time, asec, 3), self.time_index))
 
     def run_simulation(self, store_intermediate_meshes = False):
         """
@@ -2117,12 +2240,18 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 animator.initialize(self)
 
             while True:
-                if self.time_index == 0 or self.time_index == self.time_steps - 1 or self.time_index % self.spec.store_data_every == 0:
-                    self.store_data(self.time_index)
+                if self.time in self.data_times:
+                    self.store_data()
+
+                if self.time in self.snapshot_times:
+                    self.take_snapshot()
 
                 for animator in self.animators:
                     if self.time_index == 0 or self.time_index == self.time_steps or self.time_index % animator.decimation == 0:
                         animator.send_frame_to_ffmpeg()
+
+                if self.time in self.data_times:  # having to repeat this is clunky, but I need the data for the animators to work and I can't change the data index until the animators are done
+                    self.data_time_index += 1
 
                 if self.time_index == self.time_steps - 1:
                     break
@@ -2130,7 +2259,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 self.time_index += 1
 
                 norm_diff_mask = self.mesh.evolve(self.times[self.time_index] - self.times[self.time_index - 1])  # evolve the mesh forward to the next time step
-                self.norm_diff_mask_vs_time[self.time_index] = norm_diff_mask  # move to store data so it has the right index?
+                self.norm_diff_mask_vs_time[self.data_time_index] = norm_diff_mask  # move to store data so it has the right index?
 
                 logger.debug('{} {} ({}) evolved to time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.file_name, self.time_index, self.time_steps - 1,
                                                                                      np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
@@ -2202,7 +2331,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         group_labels = {k: label_format_str.format(int(k)) for k in grouped_states}
 
-        cutoff_key = max(grouped_states) + 1  # get max key, make sure cutoff key is larger for sorting purposes
+        try:
+            cutoff_key = max(grouped_states) + 1  # get max key, make sure cutoff key is larger for sorting purposes
+        except ValueError:
+            cutoff_key = ''
 
         grouped_states[cutoff_key] = cutoff
         group_labels[cutoff_key] = label_format_str.format(r'\geq {}'.format(cutoff_value))
@@ -2224,9 +2356,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
 
         if not isinstance(self.spec.electric_potential, potentials.NoPotentialEnergy):
-            ax_field.plot(self.times[self.storage_mask] / x_scale_unit, self.electric_field_amplitude_vs_time[self.storage_mask] / atomic_electric_field, color = COLOR_ELECTRIC_FIELD, linewidth = 2)
+            ax_field.plot(self.data_times / x_scale_unit, self.electric_field_amplitude_vs_time / atomic_electric_field, color = COLOR_ELECTRIC_FIELD, linewidth = 2)
 
-        ax_overlaps.plot(self.times[self.storage_mask] / x_scale_unit, self.norm_vs_time[self.storage_mask], label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 2)
+        ax_overlaps.plot(self.data_times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 2)
 
         if grouped_free_states is None:
             grouped_free_states, group_labels = self.group_free_states_by_discrete_attr('l')
@@ -2237,9 +2369,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         state_overlaps = self.state_overlaps_vs_time  # it's a property that would otherwise get evaluated every time we asked for it
 
-        extra_bound_overlap = np.zeros(self.time_steps)
+        extra_bound_overlap = np.zeros(self.data_time_steps)
         if collapse_bound_state_angular_momentums:
-            overlaps_by_n = {n: np.zeros(self.time_steps) for n in range(1, bound_state_max_n + 1)}  # prepare arrays to sum over angular momenta in, one for each n
+            overlaps_by_n = {n: np.zeros(self.data_time_steps) for n in range(1, bound_state_max_n + 1)}  # prepare arrays to sum over angular momenta in, one for each n
             for state in sorted(self.bound_states):
                 if state.n <= bound_state_max_n:
                     overlaps_by_n[state.n] += state_overlaps[state]
@@ -2268,9 +2400,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 labels.append(r'$\left| \left\langle \psi| {}  \right\rangle \right|^2$'.format(group_labels[group]))
                 colors.append(free_state_color_cycle.__next__())
 
-        overlaps = [overlap[self.storage_mask] for overlap in overlaps]
+        overlaps = [overlap for overlap in overlaps]
 
-        ax_overlaps.stackplot(self.times[self.storage_mask] / x_scale_unit,
+        ax_overlaps.stackplot(self.data_times / x_scale_unit,
                               *overlaps,
                               labels = labels,
                               colors = colors,
@@ -2556,6 +2688,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if not save_mesh:
             mesh = self.mesh.copy()
             self.mesh = None
+
+        if len(self.animators) > 0:
+            raise cp.CompyException('Cannot pickle Simulation with Animators')
 
         out = super(ElectricFieldSimulation, self).save(target_dir = target_dir, file_extension = file_extension)
 
