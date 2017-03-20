@@ -595,7 +595,7 @@ class OneDFreeParticle(QuantumState):
 class QHOState(QuantumState):
     """A class representing a bound state of the quantum harmonic oscillator."""
 
-    def __init__(self, spring_constant, mass, n = 0, amplitude = 1, dimension_label = 'x'):
+    def __init__(self, spring_constant, mass = electron_mass, n = 0, amplitude = 1, dimension_label = 'x'):
         """
         Construct a QHOState from a spring constant, mass, and energy index n.
 
@@ -613,7 +613,7 @@ class QHOState(QuantumState):
         super(QHOState, self).__init__(amplitude = amplitude)
 
     @classmethod
-    def from_omega_and_mass(cls, omega, mass, n = 0, amplitude = 1, dimension_label = 'x'):
+    def from_omega_and_mass(cls, omega, mass = electron_mass, n = 0, amplitude = 1, dimension_label = 'x'):
         """
         Construct a QHOState from an angular frequency, mass, and energy index n.
 

@@ -207,6 +207,19 @@ class QuantumMesh:
         self.g_mesh = None
         self.inner_product_multiplier = None
 
+    def __eq__(self, other):
+        """
+        Return whether the provided meshes are equal. QuantumMeshes should evaluate equal if and only if their Simulations are equal and their g_mesh (the only thing which carries state information) are the same.
+
+        :param other:
+        :return:
+        """
+        return isinstance(other, self.__class__) and self.sim == other.sim and np.array_equal(self.g_mesh, other.g_mesh)
+
+    def __hash__(self):
+        """Return the hash of the QuantumMesh, which is the same as the hash of the associated Simulation."""
+        return hash(self.sim)
+
     def __str__(self):
         return '{} for {}'.format(self.__class__.__name__, str(self.sim))
 
@@ -359,11 +372,13 @@ class QuantumMesh:
 
 class LineSpecification(ElectricFieldSpecification):
     def __init__(self, name,
+                 initial_state = states.QHOState(1 * N / m),
                  x_bound = 10 * nm,
                  x_points = 2 ** 9,
                  fft_cutoff_energy = 1000 * eV,
                  **kwargs):
         super(LineSpecification, self).__init__(name, mesh_type = LineMesh,
+                                                initial_state = initial_state,
                                                 evolution_method = 'S',
                                                 **kwargs)
 
@@ -2185,7 +2200,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
     def __init__(self, spec):
         super(ElectricFieldSimulation, self).__init__(spec)
 
-        self.mesh = None
         self.animators = self.spec.animators
 
         total_time = self.spec.time_final - self.spec.time_initial

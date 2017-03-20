@@ -61,7 +61,7 @@ if __name__ == '__main__':
         # pulse_widths = np.array([50, 100, 150, 200, 250, 300, tau_alpha / asec, 1.5 * tau_alpha / asec], dtype = np.float64)
         pulse_widths = np.array([50, 100, 150, 200, 250, 300, 400, 600, 800], dtype = np.float64)
 
-        phases = np.linspace(0, pi, 100)
+        phases = np.linspace(0, twopi, 100)
 
         # flu = 5
         for flu in [.1, .5, 1, 5, 10, 20]:
@@ -94,7 +94,7 @@ if __name__ == '__main__':
                                                                                       out_dir = OUT_DIR,
                                                                                       ))
 
-            results = cp.utils.multi_map(run, specs, processes = 3)
+            results = cp.utils.multi_map(run, specs, processes = 6)
 
             a_alpha_final = {pw: dict() for pw in pulse_widths * asec}
             for r in results:

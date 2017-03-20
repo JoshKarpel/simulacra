@@ -488,12 +488,20 @@ def xy_plot(name,
             x_lower_limit = np.nanmin(x_data)
         if x_upper_limit is None:
             x_upper_limit = np.nanmax(x_data)
+
         if y_lower_limit is None and y_upper_limit is None:
             y_lower_limit = min([np.nanmin(y) for y in y_data])
             y_upper_limit = max([np.nanmax(y) for y in y_data])
             y_range = np.abs(y_upper_limit - y_lower_limit)
             y_lower_limit -= .05 * y_range
             y_upper_limit += .05 * y_range
+
+        # neither of these trigger if both y limits are None
+        if y_lower_limit is None:
+            y_lower_limit = min([np.nanmin(y) for y in y_data])
+        if y_upper_limit is None:
+            y_upper_limit = max([np.nanmax(y) for y in y_data])
+
         ax.set_xlim(left = x_lower_limit / x_scale, right = x_upper_limit / x_scale)
         ax.set_ylim(bottom = y_lower_limit / y_scale, top = y_upper_limit / y_scale)
 
