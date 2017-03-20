@@ -331,6 +331,17 @@ class HydrogenBoundState(QuantumState):
         return self.radial_function(r) * self.spherical_harmonic(theta, phi)
 
 
+def coulomb_phase_shift(l, k):
+    """
+
+    :param l: angular momentum quantum number
+    :param k: wavenumber
+    :return:
+    """
+    gamma = 1j / (k * bohr_radius)
+    return np.angle(special.gamma(1 + l + gamma))
+
+
 class HydrogenCoulombState(QuantumState):
     """A class that represents a hydrogenic free state."""
 
@@ -356,19 +367,18 @@ class HydrogenCoulombState(QuantumState):
             raise IllegalQuantumState('energy must be greater than zero')
 
         if l >= 0:
-            self._l = l
+            self._l = int(l)
         else:
             raise IllegalQuantumState('l ({}) must be greater than or equal to zero'.format(l))
 
         if -l <= m <= l:
-            self._m = m
+            self._m = int(m)
         else:
             raise IllegalQuantumState('m ({}) must be between -l and l ({} to {})'.format(m, -l, l))
 
-
     @classmethod
     def from_wavenumber(cls, k, l = 0, m = 0):
-        """Construct a FreeState from its wavenumber and angular momentum quantum numbers."""
+        """Construct a HydrogenCoulombState from its wavenumber and angular momentum quantum numbers."""
         energy = core.electron_energy_from_wavenumber(k)
 
         return cls(energy, l, m)

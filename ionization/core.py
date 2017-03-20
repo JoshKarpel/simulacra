@@ -1270,7 +1270,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.r_max = np.max(self.r)
         self.inner_product_multiplier = self.delta_r
 
-        self.l = np.array(range(self.spec.l_points))
+        self.l = np.array(range(self.spec.l_points), dtype = int)
         self.theta_points = min(self.spec.l_points * 5, 360)
         self.phi_points = self.theta_points
 
@@ -1432,6 +1432,84 @@ class SphericalHarmonicMesh(QuantumMesh):
         for ii, theta in enumerate(thetas):
             for jj, wavenumber in enumerate(wavenumbers):
                 inner_product_mesh[ii, jj] = np.sum(multiplier * sph_harm(theta) * bessel(wavenumber))
+
+        return theta_mesh, wavenumber_mesh, inner_product_mesh
+
+    def inner_product_with_plane_waves_at_infinity(self, thetas, wavenumbers, g_mesh = None):
+        """
+        Return the inner products for each plane wave state in the Cartesian product of thetas and wavenumbers.
+
+        :param wavenumbers:
+        :param thetas:
+        :return:
+        """
+        l_mesh = self.l_mesh
+
+        # multiplier = np.sqrt(2 / pi) * self.g_factor * (-1j ** (l_mesh % 4)) * self.inner_product_multiplier * g_mesh
+
+        thetas, wavenumbers = np.array(thetas), np.array(wavenumbers)
+        theta_mesh, wavenumber_mesh = np.meshgrid(thetas, wavenumbers, indexing = 'ij')
+
+        inner_product_mesh = np.zeros(np.shape(wavenumber_mesh), dtype = np.complex128)
+
+        # @cp.utils.memoize
+        # def sph_harm(theta):
+        #     return special.sph_harm(0, l_mesh, 0, theta)
+        #
+        # @cp.utils.memoize
+        # def bessel(wavenumber):
+        #     return special.spherical_jn(l_mesh, np.real(wavenumber * self.r_mesh))
+
+        # @cp.utils.memoize
+        # def poly(l, theta):
+        #     return special.legendre(l)(np.cos(theta))
+        #
+        # @cp.utils.memoize
+        # def phase(l, k):
+        #     return np.exp(1j * states.coulomb_phase_shift(l, k))
+        #
+        # # sqrt_mesh = np.sqrt((2 * l_mesh) + 1)
+        #
+        # for ii, theta in enumerate(thetas):
+        #     for jj, wavenumber in enumerate(wavenumbers):
+        #         print(ii, jj)
+        #
+        #         total = 0
+        #         for l in self.l:
+        #             total += phase(l, wavenumber) * np.sqrt((2 * l) + 1) * poly(l, theta) * self.inner_product(states.HydrogenCoulombState.from_wavenumber(wavenumber, l), g_mesh)
+        #
+        #         inner_product_mesh[ii, jj] = total / np.sqrt(4 * pi * wavenumber)
+
+        if g_mesh is None:
+            g_mesh = self.g_mesh
+
+        sqrt_mesh = np.sqrt((2 * l_mesh) + 1)
+
+        @cp.utils.memoize
+        def poly(theta):
+            return special.lpn(l_mesh, np.cos(theta))
+
+        @cp.utils.memoize
+        def phase(k):
+            return np.exp(1j * states.coulomb_phase_shift(l_mesh, k))
+
+        for ii, theta in enumerate(thetas):
+            for jj, wavenumber in enumerate(wavenumbers):
+                print(ii, jj)
+
+                # total = 0
+                # for l in self.l:
+                #     total += phase(l, wavenumber) * np.sqrt((2 * l) + 1) * poly(l, theta) * self.inner_product(states.HydrogenCoulombState.from_wavenumber(wavenumber, l), g_mesh)
+
+                state = states.HydrogenCoulombState.from_wavenumber(wavenumber, l = 0)
+                for l in self.l[1:]:
+                    state += states.HydrogenCoulombState.from_wavenumber(wavenumber, l)
+
+                print(state)
+                state_mesh = self.get_g_for_state(state)
+                ip = self.inner_product(poly(theta) * phase(wavenumber) * sqrt_mesh * state_mesh, g_mesh)
+
+                inner_product_mesh[ii, jj] = ip / np.sqrt(4 * pi * wavenumber)
 
         return theta_mesh, wavenumber_mesh, inner_product_mesh
 

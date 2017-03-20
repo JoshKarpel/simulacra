@@ -65,45 +65,45 @@ if __name__ == '__main__':
             bound_state_max_n = 4,
         )
 
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__no_grouping')
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__no_grouping__collapsed_l',
-                                      collapse_bound_state_angular_momentums = True)
-
-        grouped_states, group_labels = sim.group_free_states_by_continuous_attr('energy', divisions = 12, cutoff_value = 150 * eV, label_unit = 'eV')
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__energy',
-                                      grouped_free_states = grouped_states, group_labels = group_labels)
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__energy__collapsed_l',
-                                      collapse_bound_state_angular_momentums = True,
-                                      grouped_free_states = grouped_states, group_labels = group_labels)
-
-        grouped_states, group_labels = sim.group_free_states_by_discrete_attr('l', cutoff_value = 20)
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__l',
-                                      grouped_free_states = grouped_states, group_labels = group_labels)
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__l__collapsed_l',
-                                      collapse_bound_state_angular_momentums = True,
-                                      grouped_free_states = grouped_states, group_labels = group_labels)
-
-        sim.plot_energy_spectrum(**plot_kwargs,
-                                 energy_upper_limit = 50 * eV, states = 'all',
-                                 group_angular_momentum = False)
-        sim.plot_energy_spectrum(**plot_kwargs,
-                                 states = 'bound',
-                                 group_angular_momentum = False)
-        sim.plot_energy_spectrum(**plot_kwargs,
-                                 energy_upper_limit = 50 * eV, states = 'free',
-                                 bins = 25,
-                                 group_angular_momentum = False)
-
-        sim.plot_energy_spectrum(**plot_kwargs,
-                                 energy_upper_limit = 50 * eV, states = 'all',
-                                 angular_momentum_cutoff = 10)
-        sim.plot_energy_spectrum(**plot_kwargs,
-                                 states = 'bound',
-                                 angular_momentum_cutoff = 10)
-        sim.plot_energy_spectrum(**plot_kwargs,
-                                 bins = 25,
-                                 energy_upper_limit = 50 * eV, states = 'free',
-                                 angular_momentum_cutoff = 10)
+        # sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__no_grouping')
+        # sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__no_grouping__collapsed_l',
+        #                               collapse_bound_state_angular_momentums = True)
+        #
+        # grouped_states, group_labels = sim.group_free_states_by_continuous_attr('energy', divisions = 12, cutoff_value = 150 * eV, label_unit = 'eV')
+        # sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__energy',
+        #                               grouped_free_states = grouped_states, group_labels = group_labels)
+        # sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__energy__collapsed_l',
+        #                               collapse_bound_state_angular_momentums = True,
+        #                               grouped_free_states = grouped_states, group_labels = group_labels)
+        #
+        # grouped_states, group_labels = sim.group_free_states_by_discrete_attr('l', cutoff_value = 20)
+        # sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__l',
+        #                               grouped_free_states = grouped_states, group_labels = group_labels)
+        # sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__l__collapsed_l',
+        #                               collapse_bound_state_angular_momentums = True,
+        #                               grouped_free_states = grouped_states, group_labels = group_labels)
+        #
+        # sim.plot_energy_spectrum(**plot_kwargs,
+        #                          energy_upper_limit = 50 * eV, states = 'all',
+        #                          group_angular_momentum = False)
+        # sim.plot_energy_spectrum(**plot_kwargs,
+        #                          states = 'bound',
+        #                          group_angular_momentum = False)
+        # sim.plot_energy_spectrum(**plot_kwargs,
+        #                          energy_upper_limit = 50 * eV, states = 'free',
+        #                          bins = 25,
+        #                          group_angular_momentum = False)
+        #
+        # sim.plot_energy_spectrum(**plot_kwargs,
+        #                          energy_upper_limit = 50 * eV, states = 'all',
+        #                          angular_momentum_cutoff = 10)
+        # sim.plot_energy_spectrum(**plot_kwargs,
+        #                          states = 'bound',
+        #                          angular_momentum_cutoff = 10)
+        # sim.plot_energy_spectrum(**plot_kwargs,
+        #                          bins = 25,
+        #                          energy_upper_limit = 50 * eV, states = 'free',
+        #                          angular_momentum_cutoff = 10)
 
         spectrum_kwargs = dict(
             target_dir = OUT_DIR,
@@ -122,6 +122,23 @@ if __name__ == '__main__':
                              target_dir = OUT_DIR)
 
             cp.utils.xy_plot('along_theta=0__log={}__momentum'.format(log),
+                             wavenumbers[0] * hbar,
+                             np.abs(along_z[0]) ** 2,
+                             x_scale = 'atomic_momentum', x_label = 'Momentum $p$',
+                             y_log_axis = log,
+                             target_dir = OUT_DIR)
+
+            thetas, wavenumbers, along_z = sim.mesh.inner_product_with_plane_waves_at_infinity(thetas = [0], wavenumbers = np.linspace(.1, 50, 500) * per_nm,
+                                                                                               g_mesh = sim.mesh.get_g_with_states_removed(sim.bound_states))
+
+            cp.utils.xy_plot('along_theta=0__log={}__wavenumber__at_inf'.format(log),
+                             wavenumbers[0],
+                             np.abs(along_z[0]) ** 2,
+                             x_scale = 'per_nm', x_label = 'Wavenumber $k$',
+                             y_log_axis = log,
+                             target_dir = OUT_DIR)
+
+            cp.utils.xy_plot('along_theta=0__log={}__momentum__at_inf'.format(log),
                              wavenumbers[0] * hbar,
                              np.abs(along_z[0]) ** 2,
                              x_scale = 'atomic_momentum', x_label = 'Momentum $p$',
