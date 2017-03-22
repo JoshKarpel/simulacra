@@ -107,6 +107,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         :param checkpoint_dir: a directory path to store the checkpoint file in
         :param animators: a list of Animators which will be run during time evolution
         :param store_norm_by_l: if True, the Simulation will store the amount of norm in each spherical harmonic.
+        :param store_data_every: decimate by this is if >= 1, else store only initial and final
         :param snapshot_times:
         :param snapshot_indices:
         :param snapshot_types:
@@ -150,7 +151,7 @@ class ElectricFieldSpecification(cp.core.Specification):
 
         self.animators = deepcopy(tuple(animators))
 
-        self.store_data_every = store_data_every
+        self.store_data_every = int(store_data_every)
 
         self.snapshot_times = set(snapshot_times)
         self.snapshot_indices = set(snapshot_indices)
@@ -2225,7 +2226,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         # simulation data storage
         time_indices = np.array(range(0, self.time_steps))
-        self.data_mask = np.equal(time_indices, 0) + np.equal(time_indices, self.time_steps - 1) + np.equal(time_indices % self.spec.store_data_every, 0)
+        self.data_mask = np.equal(time_indices, 0) + np.equal(time_indices, self.time_steps - 1)
+        if self.spec.store_data_every >= 1:
+            self.data_mask += np.equal(time_indices % self.spec.store_data_every, 0)
         self.data_times = self.times[self.data_mask]
         self.data_indices = time_indices[self.data_mask]
         self.data_time_steps = len(self.data_times)
