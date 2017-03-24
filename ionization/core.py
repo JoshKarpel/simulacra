@@ -1227,7 +1227,7 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
     def __init__(self, name,
                  r_bound = 100 * bohr_radius,
                  r_points = 400,
-                 l_points = 100,
+                 l_bound = 100,
                  evolution_equations = 'L',
                  evolution_method = 'SO',
                  store_norm_by_l = False,
@@ -1241,7 +1241,7 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
         :param name:
         :param r_bound:
         :param r_points:
-        :param l_points:
+        :param l_bound:
         :param evolution_equations: 'L' (recommended) or 'H'
         :param evolution_method: 'SO' (recommended) or 'CN'
         :param kwargs:
@@ -1250,8 +1250,8 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
 
         self.r_bound = r_bound
         self.r_points = int(r_points)
-        self.l_points = l_points
-        self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.l_points))
+        self.l_bound = l_bound
+        self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.l_bound))
 
         self.evolution_equations = evolution_equations
         self.evolution_method = evolution_method
@@ -1268,8 +1268,8 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
                 '   R Boundary: {} Bohr radii'.format(uround(self.r_bound, bohr_radius, 3)),
                 '   R Points: {}'.format(self.r_points),
                 '   R Mesh Spacing: ~{} Bohr radii'.format(uround(self.r_bound / self.r_points, bohr_radius, 3)),
-                '   Spherical Harmonics: {}'.format(self.l_points),
-                '   Total Mesh Points: {}'.format(self.r_points * self.l_points)]
+                '   Spherical Harmonics: {}'.format(self.l_bound),
+                '   Total Mesh Points: {}'.format(self.r_points * self.l_bound)]
 
         return '\n'.join((super(SphericalHarmonicSpecification, self).info(), *mesh))
 
@@ -1286,15 +1286,17 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.r_max = np.max(self.r)
         self.inner_product_multiplier = self.delta_r
 
-        self.l = np.array(range(self.spec.l_points), dtype = int)
-        self.theta_points = min(self.spec.l_points * 5, 360)
+        self.l = np.array(range(self.spec.l_bound), dtype = int)
+        self.theta_points = min(self.spec.l_bound * 5, 360)
         self.phi_points = self.theta_points
 
         self.mesh_points = len(self.r) * len(self.l)
         self.mesh_shape = np.shape(self.r_mesh)
 
         if self.spec.use_numeric_eigenstates_as_basis:
-            self.analytic_to_numeric = self._get_numeric_eigenstate_basis(self.spec.numeric_eigenstate_energy_max, self.spec.numeric_eigenstate_l_max)
+            with cp.utils.Timer() as t:
+                self.analytic_to_numeric = self._get_numeric_eigenstate_basis(self.spec.numeric_eigenstate_energy_max, self.spec.numeric_eigenstate_l_max)
+            print(t)
             self.spec.test_states = sorted(list(self.analytic_to_numeric.values()), key = lambda x: x.energy)
             self.spec.initial_state = self.analytic_to_numeric[self.spec.initial_state]
 
@@ -1545,8 +1547,8 @@ class SphericalHarmonicMesh(QuantumMesh):
         l_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
         l_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
         for l_index in range(self.mesh_points - 1):
-            if (l_index + 1) % self.spec.l_points != 0:
-                l = (l_index % self.spec.l_points) + 1
+            if (l_index + 1) % self.spec.l_bound != 0:
+                l = (l_index % self.spec.l_bound) + 1
                 l_offdiagonal[l_index] = a(l)
         l_offdiagonal *= l_prefactor
 
@@ -1597,7 +1599,23 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         for l in range(l_max + 1):
             h = self._get_internal_hamiltonian_matrix_operator_single_l(l = l)
-            eigenvalues, eigenvectors = sparsealg.eigsh(h, k = h.shape[0] - 2, which = 'SA')
+
+            estimated_spacing = twopi / self.r_max
+            wavenumber_max = np.real(electron_wavenumber_from_energy(energy_max))
+            number_of_eigenvectors = int(wavenumber_max / estimated_spacing)  # generate an initial guess based on roughly linear wavenumber steps between eigenvalues
+
+            max_eigenvectors = h.shape[0] - 2  # can't generate more than this many eigenvectors using sparse linear algebra methods
+
+            while True:
+                if number_of_eigenvectors > max_eigenvectors:
+                    number_of_eigenvectors = max_eigenvectors  # this will cause the loop to break after this attempt
+
+                eigenvalues, eigenvectors = sparsealg.eigsh(h, k = number_of_eigenvectors, which = 'SA')
+
+                if np.max(eigenvalues) > energy_max or number_of_eigenvectors == max_eigenvectors:
+                    break
+
+                number_of_eigenvectors = int(number_of_eigenvectors * 1.1 * np.sqrt(energy_max / np.max(eigenvalues)))  # based on approximate sqrt scaling of energy to wavenumber, with safety factor
 
             for eigenvalue, eigenvector in zip(eigenvalues, eigenvectors.T):
                 eigenvector /= np.sqrt(self.inner_product_multiplier * np.sum(np.abs(eigenvector) ** 2))  # normalize
@@ -1659,8 +1677,8 @@ class SphericalHarmonicMesh(QuantumMesh):
         l_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
         l_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
         for l_index in range(self.mesh_points - 1):
-            if (l_index + 1) % self.spec.l_points != 0:
-                l = (l_index % self.spec.l_points) + 1
+            if (l_index + 1) % self.spec.l_bound != 0:
+                l = (l_index % self.spec.l_bound) + 1
                 l_offdiagonal[l_index] = self.c(l)
         l_offdiagonal *= l_prefactor
 

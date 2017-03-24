@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
             sph_spec = ion.SphericalHarmonicSpecification('CN__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                           r_bound = bound * bohr_radius, r_points = points,
-                                                          l_points = angular_points,
+                                                          l_bound = angular_points,
                                                           time_initial = t_init, time_final = t_final, time_step = t_step,
                                                           internal_potential = internal_potential,
                                                           electric_potential = external_potential,
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
             sph_spec = ion.SphericalHarmonicSpecification('CN_I__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                           r_bound = bound * bohr_radius, r_points = points,
-                                                          l_points = angular_points,
+                                                          l_bound = angular_points,
                                                           time_initial = t_init, time_final = t_final, time_step = t_step,
                                                           internal_potential = internal_potential,
                                                           electric_potential = external_potential,
@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
             sph_spec = ion.SphericalHarmonicSpecification('SO__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                           r_bound = bound * bohr_radius, r_points = points,
-                                                          l_points = angular_points,
+                                                          l_bound = angular_points,
                                                           time_initial = t_init, time_final = t_final, time_step = t_step,
                                                           internal_potential = internal_potential,
                                                           electric_potential = external_potential,
@@ -125,7 +125,7 @@ if __name__ == '__main__':
 
             sph_spec = ion.SphericalHarmonicSpecification('SO_I__dipole__{}x{}_amp={}'.format(points, angular_points, uround(amplitude, atomic_electric_field, 3)),
                                                           r_bound = bound * bohr_radius, r_points = points,
-                                                          l_points = angular_points,
+                                                          l_bound = angular_points,
                                                           time_initial = t_init, time_final = t_final, time_step = t_step,
                                                           internal_potential = internal_potential,
                                                           electric_potential = external_potential,

@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
         # SET UP SIM
         sim = ion.SphericalHarmonicSpecification(identifier,
-                                                 r_bound = space_bound, r_points = r_points, l_points = l_points,
+                                                 r_bound = space_bound, r_points = r_points, l_bound = l_points,
                                                  # time_initial = - time_bound, time_final = time_bound, time_step = dt,
                                                  time_initial = 0, time_final = electric_field.period * 20, time_step = dt,
                                                  internal_potential = ion.Coulomb(),

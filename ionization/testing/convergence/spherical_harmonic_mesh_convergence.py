@@ -174,7 +174,7 @@ if __name__ == '__main__':
             specs.append(ion.SphericalHarmonicSpecification('__'.join(spec_name),
                                                             r_bound = r_bound * bohr_radius,
                                                             r_points = r_bound * r_points_per_br,
-                                                            l_points = l_points,
+                                                            l_bound = l_points,
                                                             time_step = time_step * asec,
                                                             time_initial = -t_bound * asec,
                                                             time_final = t_bound * asec,

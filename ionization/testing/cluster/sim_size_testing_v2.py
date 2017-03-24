@@ -28,7 +28,7 @@ if __name__ == '__main__':
             specs.append(ion.SphericalHarmonicSpecification('store={}'.format(store),
                                                             time_initial = 0 * asec, time_final = 10000 * asec, time_step = 1 * asec,
                                                             store_data_every = store,
-                                                            r_bound = 100 * bohr_radius, r_points = 100 * 4, l_points = 100,
+                                                            r_bound = 100 * bohr_radius, r_points = 100 * 4, l_bound = 100,
                                                             use_numeric_eigenstates_as_basis = True, numeric_eigenstate_energy_max = 50 * eV, numeric_eigenstate_l_max = 20,
                                                             ))
 

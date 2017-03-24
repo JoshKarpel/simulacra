@@ -49,6 +49,6 @@ if __name__ == '__main__':
 
                 specs.append(ion.SphericalHarmonicSpecification('sph_harms__{}_{}__{}'.format(initial_state.n, initial_state.l, bound),
                                                                 initial_state = initial_state,
-                                                                r_bound = bound * bohr_radius, l_points = angular_points))
+                                                                r_bound = bound * bohr_radius, l_bound = angular_points))
 
         cp.utils.multi_map(make_plots, specs, processes = 2)

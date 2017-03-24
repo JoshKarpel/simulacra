@@ -18,7 +18,7 @@ if __name__ == '__main__':
         sim = ion.SphericalHarmonicSpecification('mask',
                                                  time_final = 200 * asec,
                                                  r_bound = 50 * bohr_radius, r_points = 50 * 8,
-                                                 l_points = 100,
+                                                 l_bound = 100,
                                                  electric_potential = electric,
                                                  test_states = [ion.HydrogenBoundState(n, l) for n in range(6) for l in range(n)],
                                                  mask = mask).to_simulation()

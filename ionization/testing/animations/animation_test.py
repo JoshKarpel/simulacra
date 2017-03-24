@@ -115,7 +115,7 @@ if __name__ == '__main__':
                                  ]
                     spec = ion.SphericalHarmonicSpecification(prefix + 'harm_CN_4', time_initial = t_init, time_final = t_final, time_step = dt,
                                                               r_bound = bound * bohr_radius, r_points = bound * 4,
-                                                              l_points = angular_points,
+                                                              l_bound = angular_points,
                                                               initial_state = state,
                                                               internal_potential = internal_potential,
                                                               electric_potential = e_field,
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
                     spec = ion.SphericalHarmonicSpecification(prefix + 'harm_SO_4', time_initial = t_init, time_final = t_final, time_step = dt,
                                                               r_bound = bound * bohr_radius, r_points = bound * 4,
-                                                              l_points = angular_points,
+                                                              l_bound = angular_points,
                                                               initial_state = state,
                                                               internal_potential = internal_potential,
                                                               electric_potential = e_field,
@@ -139,7 +139,7 @@ if __name__ == '__main__':
 
                     spec = ion.SphericalHarmonicSpecification(prefix + 'harm_CN_10', time_initial = t_init, time_final = t_final, time_step = dt,
                                                               r_bound = bound * bohr_radius, r_points = bound * 10,
-                                                              l_points = angular_points,
+                                                              l_bound = angular_points,
                                                               initial_state = state,
                                                               internal_potential = internal_potential,
                                                               electric_potential = e_field,
@@ -151,7 +151,7 @@ if __name__ == '__main__':
 
                     spec = ion.SphericalHarmonicSpecification(prefix + 'harm_SO_10', time_initial = t_init, time_final = t_final, time_step = dt,
                                                               r_bound = bound * bohr_radius, r_points = bound * 10,
-                                                              l_points = angular_points,
+                                                              l_bound = angular_points,
                                                               initial_state = state,
                                                               internal_potential = internal_potential,
                                                               electric_potential = e_field,

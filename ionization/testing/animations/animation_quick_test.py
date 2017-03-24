@@ -75,7 +75,7 @@ if __name__ == '__main__':
         ]
         specs.append(ion.SphericalHarmonicSpecification('sph_harm', time_initial = t_init * asec, time_final = t_final * asec, time_step = dt * asec,
                                                         r_bound = bound * bohr_radius, r_points = radial_points,
-                                                        l_points = angular_points,
+                                                        l_bound = angular_points,
                                                         initial_state = initial_state,
                                                         electric_potential = e_field,
                                                         mask = mask,

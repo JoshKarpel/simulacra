@@ -35,7 +35,7 @@ if __name__ == '__main__':
                 sinc = ion.SincPulse.from_amplitude_density(pulse_width = pw * asec, amplitude_density = source.amplitude_omega, phase = phase)
 
                 specs.append(ion.SphericalHarmonicSpecification('pw={}asec_phase={}'.format(pw, phase),
-                                                                r_bound = 150 * bohr_radius, r_points = 600, l_points = 100,
+                                                                r_bound = 150 * bohr_radius, r_points = 600, l_bound = 100,
                                                                 electric_potential = sinc,
                                                                 mask = mask,
                                                                 time_initial = -15 * pw * asec, time_final = 15 * pw * asec, time_step = t_step,
