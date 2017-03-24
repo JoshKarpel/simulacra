@@ -127,7 +127,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.initial_state = initial_state
         self.test_states = tuple(sorted(tuple(test_states)))  # consume input iterators
         if len(self.test_states) == 0:
-            self.test_states = (self.initial_state,)
+            self.test_states = [self.initial_state]
         self.dipole_gauges = tuple(sorted(tuple(dipole_gauges)))
 
         self.internal_potential = internal_potential
@@ -1296,13 +1296,11 @@ class SphericalHarmonicMesh(QuantumMesh):
         if self.spec.use_numeric_eigenstates_as_basis:
             self.analytic_to_numeric = self._get_numeric_eigenstate_basis(self.spec.numeric_eigenstate_energy_max, self.spec.numeric_eigenstate_l_max)
             self.spec.test_states = sorted(list(self.analytic_to_numeric.values()), key = lambda x: x.energy)
-            g_initial = self.get_g_for_state(self.analytic_to_numeric[self.spec.initial_state])
+            self.spec.initial_state = self.analytic_to_numeric[self.spec.initial_state]
 
             logger.warning('Replaced test states for {} with numeric eigenbasis'.format(self))
-        else:
-            g_initial = self.get_g_for_state(self.spec.initial_state)
 
-        self.g_mesh = g_initial
+        self.g_mesh = self.get_g_for_state(self.spec.initial_state)
 
     @property
     @cp.utils.memoize
@@ -1597,7 +1595,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     def _get_numeric_eigenstate_basis(self, energy_max, l_max):
         analytic_to_numeric = {}
 
-        for l in range(l_max):
+        for l in range(l_max + 1):
             h = self._get_internal_hamiltonian_matrix_operator_single_l(l = l)
             eigenvalues, eigenvectors = sparsealg.eigsh(h, k = h.shape[0] - 2, which = 'SA')
 

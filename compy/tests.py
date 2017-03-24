@@ -25,7 +25,6 @@ class TestEnsureDirExists(unittest.TestCase):
         utils.ensure_dir_exists(os.path.join(TEST_DIR, self.filename))
         self.assertTrue(os.path.exists(self.target_name))
         self.assertFalse(os.path.exists(os.path.join(self.target_name, 'kappa')))  # didn't accidentally create a path with the name of the file
-        os.rmdir(self.target_name)  # necessary cleanup to run other tests in this TestCase
 
 
 class TestBeet(unittest.TestCase):
@@ -165,3 +164,20 @@ class TestPrimeFinders(unittest.TestCase):
         for not_prime in [1, 4, 6, 15]:
             with self.subTest(np = not_prime):
                 self.assertFalse(math.is_prime(not_prime))
+
+
+class TestRestrictedValues(unittest.TestCase):
+    legal = ('a', 5, (4, 5, 6))
+    illegal = ('foo', 3, (1, 2, 3))
+    attr = utils.RestrictedValues('attr', legal)
+
+    def test_legal_assignments(self):
+        for x in self.legal:
+            with self.subTest(x = x):
+                self.attr = x
+
+    def test_illegal_assignments(self):
+        for x in self.illegal:
+            with self.subTest(x = x):
+                with self.assertRaises(ValueError):
+                    self.attr = x

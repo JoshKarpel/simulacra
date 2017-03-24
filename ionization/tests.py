@@ -87,6 +87,13 @@ class TestElectricFieldSimulation:
         self.assertIsNotNone(loaded.mesh)
         self.assertNotEqual(loaded.mesh, pre_save_mesh)  # pre and post should not be equal
 
+    def test_initial_norm(self):
+        self.assertAlmostEqual(self.obj.mesh.norm(), 1)
+
+    def test_initial_state_overlap(self):
+        ip = self.obj.mesh.inner_product(self.obj.spec.initial_state)
+        self.assertAlmostEqual(np.abs(ip) ** 2, 1)
+
 
 class TestLineSimulation(TestElectricFieldSimulation, cp.tests.TestBeet):
     spec_type = core.LineSpecification
