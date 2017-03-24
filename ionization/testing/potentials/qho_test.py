@@ -44,20 +44,21 @@ if __name__ == '__main__':
         # delta = 2 * bohr_radius
         # sim.mesh.psi = np.exp(-0.5 * ((sim.mesh.x / delta) ** 2)).astype(np.complex128)
 
-        print('init norm', sim.mesh.norm)
+        print('init norm', sim.mesh.norm())
 
         sim.mesh.plot_g(name_postfix = '_init', target_dir = OUT_DIR)
 
         sim.run_simulation()
 
         print(sim.info())
-        print('norm', sim.mesh.norm)
+        print('norm', sim.mesh.norm())
         print('energy EV', sim.energy_expectation_value_vs_time_internal / eV)
         # print(pot.omega(init.mass), init.omega)
         # print('period: {} fs'.format(uround(init.period, fsec, 3)))
 
         sim.mesh.plot_g(name_postfix = '_post', target_dir = OUT_DIR)
-        sim.plot_wavefunction_vs_time(target_dir = OUT_DIR, x_scale = 'fsec')
+        # sim.plot_wavefunction_vs_time(target_dir = OUT_DIR, x_scale = 'fsec')
+        sim.plot_test_state_overlaps_vs_time(target_dir = OUT_DIR, x_scale = 'fsec')
 
         # print(sim.mesh.wavenumbers)
         # print(sim.mesh.free_evolution_prefactor)
