@@ -71,7 +71,7 @@ class MetricsAndElectricField(cp.AxisManager):
 
         self.axis.grid(True, color = 'gray', linestyle = '--')
 
-        self.axis.set_xlabel(r'Time $t$ ({})'.format(self.time_unit_str), fontsize = 24)
+        self.axis.set_xlabel(r'Time $t$ (${}$)'.format(self.time_unit_str), fontsize = 24)
 
         if self.label_left:
             self.axis.set_ylabel('Wavefunction Metric', fontsize = 24)

@@ -70,7 +70,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  electric_potential = potentials.NoElectricField(),
                  electric_potential_dc_correction = False,
                  mask = potentials.NoMask(),
-                 evolution_method = 'CN', evolution_equations = 'H',
+                 evolution_method = 'SO', evolution_equations = 'H',
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
                  minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
@@ -182,7 +182,9 @@ class ElectricFieldSpecification(cp.core.Specification):
                           '   Initial State: {}'.format(self.initial_state),
                           '   Initial Time: {} as'.format(uround(self.time_initial, asec)),
                           '   Final Time: {} as'.format(uround(self.time_final, asec)),
-                          '   Time Step: {} as'.format(uround(self.time_step, asec))]
+                          '   Time Step: {} as'.format(uround(self.time_step, asec)),
+                          '   Evolution Equations: {}'.format(self.evolution_equations),
+                          '   Evolution Method: {}'.format(self.evolution_method)]
 
         if self.minimum_time_final is not 0:
             time_evolution += ['   Minimum Final Time: {} as'.format(uround(self.minimum_time_final, asec)),
@@ -380,7 +382,6 @@ class LineSpecification(ElectricFieldSpecification):
                  **kwargs):
         super(LineSpecification, self).__init__(name, mesh_type = LineMesh,
                                                 initial_state = initial_state,
-                                                evolution_method = 'S',
                                                 **kwargs)
 
         self.x_bound = x_bound
@@ -471,6 +472,33 @@ class LineMesh(QuantumMesh):
     def _evolve_S(self, time_step):
         self._evolve_potential(time_step / 2)
         self._evolve_free(time_step)  # splitting order chosen for computational efficiency (only one FFT per time step)
+        self._evolve_potential(time_step / 2)
+
+    @cp.utils.memoize
+    def get_kinetic_energy_matrix_operator(self):
+        prefactor = -2 * (hbar ** 2) / (2 * self.spec.test_mass) / (self.delta_x ** 2)
+
+        diag = -2 * prefactor * np.ones(len(self.x_mesh), dtype = np.complex128)
+        off_diag = prefactor * np.ones(len(self.x_mesh) - 1, dtype = np.complex128)
+
+        return sparse.diags((off_diag, diag, off_diag), (-1, 0, 1))
+
+    def _evolve_SO(self, time_step):
+        self._evolve_potential(time_step / 2)
+
+        tau = time_step / (2 * hbar)
+        hamiltonian_x = 1j * tau * self.get_kinetic_energy_matrix_operator()
+
+        # STEP 2
+        hamiltonian = hamiltonian_x.copy()
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        g_vector = cy.tdma(hamiltonian, self.g_mesh)
+
+        # STEP 3
+        hamiltonian = -1 * hamiltonian_x
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        self.g_mesh = hamiltonian.dot(g_vector)
+
         self._evolve_potential(time_step / 2)
 
     def get_mesh_slicer(self, plot_limit):

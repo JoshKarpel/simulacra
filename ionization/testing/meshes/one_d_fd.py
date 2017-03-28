@@ -12,6 +12,18 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 log = cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG)
 
+
+def run(spec):
+    with log as logger:
+        sim = spec.to_simulation()
+
+        logger.info(sim.info())
+        sim.run_simulation()
+        logger.info(sim.info())
+
+        sim.plot_test_state_overlaps_vs_time(target_dir = OUT_DIR,
+                                             grouped_free_states = {})
+
 if __name__ == '__main__':
     with log as logger:
         energy_spacing = 1 * eV
@@ -20,33 +32,39 @@ if __name__ == '__main__':
         qho = ion.HarmonicOscillator.from_energy_spacing_and_mass(energy_spacing = energy_spacing, mass = mass)
 
         initial_state = ion.QHOState.from_QHO_potential_and_mass(qho, mass, n = 0)
-        test_states = [ion.QHOState.from_QHO_potential_and_mass(qho, mass, n = n) for n in range(10)]
+        test_states = [ion.QHOState.from_QHO_potential_and_mass(qho, mass, n = n) for n in range(31)]
 
         efield = ion.SineWave.from_photon_energy(energy_spacing, amplitude = .01 * atomic_electric_field)
         # efield = ion.NoElectricField()
 
+        ani_kwargs = dict(
+            target_dir = OUT_DIR,
+            distance_unit = 'nm',
+        )
+
         ani = [
-            ion.animators.LineAnimator(target_dir = OUT_DIR, postfix = '_full'),
-            ion.animators.LineAnimator(target_dir = OUT_DIR, plot_limit = 10 * nm, postfix = '_10'),
+            ion.animators.LineAnimator(postfix = '_full', **ani_kwargs),
+            ion.animators.LineAnimator(postfix = '_10', plot_limit = 10 * nm, **ani_kwargs),
         ]
 
-        sim = ion.LineSpecification('spectral',
-                                    x_bound = 100 * nm, x_points = 2 ** 14,
-                                    internal_potential = qho,
-                                    initial_state = initial_state,
-                                    test_states = test_states,
-                                    test_mass = mass,
-                                    electric_potential = efield,
-                                    time_initial = 0,
-                                    time_final = efield.period * 10,
-                                    time_step = 10 * asec,
-                                    animators = ani,
-                                    ).to_simulation()
+        spec_kwargs = dict(
+            x_bound = 50 * nm, x_points = 2 ** 16,
+            internal_potential = qho,
+            initial_state = initial_state,
+            test_states = test_states,
+            test_mass = mass,
+            electric_potential = efield,
+            time_initial = 0,
+            time_final = efield.period * 3,
+            time_step = 1 * asec,
+            animators = ani,
+        )
 
-        sim.mesh.plot_g(target_dir = OUT_DIR)
+        specs = []
+        for method in ('S', 'SO'):
+            specs.append(ion.LineSpecification(method,
+                                               **spec_kwargs,
+                                               evolution_method = method,
+                                               ))
 
-        sim.run_simulation()
-        logger.info(sim.info())
-
-        sim.plot_test_state_overlaps_vs_time(target_dir = OUT_DIR,
-                                             grouped_free_states = {})
+        cp.utils.multi_map(run, specs, processes = 2)
