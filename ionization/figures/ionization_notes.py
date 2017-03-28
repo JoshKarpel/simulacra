@@ -13,6 +13,7 @@ matplotlib.use('pgf')
 
 import compy as cp
 import ionization as ion
+import ionization.integrodiff as ide
 from compy.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -44,9 +45,16 @@ matplotlib.rcParams.update(pgf_with_latex)
 import matplotlib.pyplot as plt
 
 
+def run(spec):
+    sim = spec.to_simulation()
+    sim.run_simulation()
+    return sim
+
+
 def save_figure(filename):
     cp.utils.save_current_figure(filename, target_dir = OUT_DIR, img_format = 'pdf')
     cp.utils.save_current_figure(filename, target_dir = OUT_DIR, img_format = 'pgf')
+    cp.utils.save_current_figure(filename, target_dir = OUT_DIR, img_format = 'png', img_scale = 2)
 
 
 def get_func_name():
@@ -60,7 +68,6 @@ grid_kwargs = {
     'linewidth': .25,
     'alpha': 0.4
 }
-
 
 def sinc_pulse_power_spectrum_full():
     fig = cp.utils.get_figure('full')
@@ -374,6 +381,107 @@ def a_alpha_v2_kernel_gaussian():
     save_figure(get_func_name())
 
 
+def ide_solution_sinc_pulse_cep_symmetry(phase = 0):
+    fig = cp.utils.get_figure('full')
+
+    grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [2.5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
+    ax_upper = plt.subplot(grid_spec[0])
+    ax_lower = plt.subplot(grid_spec[1], sharex = ax_upper)
+    #
+    # omega_min = twopi
+    # omega_max = 20 * twopi
+    #
+    # omega_c = (omega_min + omega_max) / 2
+    # delta = omega_max - omega_min
+    #
+    # time = np.linspace(-1, 1, 1000)
+    # field = cp.math.sinc(delta * time / 2) * np.cos(omega_c * time + phase * pi)
+
+    pulse_width = 200
+    fluence = .3
+
+    plot_bound = 4
+
+    efields = [ion.SincPulse(pulse_width = pulse_width * asec, fluence = fluence * Jcm2, phase = phase * pi),
+               ion.SincPulse(pulse_width = pulse_width * asec, fluence = fluence * Jcm2, phase = -phase * pi)]
+
+    q = electron_charge
+    m = electron_mass_reduced
+    L = bohr_radius
+    tau_alpha = 4 * m * (L ** 2) / hbar
+    prefactor = -np.sqrt(pi) * (L ** 2) * ((q / hbar) ** 2)
+
+    spec_kwargs = dict(
+        time_initial = -20 * pulse_width * asec, time_final = 20 * pulse_width * asec,
+        time_step = .1 * asec,
+        error_on = 'y', eps = 1e-3,
+        maximum_time_step = 5 * asec,
+        prefactor = prefactor,
+        kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha),
+    )
+
+    specs = []
+    for efield in efields:
+        specs.append(ide.AdaptiveIntegroDifferentialEquationSpecification(efield.phase,
+                                                                          f = efield.get_electric_field_amplitude,
+                                                                          **spec_kwargs,
+                                                                          ))
+    sims = cp.utils.multi_map(run, specs, processes = 2)
+
+    for sim, cep, color, style in zip(sims, (r'$\mathrm{CEP} = \varphi$', r'$\mathrm{CEP} = -\varphi$'), ('C0', 'C1'), ('-', '--')):
+        ax_lower.plot(sim.times, sim.spec.f(sim.times), color = color, linewidth = 1.5, label = cep, linestyle = style)
+        ax_upper.plot(sim.times, np.abs(sim.y) ** 2, color = color, linewidth = 1.5, label = cep, linestyle = style)
+
+    efield_1 = sims[0].spec.f(sims[0].times)
+    field_max = np.max(efield_1)
+    field_min = np.min(efield_1)
+    field_range = np.abs(field_max - field_min)
+
+    ax_lower.set_xlabel(r'Time $t$')
+    ax_lower.set_ylabel(r'$   \mathcal{E}(t)   $')
+    ax_lower.yaxis.set_label_coords(-.125, .5)
+
+    ax_upper.set_ylabel(r'$ \left| a(t) \right|^2 $')
+
+    ax_lower.set_xticks([i * pulse_width * asec for i in range(-10, 11)])
+    # ax_lower.set_xticklabels([r'$0$'] + [r'$ {} \tau $'.format(i) for i in range(-10, 11) if i != 0])
+    x_tick_labels = []
+    for i in range(-10, 11):
+        if i == 0:
+            x_tick_labels.append(r'$0$')
+        elif i == 1:
+            x_tick_labels.append(r'$\tau$')
+        elif i == -1:
+            x_tick_labels.append(r'$-\tau$')
+        else:
+            x_tick_labels.append(r'$ {} \tau $'.format(i))
+    ax_lower.set_xticklabels(x_tick_labels)
+
+    ax_lower.set_yticks([0, field_max, field_max / np.sqrt(2), -field_max, -field_max / np.sqrt(2)])
+    ax_lower.set_yticklabels([
+        r'$0$',
+        r'$\mathcal{E}_{t} $',
+        r'$\mathcal{E}_{t} / \sqrt{2} $',
+        r'$-\mathcal{E}_{t} $',
+        r'$-\mathcal{E}_{t} / \sqrt{2} $',
+    ])
+
+    ax_upper.tick_params(labelright = True)
+    ax_lower.tick_params(labelright = True)
+    ax_upper.xaxis.tick_top()
+
+    ax_lower.grid(True, **grid_kwargs)
+    ax_upper.grid(True, **grid_kwargs)
+
+    ax_lower.set_xlim(-plot_bound * pulse_width * asec, plot_bound * pulse_width * asec)
+    ax_lower.set_ylim(field_min - (.125 * field_range), field_max + (.125 * field_range))
+    ax_upper.set_ylim(0, 1)
+
+    ax_upper.legend(loc = 'best')
+
+    save_figure(get_func_name() + '_phase={}'.format(round(phase, 3)))
+
+
 if __name__ == '__main__':
     with log as logger:
         figures = [
@@ -387,6 +495,8 @@ if __name__ == '__main__':
             ft.partial(sinc_pulse_electric_field, phase = 1 / 2),
             ft.partial(sinc_pulse_electric_field, phase = 1),
             gaussian_pulse_power_spectrum_half,
+            ft.partial(ide_solution_sinc_pulse_cep_symmetry, phase = 1 / 4),
+            ft.partial(ide_solution_sinc_pulse_cep_symmetry, phase = 1 / 3),
         ]
 
         for fig in tqdm(figures):
