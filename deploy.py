@@ -18,12 +18,13 @@ if __name__ == '__main__':
         shutil.make_archive(d, format = 'gztar', base_dir = d)
 
     os.chdir('..')
+
     shutil.copy2('ionization/scripts/run_sim.py', 'deploy')
     shutil.copy2('ionization/scripts/run_sim.sh', 'deploy')
     shutil.copy2('ionization/scripts/sync_and_process.py', 'deploy')
-    shutil.copy2('ionization/scripts/create_job_sinc.py', 'deploy')
-    shutil.copy2('ionization/scripts/create_job_sinc_phase_scan.py', 'deploy')
-    # shutil.copy2('compy/scripts/tar.py', 'deploy')
+
+    shutil.copy2('ionization/scripts/cluster_job_creation/create_job_sinc.py', 'deploy')
+    shutil.copy2('ionization/scripts/cluster_job_creation/create_job__scan_width_phase_fluence.py', 'deploy')
 
     for path in (r'C:\Users\Josh\Dropbox\Research\deploy',
                  r'D:\Dropbox\Research\deploy'):

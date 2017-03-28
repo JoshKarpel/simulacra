@@ -55,7 +55,7 @@ if __name__ == '__main__':
             test_mass = mass,
             electric_potential = efield,
             time_initial = 0,
-            time_final = efield.period * 3,
+            time_final = efield.period * 10,
             time_step = 1 * asec,
             animators = ani,
         )

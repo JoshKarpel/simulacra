@@ -580,6 +580,7 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
                                  'phase',
                                  ('smallest_photon_energy', 'eV'),
                                  ('largest_photon_energy', 'eV'),
+                                 'omega_carrier',
                                  )
 
         return out + super().__str__()
@@ -592,6 +593,7 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
                                   'phase',
                                   'smallest_photon_energy',
                                   'largest_photon_energy',
+                                  'omega_carrier',
                                   )
 
     def get_electric_field_amplitude(self, t):
@@ -637,6 +639,7 @@ class GaussianPulse(UniformLinearlyPolarizedElectricField):
                                  ('pulse_center', 'asec'),
                                  ('fluence', 'J/cm^2'),
                                  'phase',
+                                 'omega_carrier',
                                  )
 
         return out + super().__str__()
@@ -647,6 +650,7 @@ class GaussianPulse(UniformLinearlyPolarizedElectricField):
                                   'pulse_center',
                                   'fluence',
                                   'phase',
+                                  'omega_carrier',
                                   )
 
     def get_electric_field_amplitude(self, t):
@@ -692,6 +696,7 @@ class SechPulse(UniformLinearlyPolarizedElectricField):
                                  ('pulse_center', 'asec'),
                                  ('fluence', 'J/cm^2'),
                                  'phase',
+                                 'omega_carrier',
                                  )
 
         return out + super().__str__()
@@ -702,6 +707,7 @@ class SechPulse(UniformLinearlyPolarizedElectricField):
                                   'pulse_center',
                                   'fluence',
                                   'phase',
+                                  'omega_carrier',
                                   )
 
     def get_electric_field_amplitude(self, t):

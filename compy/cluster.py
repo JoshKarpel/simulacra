@@ -523,7 +523,7 @@ def abort_job_creation():
     sys.exit(0)
 
 
-def create_job_dirs(job_dir):
+def create_job_subdirs(job_dir):
     print('Creating job directory and subdirectories...')
 
     utils.ensure_dir_exists(job_dir)

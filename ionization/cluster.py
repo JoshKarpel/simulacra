@@ -50,6 +50,8 @@ def ask_mesh_type():
 
             mesh_kwargs['outer_radius'] = mesh_kwargs['r_bound']
 
+            mesh_kwargs['snapshot_type'] = core.SphericalHarmonicSnapshot
+
             memory_estimate = (128 / 8) * mesh_kwargs['r_points'] * mesh_kwargs['l_points']
 
         else:

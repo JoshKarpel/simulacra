@@ -7,6 +7,7 @@ import logging
 import argparse
 import json
 import pickle
+import functools as ft
 
 import numpy as np
 
@@ -23,12 +24,16 @@ if __name__ == '__main__':
                         help = 'the name of the job')
     parser.add_argument('--dir', '-d',
                         action = 'store', default = os.getcwd(),
-                        help = 'directory to put the job directory in')
+                        help = 'directory to put the job directory in. Defaults to cwd')
     parser.add_argument('--overwrite', '-o',
                         action = 'store_true',
                         help = 'force overwrite existing job directory if there is a name collision')
     parser.add_argument('--verbosity', '-v',
-                        action = 'count', default = 0)
+                        action = 'count', default = 0,
+                        help = 'set verbosity level')
+    parser.add_argument('--dry',
+                        action = 'store_true',
+                        help = 'do not attempt to actually submit the job')
 
     args = parser.parse_args()
 
@@ -41,6 +46,8 @@ if __name__ == '__main__':
         if os.path.exists(job_dir):
             if not args.overwrite and not clu.ask_for_bool('A job with that name already exists. Overwrite?', default = 'No'):
                 clu.abort_job_creation()
+            else:
+                shutil.rmtree(job_dir)
 
         parameters = []
 
@@ -52,13 +59,25 @@ if __name__ == '__main__':
                                                                      clu.ask_for_input('Initial State l?', default = 0, cast_to = int)))
         parameters.append(initial_state)
 
-        if clu.ask_for_bool('Overlap only with initial state?', default = 'yes'):
-            parameters.append(clu.Parameter(name = 'test_states',
-                                            value = [initial_state.value]))
-        else:
-            largest_n = clu.ask_for_input('Largest Bound State n to Overlap With?', default = 5, cast_to = int)
-            parameters.append(clu.Parameter(name = 'test_states',
-                                            value = tuple(ion.HydrogenBoundState(n, l) for n in range(largest_n + 1) for l in range(n))))
+        numeric_basis_q = False
+        if spec_type == ion.SphericalHarmonicSpecification:
+            numeric_basis_q = clu.ask_for_bool('Use numeric eigenstate basis?', default = True)
+            if numeric_basis_q:
+                parameters.append(clu.Parameter(name = 'use_numeric_eigenstates_as_basis',
+                                                value = True))
+                parameters.append(clu.Parameter(name = 'numeric_eigenstate_l_max',
+                                                value = clu.ask_for_input('Numeric Eigenstate Maximum l?', default = 10, cast_to = int)))
+                parameters.append(clu.Parameter(name = 'numeric_eigenstate_energy_max',
+                                                value = eV * clu.ask_for_input('Numeric Eigenstate Max Energy (in eV)?', default = 50, cast_to = float)))
+
+        if not numeric_basis_q:
+            if clu.ask_for_bool('Overlap only with initial state?', default = 'yes'):
+                parameters.append(clu.Parameter(name = 'test_states',
+                                                value = [initial_state.value]))
+            else:
+                largest_n = clu.ask_for_input('Largest Bound State n to Overlap With?', default = 5, cast_to = int)
+                parameters.append(clu.Parameter(name = 'test_states',
+                                                value = tuple(ion.HydrogenBoundState(n, l) for n in range(largest_n + 1) for l in range(n))))
 
         parameters.append(clu.Parameter(name = 'time_step',
                                         value = asec * clu.ask_for_input('Time Step (in as)?', default = 1, cast_to = float)))
@@ -90,20 +109,30 @@ if __name__ == '__main__':
         # pulse parameters
         pulse_parameters = []
 
+        pulse_type_q = clu.ask_for_input('Pulse Type? [sinc/gaussian/sech]', default = 'sinc')
+        if pulse_type_q == 'sinc':
+            pulse_type = ion.SincPulse
+        elif pulse_type_q == 'gaussian':
+            pulse_type = ion.GaussianPulse
+        elif pulse_type_q == 'sech':
+            pulse_type = ion.SechPulse
+        else:
+            raise ValueError("Pulse type ({}) was not one of 'sinc', 'gaussian', or 'sech'".format(pulse_type_q))
+
         pulse_width = clu.Parameter(name = 'pulse_width',
-                                    value = asec * np.array(clu.ask_for_eval('Pulse Widths (in as)?', default = 'np.linspace(1, 1000, 200)')),
+                                    value = asec * np.array(clu.ask_for_eval('Pulse Widths (in as)?', default = 'np.array([50, 100, 200, 300, 400, 500])')),
                                     expandable = True)
         pulse_parameters.append(pulse_width)
 
-        phase = clu.Parameter(name = 'phase',
-                              value = clu.ask_for_eval('Sinc Pulse Phase? (cos/sin)', default = "'cos'"),
-                              expandable = True)
-        pulse_parameters.append(phase)
-
         fluence = clu.Parameter(name = 'fluence',
-                                value = (J / (cm ** 2)) * np.array(clu.ask_for_eval('Pulse Fluence (in J/cm^2)?', default = 1)),
+                                value = (J / (cm ** 2)) * np.array(clu.ask_for_eval('Pulse Fluence (in J/cm^2)?', default = 'np.array([.1, 1, 5, 10, 20])')),
                                 expandable = True)
         pulse_parameters.append(fluence)
+
+        phases = clu.Parameter(name = 'phase',
+                               value = np.linspace(0, twopi, clu.ask_for_input('Number of Phases?', default = 100, cast_to = int)),
+                               expandable = True)
+        pulse_parameters.append(phases)
 
         window_time_in_pw = clu.Parameter(name = 'window_time_in_pw',
                                           value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 1, cast_to = float))
@@ -112,30 +141,59 @@ if __name__ == '__main__':
         parameters.append(window_time_in_pw)
         parameters.append(window_width_in_pw)
 
+        pulses = tuple(ion.SincPulse(**d,
+                                     window = ion.SymmetricExponentialTimeWindow(window_time = d['pulse_width'] * window_time_in_pw.value,
+                                                                                 window_width = d['pulse_width'] * window_width_in_pw.value))
+                       for d in clu.expand_parameters_to_dicts(pulse_parameters))
+
+        if pulse_type != ion.SincPulse:
+            pulses = tuple(pulse_type(pulse_width = p.pulse_width, fluence = p.fluence, phase = p.phase,
+                                      omega_carrier = p.omega_carrier,
+                                      pulse_center = p.pulse_center,
+                                      window = p.window)
+                           for p in pulses)
+
+        parameters.append(clu.Parameter(name = 'electric_potential_dc_correction',
+                                        value = clu.ask_for_bool('Perform Electric Field DC Correction?', default = True)))
+
         parameters.append(clu.Parameter(name = 'electric_potential',
-                                        value = tuple(ion.SincPulse(**d,
-                                                                    window = ion.SymmetricExponentialTimeWindow(window_time = d['pulse_width'] * window_time_in_pw.value,
-                                                                                                                window_width = d['pulse_width'] * window_width_in_pw.value))
-                                                      for d in clu.expand_parameters_to_dicts(pulse_parameters)),
+                                        value = pulses,
                                         expandable = True))
 
         parameters.append(clu.Parameter(name = 'store_norm_by_l',
-                                        value = clu.ask_for_bool('Store Norm-by-L?')))
+                                        value = clu.ask_for_bool('Store Norm-by-L?', default = False)))
+
+        parameters.append(clu.Parameter(name = 'store_data_every',
+                                        value = clu.ask_for_input('Store Data Every?', default = 1, cast_to = int)))
+
+        parameters.append(clu.Parameter(name = 'snapshot_indices',
+                                        value = clu.ask_for_eval('Snapshot Indices?')))
+
+        parameters.append(clu.Parameter(name = 'snapshot_times',
+                                        value = asec * np.array(clu.ask_for_eval('Snapshot Times?', default = 'np.array([])'))))
 
         print('Generating parameters...')
 
         spec_kwargs_list = clu.expand_parameters_to_dicts(parameters)
         specs = []
 
+        print('Generating specifications...')
+
         for ii, spec_kwargs in enumerate(spec_kwargs_list):
+            name = '{}_pw={}asec_flu={}Jcm2_phase={}pi'.format(
+                pulse_type_q,
+                uround(spec_kwargs['electric_potential'].pulse_width, asec),
+                uround(spec_kwargs['electric_potential'].fluence, Jcm2),
+                uround(spec_kwargs['electric_potential'].phase, pi)
+            )
+
             time_bound = spec_kwargs['time_bound_in_pw'] * spec_kwargs['electric_potential'].pulse_width
-            spec = spec_type('flu={}jcm2_pw={}as_phase={}'.format(uround(spec_kwargs['electric_potential'].fluence, (J / cm ** 2), 3),
-                                                                  uround(spec_kwargs['electric_potential'].pulse_width, asec, 3),
-                                                                  spec_kwargs['electric_potential'].phase),
+            spec = spec_type(name,
                              file_name = str(ii),
                              time_initial = -time_bound, time_final = time_bound,
                              **mesh_kwargs, **spec_kwargs)
 
+            spec.pulse_type = pulse_type
             spec.pulse_width = spec_kwargs['electric_potential'].pulse_width
             spec.fluence = spec_kwargs['electric_potential'].fluence
             spec.phase = spec_kwargs['electric_potential'].phase
@@ -150,7 +208,7 @@ if __name__ == '__main__':
         # point of no return
         shutil.rmtree(job_dir, ignore_errors = True)
 
-        clu.create_job_dirs(job_dir)
+        clu.create_job_subdirs(job_dir)
         clu.save_specifications(specs, job_dir)
         clu.write_specifications_info_to_file(specs, job_dir)
         clu.write_parameters_info_to_file(parameters + pulse_parameters, job_dir)
@@ -165,4 +223,5 @@ if __name__ == '__main__':
 
         clu.write_submit_file(submit_string, job_dir)
 
-        clu.submit_job(job_dir)
+        if not args.dry:
+            clu.submit_job(job_dir)

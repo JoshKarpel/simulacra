@@ -140,7 +140,7 @@ if __name__ == '__main__':
 
         shutil.rmtree(job_dir, ignore_errors = True)
 
-        clu.create_job_dirs(job_dir)
+        clu.create_job_subdirs(job_dir)
         clu.save_specifications(specs, job_dir)
         clu.write_specifications_info_to_file(specs, job_dir)
         clu.write_parameters_info_to_file(parameters + pulse_parameters, job_dir)
