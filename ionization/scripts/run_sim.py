@@ -7,7 +7,6 @@ import argparse
 import logging
 import datetime as dt
 import socket
-import json
 
 import compy as cp
 

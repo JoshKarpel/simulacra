@@ -196,7 +196,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         analysis = ['Analysis:',
                     '   Test Charge: {} e'.format(uround(self.test_charge, proton_charge)),
                     '   Test Mass: {} m_e'.format(uround(self.test_mass, electron_mass)),
-                    '   Test States: {}'.format(', '.join(str(s) for s in self.test_states)),
+                    '   Test States (first 10): {}'.format(', '.join(str(s) for s in sorted(self.test_states[:10]))),
                     '   Dipole Gauges: {}'.format(', '.join(self.dipole_gauges))]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials + analysis)
@@ -2408,6 +2408,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 if self.spec.checkpoints:
                     if (self.time_index + 1) % self.spec.checkpoint_every == 0:
                         self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
+                        self.status = cp.STATUS_RUN
                         logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
 
             self.status = cp.STATUS_FIN
@@ -2909,7 +2910,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if len(self.animators) > 0:
             raise cp.CompyException('Cannot pickle Simulation with Animators')
 
-        out = super(ElectricFieldSimulation, self).save(target_dir = target_dir, file_extension = file_extension)
+        out = super().save(target_dir = target_dir, file_extension = file_extension)
 
         if not save_mesh:
             self.mesh = mesh

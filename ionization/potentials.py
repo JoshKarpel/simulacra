@@ -255,7 +255,7 @@ class NoElectricField(UniformLinearlyPolarizedElectricField):
 
     def get_electric_field_amplitude(self, t):
         """Return the electric field amplitude at time t."""
-        return 0 * super(NoElectricField, self).get_electric_field_amplitude(t)
+        return np.zeros(np.shape(t)) * super(NoElectricField, self).get_electric_field_amplitude(t)
 
 
 class Rectangle(UniformLinearlyPolarizedElectricField):
@@ -596,10 +596,14 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
                                   'omega_carrier',
                                   )
 
+    def get_electric_field_envelope(self, t):
+        tau = t - self.pulse_center
+        return cp.math.sinc(self.delta_omega * tau / 2)
+
     def get_electric_field_amplitude(self, t):
         """Return the electric field amplitude at time t."""
         tau = t - self.pulse_center
-        amp = cp.math.sinc(self.delta_omega * tau / 2) * np.cos((self.omega_carrier * tau) + self.phase)
+        amp = self.get_electric_field_envelope(t) * np.cos((self.omega_carrier * tau) + self.phase)
 
         return amp * self.amplitude_time * super().get_electric_field_amplitude(t)
 
@@ -653,10 +657,14 @@ class GaussianPulse(UniformLinearlyPolarizedElectricField):
                                   'omega_carrier',
                                   )
 
+    def get_electric_field_envelope(self, t):
+        tau = t - self.pulse_center
+        return np.exp(-0.5 * ((tau / self.pulse_width) ** 2))
+
     def get_electric_field_amplitude(self, t):
         """Return the electric field amplitude at time t."""
         tau = t - self.pulse_center
-        amp = np.exp(-0.5 * ((tau / self.pulse_width) ** 2)) * np.cos((self.omega_carrier * tau) + self.phase)
+        amp = self.get_electric_field_envelope(t) * np.cos((self.omega_carrier * tau) + self.phase)
 
         return amp * self.amplitude_time * super().get_electric_field_amplitude(t)
 
@@ -710,10 +718,14 @@ class SechPulse(UniformLinearlyPolarizedElectricField):
                                   'omega_carrier',
                                   )
 
+    def get_electric_field_envelope(self, t):
+        tau = t - self.pulse_center
+        return 1 / np.cosh(tau / self.pulse_width)
+
     def get_electric_field_amplitude(self, t):
         """Return the electric field amplitude at time t."""
         tau = t - self.pulse_center
-        amp = (1 / np.cosh(tau / self.pulse_width)) * np.cos((self.omega_carrier * tau) + self.phase)
+        amp = self.get_electric_field_envelope(t) * np.cos((self.omega_carrier * tau) + self.phase)
 
         return amp * self.amplitude_time * super().get_electric_field_amplitude(t)
 

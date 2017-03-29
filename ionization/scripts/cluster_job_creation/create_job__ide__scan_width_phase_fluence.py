@@ -69,10 +69,10 @@ if __name__ == '__main__':
                                         value = dict(tau_alpha = tau_alpha)))
 
         parameters.append(clu.Parameter(name = 'minimum_time_step',
-                                        value = asec * clu.ask_for_input('Minimum Time Step (in as)?', default = 1, cast_to = float)))
+                                        value = asec * clu.ask_for_input('Minimum Time Step (in as)?', default = .01, cast_to = float)))
 
         parameters.append(clu.Parameter(name = 'maximum_time_step',
-                                        value = asec * clu.ask_for_input('Maximum Time Step (in as)?', default = 1, cast_to = float)))
+                                        value = asec * clu.ask_for_input('Maximum Time Step (in as)?', default = 10, cast_to = float)))
 
         parameters.append(clu.Parameter(name = 'time_step',
                                         value = asec * clu.ask_for_input('Initial Time Step (in as)?', default = .1, cast_to = float)))

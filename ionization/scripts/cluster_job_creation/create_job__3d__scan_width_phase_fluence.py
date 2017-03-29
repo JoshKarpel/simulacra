@@ -160,10 +160,10 @@ if __name__ == '__main__':
                                         value = clu.ask_for_input('Store Data Every?', default = 1, cast_to = int)))
 
         parameters.append(clu.Parameter(name = 'snapshot_indices',
-                                        value = clu.ask_for_eval('Snapshot Indices?')))
+                                        value = clu.ask_for_eval('Snapshot Indices?', default = '()')))
 
         parameters.append(clu.Parameter(name = 'snapshot_times',
-                                        value = asec * np.array(clu.ask_for_eval('Snapshot Times?', default = 'np.array([])'))))
+                                        value = asec * np.array(clu.ask_for_eval('Snapshot Times?', default = '()'))))
 
         print('Generating parameters...')
 

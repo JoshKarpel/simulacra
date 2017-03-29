@@ -35,6 +35,7 @@ class IntegroDifferentialEquationSpecification(cp.Specification):
                  a_initial = 1,
                  prefactor = 1,
                  electric_potential = potentials.NoElectricField(),
+                 electric_potential_dc_correction = True,
                  kernel = return_one, kernel_kwargs = None,
                  integration_method = 'simpson',
                  evolution_method = 'FE',
@@ -67,6 +68,7 @@ class IntegroDifferentialEquationSpecification(cp.Specification):
         self.prefactor = prefactor
 
         self.electric_potential = electric_potential
+        self.electric_potential_dc_correction = electric_potential_dc_correction
 
         self.kernel = kernel
         self.kernel_kwargs = dict()
@@ -229,10 +231,16 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
             logger.debug('{} {} ({}) evolved to time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.file_name, self.time_index, self.time_steps - 1,
                                                                                  np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
 
+            if self.spec.checkpoints:
+                if (self.time_index + 1) % self.spec.checkpoint_every == 0:
+                    self.save(target_dir = self.spec.checkpoint_dir)
+                    self.status = cp.STATUS_RUN
+                    logger.info('Checkpointed {} {} ({}) at time step {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1))
+
         self.status = 'finished'
         logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
 
-    def plot_solution(self, log = False, y_axis_label = None, time_scale = 'asec', field_axis_label = None, field_scale = 1, abs_squared = True, **kwargs):
+    def plot_solution(self, log = False, y_axis_label = None, time_scale = 'asec', field_scale = 'AEF', abs_squared = True, **kwargs):
         fig = cp.utils.get_figure('full')
 
         x_scale_unit, x_scale_name = unit_value_and_name_from_unit(time_scale)
@@ -265,9 +273,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         if y_axis_label is None:
             y_axis_label = r'$y(t)$'
         ax_y.set_ylabel(y_axis_label, fontsize = 13)
-        if field_axis_label is None:
-            field_axis_label = r'$f(t)$'.format(f_scale_name)
-        ax_f.set_ylabel(r'{} (${}$)'.format(field_axis_label, f_scale_name), fontsize = 13, color = core.RED)
+        ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = core.RED)
 
         ax_y.tick_params(labelright = True)
         ax_f.tick_params(labelright = True)
@@ -390,20 +396,20 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
 
         self.computed_time_steps = 0
 
-        if self.spec.electric_potential_dc_correction:
-            total_time = self.spec.time_final - self.spec.time_initial
-            densest_time_step_count = total_time / self.spec.minimum_time_step
-
-            approx_times = np.linspace(self.spec.time_initial, self.spec.time_final, densest_time_step_count)
-
-            electric_field_vs_time = self.spec.electric_potential.get_electric_field_amplitude(approx_times)
-            average_electric_field = integrate.simps(electric_field_vs_time, x = approx_times) / total_time
-
-            old_pot = self.spec.electric_potential
-
-            self.spec.electric_potential += potentials.Rectangle(start_time = self.spec.time_initial, end_time = self.spec.time_initial, amplitude = -average_electric_field)
-
-            logger.warning('Replaced electric potential {} --> {} for {} {}'.format(old_pot, self.spec.electric_potential, self.__class__.__name__, self.name))
+        # if self.spec.electric_potential_dc_correction:
+        #     total_time = self.spec.time_final - self.spec.time_initial
+        #     densest_time_step_count = total_time / self.spec.minimum_time_step
+        #
+        #     approx_times = np.linspace(self.spec.time_initial, self.spec.time_final, densest_time_step_count)
+        #
+        #     electric_field_vs_time = self.spec.electric_potential.get_electric_field_amplitude(approx_times)
+        #     average_electric_field = integrate.simps(electric_field_vs_time, x = approx_times) / total_time
+        #
+        #     old_pot = self.spec.electric_potential
+        #
+        #     self.spec.electric_potential += potentials.Rectangle(start_time = self.spec.time_initial, end_time = self.spec.time_initial, amplitude = -average_electric_field)
+        #
+        #     logger.warning('Replaced electric potential {} --> {} for {} {}'.format(old_pot, self.spec.electric_potential, self.__class__.__name__, self.name))
 
     def evolve_ARK4(self):
         """
@@ -562,12 +568,13 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
 
             self.time_index += 1
 
+            logger.debug('{} {} ({}) evolved to time index {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index))
+
             if self.spec.checkpoints:
                 if (self.time_index + 1) % self.spec.checkpoint_every == 0:
                     self.save(target_dir = self.spec.checkpoint_dir)
-                    logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
-
-            logger.debug('{} {} ({}) evolved to time index {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index))
+                    self.status = cp.STATUS_RUN
+                    logger.info('Checkpointed {} {} ({}) at time step {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1))
 
         self.status = cp.STATUS_FIN
         logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
