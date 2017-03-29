@@ -46,8 +46,8 @@ if __name__ == '__main__':
 
         sim.plot_solution(target_dir = OUT_DIR,
                           y_axis_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
-                          f_axis_label = r'${}(t)$'.format(str_efield),
-                          f_scale = 'AEF')
+                          field_axis_label = r'${}(t)$'.format(str_efield),
+                          field_scale = 'AEF')
 
         cp.utils.xy_plot('time_step',
                          sim.times,

@@ -260,7 +260,20 @@ class ClusterInterface:
 #         logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
 
 
+class SimulationResult:
+    def __init__(self, sim):
+        self.name = sim.name
+        self.file_name = int(sim.file_name)
+
+        self.start_time = sim.start_time
+        self.end_time = sim.end_time
+        self.elapsed_time = sim.elapsed_time.total_seconds()
+        self.run_time = sim.run_time.total_seconds()
+
+
 class JobProcessor(utils.Beet):
+    simulation_result_type = SimulationResult
+
     def __init__(self, job_name, job_dir_path, simulation_type):
         super(JobProcessor, self).__init__(job_name)
         self.job_dir_path = job_dir_path
@@ -289,15 +302,7 @@ class JobProcessor(utils.Beet):
 
     def collect_data_from_sim(self, sim_name, sim):
         """Hook method to collect summary data from a single Simulation."""
-        self.data[sim_name].update({
-            'name': sim.name,
-            'file_name': int(sim.file_name),
-            'start_time': sim.start_time,
-            'end_time': sim.end_time,
-            'elapsed_time': sim.elapsed_time.total_seconds(),
-            'run_time': sim.run_time.total_seconds(),
-            'file_size': utils.get_file_size(os.path.join(self.output_dir, '{}.sim'.format(sim_name)))
-        })
+        self.data[sim_name] = self.simulation_result_type(sim)
 
         for parameter, value in self.data[sim_name].items():
             try:
@@ -368,6 +373,30 @@ class JobProcessor(utils.Beet):
     def write_to_txt(self):
         with open(os.path.join(self.job_dir_path, 'data.txt'), mode = 'w') as f:
             pprint(self.data, stream = f)
+
+    def select_by_kwargs(self, **kwargs):
+        """
+        Return all of the SimulationResults that match the (key, value) pairs given by the keyword arguments to this function.
+        
+        :param kwargs: (key, value) to match SimulationResults by
+        :return: a list of SimulationResults
+        """
+        out = []
+
+        for sim_result in self.data.values():
+            if all(getattr(sim_result, key) == val for key, val in kwargs.items()):
+                out.append(sim_result)
+
+        return out
+
+    def select_by_lambda(self, test_function):
+        """
+        Return all of the SimulationResults for which test_function(sim_result) is True.
+        
+        :param test_function: a function which takes one argument, a SimulationResult, and returns a Boolean
+        :return: a list of SimulationResults
+        """
+        return list([sim_result for sim_result in self.data.values() if test_function(sim_result)])
 
     def make_plot(self, name, x_key, *plot_lines, **kwargs):
         # begin by getting an OrderedDict of sim: sim_data, sorted by the value of the x_key

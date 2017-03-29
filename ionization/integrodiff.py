@@ -8,7 +8,7 @@ from copy import copy, deepcopy
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.integrate as integ
+import scipy.integrate as integrate
 
 import compy as cp
 import compy.cy as cy
@@ -32,13 +32,14 @@ class IntegroDifferentialEquationSpecification(cp.Specification):
 
     def __init__(self, name,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
-                 y_initial = 1,
+                 a_initial = 1,
                  prefactor = 1,
-                 f = return_one, f_kwargs = None,
+                 electric_potential = potentials.NoElectricField(),
                  kernel = return_one, kernel_kwargs = None,
                  integration_method = 'simpson',
                  evolution_method = 'FE',
                  simulation_type = None,
+                 checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  **kwargs):
         """
         Initialize an IntegroDifferentialEquationSpecification from the given parameters.
@@ -50,7 +51,7 @@ class IntegroDifferentialEquationSpecification(cp.Specification):
         :param time_initial:
         :param time_final:
         :param time_step:
-        :param y_initial: initial value of y
+        :param a_initial: initial value of y
         :param kwargs:
         """
         if simulation_type is None:
@@ -61,14 +62,11 @@ class IntegroDifferentialEquationSpecification(cp.Specification):
         self.time_final = time_final
         self.time_step = time_step
 
-        self.y_initial = y_initial
+        self.y_initial = a_initial
 
         self.prefactor = prefactor
 
-        self.f = f
-        self.f_kwargs = dict()
-        if f_kwargs is not None:
-            self.f_kwargs.update(f_kwargs)
+        self.electric_potential = electric_potential
 
         self.kernel = kernel
         self.kernel_kwargs = dict()
@@ -78,13 +76,27 @@ class IntegroDifferentialEquationSpecification(cp.Specification):
         self.integration_method = integration_method
         self.evolution_method = evolution_method
 
+        self.checkpoints = checkpoints
+        self.checkpoint_every = checkpoint_every
+        self.checkpoint_dir = checkpoint_dir
+
     def info(self):
+        checkpoint = ['Checkpointing: ']
+        if self.checkpoints:
+            if self.checkpoint_dir is not None:
+                working_in = self.checkpoint_dir
+            else:
+                working_in = 'cwd'
+            checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_every, working_in)
+        else:
+            checkpoint[0] += 'disabled'
+
         ide_parameters = [
             "IDE Parameters: dy/dt = prefactor * f(t) * integral[ y(t') * f(t') * kernel(t - t')  ; {t', t_initial, t} ]",
             '   Initial State: y = {}'.format(self.y_initial),
-            '   prefactor: {}'.format(self.prefactor),
-            '   f(t): {} with kwargs {}'.format(self.f.__name__, self.f_kwargs),
-            '   kernel(t): {} with kwargs {}'.format(self.kernel.__name__, self.kernel_kwargs),
+            '   Prefactor: {}'.format(self.prefactor),
+            '   Electric Potential: {}'.format(self.electric_potential),
+            '   Kernel: {} with kwargs {}'.format(self.kernel.__name__, self.kernel_kwargs),
         ]
 
         time_evolution = [
@@ -96,7 +108,7 @@ class IntegroDifferentialEquationSpecification(cp.Specification):
             '   Evolution Method: {}'.format(self.evolution_method),
         ]
 
-        return '\n'.join(ide_parameters + time_evolution)
+        return '\n'.join(checkpoint + ide_parameters + time_evolution)
 
 
 class IntegroDifferentialEquationSimulation(cp.Simulation):
@@ -107,15 +119,25 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
         self.time_index = 0
 
-        self.y = np.zeros(self.time_steps, dtype = np.complex128) * np.NaN
-        self.y[0] = self.spec.y_initial
+        self.a = np.zeros(self.time_steps, dtype = np.complex128) * np.NaN
+        self.a[0] = self.spec.y_initial
 
-        self.f_eval = None
+        if self.spec.electric_potential_dc_correction:
+            electric_field_vs_time = self.spec.electric_potential.get_electric_field_amplitude(self.times)
+            average_electric_field = integrate.simps(electric_field_vs_time, x = self.times) / total_time
+
+            old_pot = self.spec.electric_potential
+
+            self.spec.electric_potential += potentials.Rectangle(start_time = self.times[0], end_time = self.times[-1], amplitude = -average_electric_field)
+
+            logger.warning('Replaced electric potential {} --> {} for {} {}'.format(old_pot, self.spec.electric_potential, self.__class__.__name__, self.name))
+
+        self.electric_field_vs_time = self.spec.electric_potential.get_electric_field_amplitude(self.times)
 
         if self.spec.integration_method == 'simpson':
-            self.integrate = integ.simps
+            self.integrate = integrate.simps
         elif self.spec.integration_method == 'trapezoid':
-            self.integrate = integ.trapz
+            self.integrate = integrate.trapz
 
     @property
     def time_steps(self):
@@ -128,28 +150,28 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
     def evolve_FE(self):
         dt = self.times[self.time_index + 1] - self.time
 
-        k = self.spec.prefactor * self.f_eval[self.time_index] * self.integrate(y = self.f_eval[:self.time_index + 1] * self.y[:self.time_index + 1] * self.spec.kernel(self.time - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
-                                                                                x = self.times[:self.time_index + 1])
-        self.y[self.time_index + 1] = self.y[self.time_index] + (dt * k)  # estimate next point
+        k = self.spec.prefactor * self.electric_field_vs_time[self.time_index] * self.integrate(y = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(self.time - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
+                                                                                                x = self.times[:self.time_index + 1])
+        self.a[self.time_index + 1] = self.a[self.time_index] + (dt * k)  # estimate next point
 
     def evolve_BE(self):
         dt = self.times[self.time_index + 1] - self.time
 
-        k = self.spec.prefactor * self.f_eval[self.time_index + 1] * self.integrate(y = self.f_eval[:self.time_index + 1] * self.y[:self.time_index + 1] * self.spec.kernel(self.times[self.time_index + 1] - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
-                                                                                    x = self.times[:self.time_index + 1])
+        k = self.spec.prefactor * self.electric_field_vs_time[self.time_index + 1] * self.integrate(y = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(self.times[self.time_index + 1] - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
+                                                                                                    x = self.times[:self.time_index + 1])
 
-        self.y[self.time_index + 1] = (self.y[self.time_index] + (dt * k)) / (1 - self.spec.prefactor * ((dt * self.f_eval[self.time_index + 1]) ** 2))  # estimate next point
+        self.a[self.time_index + 1] = (self.a[self.time_index] + (dt * k)) / (1 - self.spec.prefactor * ((dt * self.electric_field_vs_time[self.time_index + 1]) ** 2))  # estimate next point
 
     def evolve_TRAP(self):
         dt = self.times[self.time_index + 1] - self.time
 
-        k_1 = self.spec.prefactor * self.f_eval[self.time_index + 1] * self.integrate(y = self.f_eval[:self.time_index + 1] * self.y[:self.time_index + 1] * self.spec.kernel(self.times[self.time_index + 1] - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
-                                                                                      x = self.times[:self.time_index + 1])
+        k_1 = self.spec.prefactor * self.electric_field_vs_time[self.time_index + 1] * self.integrate(y = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(self.times[self.time_index + 1] - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
+                                                                                                      x = self.times[:self.time_index + 1])
 
-        k_2 = self.spec.prefactor * self.f_eval[self.time_index] * self.integrate(y = self.f_eval[:self.time_index + 1] * self.y[:self.time_index + 1] * self.spec.kernel(self.times[self.time_index] - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
-                                                                                  x = self.times[:self.time_index + 1])
+        k_2 = self.spec.prefactor * self.electric_field_vs_time[self.time_index] * self.integrate(y = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(self.times[self.time_index] - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
+                                                                                                  x = self.times[:self.time_index + 1])
 
-        self.y[self.time_index + 1] = (self.y[self.time_index] + (dt * (k_1 + k_2) / 2)) / (1 - .5 * self.spec.prefactor * ((dt * self.f_eval[self.time_index + 1]) ** 2))  # estimate next point
+        self.a[self.time_index + 1] = (self.a[self.time_index] + (dt * (k_1 + k_2) / 2)) / (1 - .5 * self.spec.prefactor * ((dt * self.electric_field_vs_time[self.time_index + 1]) ** 2))  # estimate next point
 
     def evolve_RK4(self):
         dt = self.times[self.time_index + 1] - self.time
@@ -167,39 +189,37 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         kernel_half = self.spec.kernel(time_difference_half, **self.spec.kernel_kwargs)
         kernel_next = self.spec.kernel(time_difference_next, **self.spec.kernel_kwargs)
 
-        f_curr = self.f_eval[self.time_index]
-        f_half = self.spec.f(self.time + (dt / 2))
-        f_next = self.f_eval[self.time_index + 1]
+        f_curr = self.electric_field_vs_time[self.time_index]
+        f_half = self.spec.electric_potential.get_electric_field_amplitude(self.time + (dt / 2))
+        f_next = self.electric_field_vs_time[self.time_index + 1]
 
-        f_times_y_curr = self.f_eval[:self.time_index + 1] * self.y[:self.time_index + 1]
+        f_times_y_curr = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1]
 
         # integrate through the current time step
         integrand_for_k1 = f_times_y_curr * kernel_curr
         integral_for_k1 = self.integrate(y = integrand_for_k1, x = times_curr)
         k1 = self.spec.prefactor * f_curr * integral_for_k1
-        y_midpoint_for_k2 = self.y[self.time_index] + (dt * k1 / 2)  # dt / 2 here because we moved forward to midpoint
+        y_midpoint_for_k2 = self.a[self.time_index] + (dt * k1 / 2)  # dt / 2 here because we moved forward to midpoint
 
         integrand_for_k2 = np.append(f_times_y_curr, f_half * y_midpoint_for_k2) * kernel_half
         integral_for_k2 = self.integrate(y = integrand_for_k2, x = times_half)
         k2 = self.spec.prefactor * f_half * integral_for_k2  # dt / 2 because it's half of an interval that we're integrating over
-        y_midpoint_for_k3 = self.y[self.time_index] + (dt * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
+        y_midpoint_for_k3 = self.a[self.time_index] + (dt * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
 
         integrand_for_k3 = np.append(f_times_y_curr, f_half * y_midpoint_for_k3) * kernel_half
         integral_for_k3 = self.integrate(y = integrand_for_k3, x = times_half)
         k3 = self.spec.prefactor * f_half * integral_for_k3  # dt / 2 because it's half of an interval that we're integrating over
-        y_end_for_k4 = self.y[self.time_index] + (dt * k3)  # estimate midpoint based on estimate of slope at midpoint
+        y_end_for_k4 = self.a[self.time_index] + (dt * k3)  # estimate midpoint based on estimate of slope at midpoint
 
         integrand_for_k4 = np.append(f_times_y_curr, f_next * y_end_for_k4) * kernel_next
         integral_for_k4 = self.integrate(y = integrand_for_k4, x = times_next)
         k4 = self.spec.prefactor * f_next * integral_for_k4
 
-        self.y[self.time_index + 1] = self.y[self.time_index] + (dt * (k1 + (2 * k2) + (2 * k3) + k4) / 6)  # estimate next point
+        self.a[self.time_index + 1] = self.a[self.time_index] + (dt * (k1 + (2 * k2) + (2 * k3) + k4) / 6)  # estimate next point
 
     def run_simulation(self):
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
         self.status = 'running'
-
-        self.f_eval = self.spec.f(self.times, **self.spec.f_kwargs)
 
         while self.time < self.spec.time_final:
             getattr(self, 'evolve_' + self.spec.evolution_method)()
@@ -212,26 +232,26 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         self.status = 'finished'
         logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
 
-    def plot_solution(self, log = False, y_axis_label = None, x_scale = 'asec', f_axis_label = None, f_scale = 1, abs_squared = True, **kwargs):
+    def plot_solution(self, log = False, y_axis_label = None, time_scale = 'asec', field_axis_label = None, field_scale = 1, abs_squared = True, **kwargs):
         fig = cp.utils.get_figure('full')
 
-        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(x_scale)
-        f_scale_unit, f_scale_name = unit_value_and_name_from_unit(f_scale)
+        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(time_scale)
+        f_scale_unit, f_scale_name = unit_value_and_name_from_unit(field_scale)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
         ax_y = plt.subplot(grid_spec[0])
         ax_f = plt.subplot(grid_spec[1], sharex = ax_y)
 
-        ax_f.plot(self.times / x_scale_unit, self.spec.f(self.times, **self.spec.f_kwargs) / f_scale_unit, color = core.RED, linewidth = 2)
+        ax_f.plot(self.times / x_scale_unit, self.spec.electric_potential.get_electric_field_amplitude(self.times) / f_scale_unit, color = core.RED, linewidth = 2)
         if abs_squared:
-            y = np.abs(self.y) ** 2
+            y = np.abs(self.a) ** 2
         else:
-            y = self.y
+            y = self.a
         ax_y.plot(self.times / x_scale_unit, y, color = 'black', linewidth = 2)
 
         if log:
             ax_y.set_yscale('log')
-            min_overlap = np.min(self.y)
+            min_overlap = np.min(self.a)
             ax_y.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
             ax_y.grid(True, which = 'both', **core.GRID_KWARGS)
         else:
@@ -245,9 +265,9 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         if y_axis_label is None:
             y_axis_label = r'$y(t)$'
         ax_y.set_ylabel(y_axis_label, fontsize = 13)
-        if f_axis_label is None:
-            f_axis_label = r'$f(t)$'.format(f_scale_name)
-        ax_f.set_ylabel(r'{} (${}$)'.format(f_axis_label, f_scale_name), fontsize = 13, color = core.RED)
+        if field_axis_label is None:
+            field_axis_label = r'$f(t)$'.format(f_scale_name)
+        ax_f.set_ylabel(r'{} (${}$)'.format(field_axis_label, f_scale_name), fontsize = 13, color = core.RED)
 
         ax_y.tick_params(labelright = True)
         ax_f.tick_params(labelright = True)
@@ -322,12 +342,22 @@ class AdaptiveIntegroDifferentialEquationSpecification(IntegroDifferentialEquati
         self.safety_factor = safety_factor
 
     def info(self):
+        checkpoint = ['Checkpointing: ']
+        if self.checkpoints:
+            if self.checkpoint_dir is not None:
+                working_in = self.checkpoint_dir
+            else:
+                working_in = 'cwd'
+            checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_every, working_in)
+        else:
+            checkpoint[0] += 'disabled'
+
         ide_parameters = [
             "IDE Parameters: dy/dt = prefactor * f(t) * integral[ y(t') * f(t') * kernel(t - t')  ; {t', t_initial, t} ]",
             '   Initial State: y = {}'.format(self.y_initial),
-            '   prefactor: {}'.format(self.prefactor),
-            '   f(t): {} with kwargs {}'.format(self.f.__name__, self.f_kwargs),
-            '   kernel(t): {} with kwargs {}'.format(self.kernel.__name__, self.kernel_kwargs),
+            '   Prefactor: {}'.format(self.prefactor),
+            '   Electric Potential: {}'.format(self.electric_potential),
+            '   Kernel: {} with kwargs {}'.format(self.kernel.__name__, self.kernel_kwargs),
         ]
 
         time_evolution = [
@@ -344,7 +374,7 @@ class AdaptiveIntegroDifferentialEquationSpecification(IntegroDifferentialEquati
             '   Evolution Method: {}'.format(self.evolution_method),
         ]
 
-        return '\n'.join(ide_parameters + time_evolution)
+        return '\n'.join(checkpoint + ide_parameters + time_evolution)
 
 
 class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationSimulation):
@@ -355,10 +385,25 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
 
         self.time_step = self.spec.time_step
 
-        self.y = np.array([self.spec.y_initial])
+        self.a = np.array([self.spec.y_initial])
         self.time_steps_by_times = np.array([np.NaN])
 
         self.computed_time_steps = 0
+
+        if self.spec.electric_potential_dc_correction:
+            total_time = self.spec.time_final - self.spec.time_initial
+            densest_time_step_count = total_time / self.spec.minimum_time_step
+
+            approx_times = np.linspace(self.spec.time_initial, self.spec.time_final, densest_time_step_count)
+
+            electric_field_vs_time = self.spec.electric_potential.get_electric_field_amplitude(approx_times)
+            average_electric_field = integrate.simps(electric_field_vs_time, x = approx_times) / total_time
+
+            old_pot = self.spec.electric_potential
+
+            self.spec.electric_potential += potentials.Rectangle(start_time = self.spec.time_initial, end_time = self.spec.time_initial, amplitude = -average_electric_field)
+
+            logger.warning('Replaced electric potential {} --> {} for {} {}'.format(old_pot, self.spec.electric_potential, self.__class__.__name__, self.name))
 
     def evolve_ARK4(self):
         """
@@ -378,35 +423,35 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
         kernel_half = self.spec.kernel(time_difference_half, **self.spec.kernel_kwargs)
         kernel_next = self.spec.kernel(time_difference_next, **self.spec.kernel_kwargs)
 
-        f_curr = self.spec.f(self.time)
-        f_quarter = self.spec.f(self.time + (self.time_step / 4))
-        f_half = self.spec.f(self.time + (self.time_step / 2))
-        f_three_quarter = self.spec.f(self.time + (3 * self.time_step / 4))
-        f_next = self.spec.f(self.time + self.time_step)
+        f_curr = self.spec.electric_potential.get_electric_field_amplitude(self.time)
+        f_quarter = self.spec.electric_potential.get_electric_field_amplitude(self.time + (self.time_step / 4))
+        f_half = self.spec.electric_potential.get_electric_field_amplitude(self.time + (self.time_step / 2))
+        f_three_quarter = self.spec.electric_potential.get_electric_field_amplitude(self.time + (3 * self.time_step / 4))
+        f_next = self.spec.electric_potential.get_electric_field_amplitude(self.time + self.time_step)
 
-        f_times_y_curr = self.spec.f(self.times, **self.spec.f_kwargs) * self.y
+        f_times_y_curr = self.spec.electric_potential.get_electric_field_amplitude(self.times) * self.a
 
         # CALCULATE FULL STEP ESTIMATE
         integrand_for_k1 = f_times_y_curr * kernel_curr
         integral_for_k1 = self.integrate(y = integrand_for_k1, x = times_curr)
         k1 = self.spec.prefactor * f_curr * integral_for_k1
-        y_midpoint_for_k2 = self.y[self.time_index] + (self.time_step * k1 / 2)  # self.time_step / 2 here because we moved forward to midpoint
+        y_midpoint_for_k2 = self.a[self.time_index] + (self.time_step * k1 / 2)  # self.time_step / 2 here because we moved forward to midpoint
 
         integrand_for_k2 = np.append(f_times_y_curr, f_half * y_midpoint_for_k2) * kernel_half
         integral_for_k2 = self.integrate(y = integrand_for_k2, x = times_half)
         k2 = self.spec.prefactor * f_half * integral_for_k2  # self.time_step / 2 because it's half of an interval that we're integrating over
-        y_midpoint_for_k3 = self.y[self.time_index] + (self.time_step * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
+        y_midpoint_for_k3 = self.a[self.time_index] + (self.time_step * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
 
         integrand_for_k3 = np.append(f_times_y_curr, f_half * y_midpoint_for_k3) * kernel_half
         integral_for_k3 = self.integrate(y = integrand_for_k3, x = times_half)
         k3 = self.spec.prefactor * f_half * integral_for_k3  # self.time_step / 2 because it's half of an interval that we're integrating over
-        y_end_for_k4 = self.y[self.time_index] + (self.time_step * k3)  # estimate midpoint based on estimate of slope at midpoint
+        y_end_for_k4 = self.a[self.time_index] + (self.time_step * k3)  # estimate midpoint based on estimate of slope at midpoint
 
         integrand_for_k4 = np.append(f_times_y_curr, f_next * y_end_for_k4) * kernel_next
         integral_for_k4 = self.integrate(y = integrand_for_k4, x = times_next)
         k4 = self.spec.prefactor * f_next * integral_for_k4
 
-        full_step_estimate = self.y[self.time_index] + (self.time_step * (k1 + (2 * k2) + (2 * k3) + k4) / 6)
+        full_step_estimate = self.a[self.time_index] + (self.time_step * (k1 + (2 * k2) + (2 * k3) + k4) / 6)
 
         # CALCULATE DOUBLE HALF STEP ESTIMATE
 
@@ -426,23 +471,23 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
         # integrand_for_k1 = f_times_y_curr * kernel_curr
         # integral_for_k1 = self.integrate(y = integrand_for_k1, x = times_curr)
         # k1 = self.spec.prefactor * f_curr * integral_for_k1
-        y_midpoint_for_k2 = self.y[self.time_index] + (self.time_step * k1 / 4)  # self.time_step / 4 here because we moved forward to midpoint of midpoint
+        y_midpoint_for_k2 = self.a[self.time_index] + (self.time_step * k1 / 4)  # self.time_step / 4 here because we moved forward to midpoint of midpoint
 
         integrand_for_k2 = np.append(f_times_y_curr, f_quarter * y_midpoint_for_k2) * kernel_quarter
         integral_for_k2 = self.integrate(y = integrand_for_k2, x = times_quarter)
         k2 = self.spec.prefactor * f_quarter * integral_for_k2  # self.time_step / 2 because it's half of an interval that we're integrating over
-        y_midpoint_for_k3 = self.y[self.time_index] + (self.time_step * k2 / 4)  # estimate midpoint based on estimate of slope at midpoint
+        y_midpoint_for_k3 = self.a[self.time_index] + (self.time_step * k2 / 4)  # estimate midpoint based on estimate of slope at midpoint
 
         integrand_for_k3 = np.append(f_times_y_curr, f_quarter * y_midpoint_for_k3) * kernel_quarter
         integral_for_k3 = self.integrate(y = integrand_for_k3, x = times_quarter)
         k3 = self.spec.prefactor * f_quarter * integral_for_k3  # self.time_step / 2 because it's half of an interval that we're integrating over
-        y_end_for_k4 = self.y[self.time_index] + (self.time_step * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
+        y_end_for_k4 = self.a[self.time_index] + (self.time_step * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
 
         integrand_for_k4 = np.append(f_times_y_curr, f_half * y_end_for_k4) * kernel_half
         integral_for_k4 = self.integrate(y = integrand_for_k4, x = times_half)
         k4 = self.spec.prefactor * f_half * integral_for_k4
 
-        y_half = self.y[self.time_index] + ((self.time_step / 2) * (k1 + (2 * k2) + (2 * k3) + k4) / 6)
+        y_half = self.a[self.time_index] + ((self.time_step / 2) * (k1 + (2 * k2) + (2 * k3) + k4) / 6)
         f_times_y_half = np.append(f_times_y_curr, f_half * y_half)
 
         integrand_for_k1 = f_times_y_half * kernel_half
@@ -453,12 +498,12 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
         integrand_for_k2 = np.append(f_times_y_half, f_three_quarter * y_midpoint_for_k2) * kernel_three_quarter
         integral_for_k2 = self.integrate(y = integrand_for_k2, x = times_three_quarter)
         k2 = self.spec.prefactor * f_three_quarter * integral_for_k2  # self.time_step / 2 because it's half of an interval that we're integrating over
-        y_midpoint_for_k3 = self.y[self.time_index] + (self.time_step * k2 / 4)  # estimate midpoint based on estimate of slope at midpoint
+        y_midpoint_for_k3 = self.a[self.time_index] + (self.time_step * k2 / 4)  # estimate midpoint based on estimate of slope at midpoint
 
         integrand_for_k3 = np.append(f_times_y_half, f_three_quarter * y_midpoint_for_k3) * kernel_three_quarter
         integral_for_k3 = self.integrate(y = integrand_for_k3, x = times_three_quarter)
         k3 = self.spec.prefactor * f_three_quarter * integral_for_k3  # self.time_step / 2 because it's half of an interval that we're integrating over
-        y_end_for_k4 = self.y[self.time_index] + (self.time_step * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
+        y_end_for_k4 = self.a[self.time_index] + (self.time_step * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
 
         integrand_for_k4 = np.append(f_times_y_half, f_next * y_end_for_k4) * kernel_next
         integral_for_k4 = self.integrate(y = integrand_for_k4, x = times_next)
@@ -474,7 +519,7 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
         delta_1 = double_half_step_estimate - full_step_estimate  # estimate truncation error from difference in estimates of y
 
         if self.spec.error_on == 'y':
-            delta_0 = self.spec.epsilon * self.y[self.time_index]
+            delta_0 = self.spec.epsilon * self.a[self.time_index]
         elif self.spec.error_on == 'dydt':
             delta_0 = self.spec.epsilon * self.time_step * deriv_estimate
 
@@ -483,7 +528,7 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
         if ratio >= 1 or np.isinf(ratio) or np.isnan(ratio) or self.time_step == self.spec.minimum_time_step:  # step was ok
             self.times = np.append(self.times, self.time + self.time_step)
             self.time_steps_by_times = np.append(self.time_steps_by_times, self.time_step)
-            self.y = np.append(self.y, double_half_step_estimate + (delta_1 / 15))
+            self.a = np.append(self.a, double_half_step_estimate + (delta_1 / 15))
 
             old_step = self.time_step  # for log message
             if delta_1 != 0:  # don't adjust time step if truncation error is zero
@@ -510,14 +555,19 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
 
     def run_simulation(self):
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
-        self.status = 'running'
+        self.status = cp.STATUS_RUN
 
         while self.time < self.spec.time_final:
             getattr(self, 'evolve_' + self.spec.evolution_method)()
 
             self.time_index += 1
 
+            if self.spec.checkpoints:
+                if (self.time_index + 1) % self.spec.checkpoint_every == 0:
+                    self.save(target_dir = self.spec.checkpoint_dir)
+                    logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
+
             logger.debug('{} {} ({}) evolved to time index {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index))
 
-        self.status = 'finished'
+        self.status = cp.STATUS_FIN
         logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))

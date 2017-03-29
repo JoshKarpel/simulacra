@@ -28,8 +28,8 @@ def run(spec):
 
         sim.plot_solution(target_dir = spec.out_dir,
                           y_axis_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
-                          f_axis_label = r'${}(t)$'.format(str_efield),
-                          f_scale = 'AEF')
+                          field_axis_label = r'${}(t)$'.format(str_efield),
+                          field_scale = 'AEF')
 
         cp.utils.xy_plot(sim.name + '_RI',
                          sim.times,

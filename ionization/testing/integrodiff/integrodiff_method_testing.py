@@ -85,7 +85,7 @@ if __name__ == '__main__':
                     specs.append(ide.IntegroDifferentialEquationSpecification('int={}__evol={}'.format(int_method, evol_method),
                                                                               time_initial = -t_bound * asec, time_final = t_bound * asec, time_step = dt * asec,
                                                                               prefactor = prefactor,
-                                                                              f = electric_field.get_electric_field_amplitude,
+                                                                              electric_potential = electric_field.get_electric_field_amplitude,
                                                                               kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha),
                                                                               evolution_method = evol_method,
                                                                               integration_method = int_method,

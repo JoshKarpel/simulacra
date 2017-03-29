@@ -95,3 +95,4 @@ ENV/
 /ionization/testing/out
 /nbody/testing/out
 /deploy
+out/*

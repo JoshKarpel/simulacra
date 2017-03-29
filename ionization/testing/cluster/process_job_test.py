@@ -20,9 +20,9 @@ if __name__ == '__main__':
         job_dir = os.path.join(OUT_DIR, job_name)
 
         try:
-            jp = clu.SincPulseJobProcessor.load(os.path.join(job_dir, job_name + '.job'))
+            jp = clu.PulseJobProcessor.load(os.path.join(job_dir, job_name + '.job'))
         except FileNotFoundError:
-            jp = clu.SincPulseJobProcessor(job_name, job_dir)
+            jp = clu.PulseJobProcessor(job_name, job_dir)
 
         jp.process_job(individual_processing = False)
 

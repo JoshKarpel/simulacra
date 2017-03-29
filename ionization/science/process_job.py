@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
         OUT_DIR = os.path.join(job_dir, 'plots')
 
-        jp = clu.SincPulseJobProcessor.load(os.path.join(job_dir, job_name + '.job'))
+        jp = clu.PulseJobProcessor.load(os.path.join(job_dir, job_name + '.job'))
 
         jp.make_plot('diag',
                      'file_name',

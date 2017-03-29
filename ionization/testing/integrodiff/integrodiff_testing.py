@@ -31,7 +31,7 @@ if __name__ == '__main__':
         spec = ide.IntegroDifferentialEquationSpecification('ide_test__{}__dt={}as'.format(electric_field.__class__.__name__, dt),
                                                             time_initial = -t_bound * asec, time_final = t_bound * asec, time_step = dt * asec,
                                                             prefactor = prefactor,
-                                                            f = electric_field.get_electric_field_amplitude,
+                                                            electric_potential = electric_field.get_electric_field_amplitude,
                                                             kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha)
                                                             )
 
@@ -45,5 +45,5 @@ if __name__ == '__main__':
 
         sim.plot_solution(target_dir = OUT_DIR,
                           y_axis_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
-                          f_axis_label = r'${}(t)$'.format(str_efield),
-                          f_scale = 'AEF')
+                          field_axis_label = r'${}(t)$'.format(str_efield),
+                          field_scale = 'AEF')

@@ -1,13 +1,6 @@
-# create an Ionization vs Pulse Width job
-
-import sys
 import os
 import shutil
-import logging
 import argparse
-import json
-import pickle
-import functools as ft
 
 import numpy as np
 
@@ -18,7 +11,7 @@ from compy.units import *
 
 if __name__ == '__main__':
     # get command line arguments
-    parser = argparse.ArgumentParser(description = 'Create an Ionization vs Pulse Width job.')
+    parser = argparse.ArgumentParser(description = 'Create an Ionization vs Pulse Width, Phase, and Fluence job.')
     parser.add_argument('job_name',
                         type = str,
                         help = 'the name of the job')
@@ -39,7 +32,7 @@ if __name__ == '__main__':
 
     with cp.utils.Logger('compy', 'ionization', stdout_level = 31 - ((args.verbosity + 1) * 10)) as logger:
         # job type options
-        job_processor = ion.cluster.SincPulseJobProcessor
+        job_processor = ion.cluster.PulseJobProcessor
 
         job_dir = os.path.join(args.dir, args.job_name)
 

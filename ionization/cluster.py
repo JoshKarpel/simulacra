@@ -3,7 +3,7 @@ import logging
 import compy as cp
 from compy.cluster import *
 from compy.units import *
-from ionization import core
+from ionization import core, integrodiff
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -64,44 +64,63 @@ def ask_mesh_type():
         ask_mesh_type()
 
 
+class ElectricFieldSimulationResult(cp.cluster.SimulationResult):
+    def __init__(self, sim):
+        super().__init__(sim)
+
+        self.time_steps = sim.time_steps
+        self.electric_potential = sim.spec.electric_potential
+
+        self.final_norm = sim.norm_vs_time[-1]
+        self.final_state_overlaps = {state: overlap[-1] for state, overlap in sim.state_overlaps_vs_time.items()}
+        self.final_initial_state_overlap = sim.state_overlaps_vs_time[sim.spec.initial_state][-1]
+
+
 class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
+    simulation_result_type = ElectricFieldSimulationResult
+
     def __init__(self, job_name, job_dir_path):
-        super(ElectricFieldJobProcessor, self).__init__(job_name, job_dir_path, core.ElectricFieldSimulation)
+        super().__init__(job_name, job_dir_path, core.ElectricFieldSimulation)
 
-    def collect_data_from_sim(self, sim_name, sim):
-        self.data[sim_name].update({
-            'time_steps': sim.time_steps,
-            'electric_potential': sim.spec.electric_potential,
-            'final_norm': sim.norm_vs_time[-1],
-            'final_state_overlaps': {state: ip[-1] for state, ip in sim.state_overlaps_vs_time.items()},
-            'final_initial_state_overlap': sim.state_overlaps_vs_time[sim.spec.initial_state][-1]
-        })
-
-        try:
-            self.data[sim_name].update({
-                'r_points': sim.spec.r_points
-            })
-        except AttributeError:
-            pass
-
-        super(ElectricFieldJobProcessor, self).collect_data_from_sim(sim_name, sim)
-
-    def process_sim(self, sim_name, sim):
-        sim.spec.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(sim.spec.l_points))  # TODO: remove
-        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True)
-        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True, log = True)
-        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True, grayscale = True)
-        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True, grayscale = True, log = True)
-        sim.plot_dipole_moment_vs_time(target_dir = self.plots_dir, use_name = True)
-        sim.plot_dipole_moment_vs_frequency(target_dir = self.plots_dir, use_name = True)
+        # def process_sim(self, sim_name, sim):
+        # sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True)
+        # sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True, log = True)
+        # sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True, grayscale = True)
+        # sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, use_name = True, grayscale = True, log = True)
+        # sim.plot_dipole_moment_vs_time(target_dir = self.plots_dir, use_name = True)
+        # sim.plot_dipole_moment_vs_frequency(target_dir = self.plots_dir, use_name = True)
 
 
-class SincPulseJobProcessor(ElectricFieldJobProcessor):
-    def collect_data_from_sim(self, sim_name, sim):
-        self.data[sim_name].update({
-            'pulse_width': sim.spec.pulse_width,
-            'fluence': sim.spec.fluence,
-            'phase': sim.spec.phase,
-        })
+class PulseSimulationResult(ElectricFieldSimulationResult):
+    def __init__(self, sim):
+        super().__init__(sim)
 
-        super(SincPulseJobProcessor, self).collect_data_from_sim(sim_name, sim)
+        self.pulse_type = sim.spec.pulse_type
+        self.pulse_width = sim.spec.pulse_width
+        self.fluence = sim.spec.fluence
+        self.phase = sim.spec.phase
+
+
+class PulseJobProcessor(ElectricFieldJobProcessor):
+    simulation_result_type = PulseSimulationResult
+
+
+class IDESimulationResult(cp.cluster.SimulationResult):
+    def __init__(self, sim):
+        super().__init__()
+
+        self.electric_potential = sim.spec.electric_potential
+
+        self.pulse_type = sim.spec.pulse_type
+        self.pulse_width = sim.spec.pulse_width
+        self.fluence = sim.spec.fluence
+        self.phase = sim.spec.phase
+
+        self.final_bound_state_overlap = np.abs(sim.y[-1]) ** 2
+
+
+class IDEJobProcessor(cp.cluster.JobProcessor):
+    simulation_result_type = IDESimulationResult
+
+    def __init__(self, job_name, job_dir_path):
+        super().__init__(job_name, job_dir_path, integrodiff.AdaptiveIntegroDifferentialEquationSimulation)

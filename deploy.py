@@ -9,7 +9,7 @@ def get_dirs(directory, contents):
 if __name__ == '__main__':
     shutil.rmtree('deploy', ignore_errors = True)
 
-    for d in (d for d in os.listdir(os.getcwd()) if not d.startswith('.') and not d == 'deploy' and os.path.isdir(d)):
+    for d in (d for d in os.listdir(os.getcwd()) if not d.startswith('.') and d not in ('deploy', 'docs') and os.path.isdir(d)):
         t = os.path.join('deploy', d)
         shutil.copytree(d, t, ignore = get_dirs)
 
@@ -23,8 +23,9 @@ if __name__ == '__main__':
     shutil.copy2('ionization/scripts/run_sim.sh', 'deploy')
     shutil.copy2('ionization/scripts/sync_and_process.py', 'deploy')
 
-    shutil.copy2('ionization/scripts/cluster_job_creation/create_job_sinc.py', 'deploy')
-    shutil.copy2('ionization/scripts/cluster_job_creation/create_job__scan_width_phase_fluence.py', 'deploy')
+    shutil.copy2('ionization/scripts/cluster_job_creation/create_job__3d__scan_width_phase_fluence.py', 'deploy')
+    shutil.copy2('ionization/scripts/cluster_job_creation/create_job__ide__scan_width_phase_fluence.py', 'deploy')
+    shutil.copy2('ionization/scripts/cluster_job_creation/create_job__1d__scan_width_phase_fluence.py', 'deploy')
 
     for path in (r'C:\Users\Josh\Dropbox\Research\deploy',
                  r'D:\Dropbox\Research\deploy'):
