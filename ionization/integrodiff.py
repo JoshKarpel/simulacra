@@ -240,7 +240,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         self.status = 'finished'
         logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
 
-    def plot_solution(self, log = False, y_axis_label = None, time_scale = 'asec', field_scale = 'AEF', abs_squared = True, **kwargs):
+    def plot_a_vs_time(self, log = False, y_axis_label = None, time_scale = 'asec', field_scale = 'AEF', abs_squared = True, **kwargs):
         fig = cp.utils.get_figure('full')
 
         x_scale_unit, x_scale_name = unit_value_and_name_from_unit(time_scale)

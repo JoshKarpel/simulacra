@@ -44,10 +44,10 @@ if __name__ == '__main__':
         sim.run_simulation()
         logger.debug(sim.info())
 
-        sim.plot_solution(target_dir = OUT_DIR,
-                          y_axis_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
-                          field_axis_label = r'${}(t)$'.format(str_efield),
-                          field_scale = 'AEF')
+        sim.plot_a_vs_time(target_dir = OUT_DIR,
+                           y_axis_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
+                           field_axis_label = r'${}(t)$'.format(str_efield),
+                           field_scale = 'AEF')
 
         cp.utils.xy_plot('time_step',
                          sim.times,

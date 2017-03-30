@@ -25,10 +25,10 @@ def run(spec):
 
         logger.info('{} took {} seconds for {} steps, {} computations'.format(sim.name, sim.elapsed_time.total_seconds(), sim.time_steps, sim.computed_time_steps))
 
-        sim.plot_solution(target_dir = spec.out_dir,
-                          y_axis_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
-                          field_axis_label = r'${}(t)$'.format(str_efield),
-                          field_scale = 'AEF')
+        sim.plot_a_vs_time(target_dir = spec.out_dir,
+                           y_axis_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
+                           field_axis_label = r'${}(t)$'.format(str_efield),
+                           field_scale = 'AEF')
 
         cp.utils.xy_plot(sim.name + '_RI',
                          sim.times,
@@ -97,7 +97,7 @@ if __name__ == '__main__':
             target_dir = OUT_DIR,
         )
 
-        sim.plot_solution(**plt_kwargs)
+        sim.plot_a_vs_time(**plt_kwargs)
 
         t_lower = -t_bound_per_pw * pw * asec
         t_upper = t_bound_per_pw * pw * asec

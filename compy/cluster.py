@@ -18,6 +18,8 @@ from tqdm import tqdm
 import numpy as np
 import paramiko
 
+import compy as cp
+from compy.units import *
 from . import core
 from . import utils
 
@@ -311,7 +313,7 @@ class JobProcessor(utils.Beet):
                 pass
 
     def process_sim(self, sim_name, sim):
-        raise NotImplementedError
+        self.collect_data_from_sim(sim_name, sim)
 
     def load_sim(self, sim_name, **load_kwargs):
         """
@@ -333,16 +335,13 @@ class JobProcessor(utils.Beet):
             logger.debug('Loaded {}.sim from job {}'.format(sim_name, self.name))
         except (FileNotFoundError, EOFError) as e:
             logger.debug('Failed to find completed {}.sim from job {} due to {}'.format(sim_name, self.name, e))
-        # except zlib.error as e:
-        #     logger.warning('Encountered zlib error while trying to read {}.sim from job {}: {}'.format(sim_name, self.name, e))
-        #     os.remove(sim_path)
         except Exception as e:
             logger.critical('Error while trying to find completed {}.sim from job {} due to {}'.format(sim_name, self.name, e))
             raise e
 
         return sim
 
-    def process_job(self, individual_processing = False, force_reprocess = False):
+    def process_job(self, force_reprocess = False):
         start_time = dt.datetime.now()
         logger.info('Loading simulations from job {}'.format(self.name))
 
@@ -355,14 +354,13 @@ class JobProcessor(utils.Beet):
             sim = self.load_sim(sim_name)
             if sim is not None:
                 try:
-                    self.collect_data_from_sim(sim_name, sim)
-                    if individual_processing:
-                        self.process_sim(sim_name, sim)
+                    self.process_sim(sim_name, sim)
                     self.unprocessed_sim_names.discard(sim_name)
                 except AttributeError as e:
                     logger.exception('Exception encountered while processing simulation {}'.format(sim_name))
 
         self.write_to_txt()
+        self.make_summary_plots()
 
         end_time = dt.datetime.now()
         logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, end_time - start_time))
@@ -398,50 +396,65 @@ class JobProcessor(utils.Beet):
         """
         return list([sim_result for sim_result in self.data.values() if test_function(sim_result)])
 
-    def make_plot(self, name, x_key, *plot_lines, **kwargs):
-        # begin by getting an OrderedDict of sim: sim_data, sorted by the value of the x_key
-        data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v)
+    def make_summary_plots(self):
+        self.make_time_diagnostics_plot()
 
-        # the x_array is unique values of the x_key in the data
-        x_array = np.array(sorted(set(v[x_key] for v in data.values())))
+    def make_time_diagnostics_plot(self):
+        sim_numbers = [result.file_name for result in self.data.values()]
+        run_time = [result.run_time for result in self.data.values()]
+        elapsed_time = [result.elapsed_time for result in self.data.values()]
 
-        # each y array is constructed by looking through the data for sims that pass all of the filters for that line
-        y_arrays = [np.array(list(v[plot_line.key] for v in data.values() if all(f(v) for f in plot_line.filters))) for plot_line in plot_lines]
-        line_labels = (plot_line.label for plot_line in plot_lines)
-        line_kwargs = (plot_line.line_kwargs for plot_line in plot_lines)
+        cp.utils.xy_plot('diagnostics',
+                         sim_numbers,
+                         elapsed_time, run_time,
+                         line_labels = ('Elapsed Time', 'Run Time'),
+                         y_scale = 'hours',
+                         x_label = 'Simulation Number', y_label = 'Time')
 
-        # pass everything to xy_plot to do the heavy lifting
-        utils.xy_plot(name, x_array, *y_arrays, line_labels = line_labels, line_kwargs = line_kwargs, **kwargs)
+        # def make_plot(self, name, x_key, *plot_lines, **kwargs):
+        #     # begin by getting an OrderedDict of sim: sim_data, sorted by the value of the x_key
+        #     data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v)
+        #
+        #     # the x_array is unique values of the x_key in the data
+        #     x_array = np.array(sorted(set(v[x_key] for v in data.values())))
+        #
+        #     # each y array is constructed by looking through the data for sims that pass all of the filters for that line
+        #     y_arrays = [np.array(list(v[plot_line.key] for v in data.values() if all(f(v) for f in plot_line.filters))) for plot_line in plot_lines]
+        #     line_labels = (plot_line.label for plot_line in plot_lines)
+        #     line_kwargs = (plot_line.line_kwargs for plot_line in plot_lines)
+        #
+        #     # pass everything to xy_plot to do the heavy lifting
+        #     utils.xy_plot(name, x_array, *y_arrays, line_labels = line_labels, line_kwargs = line_kwargs, **kwargs)
 
 
-def check_value_by_key(key, value):
-    """
-    Return a function which accepts a single argument, which should be a dictionary. The functions returns dictionary[key] == value.
-    :param key: the key to look for in the dictionary
-    :param value: the value to check dictionary[key] against
-    :return: a checker function
-    """
-
-    def checker(dictionary):
-        return dictionary[key] == value
-
-    return checker
-
-
-class KeyFilterLine:
-    def __init__(self, key, filters = (lambda v: True,), label = None, **line_kwargs):
-        self.key = key
-        self.filters = filters
-        if label is None:
-            label = key
-        self.label = label
-        self.line_kwargs = line_kwargs
-
-    def __str__(self):
-        return 'Line: key = {}, filters = {}'.format(self.key, self.filters)
-
-    def __repr__(self):
-        return 'KeyFilterLine(key = {}, filter = {})'.format(self.key, self.filters)
+# def check_value_by_key(key, value):
+#     """
+#     Return a function which accepts a single argument, which should be a dictionary. The functions returns dictionary[key] == value.
+#     :param key: the key to look for in the dictionary
+#     :param value: the value to check dictionary[key] against
+#     :return: a checker function
+#     """
+#
+#     def checker(dictionary):
+#         return dictionary[key] == value
+#
+#     return checker
+#
+#
+# class KeyFilterLine:
+#     def __init__(self, key, filters = (lambda v: True,), label = None, **line_kwargs):
+#         self.key = key
+#         self.filters = filters
+#         if label is None:
+#             label = key
+#         self.label = label
+#         self.line_kwargs = line_kwargs
+#
+#     def __str__(self):
+#         return 'Line: key = {}, filters = {}'.format(self.key, self.filters)
+#
+#     def __repr__(self):
+#         return 'KeyFilterLine(key = {}, filter = {})'.format(self.key, self.filters)
 
 
 class Parameter:

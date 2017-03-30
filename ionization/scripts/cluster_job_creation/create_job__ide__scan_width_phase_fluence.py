@@ -118,14 +118,14 @@ if __name__ == '__main__':
         pulse_parameters.append(fluence)
 
         phases = clu.Parameter(name = 'phase',
-                               value = np.linspace(0, twopi, clu.ask_for_input('Number of Phases?', default = 100, cast_to = int)),
+                               value = np.array(clu.ask_for_eval('Pulse CEP (in rad)?', default = 'np.linspace(0, pi, 50)')),
                                expandable = True)
         pulse_parameters.append(phases)
 
         window_time_in_pw = clu.Parameter(name = 'window_time_in_pw',
-                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 1, cast_to = float))
+                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 2, cast_to = float))
         window_width_in_pw = clu.Parameter(name = 'window_width_in_pw',
-                                           value = clu.ask_for_input('Window Width (in pulse widths)?', default = 0.5, cast_to = float))
+                                           value = clu.ask_for_input('Window Width (in pulse widths)?', default = 0.2, cast_to = float))
         parameters.append(window_time_in_pw)
         parameters.append(window_width_in_pw)
 

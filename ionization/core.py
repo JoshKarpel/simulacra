@@ -178,26 +178,33 @@ class ElectricFieldSpecification(cp.core.Specification):
         else:
             animation[0] += 'None'
 
-        time_evolution = ['Time Evolution:',
-                          '   Initial State: {}'.format(self.initial_state),
-                          '   Initial Time: {} as'.format(uround(self.time_initial, asec)),
-                          '   Final Time: {} as'.format(uround(self.time_final, asec)),
-                          '   Time Step: {} as'.format(uround(self.time_step, asec)),
-                          '   Evolution Equations: {}'.format(self.evolution_equations),
-                          '   Evolution Method: {}'.format(self.evolution_method)]
+        time_evolution = [
+            'Time Evolution:',
+            '   Initial State: {}'.format(self.initial_state),
+            '   Initial Time: {} as'.format(uround(self.time_initial, asec)),
+            '   Final Time: {} as'.format(uround(self.time_final, asec)),
+            '   Time Step: {} as'.format(uround(self.time_step, asec)),
+            '   Evolution Equations: {}'.format(self.evolution_equations),
+            '   Evolution Method: {}'.format(self.evolution_method),
+        ]
 
         if self.minimum_time_final is not 0:
-            time_evolution += ['   Minimum Final Time: {} as'.format(uround(self.minimum_time_final, asec)),
-                               '   Extra Time Step: {} as'.format(uround(self.extra_time_step, asec))]
+            time_evolution += [
+                '   Minimum Final Time: {} as'.format(uround(self.minimum_time_final, asec)),
+                '   Extra Time Step: {} as'.format(uround(self.extra_time_step, asec)),
+            ]
 
         potentials = ['Potentials and Masks:']
         potentials += ['   {}'.format(x) for x in it.chain(self.internal_potential, self.electric_potential, self.mask)]
 
-        analysis = ['Analysis:',
-                    '   Test Charge: {} e'.format(uround(self.test_charge, proton_charge)),
-                    '   Test Mass: {} m_e'.format(uround(self.test_mass, electron_mass)),
-                    '   Test States (first 10): {}'.format(', '.join(str(s) for s in sorted(self.test_states[:10]))),
-                    '   Dipole Gauges: {}'.format(', '.join(self.dipole_gauges))]
+        analysis = [
+            'Analysis:',
+            '   Test Charge: {} e'.format(uround(self.test_charge, proton_charge)),
+            '   Test Mass: {} m_e'.format(uround(self.test_mass, electron_mass)),
+            '   Test States (first 10): {}'.format(', '.join(str(s) for s in sorted(self.test_states[:10]))),
+            '   Dipole Gauges: {}'.format(', '.join(self.dipole_gauges)),
+            '   Storing Data Every {} Time Steps'.format(self.store_data_every),
+        ]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials + analysis)
 
@@ -2251,12 +2258,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         total_time = self.spec.time_final - self.spec.time_initial
         self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
-        if self.spec.time_final < self.spec.minimum_time_final:
-            extra_times = np.delete(np.linspace(self.spec.time_final, self.spec.minimum_time_final, ((self.spec.minimum_time_final - self.spec.time_final) / self.spec.extra_time_step) + 1), 0)
-            self.times = np.concatenate((self.times, extra_times))
-        self.time_index = 0
-        self.data_time_index = 0
-        self.time_steps = len(self.times)
 
         if self.spec.electric_potential_dc_correction:
             electric_field_vs_time = self.spec.electric_potential.get_electric_field_amplitude(self.times)
@@ -2267,6 +2268,14 @@ class ElectricFieldSimulation(cp.core.Simulation):
             self.spec.electric_potential += potentials.Rectangle(start_time = self.times[0], end_time = self.times[-1], amplitude = -average_electric_field)
 
             logger.warning('Replaced electric potential {} --> {} for {} {}'.format(old_pot, self.spec.electric_potential, self.__class__.__name__, self.name))
+
+        if self.spec.time_final < self.spec.minimum_time_final:
+            extra_times = np.delete(np.linspace(self.spec.time_final, self.spec.minimum_time_final, ((self.spec.minimum_time_final - self.spec.time_final) / self.spec.extra_time_step) + 1), 0)
+            self.times = np.concatenate((self.times, extra_times))
+
+        self.time_index = 0
+        self.data_time_index = 0
+        self.time_steps = len(self.times)
 
         self.initialize_mesh()
 
@@ -2904,8 +2913,15 @@ class ElectricFieldSimulation(cp.core.Simulation):
         """
 
         if not save_mesh:
-            mesh = self.mesh.copy()
-            self.mesh = None
+            try:
+                for state in self.spec.test_states:  # remove numeric eigenstate information
+                    state.radial_mesh = None
+
+                mesh = self.mesh.copy()
+                self.mesh = None
+
+            except AttributeError:  # mesh is already None
+                mesh = None
 
         if len(self.animators) > 0:
             raise cp.CompyException('Cannot pickle Simulation with Animators')

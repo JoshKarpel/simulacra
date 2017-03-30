@@ -113,24 +113,24 @@ if __name__ == '__main__':
             raise ValueError("Pulse type ({}) was not one of 'sinc', 'gaussian', or 'sech'".format(pulse_type_q))
 
         pulse_width = clu.Parameter(name = 'pulse_width',
-                                    value = asec * np.array(clu.ask_for_eval('Pulse Widths (in as)?', default = 'np.array([50, 100, 200, 300, 400, 500])')),
+                                    value = asec * np.array(clu.ask_for_eval('Pulse Widths (in as)?', default = '[50, 100, 200, 300, 400, 500]')),
                                     expandable = True)
         pulse_parameters.append(pulse_width)
 
         fluence = clu.Parameter(name = 'fluence',
-                                value = (J / (cm ** 2)) * np.array(clu.ask_for_eval('Pulse Fluence (in J/cm^2)?', default = 'np.array([.1, 1, 5, 10, 20])')),
+                                value = (J / (cm ** 2)) * np.array(clu.ask_for_eval('Pulse Fluence (in J/cm^2)?', default = '[.1, 1, 5, 10, 20]')),
                                 expandable = True)
         pulse_parameters.append(fluence)
 
         phases = clu.Parameter(name = 'phase',
-                               value = np.linspace(0, twopi, clu.ask_for_input('Number of Phases?', default = 100, cast_to = int)),
+                               value = np.array(clu.ask_for_eval('Pulse CEP (in rad)?', default = 'np.linspace(0, pi, 50)')),
                                expandable = True)
         pulse_parameters.append(phases)
 
         window_time_in_pw = clu.Parameter(name = 'window_time_in_pw',
-                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 1, cast_to = float))
+                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 2, cast_to = float))
         window_width_in_pw = clu.Parameter(name = 'window_width_in_pw',
-                                           value = clu.ask_for_input('Window Width (in pulse widths)?', default = 0.5, cast_to = float))
+                                           value = clu.ask_for_input('Window Width (in pulse widths)?', default = 0.2, cast_to = float))
         parameters.append(window_time_in_pw)
         parameters.append(window_width_in_pw)
 

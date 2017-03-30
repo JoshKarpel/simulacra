@@ -35,7 +35,7 @@ def process_job(job_name, jobs_dir = None):
         jp = job_info['job_processor_type'](job_name, job_dir)
         logger.info('Created new job processor for job {}'.format(job_name))
 
-    jp.process_job(individual_processing = False, force_reprocess = False)
+    jp.process_job(force_reprocess = False)
 
     jp.save(target_dir = job_dir)
 
