@@ -72,9 +72,11 @@ class ElectricFieldSimulationResult(cp.cluster.SimulationResult):
         self.time_steps = sim.time_steps
         self.electric_potential = sim.spec.electric_potential
 
+        state_overlaps = sim.state_overlaps_vs_time
+
         self.final_norm = sim.norm_vs_time[-1]
-        self.final_state_overlaps = {state: overlap[-1] for state, overlap in sim.state_overlaps_vs_time.items()}
-        self.final_initial_state_overlap = sim.state_overlaps_vs_time[sim.spec.initial_state][-1]
+        self.final_state_overlaps = {state: overlap[-1] for state, overlap in state_overlaps.items()}
+        self.final_initial_state_overlap = state_overlaps[sim.spec.initial_state][-1]
 
 
 class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
@@ -106,6 +108,42 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
     def make_summary_plots(self):
         super().make_summary_plots()
 
+        self.make_pulse_parameter_scan_plots()
+
+    def make_pulse_parameter_scan_plots(self):
+        for ionization_metric in ('final_norm', 'final_initial_state_overlap'):
+            ionization_metric_name = ionization_metric.replace('_', ' ').title()
+
+            for plot_parameter, line_parameter, scan_parameter in it.permutations(('pulse_width', 'fluence', 'phase')):
+                plot_parameter_name, line_parameter_name, scan_parameter_name = plot_parameter.replace('_', ' ').title(), line_parameter.replace('_', ' ').title(), scan_parameter.replace('_', ' ').title()
+                plot_parameter_unit, line_parameter_unit, scan_parameter_unit = parameter_name_to_unit[plot_parameter], parameter_name_to_unit[line_parameter], parameter_name_to_unit[scan_parameter]
+
+                plot_parameter_set, line_parameter_set, scan_parameter_set = self.parameter_sets[plot_parameter], self.parameter_sets[line_parameter], self.parameter_sets[scan_parameter]
+                for plot_parameter_value in plot_parameter_set:
+                    for line_group_number, line_parameter_group in enumerate(cp.utils.grouper(sorted(line_parameter_set), 8)):
+                        plot_name = f'{ionization_metric}__{plot_parameter}={plot_parameter_value}__grouped_by_{line_parameter}__group_{line_group_number}'
+
+                        lines = []
+                        line_labels = []
+                        for line_parameter_value in sorted(line_parameter_group):
+                            results = sorted(self.select_by_kwargs(**{line_parameter: line_parameter_value}), key = lambda result: getattr(result, scan_parameter))
+                            x = [getattr(result, scan_parameter) for result in results]
+                            lines.append([getattr(result, ionization_metric) for result in results])
+
+                            label = fr"{line_parameter_name} = ${uround(line_parameter_value, 3, parameter_name_to_unit[line_parameter])}$ (${line_parameter_unit}$)"
+                            line_labels.append(label)
+
+                        for log in (False, True):
+                            cp.utils.xy_plot(plot_name + f'__log={log}',
+                                             x,
+                                             *lines,
+                                             line_labels = line_labels,
+                                             title = f"{plot_parameter_name} = {uround(plot_parameter_value, 3, plot_parameter_unit)}",
+                                             x_label = scan_parameter_name, x_scale = scan_parameter_unit,
+                                             y_label = ionization_metric_name,
+                                             target_dir = self.plots_dir
+                                             )
+
 
 class IDESimulationResult(cp.cluster.SimulationResult):
     def __init__(self, sim):
@@ -118,7 +156,7 @@ class IDESimulationResult(cp.cluster.SimulationResult):
         self.fluence = sim.spec.fluence
         self.phase = sim.spec.phase
 
-        self.final_bound_state_overlap = np.abs(sim.y[-1]) ** 2
+        self.final_bound_state_overlap = np.abs(sim.a[-1]) ** 2
 
 
 parameter_name_to_unit = {
@@ -146,7 +184,7 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
         self.make_pulse_parameter_scan_plots()
 
     def make_pulse_parameter_scan_plots(self):
-        for ionization_metric in ('final_norm', 'final_initial_state_overlap'):
+        for ionization_metric in ['final_bound_state_overlap']:
             ionization_metric_name = ionization_metric.replace('_', ' ').title()
 
             for plot_parameter, line_parameter, scan_parameter in it.permutations(('pulse_width', 'fluence', 'phase')):

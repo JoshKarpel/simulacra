@@ -257,10 +257,12 @@ class Beet:
 NearestEntry = collections.namedtuple('NearestEntry', ('index', 'value', 'target'))
 
 
-def find_nearest_entry(ndarray, target):
-    """Returns the (index, value, target) of the numpy array entry closest to the given target."""
-    index = np.argmin(np.abs(ndarray - target))
-    value = ndarray[index]
+def find_nearest_entry(array, target):
+    """Returns the (index, value, target) of the array entry closest to the given target."""
+    array = np.array(array)  # turn the array into a numpy array
+
+    index = np.argmin(np.abs(array - target))
+    value = array[index]
 
     return NearestEntry(index, value, target)
 

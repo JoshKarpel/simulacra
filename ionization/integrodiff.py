@@ -240,44 +240,40 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         self.status = 'finished'
         logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
 
-    def plot_a_vs_time(self, log = False, y_axis_label = None, time_scale = 'asec', field_scale = 'AEF', abs_squared = True, **kwargs):
+    def plot_a_vs_time(self, log = False, time_scale = 'asec', field_scale = 'AEF', **kwargs):
         fig = cp.utils.get_figure('full')
 
         x_scale_unit, x_scale_name = unit_value_and_name_from_unit(time_scale)
         f_scale_unit, f_scale_name = unit_value_and_name_from_unit(field_scale)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
-        ax_y = plt.subplot(grid_spec[0])
-        ax_f = plt.subplot(grid_spec[1], sharex = ax_y)
+        ax_a = plt.subplot(grid_spec[0])
+        ax_f = plt.subplot(grid_spec[1], sharex = ax_a)
 
         ax_f.plot(self.times / x_scale_unit, self.spec.electric_potential.get_electric_field_amplitude(self.times) / f_scale_unit, color = core.RED, linewidth = 2)
-        if abs_squared:
-            y = np.abs(self.a) ** 2
-        else:
-            y = self.a
-        ax_y.plot(self.times / x_scale_unit, y, color = 'black', linewidth = 2)
+
+        overlap = np.abs(self.a) ** 2
+        ax_a.plot(self.times / x_scale_unit, overlap, color = 'black', linewidth = 2)
 
         if log:
-            ax_y.set_yscale('log')
-            min_overlap = np.min(self.a)
-            ax_y.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-            ax_y.grid(True, which = 'both', **core.GRID_KWARGS)
+            ax_a.set_yscale('log')
+            min_overlap = np.min(overlap)
+            ax_a.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
+            ax_a.grid(True, which = 'both', **core.GRID_KWARGS)
         else:
-            ax_y.set_ylim(0.0, 1.0)
-            ax_y.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-            ax_y.grid(True, **core.GRID_KWARGS)
+            ax_a.set_ylim(0.0, 1.0)
+            ax_a.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+            ax_a.grid(True, **core.GRID_KWARGS)
 
-        ax_y.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
+        ax_a.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
-        ax_f.set_xlabel('Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
-        if y_axis_label is None:
-            y_axis_label = r'$y(t)$'
-        ax_y.set_ylabel(y_axis_label, fontsize = 13)
+        ax_f.set_xlabel(r'Time $t$ (${}$)'.format(x_scale_name), fontsize = 1)
+        ax_a.set_ylabel(r'$\left| a_{\alpha}(t) \right|^2$', fontsize = 13)
         ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = core.RED)
 
-        ax_y.tick_params(labelright = True)
+        ax_a.tick_params(labelright = True)
         ax_f.tick_params(labelright = True)
-        ax_y.xaxis.tick_top()
+        ax_a.xaxis.tick_top()
 
         plt.rcParams['xtick.major.pad'] = 5
         plt.rcParams['ytick.major.pad'] = 5
@@ -293,7 +289,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
 
         ax_f.tick_params(axis = 'x', which = 'major', labelsize = 10)
         ax_f.tick_params(axis = 'y', which = 'major', labelsize = 10)
-        ax_y.tick_params(axis = 'both', which = 'major', labelsize = 10)
+        ax_a.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
         ax_f.grid(True, **core.GRID_KWARGS)
 

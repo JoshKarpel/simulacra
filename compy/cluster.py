@@ -10,6 +10,7 @@ import subprocess
 import itertools as it
 import hashlib
 import pickle
+import zlib
 from copy import copy, deepcopy
 from collections import OrderedDict, defaultdict
 from pprint import pprint
@@ -306,7 +307,7 @@ class JobProcessor(utils.Beet):
         """Hook method to collect summary data from a single Simulation."""
         self.data[sim_name] = self.simulation_result_type(sim)
 
-        for parameter, value in self.data[sim_name].items():
+        for parameter, value in vars(self.data[sim_name]).items():
             try:
                 self.parameter_sets[parameter].add(value)
             except TypeError as e:
@@ -335,8 +336,11 @@ class JobProcessor(utils.Beet):
             logger.debug('Loaded {}.sim from job {}'.format(sim_name, self.name))
         except (FileNotFoundError, EOFError) as e:
             logger.debug('Failed to find completed {}.sim from job {} due to {}'.format(sim_name, self.name, e))
+        except zlib.error as e:
+            logger.warning('Encountered zlib error while trying to read {}.sim from job {}: {}'.format(sim_name, self.name, e))
+            os.remove(sim_path)
         except Exception as e:
-            logger.critical('Error while trying to find completed {}.sim from job {} due to {}'.format(sim_name, self.name, e))
+            logger.exception('Exception encountered while trying to find completed {}.sim from job {} due to {}'.format(sim_name, self.name, e))
             raise e
 
         return sim

@@ -113,12 +113,14 @@ class Coulomb(PotentialEnergy):
 class HarmonicOscillator(PotentialEnergy):
     """A PotentialEnergy representing the potential energy of a harmonic oscillator."""
 
-    def __init__(self, spring_constant = 4.20521 * N / m, center = 0 * nm):
+    def __init__(self, spring_constant = 4.20521 * N / m, center = 0 * nm, cutoff_distance = None):
         """Construct a HarmonicOscillator object with the given spring constant and center position."""
         self.spring_constant = spring_constant
         self.center = center
 
-        super(HarmonicOscillator, self).__init__()
+        self.cutoff_distance = cutoff_distance
+
+        super().__init__()
 
     @classmethod
     def from_frequency_and_mass(cls, omega = 1.5192675e15 * Hz, mass = electron_mass):
@@ -145,7 +147,12 @@ class HarmonicOscillator(PotentialEnergy):
 
     def __call__(self, *, distance, **kwargs):
         """Return the HarmonicOscillator potential energy evaluated at position distance."""
-        return 0.5 * self.spring_constant * ((distance - self.center) ** 2)
+        d = (distance - self.center)
+
+        inside = 0.5 * self.spring_constant * (d ** 2)
+        outside = 0.5 * self.spring_constant * (self.cutoff_distance ** 2)
+
+        return np.where(np.less_equal(np.abs(d), self.cutoff_distance), inside, outside)
 
     def omega(self, mass):
         """Return the angular frequency for this potential for the given mass."""

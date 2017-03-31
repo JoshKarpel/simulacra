@@ -59,7 +59,7 @@ def resume_process(process):
 if __name__ == '__main__':
     with cp.utils.Logger('__main__', 'compy', 'ionization',
                          stdout_logs = True, stdout_level = logging.INFO,
-                         file_logs = True, file_level = logging.WARNING, file_name = '{}_{}'.format(__file__, dt.date.today().strftime('%Y-%m-%d_%H_%M_%S')), file_dir = 'logs'):
+                         file_logs = True, file_level = logging.WARNING, file_name = '{}_{}'.format(__file__, dt.datetime.now().strftime('%Y-%m-%d_%H_%M_%S')), file_dir = 'logs'):
         dropbox_process = cp.utils.get_process_by_name('Dropbox.exe')
 
         try:
@@ -67,10 +67,10 @@ if __name__ == '__main__':
             jobs_dir = "E:\Dropbox\Research\Cluster\cluster_mirror\home\karpel\jobs"
 
             cp.utils.try_loop(
-                # ft.partial(suspend_process, dropbox_process),
+                ft.partial(suspend_process, dropbox_process),
                 ft.partial(synchronize_with_cluster, ci),
                 ft.partial(process_jobs, jobs_dir),
-                # ft.partial(resume_process, dropbox_process),
+                ft.partial(resume_process, dropbox_process),
                 wait_after_success = dt.timedelta(hours = 3),
                 wait_after_failure = dt.timedelta(hours = 1)
             )

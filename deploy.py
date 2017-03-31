@@ -23,9 +23,9 @@ if __name__ == '__main__':
     shutil.copy2('ionization/scripts/run_sim.sh', 'deploy')
     shutil.copy2('ionization/scripts/sync_and_process.py', 'deploy')
 
-    shutil.copy2('ionization/scripts/cluster_job_creation/create_job__3d__scan_width_phase_fluence.py', 'deploy')
+    shutil.copy2('ionization/scripts/cluster_job_creation/create_job__hyd__scan_width_phase_fluence.py', 'deploy')
     shutil.copy2('ionization/scripts/cluster_job_creation/create_job__ide__scan_width_phase_fluence.py', 'deploy')
-    shutil.copy2('ionization/scripts/cluster_job_creation/create_job__1d__scan_width_phase_fluence.py', 'deploy')
+    shutil.copy2('ionization/scripts/cluster_job_creation/create_job__fsw__scan_width_phase_fluence.py', 'deploy')
 
     for path in (r'C:\Users\Josh\Dropbox\Research\deploy',
                  r'D:\Dropbox\Research\deploy'):
