@@ -270,7 +270,7 @@ class SimulationResult:
         self.start_time = sim.start_time
         self.end_time = sim.end_time
         self.elapsed_time = sim.elapsed_time.total_seconds()
-        self.run_time = sim.run_time.total_seconds()
+        self.running_time = sim.running_time.total_seconds()
 
 
 class JobProcessor(utils.Beet):

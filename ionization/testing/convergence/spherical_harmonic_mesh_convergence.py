@@ -28,8 +28,8 @@ def run_spec(spec):
             sim.save(target_dir = LIB_DIR)
             logger.info(sim.info())
 
-        # if 'reference' in sim.name:
-        #     sim.plot_wavefunction_vs_time(target_dir = OUT_DIR)
+        if 'reference' in sim.name:
+            sim.plot_wavefunction_vs_time(target_dir = OUT_DIR)
 
         return sim
 
@@ -130,13 +130,13 @@ def plot_final_initial_state_vs_time_step(name, sims, ref, **kwargs):
 
 if __name__ == '__main__':
     with log as logger:
-        r_bound = 100
-        t_bound = 150  # symmetric around 0
+        r_bound = 50
+        l_points = 50
+        t_bound = 250  # symmetric around 0
         amp = .1
 
-        electric_potential = ion.Rectangle(start_time = -100 * asec, end_time = 100 * asec, amplitude = amp * atomic_electric_field)
-
-        l_points = 50
+        electric_potential = ion.Rectangle(start_time = -t_bound * .9 * asec, end_time = t_bound * .9 * asec, amplitude = amp * atomic_electric_field,
+                                           window = ion.SymmetricExponentialTimeWindow(window_time = 100 * asec, window_width = 5 * asec))
 
         # r_points_per_br_list = [1, 2, 4]
         # time_step_list = [5, 2, 1]
@@ -145,28 +145,28 @@ if __name__ == '__main__':
         # time_step_list = [10, 7.5, 5, 2.5, 2, 1, .75, .5, .25, .2, .1, .075, .05, .025, .02, .01]
 
         r_points_per_br_list = range(1, 32 + 1)
-        t = np.array([10, 7.5, 5, 2.5, 2])
+        t = np.array([7.5, 5, 2.5, 2, 1])
         time_step_list = np.concatenate([t, t / 10, t / 100, t / 1000])
 
         prefix = 'R={}br__L={}__amp={}aef'.format(r_bound, l_points, amp)
 
         specs = []
 
-        # specs.append(ion.SphericalHarmonicSpecification('reference',
-        #                                                 r_bound = r_bound * bohr_radius,
-        #                                                 r_points = r_bound * r_points_per_br_list[-1],
-        #                                                 l_points = l_points,
-        #                                                 time_step = time_step_list[-1] * asec,
-        #                                                 time_initial = -t_bound * asec,
-        #                                                 time_final = t_bound * asec,
-        #                                                 electric_potential = electric_potential,
-        #                                                 use_numeric_eigenstates_as_basis = True,
-        #                                                 numeric_eigenstate_energy_max = 10 * eV,
-        #                                                 numeric_eigenstate_l_max = 0,
-        #                                                 store_data_every = 1,
-        #                                                 r_points_per_br = r_points_per_br_list[-1],
-        #                                                 dt = time_step_list[-1],
-        #                                                 ))
+        specs.append(ion.SphericalHarmonicSpecification(prefix + '__reference',
+                                                        r_bound = r_bound * bohr_radius,
+                                                        r_points = r_bound * 4,
+                                                        l_bound = l_points,
+                                                        time_step = 1 * asec,
+                                                        time_initial = -t_bound * asec,
+                                                        time_final = t_bound * asec,
+                                                        electric_potential = electric_potential,
+                                                        use_numeric_eigenstates_as_basis = True,
+                                                        numeric_eigenstate_energy_max = 10 * eV,
+                                                        numeric_eigenstate_l_max = 0,
+                                                        store_data_every = 1,
+                                                        r_points_per_br = 4,
+                                                        dt = 1,
+                                                        ))
 
         for r_points_per_br, time_step in it.product(r_points_per_br_list, time_step_list):
             spec_name = [prefix] + ['{}x{}'.format(r_points_per_br, l_points), 'dt={}as'.format(time_step)]
@@ -189,7 +189,7 @@ if __name__ == '__main__':
 
         sims = cp.utils.multi_map(run_spec, specs, processes = 6)
 
-        # with open(os.path.join('ref_info.txt', mode = 'w') as f:
+        # with open(os.path.join(OUT_DIR, 'ref_info.txt'), mode = 'w') as f:
         #     print(sims[0].info(), file = f)
 
         r_points_per_br_set = set(sim.spec.r_points_per_br for sim in sims)

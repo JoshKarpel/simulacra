@@ -63,15 +63,17 @@ if __name__ == '__main__':
         dropbox_process = cp.utils.get_process_by_name('Dropbox.exe')
 
         try:
-            CI = clu.ClusterInterface('submit-5.chtc.wisc.edu', username = 'karpel', key_path = 'E:\chtc_ssh_private')
-            JOBS_DIR = "E:\Dropbox\Research\Cluster\cluster_mirror\home\karpel\jobs"
+            ci = clu.ClusterInterface('submit-5.chtc.wisc.edu', username = 'karpel', key_path = 'E:\chtc_ssh_private')
+            jobs_dir = "E:\Dropbox\Research\Cluster\cluster_mirror\home\karpel\jobs"
 
-            cp.utils.try_loop(ft.partial(suspend_process, dropbox_process),
-                              ft.partial(synchronize_with_cluster, CI),
-                              ft.partial(process_jobs, JOBS_DIR),
-                              ft.partial(resume_process, dropbox_process),
-                              wait_after_success = dt.timedelta(hours = 3),
-                              wait_after_failure = dt.timedelta(hours = 1))
+            cp.utils.try_loop(
+                # ft.partial(suspend_process, dropbox_process),
+                ft.partial(synchronize_with_cluster, ci),
+                ft.partial(process_jobs, jobs_dir),
+                # ft.partial(resume_process, dropbox_process),
+                wait_after_success = dt.timedelta(hours = 3),
+                wait_after_failure = dt.timedelta(hours = 1)
+            )
         except Exception as e:
             logger.exception(e)
             raise e

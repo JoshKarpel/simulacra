@@ -1652,7 +1652,7 @@ class SphericalHarmonicMesh(QuantumMesh):
                 if np.max(eigenvalues) > energy_max or number_of_eigenvectors == max_eigenvectors:
                     break
 
-                number_of_eigenvectors = int(number_of_eigenvectors * 1.1 * np.sqrt(energy_max / np.max(eigenvalues)))  # based on approximate sqrt scaling of energy to wavenumber, with safety factor
+                number_of_eigenvectors = int(number_of_eigenvectors * 1.1 * np.sqrt(np.abs(energy_max / np.max(eigenvalues))))  # based on approximate sqrt scaling of energy to wavenumber, with safety factor
 
             for eigenvalue, eigenvector in zip(eigenvalues, eigenvectors.T):
                 eigenvector /= np.sqrt(self.inner_product_multiplier * np.sum(np.abs(eigenvector) ** 2))  # normalize
