@@ -16,7 +16,9 @@ mpl_rcParams_update = {
     'mathtext.fontset': 'cm',
     'mathtext.rm': 'serif',
     'xtick.top': True,
+    'xtick.bottom': True,
     'ytick.right': True,
+    'ytick.left': True,
 }
 
 mpl.rcParams.update(mpl_rcParams_update)

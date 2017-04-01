@@ -75,9 +75,12 @@ if __name__ == '__main__':
         parameters.append(clu.Parameter(name = 'time_step',
                                         value = asec * clu.ask_for_input('Time Step (in as)?', default = 1, cast_to = float)))
 
-        time_bound_in_pw = clu.Parameter(name = 'time_bound_in_pw',
-                                         value = clu.ask_for_input('Time Bound (in pulse widths)?', default = 30, cast_to = float))
-        parameters.append(time_bound_in_pw)
+        time_initial_in_pw = clu.Parameter(name = 'initial_time_in_pw',
+                                           value = clu.ask_for_input('Initial Time (in pulse widths)?', default = -35, cast_to = float))
+        parameters.append(time_initial_in_pw)
+
+        parameters.append(clu.Parameter(name = 'final_time_in_pw',
+                                        value = clu.ask_for_input('Final Time (in pulse widths)?', default = 40, cast_to = float)))
 
         minimum_time_final = clu.Parameter(name = 'minimum_time_final',
                                            value = asec * clu.ask_for_input('Minimum Final Time (in as)?', default = 0, cast_to = float))
@@ -128,7 +131,7 @@ if __name__ == '__main__':
         pulse_parameters.append(phases)
 
         window_time_in_pw = clu.Parameter(name = 'window_time_in_pw',
-                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 2, cast_to = float))
+                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = np.abs(time_initial_in_pw.value) - 5, cast_to = float))
         window_width_in_pw = clu.Parameter(name = 'window_width_in_pw',
                                            value = clu.ask_for_input('Window Width (in pulse widths)?', default = 0.2, cast_to = float))
         parameters.append(window_time_in_pw)
@@ -180,10 +183,12 @@ if __name__ == '__main__':
                 uround(spec_kwargs['electric_potential'].phase, pi)
             )
 
-            time_bound = spec_kwargs['time_bound_in_pw'] * spec_kwargs['electric_potential'].pulse_width
+            time_initial = spec_kwargs['initial_time_in_pw'] * spec_kwargs['electric_potential'].pulse_width
+            time_final = spec_kwargs['final_time_in_pw'] * spec_kwargs['electric_potential'].pulse_width
+
             spec = spec_type(name,
                              file_name = str(ii),
-                             time_initial = -time_bound, time_final = time_bound,
+                             time_initial = time_initial, time_final = time_final,
                              **mesh_kwargs, **spec_kwargs)
 
             spec.pulse_type = pulse_type

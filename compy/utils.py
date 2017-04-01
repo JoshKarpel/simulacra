@@ -818,7 +818,7 @@ def try_loop(*functions_to_run,
             time.sleep(wait_after_success.total_seconds())
         except Exception as e:
             logger.exception('Exception encountered')
-            logger.warning('Loop cycle failed, retrying in {} seconds'.format(wait_after_failure.total_seconds()))
+            logger.warning(f'Loop cycle failed, retrying in {wait_after_failure.total_seconds()} seconds')
 
         time.sleep(wait_after_failure.total_seconds())
 

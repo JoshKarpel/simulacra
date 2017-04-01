@@ -405,7 +405,7 @@ class JobProcessor(utils.Beet):
 
     def make_time_diagnostics_plot(self):
         sim_numbers = [result.file_name for result in self.data.values()]
-        run_time = [result.run_time for result in self.data.values()]
+        run_time = [result.running_time for result in self.data.values()]
         elapsed_time = [result.elapsed_time for result in self.data.values()]
 
         cp.utils.xy_plot('diagnostics',

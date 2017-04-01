@@ -88,8 +88,27 @@ class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
     def process_sim(self, sim_name, sim):
         super().process_sim(sim_name, sim)
 
-        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir)
-        sim.plot_wavefunction_vs_time(target_dir = self.plots_dir, log = True)
+        plot_kwargs = dict(
+            target_dir = self.plots_dir,
+            plot_name = 'name',
+            show_title = True,
+        )
+
+        # sim.plot_wavefunction_vs_time(**plot_kwargs)
+
+        grouped_states, group_labels = sim.group_free_states_by_continuous_attr('energy', divisions = 12, cutoff_value = 100 * eV, label_unit = 'eV')
+        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = f'__energy__{sim.file_name}',
+                                      grouped_free_states = grouped_states, group_labels = group_labels)
+        # sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__energy__collapsed',
+        #                               collapse_bound_state_angular_momentums = True,
+        #                               grouped_free_states = grouped_states, group_labels = group_labels)
+
+        grouped_states, group_labels = sim.group_free_states_by_discrete_attr('l', cutoff_value = 10)
+        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = f'__l__{sim.file_name}',
+                                      grouped_free_states = grouped_states, group_labels = group_labels)
+        # sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__l__collapsed',
+        #                               collapse_bound_state_angular_momentums = True,
+        #                               grouped_free_states = grouped_states, group_labels = group_labels)
 
 
 class PulseSimulationResult(ElectricFieldSimulationResult):
@@ -175,8 +194,15 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
     def process_sim(self, sim_name, sim):
         super().process_sim(sim_name, sim)
 
-        sim.plot_a_vs_time(target_dir = self.plots_dir)
-        sim.plot_a_vs_time(target_dir = self.plots_dir, log = True)
+        plot_kwargs = dict(
+            target_dir = self.plots_dir,
+            plot_name = 'name',
+            show_title = True,
+            name_postfix = sim.file_name,
+        )
+
+        sim.plot_a_vs_time(**plot_kwargs)
+        sim.plot_a_vs_time(**plot_kwargs, log = True)
 
     def make_summary_plots(self):
         super().make_summary_plots()

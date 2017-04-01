@@ -2573,7 +2573,21 @@ class ElectricFieldSimulation(cp.core.Simulation):
                                   collapse_bound_state_angular_momentums = False,
                                   grouped_free_states = None,
                                   group_labels = None,
+                                  show_title = False,
+                                  plot_name = 'file_name',
                                   **kwargs):
+        """
+        
+        :param log: 
+        :param x_scale: 
+        :param bound_state_max_n: 
+        :param collapse_bound_state_angular_momentums: 
+        :param grouped_free_states: 
+        :param group_labels: 
+        :param plot_name: 'name' or 'file_name'
+        :param kwargs: 
+        :return: 
+        """
         fig = cp.utils.get_figure('full')
 
         x_scale_unit, x_scale_name = unit_value_and_name_from_unit(x_scale)
@@ -2653,9 +2667,23 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         ax_overlaps.legend(bbox_to_anchor = (1.1, 1.1), loc = 'upper left', borderaxespad = 0.05, fontsize = 9, ncol = 1 + (len(overlaps) // 17))
 
-        ax_overlaps.tick_params(labelright = True)
-        ax_field.tick_params(labelright = True)
-        ax_overlaps.xaxis.tick_top()
+        ax_overlaps.tick_params(labelleft = True,
+                                labelright = True,
+                                labeltop = True,
+                                labelbottom = False,
+                                bottom = True,
+                                top = True,
+                                left = True,
+                                right = True)
+        ax_field.tick_params(labelleft = True,
+                             labelright = True,
+                             labeltop = False,
+                             labelbottom = True,
+                             bottom = True,
+                             top = True,
+                             left = True,
+                             right = True)
+        # ax_overlaps.xaxis.tick_top()
 
         plt.rcParams['xtick.major.pad'] = 5
         plt.rcParams['ytick.major.pad'] = 5
@@ -2674,10 +2702,14 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         ax_field.grid(True, **GRID_KWARGS)
 
+        if show_title:
+            title = ax_overlaps.set_title(self.name)
+            title.set_y(1.12)
+
         postfix = ''
         if log:
             postfix += '__log'
-        prefix = self.file_name
+        prefix = getattr(self, plot_name)
 
         name = prefix + '__wavefunction_vs_time{}'.format(postfix)
 

@@ -240,7 +240,10 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         self.status = 'finished'
         logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
 
-    def plot_a_vs_time(self, log = False, time_scale = 'asec', field_scale = 'AEF', **kwargs):
+    def plot_a_vs_time(self, log = False, time_scale = 'asec', field_scale = 'AEF',
+                       show_title = False,
+                       plot_name = 'file_name',
+                       **kwargs):
         fig = cp.utils.get_figure('full')
 
         x_scale_unit, x_scale_name = unit_value_and_name_from_unit(time_scale)
@@ -291,12 +294,33 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         ax_f.tick_params(axis = 'y', which = 'major', labelsize = 10)
         ax_a.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
+        ax_a.tick_params(labelleft = True,
+                         labelright = True,
+                         labeltop = True,
+                         labelbottom = False,
+                         bottom = True,
+                         top = True,
+                         left = True,
+                         right = True)
+        ax_f.tick_params(labelleft = True,
+                         labelright = True,
+                         labeltop = False,
+                         labelbottom = True,
+                         bottom = True,
+                         top = True,
+                         left = True,
+                         right = True)
+
         ax_f.grid(True, **core.GRID_KWARGS)
+
+        if show_title:
+            title = ax_a.set_title(self.name)
+            title.set_y(1.12)
 
         postfix = ''
         if log:
             postfix += '__log'
-        prefix = self.file_name
+        prefix = getattr(self, plot_name)
 
         name = prefix + '__solution_vs_time{}'.format(postfix)
 
