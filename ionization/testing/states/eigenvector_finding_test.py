@@ -17,13 +17,13 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 if __name__ == '__main__':
     # test_states = [ion.HydrogenBoundState(n, l) for n in range(6) for l in range(n)]
 
-    l_points = 1
+    l_bound = 1
     bound = 100
     points_per_bohr_radius = 4
 
     spec_kwargs = {'r_bound': bound * bohr_radius,
                    'r_points': bound * points_per_bohr_radius,
-                   'l_points': 100,
+                   'l_bound': 100,
                    'initial_state': ion.HydrogenBoundState(1, 0),
                    'time_initial': 0 * asec,
                    'time_final': 200 * asec,
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     sim = ion.SphericalHarmonicSpecification('eig', **spec_kwargs).to_simulation()
 
     with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO, file_logs = True, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
-        for l in range(l_points):
+        for l in range(l_bound):
             logger.info('working on l = {}'.format(l))
             h = sim.mesh._get_internal_hamiltonian_matrix_operator_single_l(l = l)
             with cp.utils.Timer() as t:

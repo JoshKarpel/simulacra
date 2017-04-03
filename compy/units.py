@@ -59,12 +59,22 @@ unit_names_to_values.update({'m': m,
                              's': s,
                              'kg': kg,
                              'A': A,
-                             'K': K})
+                             'K': K,
+                             'rad': rad,
+                             'radian': rad,
+                             'deg': deg,
+                             'degrees': deg,
+                             })
 unit_names_to_tex_strings.update({'m': r'\mathrm{m}',
                                   's': r'\mathrm{s}',
                                   'kg': r'\mathrm{kg}',
                                   'A': r'\mathrm{A}',
-                                  'K': r'\mathrm{K}'})
+                                  'K': r'\mathrm{K}',
+                                  'rad': r'\mathrm{rad}',
+                                  'radian': r'\mathrm{rad}',
+                                  'deg': r'\mathrm{deg}',
+                                  'degrees': r'\mathrm{deg}',
+                                  })
 
 # distance
 cm = 1e-2 * m

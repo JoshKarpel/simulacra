@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
                 spec_kwargs = {'r_bound': bound * bohr_radius,
                                'r_points': bound * ppbr,
-                               'l_points': max(state_a.l, state_b.l) + 10,
+                               'l_bound': max(state_a.l, state_b.l) + 10,
                                'initial_state': state_a,
                                'test_states': (state_a, state_b),
                                'time_initial': 0 * asec,

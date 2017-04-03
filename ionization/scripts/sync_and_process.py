@@ -37,7 +37,7 @@ def process_job(job_name, jobs_dir = None):
 
     jp.process_job(force_reprocess = False)
 
-    jp.save(target_dir = os.getcwd())
+    jp.save(target_dir = os.path.join(os.getcwd(), 'job_processors'))
 
 
 def process_jobs(jobs_dir):
@@ -47,6 +47,7 @@ def process_jobs(jobs_dir):
             process_job(job_name, jobs_dir = jobs_dir)
         except Exception as e:
             logger.exception('Encountered exception while processing job {}'.format(job_name))
+            raise e
 
 
 def suspend_processes(processes):

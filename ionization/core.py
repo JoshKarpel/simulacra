@@ -1296,7 +1296,7 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
         self.store_norm_by_l = store_norm_by_l
 
         self.use_numeric_eigenstates_as_basis = use_numeric_eigenstates_as_basis
-        self.numeric_eigenstate_l_max = numeric_eigenstate_l_max
+        self.numeric_eigenstate_l_max = min(self.l_bound - 1, numeric_eigenstate_l_max)
         self.numeric_eigenstate_energy_max = numeric_eigenstate_energy_max
 
     def info(self):
@@ -2372,7 +2372,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         self.snapshots[self.time_index] = snapshot
 
-        logger.info('Stored Snapshot of {} at time {} as (time index {})'.format(self.name, uround(self.time, asec, 3), self.time_index))
+        logger.info('Stored {} of {} at time {} as (time index {})'.format(snapshot.__class__.__name__, self.name, uround(self.time, asec, 3), self.time_index))
 
     def run_simulation(self, store_intermediate_meshes = False):
         """

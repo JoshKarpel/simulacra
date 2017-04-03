@@ -293,20 +293,22 @@ class JobProcessor(utils.Beet):
         self.plots_dir = os.path.join(self.job_dir_path, 'plots')
         self.movies_dir = os.path.join(self.job_dir_path, 'movies')
 
-        self.sim_names = self.get_sim_names()
+        self.sim_names = self.get_sim_names_from_specs()
         self.sim_count = len(self.sim_names)
         self.unprocessed_sim_names = set(self.sim_names)
 
         self.data = OrderedDict((sim_name, None) for sim_name in self.sim_names)
-        self.parameter_sets = defaultdict(set)
 
         self.simulation_type = simulation_type
 
     def __str__(self):
         return '{} for job {}, processed {}/{} Simulations'.format(self.__class__.__name__, self.name, self.sim_count - len(self.unprocessed_sim_names), self.sim_count)
 
-    def get_sim_names(self):
+    def get_sim_names_from_specs(self):
         return sorted([f.strip('.spec') for f in os.listdir(self.input_dir)], key = int)
+
+    def get_sim_names_from_sims(self):
+        return sorted([f.strip('.sim') for f in os.listdir(self.output_dir)], key = int)
 
     def save(self, target_dir = None, file_extension = '.job'):
         return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
@@ -354,15 +356,15 @@ class JobProcessor(utils.Beet):
         if force_reprocess:
             sim_names = tqdm(copy(self.sim_names))
         else:
-            sim_names = tqdm(copy(self.unprocessed_sim_names))
+            # sim_names = tqdm(copy(self.unprocessed_sim_names))
+            new_sims = self.unprocessed_sim_names.intersection(self.get_sim_names_from_sims())
+            sim_names = tqdm(new_sims)
 
         for sim_name in sim_names:
             sim = self.load_sim(sim_name)
 
             if sim is not None:
                 try:
-                    # self.process_sim(sim_name, sim)
-                    # self.data[sim_name] = cp.utils.multi_map(ft.partial(make_simulation_result, self.simulation_result_type, self), [sim], processes = 1)[0]  # run the sim processor in a new python instance to avoid memory leaks
                     self.data[sim_name] = self.simulation_result_type(sim, job_processor = self)
                     self.unprocessed_sim_names.discard(sim_name)
                 except AttributeError as e:
@@ -371,13 +373,14 @@ class JobProcessor(utils.Beet):
             self.save(target_dir = self.job_dir_path)
 
         # self.write_to_txt()
+        # self.write_to_csv()
         self.make_summary_plots()
 
         end_time = dt.datetime.now()
         logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, end_time - start_time))
 
-    def write_to_csv(self):
-        raise NotImplementedError
+    # def write_to_csv(self):
+    #     raise NotImplementedError
 
     # def write_to_txt(self):
     #     with open(os.path.join(self.job_dir_path, 'data.txt'), mode = 'w') as f:
@@ -407,18 +410,20 @@ class JobProcessor(utils.Beet):
         """
         return list([sim_result for sim_result in self.data.values() if test_function(sim_result) and sim_result is not None])
 
+    def parameter_set(self, parameter):
+        return set(getattr(result, parameter) for result in self.data.values())
+
     def make_summary_plots(self):
         self.make_time_diagnostics_plot()
 
     def make_time_diagnostics_plot(self):
         sim_numbers = [result.file_name for result in self.data.values() if result is not None]
         running_time = [result.running_time for result in self.data.values() if result is not None]
-        elapsed_time = [result.elapsed_time for result in self.data.values() if result is not None]
 
         cp.utils.xy_plot(f'{self.name}__diagnostics',
                          sim_numbers,
-                         elapsed_time, running_time,
-                         line_labels = ('Elapsed Time', 'Run Time'),
+                         running_time,
+                         line_kwargs = [dict(linestyle = '', marker = '.')],
                          y_scale = 'hours',
                          x_label = 'Simulation Number', y_label = 'Time',
                          target_dir = self.plots_dir)

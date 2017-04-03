@@ -47,13 +47,13 @@ def ask_mesh_type():
 
             mesh_kwargs['r_bound'] = bohr_radius * cp.cluster.ask_for_input('R Bound (Bohr radii)', default = 250, cast_to = float)
             mesh_kwargs['r_points'] = (mesh_kwargs['r_bound'] / bohr_radius) * cp.cluster.ask_for_input('R Points per Bohr Radii', default = 8, cast_to = int)
-            mesh_kwargs['l_points'] = cp.cluster.ask_for_input('l points', default = 200, cast_to = int)
+            mesh_kwargs['l_bound'] = cp.cluster.ask_for_input('l points', default = 200, cast_to = int)
 
             mesh_kwargs['outer_radius'] = mesh_kwargs['r_bound']
 
             mesh_kwargs['snapshot_type'] = core.SphericalHarmonicSnapshot
 
-            memory_estimate = (128 / 8) * mesh_kwargs['r_points'] * mesh_kwargs['l_points']
+            memory_estimate = (128 / 8) * mesh_kwargs['r_points'] * mesh_kwargs['l_bound']
 
         else:
             raise ValueError('Mesh type {} not found!'.format(mesh_type))
@@ -110,9 +110,9 @@ class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
     simulation_result_type = ElectricFieldSimulationResult
 
 
-parameter_name_to_unit = {
+parameter_name_to_unit_name = {
     'pulse_width': 'asec',
-    'fluence': 'jcm2',
+    'fluence': 'Jcm2',
     'phase': 'rad'
 }
 
@@ -136,8 +136,8 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
     def make_summary_plots(self):
         super().make_summary_plots()
 
-        # if len(self.unprocessed_sim_names) == 0:
-        #     self.make_pulse_parameter_scan_plots()
+        if len(self.unprocessed_sim_names) == 0:
+            self.make_pulse_parameter_scan_plots()
 
     def make_pulse_parameter_scan_plots(self):
         for ionization_metric in ('final_norm', 'final_initial_state_overlap'):
@@ -145,21 +145,22 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
 
             for plot_parameter, line_parameter, scan_parameter in it.permutations(('pulse_width', 'fluence', 'phase')):
                 plot_parameter_name, line_parameter_name, scan_parameter_name = plot_parameter.replace('_', ' ').title(), line_parameter.replace('_', ' ').title(), scan_parameter.replace('_', ' ').title()
-                plot_parameter_unit, line_parameter_unit, scan_parameter_unit = parameter_name_to_unit[plot_parameter], parameter_name_to_unit[line_parameter], parameter_name_to_unit[scan_parameter]
+                plot_parameter_unit, line_parameter_unit, scan_parameter_unit = parameter_name_to_unit_name[plot_parameter], parameter_name_to_unit_name[line_parameter], parameter_name_to_unit_name[scan_parameter]
+                plot_parameter_set, line_parameter_set, scan_parameter_set = self.parameter_set(plot_parameter), self.parameter_set(line_parameter), self.parameter_set(scan_parameter)
 
-                plot_parameter_set, line_parameter_set, scan_parameter_set = self.parameter_sets[plot_parameter], self.parameter_sets[line_parameter], self.parameter_sets[scan_parameter]
                 for plot_parameter_value in plot_parameter_set:
                     for line_group_number, line_parameter_group in enumerate(cp.utils.grouper(sorted(line_parameter_set), 8)):
-                        plot_name = f'{ionization_metric}__{plot_parameter}={plot_parameter_value}__grouped_by_{line_parameter}__group_{line_group_number}'
+                        plot_name = f'{ionization_metric}__{plot_parameter}={uround(plot_parameter_value, parameter_name_to_unit_name[plot_parameter], 3)}__grouped_by_{line_parameter}__group_{line_group_number}'
 
                         lines = []
                         line_labels = []
-                        for line_parameter_value in sorted(line_parameter_group):
+
+                        for line_parameter_value in sorted(l for l in line_parameter_group if l is not None):
                             results = sorted(self.select_by_kwargs(**{line_parameter: line_parameter_value}), key = lambda result: getattr(result, scan_parameter))
                             x = [getattr(result, scan_parameter) for result in results]
                             lines.append([getattr(result, ionization_metric) for result in results])
 
-                            label = fr"{line_parameter_name} = ${uround(line_parameter_value, 3, parameter_name_to_unit[line_parameter])}$ (${line_parameter_unit}$)"
+                            label = fr"{line_parameter_name}$\, = {uround(line_parameter_value, parameter_name_to_unit_name[line_parameter], 3)} \, {unit_names_to_tex_strings[line_parameter_unit]}$"
                             line_labels.append(label)
 
                         for log in (False, True):
@@ -167,7 +168,7 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
                                              x,
                                              *lines,
                                              line_labels = line_labels,
-                                             title = f"{plot_parameter_name} = {uround(plot_parameter_value, 3, plot_parameter_unit)}",
+                                             title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
                                              x_label = scan_parameter_name, x_scale = scan_parameter_unit,
                                              y_label = ionization_metric_name,
                                              target_dir = self.plots_dir
@@ -208,8 +209,8 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
     def make_summary_plots(self):
         super().make_summary_plots()
 
-        # if len(self.unprocessed_sim_names) == 0:
-        #     self.make_pulse_parameter_scan_plots()
+        if len(self.unprocessed_sim_names) == 0:
+            self.make_pulse_parameter_scan_plots()
 
     def make_pulse_parameter_scan_plots(self):
         for ionization_metric in ['final_bound_state_overlap']:
@@ -217,21 +218,22 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
 
             for plot_parameter, line_parameter, scan_parameter in it.permutations(('pulse_width', 'fluence', 'phase')):
                 plot_parameter_name, line_parameter_name, scan_parameter_name = plot_parameter.replace('_', ' ').title(), line_parameter.replace('_', ' ').title(), scan_parameter.replace('_', ' ').title()
-                plot_parameter_unit, line_parameter_unit, scan_parameter_unit = parameter_name_to_unit[plot_parameter], parameter_name_to_unit[line_parameter], parameter_name_to_unit[scan_parameter]
+                plot_parameter_unit, line_parameter_unit, scan_parameter_unit = parameter_name_to_unit_name[plot_parameter], parameter_name_to_unit_name[line_parameter], parameter_name_to_unit_name[scan_parameter]
+                plot_parameter_set, line_parameter_set, scan_parameter_set = self.parameter_set(plot_parameter), self.parameter_set(line_parameter), self.parameter_set(scan_parameter)
 
-                plot_parameter_set, line_parameter_set, scan_parameter_set = self.parameter_sets[plot_parameter], self.parameter_sets[line_parameter], self.parameter_sets[scan_parameter]
                 for plot_parameter_value in plot_parameter_set:
                     for line_group_number, line_parameter_group in enumerate(cp.utils.grouper(sorted(line_parameter_set), 8)):
                         plot_name = f'{ionization_metric}__{plot_parameter}={plot_parameter_value}__grouped_by_{line_parameter}__group_{line_group_number}'
 
                         lines = []
                         line_labels = []
-                        for line_parameter_value in sorted(line_parameter_group):
+
+                        for line_parameter_value in sorted(l for l in line_parameter_group if l is not None):
                             results = sorted(self.select_by_kwargs(**{line_parameter: line_parameter_value}), key = lambda result: getattr(result, scan_parameter))
                             x = [getattr(result, scan_parameter) for result in results]
                             lines.append([getattr(result, ionization_metric) for result in results])
 
-                            label = fr"{line_parameter_name} = ${uround(line_parameter_value, 3, parameter_name_to_unit[line_parameter])}$ (${line_parameter_unit}$)"
+                            label = fr"{line_parameter_name}$\, = {uround(line_parameter_value, parameter_name_to_unit_name[line_parameter], 3)} \, {unit_names_to_tex_strings[line_parameter_unit]}$"
                             line_labels.append(label)
 
                         for log in (False, True):
@@ -239,7 +241,7 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
                                              x,
                                              *lines,
                                              line_labels = line_labels,
-                                             title = f"{plot_parameter_name} = {uround(plot_parameter_value, 3, plot_parameter_unit)}",
+                                             title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
                                              x_label = scan_parameter_name, x_scale = scan_parameter_unit,
                                              y_label = ionization_metric_name,
                                              target_dir = self.plots_dir

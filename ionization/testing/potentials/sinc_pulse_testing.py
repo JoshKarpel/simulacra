@@ -30,7 +30,7 @@ if __name__ == '__main__':
     with log as logger:
         bound = 200
         r_points = bound * 4
-        l_points = 128
+        l_bound = 128
         dt = 1
 
         initial_states = [ion.HydrogenBoundState(1, 0), ion.HydrogenBoundState(2, 0), ion.HydrogenBoundState(2, 1)]
@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
                     mask = ion.RadialCosineMask(inner_radius = (bound - 25) * bohr_radius, outer_radius = bound * bohr_radius)
 
-                    out_dir_add = 'bounds_r={}_l={}__n={}_l={}__flu={}'.format(bound, l_points, initial_state.n, initial_state.l, fluence)
+                    out_dir_add = 'bounds_r={}_l={}__n={}_l={}__flu={}'.format(bound, l_bound, initial_state.n, initial_state.l, fluence)
                     out_dir_mod = os.path.join(OUT_DIR, out_dir_add)
 
                     animators = [ion.animators.SphericalHarmonicAnimator(target_dir = out_dir_mod),
@@ -70,7 +70,7 @@ if __name__ == '__main__':
                                                               time_initial = t_init, time_final = t_final, time_step = t_step,
                                                               r_points = r_points,
                                                               r_bound = bound * bohr_radius,
-                                                              l_bound = l_points,
+                                                              l_bound = l_bound,
                                                               initial_state = initial_state,
                                                               electric_potential = e_field_cos,
                                                               evolution_method = 'CN',
@@ -83,7 +83,7 @@ if __name__ == '__main__':
                                                               time_initial = t_init, time_final = t_final, time_step = t_step,
                                                               r_points = r_points,
                                                               r_bound = bound * bohr_radius,
-                                                              l_bound = l_points,
+                                                              l_bound = l_bound,
                                                               initial_state = initial_state,
                                                               electric_potential = e_field_sin,
                                                               evolution_method = 'CN',

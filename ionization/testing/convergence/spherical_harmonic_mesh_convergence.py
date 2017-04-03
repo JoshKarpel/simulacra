@@ -131,7 +131,7 @@ def plot_final_initial_state_vs_time_step(name, sims, ref, **kwargs):
 if __name__ == '__main__':
     with log as logger:
         r_bound = 50
-        l_points = 50
+        l_bound = 50
         t_bound = 250  # symmetric around 0
         amp = .1
 
@@ -148,14 +148,14 @@ if __name__ == '__main__':
         t = np.array([7.5, 5, 2.5, 2, 1])
         time_step_list = np.concatenate([t, t / 10, t / 100, t / 1000])
 
-        prefix = 'R={}br__L={}__amp={}aef'.format(r_bound, l_points, amp)
+        prefix = 'R={}br__L={}__amp={}aef'.format(r_bound, l_bound, amp)
 
         specs = []
 
         specs.append(ion.SphericalHarmonicSpecification(prefix + '__reference',
                                                         r_bound = r_bound * bohr_radius,
                                                         r_points = r_bound * 4,
-                                                        l_bound = l_points,
+                                                        l_bound = l_bound,
                                                         time_step = 1 * asec,
                                                         time_initial = -t_bound * asec,
                                                         time_final = t_bound * asec,
@@ -169,12 +169,12 @@ if __name__ == '__main__':
                                                         ))
 
         for r_points_per_br, time_step in it.product(r_points_per_br_list, time_step_list):
-            spec_name = [prefix] + ['{}x{}'.format(r_points_per_br, l_points), 'dt={}as'.format(time_step)]
+            spec_name = [prefix] + ['{}x{}'.format(r_points_per_br, l_bound), 'dt={}as'.format(time_step)]
 
             specs.append(ion.SphericalHarmonicSpecification('__'.join(spec_name),
                                                             r_bound = r_bound * bohr_radius,
                                                             r_points = r_bound * r_points_per_br,
-                                                            l_bound = l_points,
+                                                            l_bound = l_bound,
                                                             time_step = time_step * asec,
                                                             time_initial = -t_bound * asec,
                                                             time_final = t_bound * asec,

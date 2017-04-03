@@ -73,7 +73,7 @@ if __name__ == '__main__':
         #
         # for l in range(6):
         #     sim = ion.SphericalHarmonicSpecification('coulomb_state_l={}'.format(l),
-        #                                              r_bound = 100 * bohr_radius, r_points = 100 * 4, l_points = 50,
+        #                                              r_bound = 100 * bohr_radius, r_points = 100 * 4, l_bound = 50,
         #                                              internal_potential = ion.NoPotentialEnergy(),
         #                                              initial_state = ion.HydrogenCoulombState(energy = 50 * eV, l = l),
         #                                              ).to_simulation()

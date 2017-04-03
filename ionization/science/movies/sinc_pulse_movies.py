@@ -33,7 +33,7 @@ if __name__ == '__main__':
         bound = 80
         points_per_r = 4
         r_points = bound * points_per_r
-        l_points = 100
+        l_bound = 100
         dt = 1
 
         initial_states = [ion.HydrogenBoundState(1, 0), ion.HydrogenBoundState(2, 0), ion.HydrogenBoundState(2, 1)]
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
                     mask = ion.potentials.RadialCosineMask(inner_radius = .8 * bound * bohr_radius, outer_radius = bound * bohr_radius)
 
-                    out_dir_add = 'r={}at{}_l={}__n={}_l={}__flu={}'.format(bound, points_per_r, l_points, initial_state.n, initial_state.l, fluence)
+                    out_dir_add = 'r={}at{}_l={}__n={}_l={}__flu={}'.format(bound, points_per_r, l_bound, initial_state.n, initial_state.l, fluence)
                     out_dir_mod = os.path.join(OUT_DIR, out_dir_add)
 
                     animator_kwargs = {'target_dir': out_dir_mod,
@@ -87,7 +87,7 @@ if __name__ == '__main__':
                         'time_step': t_step,
                         'r_points': r_points,
                         'r_bound': bound * bohr_radius,
-                        'l_points': l_points,
+                        'l_bound': l_bound,
                         'initial_state': initial_state,
                         'test_states': test_states,
                         'mask': mask,

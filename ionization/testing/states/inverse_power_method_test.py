@@ -19,7 +19,7 @@ if __name__ == '__main__':
         test_states = [ion.HydrogenBoundState(n, l) for n in range(6) for l in range(n)]
         spec_kwargs = {'r_bound': 100 * bohr_radius,
                        'r_points': 400,
-                       'l_points': 100,
+                       'l_bound': 100,
                        'initial_state': ion.HydrogenBoundState(1, 0),
                        'time_initial': 0 * asec,
                        'time_final': 1000 * asec,

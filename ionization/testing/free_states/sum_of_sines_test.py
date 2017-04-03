@@ -18,7 +18,7 @@ if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
         bound = 200
         points_per_bohr_radius = 4
-        l_points = 200
+        l_bound = 200
 
         pw = 100
         t_bound = 30 * pw
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         spec_kwargs = dict(
             r_bound = bound * bohr_radius,
             r_points = bound * points_per_bohr_radius,
-            l_points = l_points,
+            l_bound = l_bound,
             initial_state = ion.HydrogenBoundState(1, 0),
             time_initial = -t_bound * asec,
             time_final = t_bound * asec,
@@ -58,7 +58,7 @@ if __name__ == '__main__':
             snapshot_type = ion.SphericalHarmonicSnapshot
         )
 
-        sim = ion.SphericalHarmonicSpecification('SumOfSines__flu={}jcm2__{}at{}x{}__data_rate={}'.format(flu, bound, points_per_bohr_radius, l_points, store_every), **spec_kwargs).to_simulation()
+        sim = ion.SphericalHarmonicSpecification('SumOfSines__flu={}jcm2__{}at{}x{}__data_rate={}'.format(flu, bound, points_per_bohr_radius, l_bound, store_every), **spec_kwargs).to_simulation()
 
         print(sim.info())
         sim.run_simulation()

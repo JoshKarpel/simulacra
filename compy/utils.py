@@ -812,7 +812,7 @@ def try_loop(*functions_to_run,
                 try:
                     f()
                 except Exception as e:
-                    logger.exception(f'Exception encountered while executing loop function {f.__name__}')
+                    logger.exception(f'Exception encountered while executing loop function {f}')
                     failed = True
 
         logger.info(complete_text + '. Elapsed time: {}'.format(timer.time_elapsed))

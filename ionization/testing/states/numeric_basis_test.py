@@ -81,7 +81,7 @@ if __name__ == '__main__':
         spec_kwargs = dict(
             r_bound = bound * bohr_radius,
             r_points = bound * points_per_bohr_radius,
-            l_points = 70,
+            l_bound = 70,
             initial_state = ion.HydrogenBoundState(1, 0),
             time_initial = 0 * asec,
             time_final = 500 * asec,

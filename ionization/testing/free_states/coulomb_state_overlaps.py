@@ -34,16 +34,16 @@ if __name__ == '__main__':
 
         space_bound = 200  # BR
         points_per_bohr_radius = 4
-        l_points = 20
+        l_bound = 20
 
         initial_state = ion.HydrogenBoundState(1, 0)
 
         test_states_bound_max_n = 10
         test_states_free_per_l = 1000
         test_states_max_energy = 50  # eV
-        test_states_l_points = 15  # < l_points
+        test_states_l_points = 15  # < l_bound
 
-        identifier = '{}_{}__{}_at_{}x{}__pw={}as__phase={}'.format(initial_state.n, initial_state.l, space_bound, points_per_bohr_radius, l_points, pw, phase)
+        identifier = '{}_{}__{}_at_{}x{}__pw={}as__phase={}'.format(initial_state.n, initial_state.l, space_bound, points_per_bohr_radius, l_bound, pw, phase)
 
         # CONVERT TO REAL UNITS
         pw *= asec
@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
         # SET UP SIM
         sim = ion.SphericalHarmonicSpecification(identifier,
-                                                 r_bound = space_bound, r_points = r_points, l_bound = l_points,
+                                                 r_bound = space_bound, r_points = r_points, l_bound = l_bound,
                                                  # time_initial = - time_bound, time_final = time_bound, time_step = dt,
                                                  time_initial = 0, time_final = electric_field.period * 20, time_step = dt,
                                                  internal_potential = ion.Coulomb(),
