@@ -804,23 +804,27 @@ def try_loop(*functions_to_run,
     :return:
     """
     while True:
-        try:
-            logger.info(begin_text)
+        logger.info(begin_text)
 
-            with Timer() as timer:
-                for f in functions_to_run:
+        with Timer() as timer:
+            failed = False
+            for f in functions_to_run:
+                try:
                     f()
+                except Exception as e:
+                    logger.exception(f'Exception encountered while executing loop function {f.__name__}')
+                    failed = True
 
-            logger.info(complete_text + '. Elapsed time: {}'.format(timer.time_elapsed))
+        logger.info(complete_text + '. Elapsed time: {}'.format(timer.time_elapsed))
 
-            logger.info('Next loop cycle at {}'.format(dt.datetime.now() + wait_after_success))
+        if failed:
+            wait = wait_after_failure
+            logger.info(f'Loop cycle failed, retrying in {wait_after_failure.total_seconds()} seconds')
+        else:
+            wait = wait_after_success
+            logger.info(f'Loop cycle succeeded, next cycle in {wait_after_failure.total_seconds()} seconds')
 
-            time.sleep(wait_after_success.total_seconds())
-        except Exception as e:
-            logger.exception('Exception encountered')
-            logger.warning(f'Loop cycle failed, retrying in {wait_after_failure.total_seconds()} seconds')
-
-        time.sleep(wait_after_failure.total_seconds())
+        time.sleep(wait.total_seconds())
 
 
 def grouper(iterable, n, fillvalue = None):
@@ -839,12 +843,8 @@ def grouper(iterable, n, fillvalue = None):
     return it.zip_longest(*args, fillvalue = fillvalue)
 
 
-def get_process_by_name(process_name):
-    for proc in psutil.process_iter():
-        if proc.name() == process_name:
-            return proc
-
-    raise ProcessLookupError('No process with name "{}" found'.format(process_name))
+def get_processes_by_name(process_name):
+    return [p for p in psutil.process_iter() if p.name() == process_name]
 
 
 def get_fig_dims(fig_scale, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0):

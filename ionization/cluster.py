@@ -66,28 +66,23 @@ def ask_mesh_type():
 
 
 class ElectricFieldSimulationResult(cp.cluster.SimulationResult):
-    def __init__(self, sim):
-        super().__init__(sim)
+    def __init__(self, sim, job_processor):
+        super().__init__(sim, job_processor)
 
-        self.time_steps = sim.time_steps
-        self.electric_potential = sim.spec.electric_potential
+        self.time_steps = copy(sim.time_steps)
 
         state_overlaps = sim.state_overlaps_vs_time
 
-        self.final_norm = sim.norm_vs_time[-1]
-        self.final_state_overlaps = {state: overlap[-1] for state, overlap in state_overlaps.items()}
-        self.final_initial_state_overlap = state_overlaps[sim.spec.initial_state][-1]
+        self.final_norm = copy(sim.norm_vs_time[-1])
+        # self.final_state_overlaps = {state: overlap[-1] for state, overlap in state_overlaps.items()}
+        self.final_initial_state_overlap = copy(state_overlaps[sim.spec.initial_state][-1])
+        self.final_bound_state_overlap = copy(sum(state_overlaps[s] for s in sim.bound_states))
+        self.final_free_state_overlap = copy(sum(state_overlaps[s] for s in sim.free_states))
 
+        if len(sim.data_times) > 2:
+            self.make_wavefunction_plots(sim)
 
-class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
-    simulation_result_type = ElectricFieldSimulationResult
-
-    def __init__(self, job_name, job_dir_path):
-        super().__init__(job_name, job_dir_path, core.ElectricFieldSimulation)
-
-    def process_sim(self, sim_name, sim):
-        super().process_sim(sim_name, sim)
-
+    def make_wavefunction_plots(self, sim):
         plot_kwargs = dict(
             target_dir = self.plots_dir,
             plot_name = 'name',
@@ -111,23 +106,38 @@ class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
         #                               grouped_free_states = grouped_states, group_labels = group_labels)
 
 
-class PulseSimulationResult(ElectricFieldSimulationResult):
-    def __init__(self, sim):
-        super().__init__(sim)
+class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
+    simulation_result_type = ElectricFieldSimulationResult
 
-        self.pulse_type = sim.spec.pulse_type
-        self.pulse_width = sim.spec.pulse_width
-        self.fluence = sim.spec.fluence
-        self.phase = sim.spec.phase
+
+parameter_name_to_unit = {
+    'pulse_width': 'asec',
+    'fluence': 'jcm2',
+    'phase': 'rad'
+}
+
+
+class PulseSimulationResult(ElectricFieldSimulationResult):
+    def __init__(self, sim, job_processor):
+        super().__init__(sim, job_processor)
+
+        self.pulse_type = copy(sim.spec.pulse_type)
+        self.pulse_width = copy(sim.spec.pulse_width)
+        self.fluence = copy(sim.spec.fluence)
+        self.phase = copy(sim.spec.phase)
 
 
 class PulseJobProcessor(ElectricFieldJobProcessor):
     simulation_result_type = PulseSimulationResult
 
+    def __init__(self, job_name, job_dir_path):
+        super().__init__(job_name, job_dir_path, core.ElectricFieldSimulation)
+
     def make_summary_plots(self):
         super().make_summary_plots()
 
-        self.make_pulse_parameter_scan_plots()
+        # if len(self.unprocessed_sim_names) == 0:
+        #     self.make_pulse_parameter_scan_plots()
 
     def make_pulse_parameter_scan_plots(self):
         for ionization_metric in ('final_norm', 'final_initial_state_overlap'):
@@ -165,24 +175,28 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
 
 
 class IDESimulationResult(cp.cluster.SimulationResult):
-    def __init__(self, sim):
-        super().__init__(sim)
+    def __init__(self, sim, job_processor):
+        super().__init__(sim, job_processor)
 
-        self.electric_potential = sim.spec.electric_potential
-
-        self.pulse_type = sim.spec.pulse_type
-        self.pulse_width = sim.spec.pulse_width
-        self.fluence = sim.spec.fluence
-        self.phase = sim.spec.phase
+        self.pulse_type = copy(sim.spec.pulse_type)
+        self.pulse_width = copy(sim.spec.pulse_width)
+        self.fluence = copy(sim.spec.fluence)
+        self.phase = copy(sim.spec.phase)
 
         self.final_bound_state_overlap = np.abs(sim.a[-1]) ** 2
 
+        self.make_a_plots(sim)
 
-parameter_name_to_unit = {
-    'pulse_width': 'asec',
-    'fluence': 'jcm2',
-    'phase': 'rad'
-}
+    def make_a_plots(self, sim):
+        plot_kwargs = dict(
+            target_dir = self.plots_dir,
+            plot_name = 'name',
+            show_title = True,
+            name_postfix = f'__{sim.file_name}',
+        )
+
+        sim.plot_a_vs_time(**plot_kwargs)
+        sim.plot_a_vs_time(**plot_kwargs, log = True)
 
 
 class IDEJobProcessor(cp.cluster.JobProcessor):
@@ -191,23 +205,11 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
     def __init__(self, job_name, job_dir_path):
         super().__init__(job_name, job_dir_path, integrodiff.AdaptiveIntegroDifferentialEquationSimulation)
 
-    def process_sim(self, sim_name, sim):
-        super().process_sim(sim_name, sim)
-
-        plot_kwargs = dict(
-            target_dir = self.plots_dir,
-            plot_name = 'name',
-            show_title = True,
-            name_postfix = sim.file_name,
-        )
-
-        sim.plot_a_vs_time(**plot_kwargs)
-        sim.plot_a_vs_time(**plot_kwargs, log = True)
-
     def make_summary_plots(self):
         super().make_summary_plots()
 
-        self.make_pulse_parameter_scan_plots()
+        # if len(self.unprocessed_sim_names) == 0:
+        #     self.make_pulse_parameter_scan_plots()
 
     def make_pulse_parameter_scan_plots(self):
         for ionization_metric in ['final_bound_state_overlap']:

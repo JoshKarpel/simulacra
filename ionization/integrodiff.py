@@ -305,7 +305,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         ax_f.tick_params(labelleft = True,
                          labelright = True,
                          labeltop = False,
-                         labelbottom = True,
+                         # labelbottom = True,
                          bottom = True,
                          top = True,
                          left = True,

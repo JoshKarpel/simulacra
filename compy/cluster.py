@@ -1,6 +1,7 @@
 import collections
 import datetime as dt
 import json
+import functools as ft
 import logging
 import os
 import sys
@@ -264,14 +265,21 @@ class ClusterInterface:
 
 
 class SimulationResult:
-    def __init__(self, sim):
-        self.name = sim.name
-        self.file_name = int(sim.file_name)
+    def __init__(self, sim, job_processor):
+        self.name = copy(sim.name)
+        self.file_name = copy(int(sim.file_name))
+        self.plots_dir = job_processor.plots_dir
 
-        self.start_time = sim.start_time
-        self.end_time = sim.end_time
-        self.elapsed_time = sim.elapsed_time.total_seconds()
-        self.running_time = sim.running_time.total_seconds()
+        self.start_time = copy(sim.start_time)
+        self.end_time = copy(sim.end_time)
+        self.elapsed_time = copy(sim.elapsed_time.total_seconds())
+        self.running_time = copy(sim.running_time.total_seconds())
+
+
+# def make_simulation_result(simulation_result_type, job_processor, sim):
+#     sim_result = simulation_result_type(sim, job_processor)
+#
+#     return sim_result
 
 
 class JobProcessor(utils.Beet):
@@ -289,7 +297,7 @@ class JobProcessor(utils.Beet):
         self.sim_count = len(self.sim_names)
         self.unprocessed_sim_names = set(self.sim_names)
 
-        self.data = OrderedDict((sim_name, {}) for sim_name in self.sim_names)
+        self.data = OrderedDict((sim_name, None) for sim_name in self.sim_names)
         self.parameter_sets = defaultdict(set)
 
         self.simulation_type = simulation_type
@@ -303,18 +311,12 @@ class JobProcessor(utils.Beet):
     def save(self, target_dir = None, file_extension = '.job'):
         return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
 
-    def collect_data_from_sim(self, sim_name, sim):
-        """Hook method to collect summary data from a single Simulation."""
-        self.data[sim_name] = self.simulation_result_type(sim)
+    # def collect_data_from_sim(self, sim_name, sim):
+    #     """Hook method to collect summary data from a single Simulation."""
+    #     self.data[sim_name] = self.simulation_result_type(sim)
 
-        for parameter, value in vars(self.data[sim_name]).items():
-            try:
-                self.parameter_sets[parameter].add(value)
-            except TypeError as e:
-                pass
-
-    def process_sim(self, sim_name, sim):
-        self.collect_data_from_sim(sim_name, sim)
+    # def process_sim(self, sim_name, sim):
+    #     self.collect_data_from_sim(sim_name, sim)
 
     def load_sim(self, sim_name, **load_kwargs):
         """
@@ -356,14 +358,19 @@ class JobProcessor(utils.Beet):
 
         for sim_name in sim_names:
             sim = self.load_sim(sim_name)
+
             if sim is not None:
                 try:
-                    self.process_sim(sim_name, sim)
+                    # self.process_sim(sim_name, sim)
+                    # self.data[sim_name] = cp.utils.multi_map(ft.partial(make_simulation_result, self.simulation_result_type, self), [sim], processes = 1)[0]  # run the sim processor in a new python instance to avoid memory leaks
+                    self.data[sim_name] = self.simulation_result_type(sim, job_processor = self)
                     self.unprocessed_sim_names.discard(sim_name)
                 except AttributeError as e:
                     logger.exception('Exception encountered while processing simulation {}'.format(sim_name))
 
-        self.write_to_txt()
+            self.save(target_dir = self.job_dir_path)
+
+        # self.write_to_txt()
         self.make_summary_plots()
 
         end_time = dt.datetime.now()
@@ -372,9 +379,9 @@ class JobProcessor(utils.Beet):
     def write_to_csv(self):
         raise NotImplementedError
 
-    def write_to_txt(self):
-        with open(os.path.join(self.job_dir_path, 'data.txt'), mode = 'w') as f:
-            pprint(self.data, stream = f)
+    # def write_to_txt(self):
+    #     with open(os.path.join(self.job_dir_path, 'data.txt'), mode = 'w') as f:
+    #         pprint(self.data, stream = f)
 
     def select_by_kwargs(self, **kwargs):
         """
@@ -385,7 +392,7 @@ class JobProcessor(utils.Beet):
         """
         out = []
 
-        for sim_result in self.data.values():
+        for sim_result in (r for r in self.data.values() if r is not None):
             if all(getattr(sim_result, key) == val for key, val in kwargs.items()):
                 out.append(sim_result)
 
@@ -398,22 +405,23 @@ class JobProcessor(utils.Beet):
         :param test_function: a function which takes one argument, a SimulationResult, and returns a Boolean
         :return: a list of SimulationResults
         """
-        return list([sim_result for sim_result in self.data.values() if test_function(sim_result)])
+        return list([sim_result for sim_result in self.data.values() if test_function(sim_result) and sim_result is not None])
 
     def make_summary_plots(self):
         self.make_time_diagnostics_plot()
 
     def make_time_diagnostics_plot(self):
-        sim_numbers = [result.file_name for result in self.data.values()]
-        run_time = [result.running_time for result in self.data.values()]
-        elapsed_time = [result.elapsed_time for result in self.data.values()]
+        sim_numbers = [result.file_name for result in self.data.values() if result is not None]
+        running_time = [result.running_time for result in self.data.values() if result is not None]
+        elapsed_time = [result.elapsed_time for result in self.data.values() if result is not None]
 
-        cp.utils.xy_plot('diagnostics',
+        cp.utils.xy_plot(f'{self.name}__diagnostics',
                          sim_numbers,
-                         elapsed_time, run_time,
+                         elapsed_time, running_time,
                          line_labels = ('Elapsed Time', 'Run Time'),
                          y_scale = 'hours',
-                         x_label = 'Simulation Number', y_label = 'Time')
+                         x_label = 'Simulation Number', y_label = 'Time',
+                         target_dir = self.plots_dir)
 
         # def make_plot(self, name, x_key, *plot_lines, **kwargs):
         #     # begin by getting an OrderedDict of sim: sim_data, sorted by the value of the x_key
