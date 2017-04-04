@@ -235,7 +235,7 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
 
                 for plot_parameter_value in plot_parameter_set:
                     for line_group_number, line_parameter_group in enumerate(cp.utils.grouper(sorted(line_parameter_set), 8)):
-                        plot_name = f'{ionization_metric}__{plot_parameter}={plot_parameter_value}__grouped_by_{line_parameter}__group_{line_group_number}'
+                        plot_name = f'{ionization_metric}__{plot_parameter}={uround(plot_parameter_value, parameter_name_to_unit_name[plot_parameter], 3)}__grouped_by_{line_parameter}__group_{line_group_number}'
 
                         lines = []
                         line_labels = []
