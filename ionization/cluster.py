@@ -235,7 +235,7 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
 
                 for plot_parameter_value in plot_parameter_set:
                     for line_group_number, line_parameter_group in enumerate(cp.utils.grouper(sorted(line_parameter_set), 8)):
-                        plot_name = f'{ionization_metric}__{plot_parameter}={uround(plot_parameter_value, plot_parameter_name, 3)}{plot_parameter_unit}__grouped_by_{line_parameter}__group_{line_group_number}'
+                        plot_name = f'{ionization_metric}__{plot_parameter}={uround(plot_parameter_value, plot_parameter_unit, 3)}{plot_parameter_unit}__grouped_by_{line_parameter}__group_{line_group_number}'
 
                         lines = []
                         line_labels = []
@@ -251,7 +251,7 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
 
                             lines.append(np.array([getattr(result, ionization_metric) for result in results]))
 
-                            label = fr"{line_parameter_name}$\, = {uround(line_parameter_value, line_parameter_name, 3)} \, {unit_names_to_tex_strings[line_parameter_unit]}$"
+                            label = fr"{line_parameter_name}$\, = {uround(line_parameter_value, line_parameter_unit, 3)} \, {unit_names_to_tex_strings[line_parameter_unit]}$"
                             line_labels.append(label)
 
                         for log in (False, True):
