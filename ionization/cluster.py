@@ -181,7 +181,7 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
                                              line_labels = line_labels,
                                              title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
                                              x_label = scan_parameter_name, x_scale = scan_parameter_unit,
-                                             y_lower_limit = y_lower_limit, y_upper_limit = 1,
+                                             y_lower_limit = y_lower_limit, y_upper_limit = 1, y_log_axis = log,
                                              y_label = ionization_metric_name,
                                              target_dir = self.plots_dir
                                              )
@@ -266,7 +266,7 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
                                              line_labels = line_labels,
                                              title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
                                              x_label = scan_parameter_name, x_scale = scan_parameter_unit,
-                                             y_lower_limit = y_lower_limit, y_upper_limit = 1,
+                                             y_lower_limit = y_lower_limit, y_upper_limit = 1, y_log_axis = log,
                                              y_label = ionization_metric_name,
                                              target_dir = self.plots_dir
                                              )
