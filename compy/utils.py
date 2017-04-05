@@ -822,7 +822,7 @@ def try_loop(*functions_to_run,
             logger.info(f'Loop cycle failed, retrying in {wait_after_failure.total_seconds()} seconds')
         else:
             wait = wait_after_success
-            logger.info(f'Loop cycle succeeded, next cycle in {wait_after_failure.total_seconds()} seconds')
+            logger.info(f'Loop cycle succeeded, next cycle in {wait_after_success.total_seconds()} seconds')
 
         time.sleep(wait.total_seconds())
 

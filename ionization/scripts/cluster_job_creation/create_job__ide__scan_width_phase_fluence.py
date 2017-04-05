@@ -77,10 +77,10 @@ if __name__ == '__main__':
         parameters.append(clu.Parameter(name = 'time_step',
                                         value = asec * clu.ask_for_input('Initial Time Step (in as)?', default = .1, cast_to = float)))
 
-        parameters.append(clu.Parameter(name = 'eps_on',
+        parameters.append(clu.Parameter(name = 'error_on',
                                         value = clu.ask_for_input('Fractional Truncation Error Control on y or dydt?', default = 'dydt', cast_to = str)))
 
-        parameters.append(clu.Parameter(name = 'eps',
+        parameters.append(clu.Parameter(name = 'epsilon',
                                         value = clu.ask_for_input('Fractional Truncation Error Limit?', default = 1e-6, cast_to = float)))
 
         time_bound_in_pw = clu.Parameter(name = 'time_bound_in_pw',

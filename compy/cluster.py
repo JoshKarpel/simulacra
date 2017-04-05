@@ -414,7 +414,8 @@ class JobProcessor(utils.Beet):
         return set(getattr(result, parameter) for result in self.data.values())
 
     def make_summary_plots(self):
-        self.make_time_diagnostics_plot()
+        if len(self.unprocessed_sim_names) < self.sim_count:
+            self.make_time_diagnostics_plot()
 
     def make_time_diagnostics_plot(self):
         sim_numbers = [result.file_name for result in self.data.values() if result is not None]

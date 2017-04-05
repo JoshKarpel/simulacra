@@ -117,6 +117,19 @@ parameter_name_to_unit_name = {
 }
 
 
+class ConvergenceSimulationResult(ElectricFieldSimulationResult):
+    def __init__(self, sim, job_processor):
+        super().__init__(sim, job_processor)
+
+        self.r_points = copy(sim.spec.r_points)
+        self.delta_r = copy(sim.mesh.delta_r)
+        self.delta_t = copy(sim.spec.time_step)
+
+
+class ConvergenceJobProcessor(ElectricFieldJobProcessor):
+    simulation_result_type = ConvergenceSimulationResult
+
+
 class PulseSimulationResult(ElectricFieldSimulationResult):
     def __init__(self, sim, job_processor):
         super().__init__(sim, job_processor)
@@ -140,7 +153,7 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
             self.make_pulse_parameter_scan_plots()
 
     def make_pulse_parameter_scan_plots(self):
-        for ionization_metric in ('final_norm', 'final_initial_state_overlap'):
+        for ionization_metric in ('final_norm', 'final_initial_state_overlap', 'final_bound_state_overlap'):
             ionization_metric_name = ionization_metric.replace('_', ' ').title()
 
             for plot_parameter, line_parameter, scan_parameter in it.permutations(('pulse_width', 'fluence', 'phase')):
@@ -183,6 +196,7 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
                                              x_label = scan_parameter_name, x_scale = scan_parameter_unit,
                                              y_lower_limit = y_lower_limit, y_upper_limit = 1, y_log_axis = log,
                                              y_label = ionization_metric_name,
+                                             legend_on_right = True,
                                              target_dir = self.plots_dir
                                              )
 
@@ -268,5 +282,6 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
                                              x_label = scan_parameter_name, x_scale = scan_parameter_unit,
                                              y_lower_limit = y_lower_limit, y_upper_limit = 1, y_log_axis = log,
                                              y_label = ionization_metric_name,
+                                             legend_on_right = True,
                                              target_dir = self.plots_dir
                                              )

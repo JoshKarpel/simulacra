@@ -163,10 +163,10 @@ if __name__ == '__main__':
                                         value = clu.ask_for_input('Store Data Every?', default = 1, cast_to = int)))
 
         parameters.append(clu.Parameter(name = 'snapshot_indices',
-                                        value = clu.ask_for_eval('Snapshot Indices?', default = '()')))
+                                        value = clu.ask_for_eval('Snapshot Indices?', default = '[]')))
 
-        parameters.append(clu.Parameter(name = 'snapshot_times',
-                                        value = asec * np.array(clu.ask_for_eval('Snapshot Times?', default = '()'))))
+        snapshot_times = asec * np.array(clu.ask_for_eval('Snapshot Times (in asec)?', default = '[]'))
+        snapshot_times_in_pw = np.array(clu.ask_for_eval('Snapshot Times (in pulse widths)?', default = '[]'))
 
         print('Generating parameters...')
 
@@ -176,25 +176,28 @@ if __name__ == '__main__':
         print('Generating specifications...')
 
         for ii, spec_kwargs in enumerate(spec_kwargs_list):
+            electric_potential = spec_kwargs['electric_potential']
             name = '{}_pw={}asec_flu={}Jcm2_phase={}pi'.format(
                 pulse_type_q,
-                uround(spec_kwargs['electric_potential'].pulse_width, asec),
-                uround(spec_kwargs['electric_potential'].fluence, Jcm2),
-                uround(spec_kwargs['electric_potential'].phase, pi)
+                uround(electric_potential.pulse_width, asec),
+                uround(electric_potential.fluence, Jcm2),
+                uround(electric_potential.phase, pi)
             )
 
-            time_initial = spec_kwargs['initial_time_in_pw'] * spec_kwargs['electric_potential'].pulse_width
-            time_final = spec_kwargs['final_time_in_pw'] * spec_kwargs['electric_potential'].pulse_width
+            time_initial = spec_kwargs['initial_time_in_pw'] * electric_potential.pulse_width
+            time_final = spec_kwargs['final_time_in_pw'] * electric_potential.pulse_width
+            snapshot_times = np.concatenate((snapshot_times, electric_potential.pulse_width * snapshot_times_in_pw))
 
             spec = spec_type(name,
                              file_name = str(ii),
                              time_initial = time_initial, time_final = time_final,
+
                              **mesh_kwargs, **spec_kwargs)
 
             spec.pulse_type = pulse_type
-            spec.pulse_width = spec_kwargs['electric_potential'].pulse_width
-            spec.fluence = spec_kwargs['electric_potential'].fluence
-            spec.phase = spec_kwargs['electric_potential'].phase
+            spec.pulse_width = electric_potential.pulse_width
+            spec.fluence = electric_potential.fluence
+            spec.phase = electric_potential.phase
 
             specs.append(spec)
 

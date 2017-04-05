@@ -160,6 +160,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.snapshot_type = snapshot_type
         if snapshot_kwargs is None:
             snapshot_kwargs = dict()
+        self.snapshot_kwargs = snapshot_kwargs
 
     def info(self):
         checkpoint = ['Checkpointing: ']
@@ -204,6 +205,8 @@ class ElectricFieldSpecification(cp.core.Specification):
             '   Test States (first 10): {}'.format(', '.join(str(s) for s in sorted(self.test_states[:10]))),
             '   Dipole Gauges: {}'.format(', '.join(self.dipole_gauges)),
             '   Storing Data Every {} Time Steps'.format(self.store_data_every),
+            '   Snapshot Indices: {}'.format(self.snapshot_indices),
+            '   Snapshot Times: {}'.format([uround(st, asec, 3) for st in self.snapshot_times]),
         ]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials + analysis)
@@ -2366,7 +2369,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         logger.debug('{} {} stored data for time index {} (data time index {})'.format(self.__class__.__name__, self.name, self.time_index, self.data_time_index))
 
     def take_snapshot(self):
-        snapshot = self.spec.snapshot_type(self, self.time_index)
+        snapshot = self.spec.snapshot_type(self, self.time_index, **self.spec.snapshot_kwargs)
 
         snapshot.take_snapshot()
 
@@ -2599,7 +2602,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if not isinstance(self.spec.electric_potential, potentials.NoPotentialEnergy):
             ax_field.plot(self.data_times / x_scale_unit, self.electric_field_amplitude_vs_time / atomic_electric_field, color = COLOR_ELECTRIC_FIELD, linewidth = 2)
 
-        ax_overlaps.plot(self.data_times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \psi|\psi \right\rangle$', color = 'black', linewidth = 2)
+        ax_overlaps.plot(self.data_times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \Psi | \Psi \right\rangle$', color = 'black', linewidth = 2)
 
         if grouped_free_states is None:
             grouped_free_states, group_labels = self.group_free_states_by_discrete_attr('l')
@@ -2619,26 +2622,26 @@ class ElectricFieldSimulation(cp.core.Simulation):
                 else:
                     extra_bound_overlap += state_overlaps[state]
             overlaps += [overlap for n, overlap in sorted(overlaps_by_n.items())]
-            labels += [r'$\left| \left\langle \psi| \psi_{{ {}, \ell }} \right\rangle \right|^2$'.format(n) for n in sorted(overlaps_by_n)]
+            labels += [r'$\left| \left\langle \Psi | \psi_{{ {}, \ell }} \right\rangle \right|^2$'.format(n) for n in sorted(overlaps_by_n)]
             colors += [matplotlib.colors.to_rgba('C' + str(n - 1), alpha = 1) for n in sorted(overlaps_by_n)]
         else:
             for state in sorted(self.bound_states):
                 if state.n <= bound_state_max_n:
                     overlaps.append(state_overlaps[state])
-                    labels.append(r'$\left| \left\langle \psi| \psi_{{ {}, {} }} \right\rangle \right|^2$'.format(state.n, state.l))
+                    labels.append(r'$\left| \left\langle \Psi | \psi_{{ {}, {} }} \right\rangle \right|^2$'.format(state.n, state.l))
                     colors.append(matplotlib.colors.to_rgba('C' + str((state.n - 1) % 10), alpha = 1 - state.l / state.n))
                 else:
                     extra_bound_overlap += state_overlaps[state]
 
         overlaps.append(extra_bound_overlap)
-        labels.append(r'$\left| \left\langle \psi| \psi_{{n \geq {} }}  \right\rangle \right|^2$'.format(bound_state_max_n + 1))
+        labels.append(r'$\left| \left\langle \Psi | \psi_{{n \geq {} }}  \right\rangle \right|^2$'.format(bound_state_max_n + 1))
         colors.append('.4')
 
         free_state_color_cycle = it.cycle(['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f'])
         for group, states in sorted(grouped_free_states.items()):
             if len(states) != 0:
                 overlaps.append(np.sum(state_overlaps[s] for s in states))
-                labels.append(r'$\left| \left\langle \psi| {}  \right\rangle \right|^2$'.format(group_labels[group]))
+                labels.append(r'$\left| \left\langle \Psi | {}  \right\rangle \right|^2$'.format(group_labels[group]))
                 colors.append(free_state_color_cycle.__next__())
 
         overlaps = [overlap for overlap in overlaps]
@@ -2832,10 +2835,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if renormalize:
             overlaps = [self.norm_by_harmonic_vs_time[sph_harm] / self.norm_vs_time for sph_harm in self.spec.spherical_harmonics]
-            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2 / \left\langle \psi| \psi \right\rangle$'.format(sph_harm.tex_str) for sph_harm in self.spec.spherical_harmonics]
+            l_labels = [r'$\left| \left\langle \Psi| {} \right\rangle \right|^2 / \left\langle \psi| \psi \right\rangle$'.format(sph_harm.tex_str) for sph_harm in self.spec.spherical_harmonics]
         else:
             overlaps = [self.norm_by_harmonic_vs_time[sph_harm] for sph_harm in self.spec.spherical_harmonics]
-            l_labels = [r'$\left| \left\langle \psi| {} \right\rangle \right|^2$'.format(sph_harm.tex_str) for sph_harm in self.spec.spherical_harmonics]
+            l_labels = [r'$\left| \left\langle \Psi| {} \right\rangle \right|^2$'.format(sph_harm.tex_str) for sph_harm in self.spec.spherical_harmonics]
         num_colors = len(overlaps)
         ax_momentums.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
         ax_momentums.stackplot(self.times / asec, *overlaps, alpha = 1, labels = l_labels)
@@ -2853,9 +2856,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_field.grid(True)
 
         ax_field.set_xlabel('Time $t$ (as)', fontsize = 15)
-        y_label = r'$\left| \left\langle \psi | Y^l_0 \right\rangle \right|^2$'
+        y_label = r'$\left| \left\langle \Psi | Y^l_0 \right\rangle \right|^2$'
         if renormalize:
-            y_label += r'$/\left\langle\psi|\psi\right\rangle$'
+            y_label += r'$/\left\langle \Psi|\Psi \right\rangle$'
         ax_momentums.set_ylabel(y_label, fontsize = 15)
         ax_field.set_ylabel('${}(t)$ (a.u.)'.format(str_efield), fontsize = 11)
 
