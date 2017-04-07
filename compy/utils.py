@@ -443,7 +443,8 @@ class FigureManager:
             plt.show()
 
         if self.close_after:
-            plt.close()
+            self.fig.clear()
+            plt.close(self.fig)
 
 
 def xy_plot(name,
@@ -624,6 +625,12 @@ def xy_plot(name,
         logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
     return path
+
+
+def run_in_thread(function, args = (), kwargs = {}, name = None):
+    p = mp.Process(target = function, args = args, kwargs = kwargs, name = name)
+    p.start()
+    p.join()
 
 
 def multi_map(function, targets, processes = None, **kwargs):

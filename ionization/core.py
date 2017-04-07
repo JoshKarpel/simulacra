@@ -260,11 +260,12 @@ class QuantumMesh:
         :return:
         """
         if g_mesh is None:
-            g_mesh = self.g_mesh.copy()
+            g_mesh = self.g_mesh
+
+        g_mesh = g_mesh.copy()  # always act on a copy of g_mesh, regardless of source
 
         for state in states:
-            ip = self.inner_product(state, g_mesh)
-            g_mesh -= ip * self.get_g_for_state(state)
+            g_mesh -= self.inner_product(state, g_mesh) * self.get_g_for_state(state)
 
         return g_mesh
 
@@ -1417,7 +1418,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         """
         # don't memoize this, instead rely on the memoization in get_radial_function_for_state, more compact in memory (at the cost of some runtime in having to reassemble g occasionally)
 
-        if all(hasattr(s, 'spherical_harmonic') for s in state):
+        if isinstance(state, states.QuantumState) and all(hasattr(s, 'spherical_harmonic') for s in state):
             g = np.zeros(self.mesh_shape, dtype = np.complex128)
 
             for s in state:
@@ -1426,6 +1427,27 @@ class SphericalHarmonicMesh(QuantumMesh):
             return g
         else:
             raise NotImplementedError('States with non-definite angular momentum are not currently supported by SphericalHarmonicMesh')
+
+    # def get_g_with_states_removed(self, states, g_mesh = None):
+    #     """
+    #     Get a g mesh with the contributions from the states removed.
+    #
+    #     Optimized for SphericalHarmonicMeshes.
+    #
+    #     :param states: a list of states to remove from g_mesh
+    #     :param g_mesh: a g_mesh to remove the state contributions from. Defaults to self.g_mesh
+    #     :return:
+    #     """
+    #
+    #     if all(hasattr(s, 'spherical_harmonic') for s in states) and g_mesh is None:
+    #         g_mesh = self.g_mesh.copy()
+    #
+    #         for s in states:
+    #             g_mesh[s.l, :] -= self.inner_product_multiplier * np.sum(np.conj(self.get_radial_g_for_state(s)) * g_mesh[s.l, :]) * self.get_radial_g_for_state(s)
+    #
+    #         return g_mesh
+    #     else:
+    #         return super().get_g_with_states_removed(states, g_mesh = g_mesh)
 
     @cp.utils.memoize
     def get_radial_g_for_state(self, state):
@@ -1485,9 +1507,12 @@ class SphericalHarmonicMesh(QuantumMesh):
         def bessel(wavenumber):
             return special.spherical_jn(l_mesh, np.real(wavenumber * self.r_mesh))
 
-        for ii, theta in enumerate(thetas):
-            for jj, wavenumber in enumerate(wavenumbers):
-                inner_product_mesh[ii, jj] = np.sum(multiplier * sph_harm(theta) * bessel(wavenumber))
+        # for ii, theta in enumerate(thetas):
+        #     for jj, wavenumber in enumerate(wavenumbers):
+        #         inner_product_mesh[ii, jj] = np.sum(multiplier * sph_harm(theta) * bessel(wavenumber))
+
+        for (ii, theta), (jj, wavenumber) in it.product(enumerate(thetas), enumerate(wavenumbers)):
+            inner_product_mesh[ii, jj] = np.sum(multiplier * sph_harm(theta) * bessel(wavenumber))
 
         return theta_mesh, wavenumber_mesh, inner_product_mesh
 
@@ -2707,7 +2732,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if show_title:
             title = ax_overlaps.set_title(self.name)
-            title.set_y(1.12)
+            title.set_y(1.15)
 
         postfix = ''
         if log:

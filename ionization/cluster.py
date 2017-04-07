@@ -74,10 +74,9 @@ class ElectricFieldSimulationResult(cp.cluster.SimulationResult):
         state_overlaps = sim.state_overlaps_vs_time
 
         self.final_norm = copy(sim.norm_vs_time[-1])
-        # self.final_state_overlaps = {state: overlap[-1] for state, overlap in state_overlaps.items()}
         self.final_initial_state_overlap = copy(state_overlaps[sim.spec.initial_state][-1])
-        self.final_bound_state_overlap = copy(sum(state_overlaps[s] for s in sim.bound_states))
-        self.final_free_state_overlap = copy(sum(state_overlaps[s] for s in sim.free_states))
+        self.final_bound_state_overlap = copy(sum(state_overlaps[s][-1] for s in sim.bound_states))
+        self.final_free_state_overlap = copy(sum(state_overlaps[s][-1] for s in sim.free_states))
 
         if len(sim.data_times) > 2:
             self.make_wavefunction_plots(sim)
@@ -108,6 +107,9 @@ class ElectricFieldSimulationResult(cp.cluster.SimulationResult):
 
 class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
     simulation_result_type = ElectricFieldSimulationResult
+
+    def __init__(self, job_name, job_dir_path):
+        super().__init__(job_name, job_dir_path, core.ElectricFieldSimulation)
 
 
 parameter_name_to_unit_name = {
@@ -143,9 +145,6 @@ class PulseSimulationResult(ElectricFieldSimulationResult):
 class PulseJobProcessor(ElectricFieldJobProcessor):
     simulation_result_type = PulseSimulationResult
 
-    def __init__(self, job_name, job_dir_path):
-        super().__init__(job_name, job_dir_path, core.ElectricFieldSimulation)
-
     def make_summary_plots(self):
         super().make_summary_plots()
 
@@ -153,6 +152,8 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
             self.make_pulse_parameter_scan_plots()
 
     def make_pulse_parameter_scan_plots(self):
+        logger.info(f'Generating Pulse Parameter Scans for job {self.name}')
+
         for ionization_metric in ('final_norm', 'final_initial_state_overlap', 'final_bound_state_overlap'):
             ionization_metric_name = ionization_metric.replace('_', ' ').title()
 
@@ -175,17 +176,19 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
                             }
                             results = sorted(self.select_by_kwargs(**selector), key = lambda result: getattr(result, scan_parameter))
 
-                            x = np.array([getattr(result, scan_parameter) for result in results])
-
                             lines.append(np.array([getattr(result, ionization_metric) for result in results]))
 
                             label = fr"{line_parameter_name}$\, = {uround(line_parameter_value, line_parameter_unit, 3)} \, {unit_names_to_tex_strings[line_parameter_unit]}$"
                             line_labels.append(label)
 
+                        x = np.array([getattr(result, scan_parameter) for result in results])
+
                         for log in (False, True):
                             if not log:
+                                y_upper_limit = 1
                                 y_lower_limit = 0
                             else:
+                                y_upper_limit = None
                                 y_lower_limit = None
 
                             cp.utils.xy_plot(plot_name + f'__log={log}',
@@ -194,7 +197,7 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
                                              line_labels = line_labels,
                                              title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
                                              x_label = scan_parameter_name, x_scale = scan_parameter_unit,
-                                             y_lower_limit = y_lower_limit, y_upper_limit = 1, y_log_axis = log,
+                                             y_lower_limit = y_lower_limit, y_upper_limit = y_upper_limit, y_log_axis = log,
                                              y_label = ionization_metric_name,
                                              legend_on_right = True,
                                              target_dir = self.plots_dir
@@ -239,6 +242,8 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
             self.make_pulse_parameter_scan_plots()
 
     def make_pulse_parameter_scan_plots(self):
+        logger.info(f'Generating Pulse Parameter Scans for job {self.name}')
+
         for ionization_metric in ['final_bound_state_overlap']:
             ionization_metric_name = ionization_metric.replace('_', ' ').title()
 
@@ -254,7 +259,7 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
                         lines = []
                         line_labels = []
 
-                        for line_parameter_value in sorted(l for l in line_parameter_group if l is not None):
+                        for line_parameter_value in (l for l in line_parameter_group if l is not None):
                             selector = {
                                 plot_parameter: plot_parameter_value,
                                 line_parameter: line_parameter_value,
@@ -270,8 +275,10 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
 
                         for log in (False, True):
                             if not log:
+                                y_upper_limit = 1
                                 y_lower_limit = 0
                             else:
+                                y_upper_limit = None
                                 y_lower_limit = None
 
                             cp.utils.xy_plot(plot_name + f'__log={log}',
@@ -280,7 +287,7 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
                                              line_labels = line_labels,
                                              title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
                                              x_label = scan_parameter_name, x_scale = scan_parameter_unit,
-                                             y_lower_limit = y_lower_limit, y_upper_limit = 1, y_log_axis = log,
+                                             y_lower_limit = y_lower_limit, y_upper_limit = y_upper_limit, y_log_axis = log,
                                              y_label = ionization_metric_name,
                                              legend_on_right = True,
                                              target_dir = self.plots_dir

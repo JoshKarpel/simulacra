@@ -428,7 +428,7 @@ def ide_solution_sinc_pulse_cep_symmetry(phase = 0):
                                                                           ))
     sims = cp.utils.multi_map(run, specs, processes = 2)
 
-    for sim, cep, color, style in zip(sims, (r'$\mathrm{CEP} = \varphi$', r'$\mathrm{CEP} = -\varphi$'), ('C0', 'C1'), ('-', '--')):
+    for sim, cep, color, style in zip(sims, (r'$\mathrm{CEP} = \varphi$', r'$\mathrm{CEP} = -\varphi$'), ('C0', 'C1'), ('-', '-')):
         ax_lower.plot(sim.times, sim.spec.f(sim.times), color = color, linewidth = 1.5, label = cep, linestyle = style)
         ax_upper.plot(sim.times, np.abs(sim.y) ** 2, color = color, linewidth = 1.5, label = cep, linestyle = style)
 

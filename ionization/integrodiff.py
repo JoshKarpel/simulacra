@@ -270,13 +270,9 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
 
         ax_a.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
-        ax_f.set_xlabel(r'Time $t$ (${}$)'.format(x_scale_name), fontsize = 1)
+        ax_f.set_xlabel(r'Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
         ax_a.set_ylabel(r'$\left| a_{\alpha}(t) \right|^2$', fontsize = 13)
         ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = core.RED)
-
-        ax_a.tick_params(labelright = True)
-        ax_f.tick_params(labelright = True)
-        ax_a.xaxis.tick_top()
 
         plt.rcParams['xtick.major.pad'] = 5
         plt.rcParams['ytick.major.pad'] = 5
@@ -305,7 +301,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         ax_f.tick_params(labelleft = True,
                          labelright = True,
                          labeltop = False,
-                         # labelbottom = True,
+                         labelbottom = True,
                          bottom = True,
                          top = True,
                          left = True,
@@ -315,7 +311,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
 
         if show_title:
             title = ax_a.set_title(self.name)
-            title.set_y(1.12)
+            title.set_y(1.15)
 
         postfix = ''
         if log:

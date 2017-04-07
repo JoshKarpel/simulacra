@@ -245,7 +245,9 @@ class ClusterInterface:
         walk(remote_path)
         print()
 
-    def mirror_remote_home_dir(self, blacklist_dir_names = ('python', 'build_python'), whitelist_file_ext = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl')):
+    def mirror_remote_home_dir(self,
+                               blacklist_dir_names = ('python', 'build_python'),
+                               whitelist_file_ext = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl')):
         """
         Mirror the remote home directory.
         
@@ -255,7 +257,11 @@ class ClusterInterface:
         start_time = dt.datetime.now()
         logger.info('Mirroring remote home directory')
 
-        self.walk_remote_path(self.remote_home_dir, func_on_files = self.mirror_file, blacklist_dir_names = blacklist_dir_names, whitelist_file_ext = whitelist_file_ext)
+        self.walk_remote_path(self.remote_home_dir,
+                              func_on_files = self.mirror_file,
+                              func_on_dirs = lambda d, _: cp.utils.ensure_dir_exists(d),
+                              blacklist_dir_names = blacklist_dir_names,
+                              whitelist_file_ext = whitelist_file_ext)
 
         end_time = dt.datetime.now()
         logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))
@@ -302,6 +308,9 @@ class JobProcessor(utils.Beet):
         self.output_dir = os.path.join(self.job_dir_path, 'outputs')  # finished Simulations go here
         self.plots_dir = os.path.join(self.job_dir_path, 'plots')  # plots from the JobProcessor go here
         self.movies_dir = os.path.join(self.job_dir_path, 'movies')
+
+        for dir in (self.input_dir, self.output_dir, self.plots_dir, self.movies_dir):
+            cp.utils.ensure_dir_exists(dir)
 
         self.sim_names = self.get_sim_names_from_specs()
         self.sim_count = len(self.sim_names)
@@ -436,6 +445,9 @@ class JobProcessor(utils.Beet):
 
     def make_time_diagnostics_plot(self):
         """Generate a diagnostics plot based on Simulation runtimes."""
+
+        logger.info(f'Generating diagnostics plot for job {self.name}')
+
         sim_numbers = [result.file_name for result in self.data.values() if result is not None]
         running_time = [result.running_time for result in self.data.values() if result is not None]
 

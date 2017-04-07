@@ -7,12 +7,18 @@ import argparse
 import functools as ft
 import psutil
 from pprint import pprint
+import multiprocessing as mp
 
 import compy as cp
 import ionization.cluster as clu
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+log_file = "{__file__}_{dt.datetime.now().strftime('%Y-%m-%d_%H_%M_%S')}"
+cp_logger = cp.utils.Logger('__main__', 'compy', 'ionization',
+                            stdout_logs = True, stdout_level = logging.INFO,
+                            file_logs = True, file_level = logging.WARNING, file_name = log_file, file_dir = 'logs')
 
 
 def synchronize_with_cluster(cluster_interface):
@@ -22,29 +28,30 @@ def synchronize_with_cluster(cluster_interface):
 
 
 def process_job(job_name, jobs_dir = None):
-    if jobs_dir is None:
-        jobs_dir = os.getcwd()
-    job_dir = os.path.join(jobs_dir, job_name)
+    with cp_logger as l:
+        if jobs_dir is None:
+            jobs_dir = os.getcwd()
+        job_dir = os.path.join(jobs_dir, job_name)
 
-    job_info = clu.load_job_info_from_file(job_dir)
+        job_info = clu.load_job_info_from_file(job_dir)
 
-    try:
-        jp = clu.JobProcessor.load(os.path.join(job_dir, job_name + '.job'))
-        logger.info('Loaded existing job processor for job {}'.format(job_name))
-    except FileNotFoundError:
-        jp = job_info['job_processor_type'](job_name, job_dir)
-        logger.info('Created new job processor for job {}'.format(job_name))
+        try:
+            jp = clu.JobProcessor.load(os.path.join(job_dir, job_name + '.job'))
+            l.info('Loaded existing job processor for job {}'.format(job_name))
+        except FileNotFoundError:
+            jp = job_info['job_processor_type'](job_name, job_dir)
+            l.info('Created new job processor for job {}'.format(job_name))
 
-    jp.process_job(force_reprocess = False)
+        jp.process_job(force_reprocess = False)
 
-    jp.save(target_dir = os.path.join(os.getcwd(), 'job_processors'))
+        jp.save(target_dir = os.path.join(os.getcwd(), 'job_processors'))
 
 
 def process_jobs(jobs_dir):
     for job_name in (f for f in os.listdir(jobs_dir) if os.path.isdir(os.path.join(jobs_dir, f))):
         try:
             logger.info('Found job {}'.format(job_name))
-            process_job(job_name, jobs_dir = jobs_dir)
+            cp.utils.run_in_thread(process_job, args = (job_name, jobs_dir))
         except Exception as e:
             logger.exception('Encountered exception while processing job {}'.format(job_name))
             raise e
@@ -63,9 +70,7 @@ def resume_processes(processes):
 
 
 if __name__ == '__main__':
-    with cp.utils.Logger('__main__', 'compy', 'ionization',
-                         stdout_logs = True, stdout_level = logging.INFO,
-                         file_logs = True, file_level = logging.WARNING, file_name = '{}_{}'.format(__file__, dt.datetime.now().strftime('%Y-%m-%d_%H_%M_%S')), file_dir = 'logs'):
+    with cp_logger as l:
         dropbox_processes = cp.utils.get_processes_by_name('Dropbox.exe')
 
         try:
