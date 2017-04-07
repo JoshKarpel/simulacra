@@ -19,20 +19,36 @@ def sinc(x):
 
 
 def gaussian(x, center, sigma, prefactor):
+    """
+    Return an unnormalized Gaussian centered at :code:`center` with standard deviation :code:`sigma` and prefactor :code:`prefactor`.
+    """
     return prefactor * np.exp(-0.5 * (((x - center) / sigma) ** 2))
     # return (prefactor / (sigma * np.sqrt(twopi))) * np.exp(-0.5 * (((x - center) / sigma) ** 2))
 
 
 def gaussian_fwhm_from_sigma(sigma):
+    """Return the full-width-at-half-max of a Gaussian with standard deviation :code:`sigma`"""
     return np.sqrt(8 * np.log(2)) * sigma
 
 
-def stirling_approximation_exp(x):
-    return np.sqrt(twopi * x) * ((x / e) ** x)
+def stirling_approximation_exp(n):
+    """
+    Return the Stirling approximation of :math:`n!`, :math:`n! \approx \sqrt{2\pi} \left( \frac{n}{e} \right)^n`.
+    :param n: the number to approximate the factorial of
+    :type n: int
+    :return: the approximation of :math:`n!`
+    """
+    return np.sqrt(twopi * n) * ((n / e) ** n)
 
 
-def stirling_approximation_ln(x):
-    return x * np.log(x) - x
+def stirling_approximation_ln(n):
+    """
+    Return the Stirling approximation of :math:`\log n!`, :math:`\log n! \approx n \, \log n - n`.
+    :param n: the number to approximate the logarithm of the factorial of
+    :type n: int
+    :return: the approximation of :math:`\log n!`
+    """
+    return n * np.log(n) - n
 
 
 class SphericalHarmonic:
@@ -41,6 +57,12 @@ class SphericalHarmonic:
     __slots__ = ('_l', '_m')
 
     def __init__(self, l = 0, m = 0):
+        """
+        Initialize a SphericalHarmonic from its angular momentum numbers.
+        
+        :param l: orbital angular momentum "quantum number"
+        :param m: azimuthal angular momentum "quantum number"
+        """
         self._l = l
         self._m = m
 
@@ -53,15 +75,15 @@ class SphericalHarmonic:
         return self._m
 
     def __str__(self):
-        return 'Y_({},{})'.format(self.l, self.m)
+        return f'Y_({self.l},{self.m})'
 
     def __repr__(self):
-        return '{}(l={}, m={})'.format(self.__class__.__name__, self.l, self.m)
+        return f'{self.__class__.__name__}(l={self.l}, m={self.m})'
 
     @property
     def tex_str(self):
-        """Gets a LaTeX-formatted string for the BoundState."""
-        return r'Y_{{{}}}^{{{}}}'.format(self.m, self.l)
+        """Returns a LaTeX-formatted string for the SphericalHarmonic."""
+        return fr'Y_{{self.m}}^{{self.l}}'
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.l == other.l and self.m == other.m
@@ -82,7 +104,11 @@ class SphericalHarmonic:
 
 @utils.memoize
 def fibonacci(n):
-    """Return the n-th Fibonacci number, with Fibonacci(0) = 0, Fibonacci(1) = 1."""
+    """
+    Return the n-th Fibonacci number, with Fibonacci(0) = 0, Fibonacci(1) = 1.
+    
+    The Fibonacci numbers are calculated via memoized recursion.
+    """
     if 0 <= n == int(n):
         if n == 0 or n == 1:
             return n
@@ -93,7 +119,7 @@ def fibonacci(n):
 
 
 def is_prime(n):
-    """Check whether n is prime."""
+    """Check whether n is prime by trial division."""
     if n != int(n) or n < 2:
         return False
     elif n == 2:
@@ -107,7 +133,7 @@ def is_prime(n):
 
 
 def prime_generator():
-    """Yield primes forever."""
+    """Yield primes forever by trial division."""
     yield 2
 
     primes = [2]
@@ -126,7 +152,7 @@ def prime_generator():
 
 
 def prime_sieve(limit):
-    """A generator that yields all of the primes below the limit."""
+    """A generator that yields all of the primes below the limit, via trial division."""
     yield 2
 
     primes = {n: True for n in range(3, limit + 1, 2)}
@@ -168,16 +194,20 @@ def prime_factorization(n):
 # TODO: recursive prime factorization
 
 
-def centered_first_derivative(y, dx):
+def centered_first_derivative(y, dx = 1):
     """
+    Return the centered first derivative of the array y, using spacing dx.
 
     :param y: vector of data to take a derivative of
     :param dx: spacing between y points
-    :return:
+    :type dx: float
+    :return: the centered first derivative of y
     """
     dx = np.abs(dx)
+
     offdiagonal = np.ones(len(y) - 1) / (2 * dx)
     operator = sparse.diags([-offdiagonal, np.zeros(len(y)), offdiagonal], offsets = (-1, 0, 1))
+
     operator.data[0][-2] = -1 / dx
     operator.data[1][0] = -1 / dx
     operator.data[1][-1] = 1 / dx
@@ -186,11 +216,13 @@ def centered_first_derivative(y, dx):
     return operator.dot(y)
 
 
-def centered_second_derivative(y, dx):
+def centered_second_derivative(y, dx = 1):
     """
+    Return the centered second derivative of the array y, using spacing dx.
 
     :param y: vector of data to take a derivative of
     :param dx: spacing between y points
-    :return:
+    :type dx: float
+    :return: the centered second derivative of y
     """
     return centered_first_derivative(centered_first_derivative(y, dx), dx)

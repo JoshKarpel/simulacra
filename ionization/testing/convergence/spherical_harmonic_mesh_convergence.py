@@ -144,36 +144,40 @@ if __name__ == '__main__':
         # r_points_per_br_list = [1, 2, 4, 5, 8, 10, 16, 20, 32]
         # time_step_list = [10, 7.5, 5, 2.5, 2, 1, .75, .5, .25, .2, .1, .075, .05, .025, .02, .01]
 
-        r_points_per_br_list = range(1, 32 + 1)
-        t = np.array([7.5, 5, 2.5, 2, 1])
-        time_step_list = np.concatenate([t, t / 10, t / 100, t / 1000])
+        dr = np.logspace(0, -2, num = 50)
+        r_points_list = set((r_bound / dr).astype(int))
+
+        # r_points_per_br_list = range(1, 32 + 1)
+        # t = np.array([9, 8, 7.5, 5, 4, 2.5, 2, 1.5, 1])
+        # time_step_list = np.concatenate([t, t / 10, t / 100, t / 1000])
+        time_step_list = np.logspace(1, -2, num = 50)
 
         prefix = 'R={}br__L={}__amp={}aef'.format(r_bound, l_bound, amp)
 
         specs = []
 
-        specs.append(ion.SphericalHarmonicSpecification(prefix + '__reference',
-                                                        r_bound = r_bound * bohr_radius,
-                                                        r_points = r_bound * 4,
-                                                        l_bound = l_bound,
-                                                        time_step = 1 * asec,
-                                                        time_initial = -t_bound * asec,
-                                                        time_final = t_bound * asec,
-                                                        electric_potential = electric_potential,
-                                                        use_numeric_eigenstates_as_basis = True,
-                                                        numeric_eigenstate_energy_max = 10 * eV,
-                                                        numeric_eigenstate_l_max = 0,
-                                                        store_data_every = 1,
-                                                        r_points_per_br = 4,
-                                                        dt = 1,
-                                                        ))
+        # specs.append(ion.SphericalHarmonicSpecification(prefix + '__reference',
+        #                                                 r_bound = r_bound * bohr_radius,
+        #                                                 r_points = r_points,
+        #                                                 l_bound = l_bound,
+        #                                                 time_step = 1 * asec,
+        #                                                 time_initial = -t_bound * asec,
+        #                                                 time_final = t_bound * asec,
+        #                                                 electric_potential = electric_potential,
+        #                                                 use_numeric_eigenstates_as_basis = True,
+        #                                                 numeric_eigenstate_energy_max = 10 * eV,
+        #                                                 numeric_eigenstate_l_max = 0,
+        #                                                 store_data_every = 1,
+        #                                                 r_points_per_br = 4,
+        #                                                 dt = 1,
+        #                                                 ))
 
-        for r_points_per_br, time_step in it.product(r_points_per_br_list, time_step_list):
-            spec_name = [prefix] + ['{}x{}'.format(r_points_per_br, l_bound), 'dt={}as'.format(time_step)]
+        for r_points, time_step in it.product(r_points_list, time_step_list):
+            spec_name = [prefix] + ['{}x{}'.format(r_points, l_bound), 'dt={}as'.format(time_step)]
 
             specs.append(ion.SphericalHarmonicSpecification('__'.join(spec_name),
                                                             r_bound = r_bound * bohr_radius,
-                                                            r_points = r_bound * r_points_per_br,
+                                                            r_points = int(r_points),
                                                             l_bound = l_bound,
                                                             time_step = time_step * asec,
                                                             time_initial = -t_bound * asec,
@@ -183,7 +187,7 @@ if __name__ == '__main__':
                                                             numeric_eigenstate_energy_max = 10 * eV,
                                                             numeric_eigenstate_l_max = 0,
                                                             store_data_every = 0,
-                                                            r_points_per_br = r_points_per_br,
+                                                            dr = r_bound / r_points,
                                                             dt = time_step,
                                                             ))
 
@@ -192,21 +196,21 @@ if __name__ == '__main__':
         # with open(os.path.join(OUT_DIR, 'ref_info.txt'), mode = 'w') as f:
         #     print(sims[0].info(), file = f)
 
-        r_points_per_br_set = set(sim.spec.r_points_per_br for sim in sims)
-        time_steps_set = set(sim.spec.dt for sim in sims)
-
-        sims_dict = {(sim.spec.r_points_per_br, sim.spec.dt): sim for sim in sims}
-
-        ### CONVERGENCE PLOTS ###
-
-        OUT_DIR_PLT = os.path.join(OUT_DIR, prefix)
-
-        ref = sims_dict[max(r_points_per_br_set), min(time_steps_set)]
-
-        for r_points_per_br in sorted(r_points_per_br_set):
-            plot_final_norm_vs_time_step('r_points_per_br={}__smallest_dt={}as'.format(r_points_per_br, min(time_steps_set)), [sims_dict[r_points_per_br, time_step] for time_step in sorted(time_steps_set)], ref, target_dir = OUT_DIR_PLT)
-            plot_final_initial_state_vs_time_step('r_points_per_br={}__smallest_dt={}as'.format(r_points_per_br, min(time_steps_set)), [sims_dict[r_points_per_br, time_step] for time_step in sorted(time_steps_set)], ref, target_dir = OUT_DIR_PLT)
-
-        for time_step in sorted(time_steps_set):
-            plot_final_norm_vs_r_points('dt={}as__max_ppbr={}'.format(time_step, max(r_points_per_br_set)), [sims_dict[r_points_per_br, time_step] for r_points_per_br in sorted(r_points_per_br_set)], ref, target_dir = OUT_DIR_PLT)
-            plot_final_initial_state_vs_r_points('dt={}as__max_ppbr={}'.format(time_step, max(r_points_per_br_set)), [sims_dict[r_points_per_br, time_step] for r_points_per_br in sorted(r_points_per_br_set)], ref, target_dir = OUT_DIR_PLT)
+        # r_points_per_br_set = set(sim.spec.r_points_per_br for sim in sims)
+        # time_steps_set = set(sim.spec.dt for sim in sims)
+        #
+        # sims_dict = {(sim.spec.r_points_per_br, sim.spec.dt): sim for sim in sims}
+        #
+        # ### CONVERGENCE PLOTS ###
+        #
+        # OUT_DIR_PLT = os.path.join(OUT_DIR, prefix)
+        #
+        # ref = sims_dict[max(r_points_per_br_set), min(time_steps_set)]
+        #
+        # for r_points_per_br in sorted(r_points_per_br_set):
+        #     plot_final_norm_vs_time_step('r_points_per_br={}__smallest_dt={}as'.format(r_points_per_br, min(time_steps_set)), [sims_dict[r_points_per_br, time_step] for time_step in sorted(time_steps_set)], ref, target_dir = OUT_DIR_PLT)
+        #     plot_final_initial_state_vs_time_step('r_points_per_br={}__smallest_dt={}as'.format(r_points_per_br, min(time_steps_set)), [sims_dict[r_points_per_br, time_step] for time_step in sorted(time_steps_set)], ref, target_dir = OUT_DIR_PLT)
+        #
+        # for time_step in sorted(time_steps_set):
+        #     plot_final_norm_vs_r_points('dt={}as__max_ppbr={}'.format(time_step, max(r_points_per_br_set)), [sims_dict[r_points_per_br, time_step] for r_points_per_br in sorted(r_points_per_br_set)], ref, target_dir = OUT_DIR_PLT)
+        #     plot_final_initial_state_vs_r_points('dt={}as__max_ppbr={}'.format(time_step, max(r_points_per_br_set)), [sims_dict[r_points_per_br, time_step] for r_points_per_br in sorted(r_points_per_br_set)], ref, target_dir = OUT_DIR_PLT)

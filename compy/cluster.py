@@ -33,9 +33,9 @@ CmdOutput = collections.namedtuple('CmdOutput', ['stdin', 'stdout', 'stderr'])
 
 class ClusterInterface:
     """
-    A class for communicating with a user's home directory on a remote machine (typically a cluster). Should be used as a context manager.
+    A class for communicating with a user's home directory on a remote machine (as written, the UW CHTC HTCondor cluster). Should be used as a context manager.
 
-    The remote home directory should look like:
+    The remote home directory should be organized like:
 
     home/
     |-- backend/
@@ -105,6 +105,7 @@ class ClusterInterface:
         return home_path
 
     def get_job_status(self):
+        """Get the status of jobs on the cluster."""
         cmd_output = self.cmd('condor_q')
 
         status = cmd_output.stdout.readlines()
@@ -113,10 +114,22 @@ class ClusterInterface:
 
         return status_str
 
-    def remote_path_to_local(self, remote_path):
+    def remote_path_to_local_path(self, remote_path):
+        """Convert a remote path to a local path."""
         return os.path.join(self.local_mirror_root, *remote_path.split(self.remote_sep))
 
     def get_file(self, remote_path, local_path, remote_stat = None, preserve_timestamps = True):
+        """
+        Download a file from the remote machine to the local machine.
+        
+        :param remote_path: the remote path to download
+        :type remote_path: str
+        :param local_path: the local path to place the downloaded file
+        :type local_path: str
+        :param remote_stat: the stat of the remote path (optimization, this method will fetch it if not passed in)
+        :param preserve_timestamps: if True, copy the modification timestamps from the remote file to the local file
+        :type preserve_timestamps: bool
+        """
         utils.ensure_dir_exists(local_path)
 
         self.ftp.get(remote_path, local_path)
@@ -128,17 +141,21 @@ class ClusterInterface:
 
         logger.debug('{}   <--   {}'.format(local_path, remote_path))
 
-    # def put_file(self, local_path, remote_path, preserve_timestamps = True):
-    #     #  TODO: ensure remote dir
-    #     self.ftp.put(local_path, remote_path)
-    #
-    #     if preserve_timestamps:
-    #         pass
-    #         #  TODO: this
-    #
-    #     logger.debug('{}   -->   {}'.format(local_path, remote_path))
+    def put_file(self, local_path, remote_path, preserve_timestamps = True):
+        """
+        Push a file from the local machine to the remote machine.
+        
+        :param local_path: the local path to push from
+        :type local_path: str
+        :param remote_path: the remove path to push to
+        :type remote_path: str
+        :param preserve_timestamps: if True, copy the modification timestamps from the remote file to the local file
+        :type preserve_timestamps: bool
+        """
+        raise NotImplementedError
 
     def is_file_synced(self, remote_stat, local_path):
+        """Determine if a local file is the same as a remote file by checking the file size and modification times."""
         if os.path.exists(local_path):
             local_stat = os.stat(local_path)
             if local_stat.st_size == remote_stat.st_size and local_stat.st_mtime == remote_stat.st_mtime:
@@ -147,7 +164,17 @@ class ClusterInterface:
         return False
 
     def mirror_file(self, remote_path, remote_stat, force_download = False, integrity_check = True):
-        local_path = self.remote_path_to_local(remote_path)
+        """
+        Mirror a remote file, only downloading it if it does not match a local copy at a derived local path name.
+        
+        File integrity is checked by comparing the MD5 hash of the remote and local files.
+        
+        :param remote_path: the remote path to mirror
+        :param remote_stat: the stat of the remote file
+        :param force_download: if True, download the file even if it is synced
+        :param integrity_check: if True, check that the MD5 hash of the remote and local files are the same, and redownload if they are not
+        """
+        local_path = self.remote_path_to_local_path(remote_path)
         if force_download or not self.is_file_synced(remote_stat, local_path):
             self.get_file(remote_path, local_path, remote_stat = remote_stat, preserve_timestamps = True)
             if integrity_check:
@@ -166,6 +193,13 @@ class ClusterInterface:
         Walk a remote directory starting at the given path.
 
         The functions func_on_dirs and func_on_files are passed the full path to the remote file and the ftp.stat of that file.
+        
+        :param remote_path: the remote path to start walking on
+        :param func_on_dirs: the function to call on directories (takes the directory file path as an argument)
+        :param func_on_files: the function to call on files (takes the file path as an argument)
+        :param exclude_hidden: do not walk over hidden files or directories
+        :param blacklist_dir_names: do not walk over directories with these names
+        :param whitelist_file_ext: only walk over files with these extensions
         """
         if func_on_dirs is None:
             func_on_dirs = lambda *args: None
@@ -190,6 +224,7 @@ class ClusterInterface:
 
                 logger.debug('Checking remote path {}'.format(full_remote_path))
 
+                # print a string that keeps track of the walked paths
                 nonlocal path_count
                 path_count += 1
                 status_str = '\rPaths Found: {}'.format(path_count).ljust(25)
@@ -210,7 +245,13 @@ class ClusterInterface:
         walk(remote_path)
         print()
 
-    def mirror_remote_home_dir(self, blacklist_dir_names = ('python', 'build_python', 'ionization'), whitelist_file_ext = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl')):
+    def mirror_remote_home_dir(self, blacklist_dir_names = ('python', 'build_python'), whitelist_file_ext = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl')):
+        """
+        Mirror the remote home directory.
+        
+        :param blacklist_dir_names: do not mirror directories with these names
+        :param whitelist_file_ext: only mirror files with these extensions
+        """
         start_time = dt.datetime.now()
         logger.info('Mirroring remote home directory')
 
@@ -220,52 +261,18 @@ class ClusterInterface:
         logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))
 
 
-# class JobProcessorManager:
-#     def __init__(self, jobs_dir):
-#         self.jobs_dir = os.path.abspath(jobs_dir)
-#
-#     @property
-#     def job_dir_names(self):
-#         return (name for name in sorted(os.listdir(self.jobs_dir)) if os.path.isdir(os.path.join(self.jobs_dir, name)))
-#
-#     @property
-#     def job_dir_paths(self):
-#         return (os.path.abspath(os.path.join(self.jobs_dir, name)) for name in self.job_dir_names)
-#
-#     def process_job(self, job_name, job_dir_path, individual_processing = False, force_reprocess = False):
-#         # try to find an existing job processor for the job
-#         try:
-#             try:
-#                 if force_reprocess:
-#                     raise FileNotFoundError  # if force reprocessing, pretend like we haven't found the job
-#                 jp = JobProcessor.load(os.path.join(job_dir_path, '{}.job'.format(job_name)))
-#             except (AttributeError, TypeError):
-#                 raise FileNotFoundError  # if something goes wrong, pretend like we haven't found it
-#         except (FileNotFoundError, EOFError, ImportError):
-#             job_info_path = os.path.join(job_dir_path, '{}_info.json'.format(job_name))
-#             with open(job_info_path, mode = 'r') as f:
-#                 job_info = json.load(f)
-#             jp = job_info['job_processor'](job_name, job_dir_path)  # TODO: this won't work maybe?
-#
-#         jp.process_job(individual_processing = individual_processing)  # try to detect if jp is from previous version and won't work, maybe catch attribute access exceptions?
-#
-#     def process_jobs(self, individual_processing = False):
-#         start_time = dt.datetime.now()
-#         logger.info('Processing jobs')
-#
-#         for job_name, job_dir_path in zip(self.job_dir_names, self.job_dir_paths):
-#             try:
-#                 self.process_job(job_name, job_dir_path, individual_processing = individual_processing)
-#             except Exception as e:
-#                 logger.exception(e)
-#                 raise e
-#
-#         end_time = dt.datetime.now()
-#         logger.info('Processing complete. Elapsed time: {}'.format(end_time - start_time))
-
-
 class SimulationResult:
+    """A class that represents the results of Simulation run on a cluster."""
+
     def __init__(self, sim, job_processor):
+        """
+        Initialize a SimulationResult from a Simulation and JobProcessor, picking up information from both.
+        
+        Do not store direct references to the Simulation to ensure that the garbage collector can clean it up.
+        
+        :param sim: a Simulation
+        :param job_processor: a JobProcessor
+        """
         self.name = copy(sim.name)
         self.file_name = copy(int(sim.file_name))
         self.plots_dir = job_processor.plots_dir
@@ -276,21 +283,24 @@ class SimulationResult:
         self.running_time = copy(sim.running_time.total_seconds())
 
 
-# def make_simulation_result(simulation_result_type, job_processor, sim):
-#     sim_result = simulation_result_type(sim, job_processor)
-#
-#     return sim_result
-
-
 class JobProcessor(utils.Beet):
+    """A class that processes a collection of pickled Simulations. Should be subclassed for specialization."""
+
     simulation_result_type = SimulationResult
 
     def __init__(self, job_name, job_dir_path, simulation_type):
+        """
+        Initialize a JobProcessor from a job name and path to its directory.
+        
+        :param job_name: the name of the job
+        :param job_dir_path: the path to the job directory
+        :param simulation_type: the type of Simulation used in the job (should be set by subclasses)
+        """
         super(JobProcessor, self).__init__(job_name)
         self.job_dir_path = job_dir_path
-        self.input_dir = os.path.join(self.job_dir_path, 'inputs')
-        self.output_dir = os.path.join(self.job_dir_path, 'outputs')
-        self.plots_dir = os.path.join(self.job_dir_path, 'plots')
+        self.input_dir = os.path.join(self.job_dir_path, 'inputs')  # Specifications go here
+        self.output_dir = os.path.join(self.job_dir_path, 'outputs')  # finished Simulations go here
+        self.plots_dir = os.path.join(self.job_dir_path, 'plots')  # plots from the JobProcessor go here
         self.movies_dir = os.path.join(self.job_dir_path, 'movies')
 
         self.sim_names = self.get_sim_names_from_specs()
@@ -305,27 +315,29 @@ class JobProcessor(utils.Beet):
         return '{} for job {}, processed {}/{} Simulations'.format(self.__class__.__name__, self.name, self.sim_count - len(self.unprocessed_sim_names), self.sim_count)
 
     def get_sim_names_from_specs(self):
+        """Get a list of Simulation file names based on their Specifications."""
         return sorted([f.strip('.spec') for f in os.listdir(self.input_dir)], key = int)
 
     def get_sim_names_from_sims(self):
+        """Get a list of Simulation file names actually found in the output directory."""
         return sorted([f.strip('.sim') for f in os.listdir(self.output_dir)], key = int)
 
     def save(self, target_dir = None, file_extension = '.job'):
+        """
+        Atomically pickle the JobProcessor to {job_dir}/{job_name}.job, and gzip it for reduced disk usage.
+
+        :param target_dir: directory to save the JobProcessor to
+        :param file_extension: file extension to name the JobProcessor with
+        :return: the path to the saved JobProcessor
+        """
         return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
-
-    # def collect_data_from_sim(self, sim_name, sim):
-    #     """Hook method to collect summary data from a single Simulation."""
-    #     self.data[sim_name] = self.simulation_result_type(sim)
-
-    # def process_sim(self, sim_name, sim):
-    #     self.collect_data_from_sim(sim_name, sim)
 
     def load_sim(self, sim_name, **load_kwargs):
         """
-        Load a Simulation from the job by its file_name. load_kwargs are passed to the Simulation's load method
+        Load a Simulation from the job by its file_name. load_kwargs are passed to the Simulation's load method.
 
-        :param sim_name:
-        :param load_kwargs:
+        :param sim_name: load the Simulation with this file name from the output directory
+        :param load_kwargs: kwargs passed to the Simulation's load method
         :return: the loaded Simulation, or None if it wasn't found
         """
         sim = None
@@ -350,14 +362,18 @@ class JobProcessor(utils.Beet):
         return sim
 
     def process_job(self, force_reprocess = False):
+        """
+        Process the job by loading newly-downloaded Simulations and generating SimulationResults from them.
+        
+        :param force_reprocess: if True, process all Simulations in the output directory regardless of prior processing status
+        """
         start_time = dt.datetime.now()
         logger.info('Loading simulations from job {}'.format(self.name))
 
         if force_reprocess:
             sim_names = tqdm(copy(self.sim_names))
         else:
-            # sim_names = tqdm(copy(self.unprocessed_sim_names))
-            new_sims = self.unprocessed_sim_names.intersection(self.get_sim_names_from_sims())
+            new_sims = self.unprocessed_sim_names.intersection(self.get_sim_names_from_sims())  # only process newly-downloaded Simulations
             sim_names = tqdm(new_sims)
 
         for sim_name in sim_names:
@@ -379,12 +395,11 @@ class JobProcessor(utils.Beet):
         end_time = dt.datetime.now()
         logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, end_time - start_time))
 
-    # def write_to_csv(self):
-    #     raise NotImplementedError
+    def write_to_csv(self):
+        raise NotImplementedError
 
-    # def write_to_txt(self):
-    #     with open(os.path.join(self.job_dir_path, 'data.txt'), mode = 'w') as f:
-    #         pprint(self.data, stream = f)
+    def write_to_txt(self):
+        raise NotImplementedError
 
     def select_by_kwargs(self, **kwargs):
         """
@@ -405,19 +420,22 @@ class JobProcessor(utils.Beet):
         """
         Return all of the SimulationResults for which test_function(sim_result) is True.
         
-        :param test_function: a function which takes one argument, a SimulationResult, and returns a Boolean
+        :param test_function: a function which takes one argument, a SimulationResult, and returns a bool (True to accept, False to reject)
         :return: a list of SimulationResults
         """
         return list([sim_result for sim_result in self.data.values() if test_function(sim_result) and sim_result is not None])
 
     def parameter_set(self, parameter):
+        """Get the set of values of the parameter from the collected data."""
         return set(getattr(result, parameter) for result in self.data.values())
 
     def make_summary_plots(self):
+        """Hook method for making automatic summary plots from collected data."""
         if len(self.unprocessed_sim_names) < self.sim_count:
             self.make_time_diagnostics_plot()
 
     def make_time_diagnostics_plot(self):
+        """Generate a diagnostics plot based on Simulation runtimes."""
         sim_numbers = [result.file_name for result in self.data.values() if result is not None]
         running_time = [result.running_time for result in self.data.values() if result is not None]
 
@@ -429,57 +447,21 @@ class JobProcessor(utils.Beet):
                          x_label = 'Simulation Number', y_label = 'Time',
                          target_dir = self.plots_dir)
 
-        # def make_plot(self, name, x_key, *plot_lines, **kwargs):
-        #     # begin by getting an OrderedDict of sim: sim_data, sorted by the value of the x_key
-        #     data = OrderedDict((k, v) for k, v in sorted(self.data.items(), key = lambda x: x[1][x_key] if x_key in x[1] else 0) if v)
-        #
-        #     # the x_array is unique values of the x_key in the data
-        #     x_array = np.array(sorted(set(v[x_key] for v in data.values())))
-        #
-        #     # each y array is constructed by looking through the data for sims that pass all of the filters for that line
-        #     y_arrays = [np.array(list(v[plot_line.key] for v in data.values() if all(f(v) for f in plot_line.filters))) for plot_line in plot_lines]
-        #     line_labels = (plot_line.label for plot_line in plot_lines)
-        #     line_kwargs = (plot_line.line_kwargs for plot_line in plot_lines)
-        #
-        #     # pass everything to xy_plot to do the heavy lifting
-        #     utils.xy_plot(name, x_array, *y_arrays, line_labels = line_labels, line_kwargs = line_kwargs, **kwargs)
-
-
-# def check_value_by_key(key, value):
-#     """
-#     Return a function which accepts a single argument, which should be a dictionary. The functions returns dictionary[key] == value.
-#     :param key: the key to look for in the dictionary
-#     :param value: the value to check dictionary[key] against
-#     :return: a checker function
-#     """
-#
-#     def checker(dictionary):
-#         return dictionary[key] == value
-#
-#     return checker
-#
-#
-# class KeyFilterLine:
-#     def __init__(self, key, filters = (lambda v: True,), label = None, **line_kwargs):
-#         self.key = key
-#         self.filters = filters
-#         if label is None:
-#             label = key
-#         self.label = label
-#         self.line_kwargs = line_kwargs
-#
-#     def __str__(self):
-#         return 'Line: key = {}, filters = {}'.format(self.key, self.filters)
-#
-#     def __repr__(self):
-#         return 'KeyFilterLine(key = {}, filter = {})'.format(self.key, self.filters)
-
 
 class Parameter:
+    """A class that represents a parameter of a Specification."""
+
     name = utils.Typed('name', legal_type = str)
     expandable = utils.Typed('expandable', legal_type = bool)
 
     def __init__(self, name, value = None, expandable = False):
+        """
+        Initialize a Parameter.
+        
+        :param name: the name of the Parameter, which should match a keyword argument of the target Specification
+        :param value: the value of the Parameter, or a list of values
+        :param expandable: whether this Parameter is expandable over the top-level iterable in value
+        """
         self.name = name
         self.value = value
         self.expandable = expandable
@@ -492,6 +474,12 @@ class Parameter:
 
 
 def expand_parameters_to_dicts(parameters):
+    """
+    Expand a list of Parameters to a list of dictionaries containing all of the combinations of expandable Parameters.
+    
+    :param parameters: a list of Parameters
+    :return: a list of dictionaries of parameter.name: parameter.value pairs
+    """
     dicts = [OrderedDict()]
 
     for par in parameters:
@@ -507,7 +495,15 @@ def expand_parameters_to_dicts(parameters):
 
 
 def ask_for_input(question, default = None, cast_to = str):
-    """Ask for input from the user, with a default value, and call cast_to on it before returning it."""
+    """
+    Ask for input from the user, with a default value, and call cast_to on it before returning it.
+    
+    :param question: a string to present to the user
+    :type question: str
+    :param default: the default answer to the question
+    :param cast_to: a type to cast the user's input to
+    :return: the casted input
+    """
     try:
         input_str = input(question + ' [Default: {}] > '.format(default))
 
@@ -527,12 +523,15 @@ def ask_for_input(question, default = None, cast_to = str):
 
 def ask_for_bool(question, default = False):
     """
+    Ask for input from the user, with a default value, which will be interpreted as a boolean.
 
     Synonyms for True: 'true', 't', 'yes', 'y', '1', 'on'
     Synonyms for False: 'false', 'f', 'no', 'n', '0', 'off'
-    :param question:
-    :param default:
-    :return:
+    
+    :param question: a string to present to the user
+    :type question: str
+    :param default: the default answer to the question
+    :return: the input interpreted as a boolean
     """
     try:
         input_str = input(question + ' [Default: {}] > '.format(default))
@@ -556,6 +555,13 @@ def ask_for_bool(question, default = False):
 
 
 def ask_for_eval(question, default = 'None'):
+    """
+    Ask for input from the user, with a default value, which will be evaluated as a python command.
+    
+    :param question: a string to present to the user
+    :param default: the default answer to the question
+    :return: the input, evaluated as a python command
+    """
     input_str = input(question + ' [Default: {}] (eval) > '.format(default))
 
     trimmed = input_str.replace(' ', '')
@@ -578,21 +584,25 @@ def ask_for_eval(question, default = 'None'):
 
 
 def abort_job_creation():
+    """Abort job creation by exiting the script."""
     print('Aborting job creation...')
     logger.critical('Aborted job creation')
     sys.exit(0)
 
 
 def create_job_subdirs(job_dir):
+    """Create directories for the inputs, outputs, logs, and movies."""
     print('Creating job directory and subdirectories...')
 
     utils.ensure_dir_exists(job_dir)
     utils.ensure_dir_exists(os.path.join(job_dir, 'inputs'))
     utils.ensure_dir_exists(os.path.join(job_dir, 'outputs'))
     utils.ensure_dir_exists(os.path.join(job_dir, 'logs'))
+    utils.ensure_dir_exists(os.path.join(job_dir, 'movies'))
 
 
 def save_specifications(specifications, job_dir):
+    """Save a list of Specifications."""
     print('Saving Parameters...')
 
     for spec in specifications:
@@ -602,6 +612,7 @@ def save_specifications(specifications, job_dir):
 
 
 def write_specifications_info_to_file(specifications, job_dir):
+    """Write information from the list of the Specifications to a file."""
     print('Writing Specification info to file...')
 
     with open(os.path.join(job_dir, 'specifications.txt'), 'w') as file:
@@ -615,6 +626,7 @@ def write_specifications_info_to_file(specifications, job_dir):
 
 
 def write_parameters_info_to_file(parameters, job_dir):
+    """Write information from the list of Parameters to a file."""
     print('Writing Parameters info to file...')
 
     with open(os.path.join(job_dir, 'parameters.txt'), 'w') as file:
@@ -652,18 +664,29 @@ request_disk = {}GB
 queue {}"""
 
 
-def format_chtc_submit_string(job_name, parameter_count, memory = 4, disk = 4, checkpoints = True):
+def format_chtc_submit_string(job_name, specification_count, memory = 4, disk = 4, checkpoints = True):
+    """
+    Return a formatted submit string for an HTCondor job.
+    
+    :param job_name: the name of the job
+    :param specification_count: the number of Specifications in the job
+    :param memory: the amount of memory to request for each Simulation, in GB
+    :param disk: the amount of disk to request for each Simulation, in GB
+    :param checkpoints: if the Simulations are going to use checkpoints, this should be True
+    :return: an HTCondor submit string
+    """
     if checkpoints:
         check = 'true'
     else:
         check = 'false'
 
-    submit_string = CHTC_SUBMIT_STRING.format(job_name, check, check, check, memory, disk, parameter_count)
+    submit_string = CHTC_SUBMIT_STRING.format(job_name, check, check, check, memory, disk, specification_count)
 
     return submit_string
 
 
 def specification_check(specifications, check = 3):
+    """Ask the user whether some number of specifications look correct."""
     print('Generated {} Specifications'.format(len(specifications)))
 
     for s in specifications[0:check]:
@@ -678,6 +701,7 @@ def specification_check(specifications, check = 3):
 
 
 def submit_check(submit_string):
+    """Ask the user whether the submit string looks correct."""
     print('-' * 20)
     print(submit_string)
     print('-' * 20)
@@ -688,6 +712,7 @@ def submit_check(submit_string):
 
 
 def write_submit_file(submit_string, job_dir):
+    """Write the submit string to a file."""
     print('Saving submit file...')
 
     with open(os.path.join(job_dir, 'submit_job.sub'), mode = 'w') as file:
@@ -697,19 +722,21 @@ def write_submit_file(submit_string, job_dir):
 
 
 def write_job_info_to_file(job_info, job_dir):
+    """Write job information to a file."""
     with open(os.path.join(job_dir, 'info.pkl'), mode = 'wb') as f:
         pickle.dump(job_info, f, protocol = -1)
 
 
 def load_job_info_from_file(job_dir):
+    """Load job information from a file."""
     with open(os.path.join(job_dir, 'info.pkl'), mode = 'rb') as f:
         return pickle.load(f)
 
 
 def submit_job(job_dir):
+    """Submit a job using a pre-existing submit file."""
     print('Submitting job...')
 
-    # TODO: temp chdir context manager
     os.chdir(job_dir)
 
     subprocess.run(['condor_submit', 'submit_job.sub'])

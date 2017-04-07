@@ -23,8 +23,17 @@ logger.setLevel(logging.DEBUG)
 
 LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
+key_value_arrays = collections.namedtuple('key_value_arrays', ('key_array', 'value_array'))
+
 
 def dict_to_arrays(d):
+    """
+    Return the keys and values of a dictionary as two numpy arrays, in key-sorted order.
+    
+    :param d: the dictionary to array-ify
+    :type d: dict
+    :return: (key_array, value_array)
+    """
     key_list = []
     val_list = []
 
@@ -32,7 +41,7 @@ def dict_to_arrays(d):
         key_list.append(key)
         val_list.append(val)
 
-    return np.array(key_list), np.array(val_list)
+    return key_value_arrays(np.array(key_list), np.array(val_list))
 
 
 def field_str(obj, *fields, digits = 3):
@@ -166,9 +175,9 @@ def strip_illegal_characters(string):
 
 class Beet:
     """
-    A superclass that provides an easy interface for pickling and unpickling instances.
+    A class that provides an easy interface for pickling and unpickling instances.
 
-    Two Beets compare and hash equal if they have the same Beet.uid, a uuid4 generated at initialization.
+    Two Beets compare and hash equal if they have the same uid attribute, a uuid4 generated during initialization.
     """
 
     def __init__(self, name, file_name = None):
@@ -258,7 +267,13 @@ NearestEntry = collections.namedtuple('NearestEntry', ('index', 'value', 'target
 
 
 def find_nearest_entry(array, target):
-    """Returns the (index, value, target) of the array entry closest to the given target."""
+    """
+    Returns the :code:`(index, value, target)` of the :code:`array` entry closest to the given :code:`target`.
+    
+    :param array: the array to look for :code:`target` in
+    :param target: the target value
+    :returns: a tuple containing the index of the closest value, the value of the closest value, and the original target value
+    """
     array = np.array(array)  # turn the array into a numpy array
 
     index = np.argmin(np.abs(array - target))
@@ -268,7 +283,12 @@ def find_nearest_entry(array, target):
 
 
 def ensure_dir_exists(path):
-    """Ensure that the directory tree to the path exists."""
+    """
+    Ensure that the directory tree to the path exists.
+    
+    :param path: the path to a file or directory
+    :type path: str
+    """
     split_path = os.path.splitext(path)
     if split_path[0] != path:  # path is file
         make_path = os.path.dirname(split_path[0])
@@ -280,7 +300,25 @@ def ensure_dir_exists(path):
 
 
 def save_current_figure(name, name_postfix = '', target_dir = None, img_format = 'pdf', img_scale = 1, transparent = True, colormap = plt.cm.inferno, **kwargs):
-    """Save the current matplotlib figure with the given name to the given folder."""
+    """
+    Save the current matplotlib figure to a file with the given name to the given folder.
+    
+    :param name: the name of the file
+    :type name: str
+    :param name_postfix: a postfix for the filename, added after :code:`name`
+    :type name: str
+    :param target_dir: the directory to save the file to
+    :type target_dir: str
+    :param img_format: the format the save the image in
+    :type img_format: str
+    :param img_scale: the scale to save the image at
+    :type img_scale: float
+    :param transparent: whether to make the background of the image transparent (if the format supports it)
+    :type transparent: bool
+    :param colormap: a colormap to switch to before saving the image
+    :param kwargs: absorbs kwargs silently
+    :return: the path the image was saved to
+    """
     plt.set_cmap(colormap)
 
     if target_dir is None:
@@ -302,7 +340,7 @@ def downsample(dense_x_array, sparse_x_array, dense_y_array):
 
     The downsampling is performed by matching points from sparse_x_array to dense_x_array using find_nearest_entry. Use with caution!
 
-    :param dense_x_array:
+    :param dense_x_array: 
     :param sparse_x_array:
     :param dense_y_array:
     :return: a sparsified version of dense_y_array
@@ -326,12 +364,47 @@ GRID_KWARGS = {
 
 
 class FigureManager:
+    """
+    A class that manages a matplotlib figure: creating it, showing it, saving it, and cleaning it up.
+    """
+
     def __init__(self, name, name_postfix = '',
                  fig_scale = 0.95, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0,
                  target_dir = None, img_format = 'pdf', img_scale = 1,
                  close_before = True, close_after = True,
                  save = True, show = False,
                  **kwargs):
+        """
+        Initialize a :code:`FigureManager`.
+        
+        Saving occurs before showing.
+        
+        :param name: the name of the file
+        :type name: str
+        :param name_postfix: a postfix for the filename, added after :code:`name`
+        :type name: str
+        :param target_dir: the directory to save the file to
+        :type target_dir: str
+        :param fig_scale: the scale of the figure in LaTeX pagewidths
+        :type fig_scale: float
+        :param fig_width_pts: width of a LaTeX pagewidth in points
+        :type float
+        :param aspect_ratio: the aspect ratio of the image
+        :type aspect_ratio: float
+        :param img_format: the format the save the image in
+        :type img_format: str
+        :param img_scale: the scale to save the image at
+        :type img_scale: float
+        :param close_before: close any existing images before creating the new figure
+        :type close_before: bool
+        :param close_after: close the figure after save/show
+        :type close_after: bool
+        :param save: if True, save the image using :func:`save_current_figure`
+        :type save: bool
+        :param show: if True, show the image
+        :type save: bool
+        :param kwargs: kwargs are absorbed
+        """
         self.name = name
         self.name_postfix = name_postfix
 
@@ -363,11 +436,11 @@ class FigureManager:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.show:
-            plt.show()
-
         if self.save:
             self.path = save_current_figure(name = self.name, name_postfix = self.name_postfix, target_dir = self.target_dir, img_format = self.img_format, img_scale = self.img_scale)
+
+        if self.show:
+            plt.show()
 
         if self.close_after:
             plt.close()
@@ -598,6 +671,7 @@ def method_dispatch(func):
 
 
 def hash_args_kwargs(*args, **kwargs):
+    """Return the hash of a tuple containing the args and kwargs."""
     return hash(args + tuple(kwargs.items()))
 
 
@@ -689,6 +763,7 @@ class Descriptor:
 
     The data is stored in the instance dictionary.
     """
+
     __slots__ = ['name']
 
     def __init__(self, name):
@@ -800,8 +875,9 @@ def try_loop(*functions_to_run,
     :param wait_after_success: a datetime.timedelta object specifying how long to wait after a loop completes
     :param wait_after_failure: a datetime.timedelta object specifying how long to wait after a loop fails (i.e., raises an exception)
     :param begin_text: a string to print at the beginning of each loop
+    :type begin_text: str
     :param complete_text: a string to print at the end of each loop
-    :return:
+    :type complete_text: str
     """
     while True:
         logger.info(begin_text)
@@ -827,55 +903,69 @@ def try_loop(*functions_to_run,
         time.sleep(wait.total_seconds())
 
 
-def grouper(iterable, n, fillvalue = None):
+def grouper(iterable, n, fill_value = None):
     """
     Collect data from iterable into fixed-length chunks or blocks of length n
 
     See https://docs.python.org/3/library/itertools.html#itertools-recipes
 
-    :param iterable:
-    :param n:
-    :param fillvalue:
+    :param iterable: an iterable to chunk
+    :param n: the size of the chunks
+    :param fill_value: a value to fill with when iterable has run out of values, but the last chunk isn't full
     :return:
     """
-    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
-    return it.zip_longest(*args, fillvalue = fillvalue)
+    return it.zip_longest(*args, fillvalue = fill_value)
 
 
 def get_processes_by_name(process_name):
+    """
+    Return an iterable of processes that match the given name.
+    
+    :param process_name: the name to search for
+    :type process_name: str
+    :return: an iterable of psutil Process instances
+    """
     return [p for p in psutil.process_iter() if p.name() == process_name]
 
 
 def get_fig_dims(fig_scale, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0):
     """
-    Helper function for get_figure
+    Return the dimensions (width, height) for a figure based on the scale, width (in points), and aspect ratio.
+    
+    Helper function for get_figure.
 
-    :param fig_scale:
+    :param fig_scale: the scale of the figure
+    :type fig_scale: float
     :param fig_width_pts: get this from LaTeX using \the\textwidth
+    :type fig_width_pts: float
     :param aspect_ratio: height = width * ratio, defaults to golden ratio
-    :return:
+    :type aspect_ratio: float
+    :return: (fig_width, fig_height)
     """
     inches_per_pt = 1.0 / 72.27  # Convert pt to inch
 
     fig_width = fig_width_pts * inches_per_pt * fig_scale  # width in inches
     fig_height = fig_width * aspect_ratio  # height in inches
-    fig_dims = [fig_width, fig_height]
 
-    return fig_dims
+    return fig_width, fig_height
 
 
 def get_figure(fig_scale = 0.95, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0):
     """
     Get a matplotlib figure object with the desired scale relative to a full-text-width LaTeX page.
 
+    Special scales:
     scale = 'full' -> scale = 0.95
     scale = 'half' -> scale = 0.475
 
-    :param fig_scale: width of figure in LaTeX \textwidths
+    :param fig_scale: the scale of the figure
+    :type fig_scale: float
     :param fig_width_pts: get this from LaTeX using \the\textwidth
+    :type fig_width_pts: float
     :param aspect_ratio: height = width * ratio, defaults to golden ratio
-    :return:
+    :type aspect_ratio: float
+    :return: a matplotlib figure with the desired dimensions
     """
     if fig_scale == 'full':
         fig_scale = 0.95
@@ -885,3 +975,62 @@ def get_figure(fig_scale = 0.95, fig_width_pts = 498.66258, aspect_ratio = (np.s
     fig = plt.figure(figsize = get_fig_dims(fig_scale, fig_width_pts = fig_width_pts, aspect_ratio = aspect_ratio))
 
     return fig
+
+
+class Summand:
+    """
+    An object that can be added to other objects that it shares a superclass with.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.summation_class = Sum
+
+    def __str__(self):
+        return self.__class__.__name__
+
+    def __repr__(self):
+        return str(self)
+
+    def __iter__(self):
+        """When unpacked, yield self, to ensure compatability with Sum's __add__ method."""
+        yield self
+
+    def __add__(self, other):
+        return self.summation_class(*self, *other)
+
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+class Sum(Summand):
+    """
+    A class that represents a sum of Summands.
+
+    Calls to __call__ are passed to the contained Summands and then added together and returned.
+    """
+
+    container_name = 'summands'
+
+    def __init__(self, *summands, **kwargs):
+        setattr(self, self.container_name, summands)
+        super(Sum, self).__init__(**kwargs)
+
+    @property
+    def _container(self):
+        return getattr(self, self.container_name)
+
+    def __str__(self):
+        return '({})'.format(' + '.join([str(s) for s in self._container]))
+
+    def __repr__(self):
+        return '{}({})'.format(self.__class__.__name__, ', '.join([repr(p) for p in self._container]))
+
+    def __iter__(self):
+        yield from self._container
+
+    def __add__(self, other):
+        """Return a new Sum, constructed from all of the contents of self and other."""
+        return self.__class__(*self, *other)  # TODO: no protection against adding together non-similar types
+
+    def __call__(self, *args, **kwargs):
+        return sum(x(*args, **kwargs) for x in self._container)

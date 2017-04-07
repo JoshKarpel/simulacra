@@ -3,6 +3,7 @@ import sys
 import unittest
 import shutil
 
+import utils
 from . import core, utils, math, cluster
 
 TEST_DIR = os.path.join(os.getcwd(), 'temp__unit_testing')
@@ -70,8 +71,8 @@ class TestSimulation(TestBeet):
 
 class TestSumming(unittest.TestCase):
     def setUp(self):
-        self.summand_one = core.Summand()
-        self.summand_two = core.Summand()
+        self.summand_one = utils.Summand()
+        self.summand_two = utils.Summand()
         self.sum = self.summand_one + self.summand_two
 
     def test_is(self):
@@ -81,13 +82,13 @@ class TestSumming(unittest.TestCase):
         self.assertFalse(self.summand_one == self.summand_two)
 
     def test_instance_of(self):
-        self.assertTrue(isinstance(self.summand_one, core.Summand))
-        self.assertTrue(isinstance(self.summand_two, core.Summand))
-        self.assertTrue(isinstance(self.sum, core.Summand))
-        self.assertTrue(isinstance(self.sum, core.Sum))
+        self.assertTrue(isinstance(self.summand_one, utils.Summand))
+        self.assertTrue(isinstance(self.summand_two, utils.Summand))
+        self.assertTrue(isinstance(self.sum, utils.Summand))
+        self.assertTrue(isinstance(self.sum, utils.Sum))
 
-        self.assertFalse(isinstance(self.summand_one, core.Sum))
-        self.assertFalse(isinstance(self.summand_two, core.Sum))
+        self.assertFalse(isinstance(self.summand_one, utils.Sum))
+        self.assertFalse(isinstance(self.summand_two, utils.Sum))
 
     def test_container(self):
         self.assertTrue(self.summand_one in self.sum.summands)
@@ -99,12 +100,12 @@ class TestSumming(unittest.TestCase):
 
 class TestSummingSubclassing(unittest.TestCase):
     def setUp(self):
-        class Fruit(core.Summand):
+        class Fruit(utils.Summand):
             def __init__(self):
                 super().__init__()
                 self.summation_class = FruitBasket
 
-        class FruitBasket(core.Sum, Fruit):
+        class FruitBasket(utils.Sum, Fruit):
             container_name = 'basket'
 
         class Apple(Fruit):
@@ -123,13 +124,13 @@ class TestSummingSubclassing(unittest.TestCase):
         self.fruit_basket = self.apple + self.banana
 
     def test_instance_of_bases(self):
-        self.assertTrue(isinstance(self.apple, core.Summand))
-        self.assertTrue(isinstance(self.banana, core.Summand))
-        self.assertTrue(isinstance(self.fruit_basket, core.Summand))
-        self.assertTrue(isinstance(self.fruit_basket, core.Sum))
+        self.assertTrue(isinstance(self.apple, utils.Summand))
+        self.assertTrue(isinstance(self.banana, utils.Summand))
+        self.assertTrue(isinstance(self.fruit_basket, utils.Summand))
+        self.assertTrue(isinstance(self.fruit_basket, utils.Sum))
 
-        self.assertFalse(isinstance(self.apple, core.Sum))
-        self.assertFalse(isinstance(self.banana, core.Sum))
+        self.assertFalse(isinstance(self.apple, utils.Sum))
+        self.assertFalse(isinstance(self.banana, utils.Sum))
 
     def test_instance_of_subclasses(self):
         self.assertTrue(isinstance(self.fruit_basket, self.Fruit))

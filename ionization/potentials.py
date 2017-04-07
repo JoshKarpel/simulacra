@@ -5,13 +5,14 @@ import numpy.fft as nfft
 import scipy.integrate as integ
 
 import compy as cp
+import utils
 from compy.units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class PotentialEnergy(cp.Summand):
+class PotentialEnergy(utils.Summand):
     """A class representing some kind of potential energy. Can be summed to form a PotentialEnergySum."""
 
     def __init__(self, *args, **kwargs):
@@ -19,7 +20,7 @@ class PotentialEnergy(cp.Summand):
         self.summation_class = PotentialEnergySum
 
 
-class PotentialEnergySum(cp.Sum, PotentialEnergy):
+class PotentialEnergySum(utils.Sum, PotentialEnergy):
     """A class representing a combination of potential energies."""
 
     container_name = 'potentials'
@@ -36,7 +37,7 @@ class NoPotentialEnergy(PotentialEnergy):
         return 0
 
 
-class TimeWindow(cp.Summand):
+class TimeWindow(utils.Summand):
     """A class representing a time-window that can be attached to another potential."""
 
     def __init__(self):
@@ -44,7 +45,7 @@ class TimeWindow(cp.Summand):
         self.summation_class = TimeWindowSum
 
 
-class TimeWindowSum(cp.Sum, TimeWindow):
+class TimeWindowSum(utils.Sum, TimeWindow):
     """A class representing a combination of time-windows."""
 
     container_name = 'windows'
@@ -56,7 +57,7 @@ class NoTimeWindow(TimeWindow):
         return 1
 
 
-class Mask(cp.Summand):
+class Mask(utils.Summand):
     """A class representing a spatial 'mask' that can be applied to the wavefunction to reduce it in certain regions."""
 
     def __init__(self):
@@ -64,7 +65,7 @@ class Mask(cp.Summand):
         self.summation_class = MaskSum
 
 
-class MaskSum(cp.Sum, Mask):
+class MaskSum(utils.Sum, Mask):
     """A class representing a combination of masks."""
 
     container_name = 'masks'

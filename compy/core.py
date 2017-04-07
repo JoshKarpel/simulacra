@@ -1,8 +1,8 @@
 import datetime as dt
+import itertools as it
 import logging
 import os
 import subprocess
-import itertools as it
 
 import matplotlib.pyplot as _plt
 
@@ -56,13 +56,15 @@ class Specification(utils.Beet):
         return super(Specification, self).save(target_dir, file_extension)
 
     def to_simulation(self):
-        """Return a Simulation of the type associated with the Specification."""
+        """Return a Simulation of the type associated with the Specification, generated from this instance."""
         return self.simulation_type(self)
 
     def info(self):
+        """Return a string describing the parameters of the Specification."""
         return ''
 
 
+# Simulation status names
 STATUS_INI = 'initialized'
 STATUS_RUN = 'running'
 STATUS_FIN = 'finished'
@@ -82,10 +84,11 @@ class Simulation(utils.Beet):
     def __init__(self, spec):
         """
         Construct a Simulation from a Specification.
+        
+        Simulations should generally be instantiated using Specification.to_simulation() to avoid possible mismatches.
 
         :param spec: the Specification for the Simulation
         :type spec: Specification
-        :type str:
         """
         self.spec = spec
 
@@ -135,8 +138,10 @@ class Simulation(utils.Beet):
         Atomically pickle the Simulation to {target_dir}/{self.file_name}.{file_extension}, and gzip it.
 
         :param target_dir: directory to save the Simulation to
+        :type target_dir: str
         :param file_extension: file extension to name the Simulation with
-        :return: None
+        :type file_extension: str
+        :return: the path to the saved Simulation
         """
         if self.status != STATUS_FIN:
             self.status = STATUS_PAU
@@ -148,7 +153,7 @@ class Simulation(utils.Beet):
         """
         Load a Simulation from file_path.
 
-        :param file_path: the path to try to load a Simulation from
+        :param file_path: the path to load a Simulation from
         :return: the loaded Simulation
         """
         sim = super(Simulation, cls).load(file_path)
@@ -162,11 +167,11 @@ class Simulation(utils.Beet):
         return '{}(spec = {}, uid = {})'.format(self.__class__.__name__, repr(self.spec), self.uid)
 
     def run_simulation(self):
-        """Hook method for running the simulation."""
+        """Hook method for running the Simulation, whatever that may entail."""
         raise NotImplementedError
 
     def info(self):
-        """Return a nicely-formatted string containing information about the Simulation."""
+        """Return a string describing the parameters of the Simulation and its associated Specification."""
         diag = ['Status: {}'.format(self.status),
                 '   Start Time: {}'.format(self.init_time),
                 '   Latest Load Time: {}'.format(self.latest_run_time),
@@ -183,6 +188,13 @@ class AxisManager:
     """
 
     def __init__(self, axis, simulation):
+        """
+        Initialize an AxisManager from a matplotlib axis and a Simulation.
+        
+        :param axis: a matplotlib axis to manage
+        :param simulation: a Simulation for the AxisManager to collect data from
+        :type simulation: Simulation
+        """
         self.axis = axis
         self.sim = simulation
         self.spec = simulation.spec
@@ -198,11 +210,13 @@ class AxisManager:
         return self.__class__.__name__
 
     def initialize(self):
+        """Hook method for initializing the AxisManager."""
         self.initialized = True
 
         logger.debug('Initialized {}'.format(self))
 
     def update(self):
+        """Hook method for updating the AxisManager's internal state."""
         logger.debug('Updated {}'.format(self))
 
 
@@ -211,8 +225,10 @@ class Animator:
     A superclass that handles sending frames to ffmpeg to create animations.
 
     To actually make an animation there are three hook methods that need to be overwritten: _initialize_figure, _update_data, and _redraw_frame.
+    
+    An Animator will generally contain a single matplotlib figure with some animation code of its own in addition to a list of :class:`AxisManagers ~<AxisManager>` that handle axes on the figure.
 
-    ffmpeg must be visible on the system path.
+    For this class to function correctly :code:`ffmpeg` must be visible on the system path.
     """
 
     def __init__(self, postfix = '', target_dir = None,
@@ -221,11 +237,17 @@ class Animator:
         """
         Construct an Animator instance.
 
+        A colormap should be specified here so that the Animator can prevent collisions with other Animators.
+
         :param postfix: postfix for the file name of the resulting animation
+        :type postfix: str
         :param target_dir: directory to place the output (and work in)
+        :type target_dir: str
         :param length: the length of the animation
+        :type length: int
         :param fps: the desired frames-per-seconds for the animation (may not be actual fps if not enough/too many available frames)
-        :param colormap: the colormap to use in the animation
+        :type fps: float
+        :param colormap: a matplotlib colormap to use in the animation
         """
         if target_dir is None:
             target_dir = os.getcwd()
@@ -236,7 +258,7 @@ class Animator:
             postfix = '_' + postfix
         self.postfix = postfix
 
-        self.length = length
+        self.length = int(length)
         self.fps = fps
         self.colormap = colormap
 
@@ -260,6 +282,8 @@ class Animator:
         _initialize_figure() is called during the execution of this method. It should assign a matplotlib figure object to self.fig.
 
         The simulation should have an attribute available_animation_frames that returns an int describing how many raw frames might be available for use by the animation.
+        
+        :param simulation: a Simulation for the AxisManager to collect data from
         """
         self.sim = simulation
         self.spec = simulation.spec
@@ -352,60 +376,3 @@ class Animator:
         logger.debug('{} sent frame to ffpmeg from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
 
-class Summand:
-    """
-    An object that can be added to other objects that it shares a superclass with.
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.summation_class = Sum
-
-    def __str__(self):
-        return self.__class__.__name__
-
-    def __repr__(self):
-        return str(self)
-
-    def __iter__(self):
-        """When unpacked, yield self, to ensure compatability with Sum's __add__ method."""
-        yield self
-
-    def __add__(self, other):
-        return self.summation_class(*self, *other)
-
-    def __call__(self, *args, **kwargs):
-        raise NotImplementedError
-
-
-class Sum(Summand):
-    """
-    A class that represents a sum of Summands.
-
-    Calls to __call__ are passed to the contained Summands and then added together and returned.
-    """
-
-    container_name = 'summands'
-
-    def __init__(self, *summands, **kwargs):
-        setattr(self, self.container_name, summands)
-        super(Sum, self).__init__(**kwargs)
-
-    @property
-    def _container(self):
-        return getattr(self, self.container_name)
-
-    def __str__(self):
-        return '({})'.format(' + '.join([str(s) for s in self._container]))
-
-    def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, ', '.join([repr(p) for p in self._container]))
-
-    def __iter__(self):
-        yield from self._container
-
-    def __add__(self, other):
-        """Return a new Sum, constructed from all of the contents of self and other."""
-        return self.__class__(*self, *other)  # TODO: no protection against adding together non-similar types
-
-    def __call__(self, *args, **kwargs):
-        return sum(x(*args, **kwargs) for x in self._container)

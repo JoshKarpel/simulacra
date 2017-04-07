@@ -14,6 +14,7 @@ import scipy.optimize as optimize
 import mpmath
 
 import compy as cp
+import utils
 from compy.units import *
 from . import core
 
@@ -26,7 +27,7 @@ class IllegalQuantumState(cp.CompyException):
     pass
 
 
-class QuantumState(cp.Summand):
+class QuantumState(utils.Summand):
     """A class that represents a quantum state, with an amplitude and some basic multiplication/addition rules. Can be summed to form a Superposition."""
 
     bound = None
@@ -99,7 +100,7 @@ class QuantumState(cp.Summand):
         return 0
 
 
-class Superposition(cp.Sum, QuantumState):
+class Superposition(utils.Sum, QuantumState):
     """A class that represents a superposition of bound states."""
 
     container_name = 'states'
