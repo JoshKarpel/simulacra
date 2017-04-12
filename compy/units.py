@@ -576,3 +576,4 @@ unit_names_to_tex_strings.update({'atomic_electric_field': r'\mathrm{a.u.}',  # 
                                   'atomic_momentum': r'\mathrm{a.u.}'})
 
 str_efield = r'\mathcal{E}'
+str_afield = r'\mathcal{A}'

@@ -15,7 +15,7 @@ if __name__ == '__main__':
         mass = electron_mass
         pw = 200
 
-        space_bound = 200 * bohr_radius
+        space_bound = 500 * bohr_radius
         time_bound = 30
 
         depth = 36.831335 * eV
@@ -72,8 +72,9 @@ if __name__ == '__main__':
                                     dipole_gauges = (),
                                     initial_state = init,
                                     # time_initial = 0, time_final = 1000 * asec, time_step = 1 * asec,
-                                    time_initial = -pw * time_bound * asec, time_final = pw * (1.5 * time_bound) * asec, time_step = 1 * asec,
-                                    mask = ion.RadialCosineMask(inner_radius = space_bound * .9, outer_radius = space_bound),
+                                    time_initial = -pw * time_bound * asec, time_final = pw * time_bound * asec, time_step = 1 * asec,
+                                    minimum_time_final = 3 * pw * time_bound * asec,
+                                    mask = ion.RadialCosineMask(inner_radius = space_bound * .8, outer_radius = space_bound),
                                     animators = ani,
                                     evolution_method = 'SO',
                                     ).to_simulation()
