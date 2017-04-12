@@ -2630,8 +2630,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_overlaps.plot(self.data_times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \Psi | \Psi \right\rangle$', color = 'black', linewidth = 2)
 
         if grouped_free_states is None:
-            grouped_free_states, group_labels = self.group_free_states_by_discrete_attr('l')
-
+            try:
+                grouped_free_states, group_labels = self.group_free_states_by_discrete_attr('l')
+            except AttributeError:
+                grouped_free_states, group_labels = {}, {}
         overlaps = []
         labels = []
         colors = []

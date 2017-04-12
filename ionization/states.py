@@ -14,7 +14,6 @@ import scipy.optimize as optimize
 import mpmath
 
 import compy as cp
-import utils
 from compy.units import *
 from . import core
 
@@ -27,7 +26,7 @@ class IllegalQuantumState(cp.CompyException):
     pass
 
 
-class QuantumState(utils.Summand):
+class QuantumState(cp.utils.Summand):
     """A class that represents a quantum state, with an amplitude and some basic multiplication/addition rules. Can be summed to form a Superposition."""
 
     bound = None
@@ -100,7 +99,7 @@ class QuantumState(utils.Summand):
         return 0
 
 
-class Superposition(utils.Sum, QuantumState):
+class Superposition(cp.utils.Sum, QuantumState):
     """A class that represents a superposition of bound states."""
 
     container_name = 'states'
@@ -737,9 +736,11 @@ class FiniteSquareWellState(QuantumState):
         if n % 2 != 0:  # n is odd
             z = optimize.brentq(lambda z: np.tan(z) - np.sqrt(((z_0 / z) ** 2) - 1), left_bound, right_bound)
             self.function_inside_well = np.cos
+            self.symmetry = 'symmetric'
         else:  # n is even
             z = optimize.brentq(lambda z: (1 / np.tan(z)) + np.sqrt(((z_0 / z) ** 2) - 1), left_bound, right_bound)
             self.function_inside_well = np.sin
+            self.symmetry = 'antisymmetric'
 
         self.wavenumber_inside_well = z / (well_width / 2)
         self.energy = (((hbar * self.wavenumber_inside_well) ** 2) / (2 * mass)) - well_depth
@@ -849,6 +850,16 @@ class FiniteSquareWellState(QuantumState):
         """
         cond = np.greater_equal(x, self.left_edge) * np.less_equal(x, self.right_edge)
 
-        return np.where(cond,
-                        self.normalization_factor_inside_well * self.function_inside_well(self.wavenumber_inside_well * x),
-                        self.normalization_factor_outside_well * np.exp(-self.wavenumber_outside_well * np.abs(x))).astype(np.complex128)
+        if self.symmetry == 'antisymmetric':
+            sym = -1
+        else:
+            sym = 1
+
+        psi = np.where(cond,
+                       self.normalization_factor_inside_well * self.function_inside_well(self.wavenumber_inside_well * x),
+                       self.normalization_factor_outside_well * np.exp(-self.wavenumber_outside_well * np.abs(x))).astype(np.complex128)
+
+        symmetrization = np.where(np.less_equal(x, self.left_edge),
+                                  sym, 1)
+
+        return psi * symmetrization

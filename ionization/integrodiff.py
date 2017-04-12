@@ -594,3 +594,301 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
 
         self.status = cp.STATUS_FIN
         logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
+
+
+class VelocityGaugeIntegroDifferentialEquationSpecification(cp.Specification):
+    integration_method = cp.utils.RestrictedValues('integration_method', ('simpson', 'trapezoid'))
+
+    def __init__(self, name,
+                 time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
+                 a_initial = 1,
+                 prefactor = 1,
+                 electric_potential = potentials.NoElectricField(),
+                 electric_potential_dc_correction = True,
+                 kernel = return_one, kernel_kwargs = None,
+                 integration_method = 'simpson',
+                 evolution_method = 'FE',
+                 simulation_type = None,
+                 checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
+                 **kwargs):
+        """
+        Initialize an IntegroDifferentialEquationSpecification from the given parameters.
+
+        The differential equation should be of the form
+        dy/dt = prefactor * f(t) * integral[ y(t') * f(t') * kernel(t - t')  ; {t', t_initial, t} ]
+
+        :param name:
+        :param time_initial:
+        :param time_final:
+        :param time_step:
+        :param a_initial: initial value of y
+        :param kwargs:
+        """
+        if simulation_type is None:
+            simulation_type = VelocityGaugeIntegroDifferentialEquationSimulation
+        super().__init__(name, simulation_type = simulation_type, **kwargs)
+
+        self.time_initial = time_initial
+        self.time_final = time_final
+        self.time_step = time_step
+
+        self.y_initial = a_initial
+
+        self.prefactor = prefactor
+
+        self.electric_potential = electric_potential
+        self.electric_potential_dc_correction = electric_potential_dc_correction
+
+        self.kernel = kernel
+        self.kernel_kwargs = dict()
+        if kernel_kwargs is not None:
+            self.kernel_kwargs.update(kernel_kwargs)
+
+        self.integration_method = integration_method
+        self.evolution_method = evolution_method
+
+        self.checkpoints = checkpoints
+        self.checkpoint_every = checkpoint_every
+        self.checkpoint_dir = checkpoint_dir
+
+    def info(self):
+        checkpoint = ['Checkpointing: ']
+        if self.checkpoints:
+            if self.checkpoint_dir is not None:
+                working_in = self.checkpoint_dir
+            else:
+                working_in = 'cwd'
+            checkpoint[0] += 'every {} time steps, working in {}'.format(self.checkpoint_every, working_in)
+        else:
+            checkpoint[0] += 'disabled'
+
+        ide_parameters = [
+            "IDE Parameters: dy/dt = prefactor * f(t) * integral[ y(t') * f(t') * kernel(t - t')  ; {t', t_initial, t} ]",
+            '   Initial State: y = {}'.format(self.y_initial),
+            '   Prefactor: {}'.format(self.prefactor),
+            '   Electric Potential: {}'.format(self.electric_potential),
+            '   Kernel: {} with kwargs {}'.format(self.kernel.__name__, self.kernel_kwargs),
+        ]
+
+        time_evolution = [
+            'Time Evolution:',
+            '   Initial Time: {} as'.format(uround(self.time_initial, asec)),
+            '   Final Time: {} as'.format(uround(self.time_final, asec)),
+            '   Time Step: {} as'.format(uround(self.time_step, asec)),
+            '   Integration Method: {}'.format(self.integration_method),
+            '   Evolution Method: {}'.format(self.evolution_method),
+        ]
+
+        return '\n'.join(checkpoint + ide_parameters + time_evolution)
+
+
+class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
+    def __init__(self, spec):
+        super().__init__(spec)
+
+        total_time = self.spec.time_final - self.spec.time_initial
+        self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
+        self.time_index = 0
+
+        self.a = np.zeros(self.time_steps, dtype = np.complex128) * np.NaN
+        self.a[0] = self.spec.y_initial
+
+        if self.spec.electric_potential_dc_correction:
+            electric_field_vs_time = self.spec.electric_potential.get_electric_field_amplitude(self.times)
+            average_electric_field = integrate.simps(electric_field_vs_time, x = self.times) / total_time
+
+            old_pot = self.spec.electric_potential
+
+            self.spec.electric_potential += potentials.Rectangle(start_time = self.times[0], end_time = self.times[-1], amplitude = -average_electric_field)
+
+            logger.warning('Replaced electric potential {} --> {} for {} {}'.format(old_pot, self.spec.electric_potential, self.__class__.__name__, self.name))
+
+        self.electric_field_vs_time = self.spec.electric_potential.get_electric_field_amplitude(self.times)
+
+        if self.spec.integration_method == 'simpson':
+            self.integrate = integrate.simps
+        elif self.spec.integration_method == 'trapezoid':
+            self.integrate = integrate.trapz
+
+    @property
+    def time_steps(self):
+        return len(self.times)
+
+    @property
+    def time(self):
+        return self.times[self.time_index]
+
+    def evolve_FE(self):
+        dt = self.times[self.time_index + 1] - self.time
+
+        k = self.spec.prefactor * self.electric_field_vs_time[self.time_index] * self.integrate(y = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(self.time - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
+                                                                                                x = self.times[:self.time_index + 1])
+        self.a[self.time_index + 1] = self.a[self.time_index] + (dt * k)  # estimate next point
+
+    def evolve_BE(self):
+        dt = self.times[self.time_index + 1] - self.time
+
+        k = self.spec.prefactor * self.electric_field_vs_time[self.time_index + 1] * self.integrate(y = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(self.times[self.time_index + 1] - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
+                                                                                                    x = self.times[:self.time_index + 1])
+
+        self.a[self.time_index + 1] = (self.a[self.time_index] + (dt * k)) / (1 - self.spec.prefactor * ((dt * self.electric_field_vs_time[self.time_index + 1]) ** 2))  # estimate next point
+
+    def evolve_TRAP(self):
+        dt = self.times[self.time_index + 1] - self.time
+
+        k_1 = self.spec.prefactor * self.electric_field_vs_time[self.time_index + 1] * self.integrate(y = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(self.times[self.time_index + 1] - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
+                                                                                                      x = self.times[:self.time_index + 1])
+
+        k_2 = self.spec.prefactor * self.electric_field_vs_time[self.time_index] * self.integrate(y = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(self.times[self.time_index] - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
+                                                                                                  x = self.times[:self.time_index + 1])
+
+        self.a[self.time_index + 1] = (self.a[self.time_index] + (dt * (k_1 + k_2) / 2)) / (1 - .5 * self.spec.prefactor * ((dt * self.electric_field_vs_time[self.time_index + 1]) ** 2))  # estimate next point
+
+    def evolve_RK4(self):
+        dt = self.times[self.time_index + 1] - self.time
+        # print('dt (as)', dt / asec)
+
+        times_curr = self.times[:self.time_index + 1]
+        times_half = np.append(self.times[:self.time_index + 1], self.time + dt / 2)
+        times_next = self.times[:self.time_index + 2]
+
+        time_difference_curr = self.time - times_curr  # slice up to current time index
+        time_difference_half = (self.time + dt / 2) - times_half
+        time_difference_next = self.times[self.time_index + 1] - times_next
+
+        kernel_curr = self.spec.kernel(time_difference_curr, **self.spec.kernel_kwargs)
+        kernel_half = self.spec.kernel(time_difference_half, **self.spec.kernel_kwargs)
+        kernel_next = self.spec.kernel(time_difference_next, **self.spec.kernel_kwargs)
+
+        f_curr = self.electric_field_vs_time[self.time_index]
+        f_half = self.spec.electric_potential.get_electric_field_amplitude(self.time + (dt / 2))
+        f_next = self.electric_field_vs_time[self.time_index + 1]
+
+        f_times_y_curr = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1]
+
+        # integrate through the current time step
+        integrand_for_k1 = f_times_y_curr * kernel_curr
+        integral_for_k1 = self.integrate(y = integrand_for_k1, x = times_curr)
+        k1 = self.spec.prefactor * f_curr * integral_for_k1
+        y_midpoint_for_k2 = self.a[self.time_index] + (dt * k1 / 2)  # dt / 2 here because we moved forward to midpoint
+
+        integrand_for_k2 = np.append(f_times_y_curr, f_half * y_midpoint_for_k2) * kernel_half
+        integral_for_k2 = self.integrate(y = integrand_for_k2, x = times_half)
+        k2 = self.spec.prefactor * f_half * integral_for_k2  # dt / 2 because it's half of an interval that we're integrating over
+        y_midpoint_for_k3 = self.a[self.time_index] + (dt * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
+
+        integrand_for_k3 = np.append(f_times_y_curr, f_half * y_midpoint_for_k3) * kernel_half
+        integral_for_k3 = self.integrate(y = integrand_for_k3, x = times_half)
+        k3 = self.spec.prefactor * f_half * integral_for_k3  # dt / 2 because it's half of an interval that we're integrating over
+        y_end_for_k4 = self.a[self.time_index] + (dt * k3)  # estimate midpoint based on estimate of slope at midpoint
+
+        integrand_for_k4 = np.append(f_times_y_curr, f_next * y_end_for_k4) * kernel_next
+        integral_for_k4 = self.integrate(y = integrand_for_k4, x = times_next)
+        k4 = self.spec.prefactor * f_next * integral_for_k4
+
+        self.a[self.time_index + 1] = self.a[self.time_index] + (dt * (k1 + (2 * k2) + (2 * k3) + k4) / 6)  # estimate next point
+
+    def run_simulation(self):
+        logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
+        self.status = 'running'
+
+        while self.time < self.spec.time_final:
+            getattr(self, 'evolve_' + self.spec.evolution_method)()
+
+            self.time_index += 1
+
+            logger.debug('{} {} ({}) evolved to time index {} / {} ({}%)'.format(self.__class__.__name__, self.name, self.file_name, self.time_index, self.time_steps - 1,
+                                                                                 np.around(100 * (self.time_index + 1) / self.time_steps, 2)))
+
+            if self.spec.checkpoints:
+                if (self.time_index + 1) % self.spec.checkpoint_every == 0:
+                    self.save(target_dir = self.spec.checkpoint_dir)
+                    self.status = cp.STATUS_RUN
+                    logger.info('Checkpointed {} {} ({}) at time step {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1))
+
+        self.status = 'finished'
+        logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
+
+    def plot_a_vs_time(self, log = False, time_scale = 'asec', field_scale = 'AEF',
+                       show_title = False,
+                       plot_name = 'file_name',
+                       **kwargs):
+        fig = cp.utils.get_figure('full')
+
+        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(time_scale)
+        f_scale_unit, f_scale_name = unit_value_and_name_from_unit(field_scale)
+
+        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
+        ax_a = plt.subplot(grid_spec[0])
+        ax_f = plt.subplot(grid_spec[1], sharex = ax_a)
+
+        ax_f.plot(self.times / x_scale_unit, self.spec.electric_potential.get_electric_field_amplitude(self.times) / f_scale_unit, color = core.RED, linewidth = 2)
+
+        overlap = np.abs(self.a) ** 2
+        ax_a.plot(self.times / x_scale_unit, overlap, color = 'black', linewidth = 2)
+
+        if log:
+            ax_a.set_yscale('log')
+            min_overlap = np.min(overlap)
+            ax_a.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
+            ax_a.grid(True, which = 'both', **core.GRID_KWARGS)
+        else:
+            ax_a.set_ylim(0.0, 1.0)
+            ax_a.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+            ax_a.grid(True, **core.GRID_KWARGS)
+
+        ax_a.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
+
+        ax_f.set_xlabel(r'Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
+        ax_a.set_ylabel(r'$\left| a_{\alpha}(t) \right|^2$', fontsize = 13)
+        ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = core.RED)
+
+        plt.rcParams['xtick.major.pad'] = 5
+        plt.rcParams['ytick.major.pad'] = 5
+
+        # Find at most n+1 ticks on the y-axis at 'nice' locations
+        max_yticks = 4
+        yloc = plt.MaxNLocator(max_yticks, prune = 'upper')
+        ax_f.yaxis.set_major_locator(yloc)
+
+        max_xticks = 6
+        xloc = plt.MaxNLocator(max_xticks, prune = 'both')
+        ax_f.xaxis.set_major_locator(xloc)
+
+        ax_f.tick_params(axis = 'x', which = 'major', labelsize = 10)
+        ax_f.tick_params(axis = 'y', which = 'major', labelsize = 10)
+        ax_a.tick_params(axis = 'both', which = 'major', labelsize = 10)
+
+        ax_a.tick_params(labelleft = True,
+                         labelright = True,
+                         labeltop = True,
+                         labelbottom = False,
+                         bottom = True,
+                         top = True,
+                         left = True,
+                         right = True)
+        ax_f.tick_params(labelleft = True,
+                         labelright = True,
+                         labeltop = False,
+                         labelbottom = True,
+                         bottom = True,
+                         top = True,
+                         left = True,
+                         right = True)
+
+        ax_f.grid(True, **core.GRID_KWARGS)
+
+        if show_title:
+            title = ax_a.set_title(self.name)
+            title.set_y(1.15)
+
+        postfix = ''
+        if log:
+            postfix += '__log'
+        prefix = getattr(self, plot_name)
+
+        name = prefix + '__solution_vs_time{}'.format(postfix)
+
+        cp.utils.save_current_figure(name = name, **kwargs)
+
+        plt.close()

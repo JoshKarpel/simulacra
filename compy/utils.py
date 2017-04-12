@@ -106,14 +106,14 @@ class Logger:
         self.file_level = file_level
 
         if file_name is None:
-            file_name = '{}__{}'.format('log', now_string())
+            file_name = f'log__{now_string()}'
         self.file_name = file_name
         if not self.file_name.endswith('.log'):
             self.file_name += '.log'
 
         if file_dir is None:
             file_dir = os.getcwd()
-        self.file_dir = file_dir
+        self.file_dir = os.path.abspath(file_dir)
 
         self.file_mode = file_mode
 

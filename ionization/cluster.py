@@ -124,12 +124,71 @@ class ConvergenceSimulationResult(ElectricFieldSimulationResult):
         super().__init__(sim, job_processor)
 
         self.r_points = copy(sim.spec.r_points)
-        self.delta_r = copy(sim.mesh.delta_r)
+        self.r_bound = copy(sim.spec.r_bound)
+        self.delta_r = self.r_bound / self.r_points
         self.delta_t = copy(sim.spec.time_step)
 
 
 class ConvergenceJobProcessor(ElectricFieldJobProcessor):
     simulation_result_type = ConvergenceSimulationResult
+
+    def make_summary_plots(self):
+        super().make_summary_plots()
+
+        if len(self.unprocessed_sim_names) == 0:
+            self.make_pulse_parameter_scan_plots()
+
+    def make_pulse_parameter_scan_plots(self):
+        logger.info(f'Generating Pulse Parameter Scans for job {self.name}')
+
+        for ionization_metric in ('final_norm', 'final_initial_state_overlap', 'final_bound_state_overlap'):
+            ionization_metric_name = ionization_metric.replace('_', ' ').title()
+
+            for plot_parameter, line_parameter, scan_parameter in it.permutations(('delta_r', 'delta_t')):
+                plot_parameter_name, line_parameter_name, scan_parameter_name = plot_parameter.replace('_', ' ').title(), line_parameter.replace('_', ' ').title(), scan_parameter.replace('_', ' ').title()
+                plot_parameter_unit, line_parameter_unit, scan_parameter_unit = parameter_name_to_unit_name[plot_parameter], parameter_name_to_unit_name[line_parameter], parameter_name_to_unit_name[scan_parameter]
+                plot_parameter_set, line_parameter_set, scan_parameter_set = self.parameter_set(plot_parameter), self.parameter_set(line_parameter), self.parameter_set(scan_parameter)
+
+                for plot_parameter_value in plot_parameter_set:
+                    for line_group_number, line_parameter_group in enumerate(cp.utils.grouper(sorted(line_parameter_set), 8)):
+                        plot_name = f'{ionization_metric}__{plot_parameter}={uround(plot_parameter_value, plot_parameter_unit, 3)}{plot_parameter_unit}__grouped_by_{line_parameter}__group_{line_group_number}'
+
+                        lines = []
+                        line_labels = []
+
+                        for line_parameter_value in sorted(l for l in line_parameter_group if l is not None):
+                            selector = {
+                                plot_parameter: plot_parameter_value,
+                                line_parameter: line_parameter_value,
+                            }
+                            results = sorted(self.select_by_kwargs(**selector), key = lambda result: getattr(result, scan_parameter))
+
+                            lines.append(np.array([getattr(result, ionization_metric) for result in results]))
+
+                            label = fr"{line_parameter_name}$\, = {uround(line_parameter_value, line_parameter_unit, 3)} \, {unit_names_to_tex_strings[line_parameter_unit]}$"
+                            line_labels.append(label)
+
+                        x = np.array([getattr(result, scan_parameter) for result in results])
+
+                        for log in (False, True):
+                            if not log:
+                                y_upper_limit = 1
+                                y_lower_limit = 0
+                            else:
+                                y_upper_limit = None
+                                y_lower_limit = None
+
+                            cp.utils.xy_plot(plot_name + f'__log={log}',
+                                             x,
+                                             *lines,
+                                             line_labels = line_labels,
+                                             title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
+                                             x_label = scan_parameter_name, x_scale = scan_parameter_unit,
+                                             y_lower_limit = y_lower_limit, y_upper_limit = y_upper_limit, y_log_axis = log,
+                                             y_label = ionization_metric_name,
+                                             legend_on_right = True,
+                                             target_dir = self.plots_dir
+                                             )
 
 
 class PulseSimulationResult(ElectricFieldSimulationResult):

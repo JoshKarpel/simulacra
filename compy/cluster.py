@@ -106,7 +106,7 @@ class ClusterInterface:
 
     def get_job_status(self):
         """Get the status of jobs on the cluster."""
-        cmd_output = self.cmd('condor_q')
+        cmd_output = self.cmd('condor_q -wide')
 
         status = cmd_output.stdout.readlines()
 
@@ -673,10 +673,12 @@ request_cpus = 1
 request_memory = {}GB
 request_disk = {}GB
 #
+requirements = (OpSysMajorVer == 6) || (OpSysMajorVer == 7)
+#
 queue {}"""
 
 
-def format_chtc_submit_string(job_name, specification_count, memory = 4, disk = 4, checkpoints = True):
+def format_chtc_submit_string(job_name, specification_count, memory = 2, disk = 1, checkpoints = True):
     """
     Return a formatted submit string for an HTCondor job.
     

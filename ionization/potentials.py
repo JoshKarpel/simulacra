@@ -5,14 +5,13 @@ import numpy.fft as nfft
 import scipy.integrate as integ
 
 import compy as cp
-import utils
 from compy.units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class PotentialEnergy(utils.Summand):
+class PotentialEnergy(cp.utils.Summand):
     """A class representing some kind of potential energy. Can be summed to form a PotentialEnergySum."""
 
     def __init__(self, *args, **kwargs):
@@ -20,7 +19,7 @@ class PotentialEnergy(utils.Summand):
         self.summation_class = PotentialEnergySum
 
 
-class PotentialEnergySum(utils.Sum, PotentialEnergy):
+class PotentialEnergySum(cp.utils.Sum, PotentialEnergy):
     """A class representing a combination of potential energies."""
 
     container_name = 'potentials'
@@ -37,7 +36,7 @@ class NoPotentialEnergy(PotentialEnergy):
         return 0
 
 
-class TimeWindow(utils.Summand):
+class TimeWindow(cp.utils.Summand):
     """A class representing a time-window that can be attached to another potential."""
 
     def __init__(self):
@@ -45,7 +44,7 @@ class TimeWindow(utils.Summand):
         self.summation_class = TimeWindowSum
 
 
-class TimeWindowSum(utils.Sum, TimeWindow):
+class TimeWindowSum(cp.utils.Sum, TimeWindow):
     """A class representing a combination of time-windows."""
 
     container_name = 'windows'
@@ -57,7 +56,7 @@ class NoTimeWindow(TimeWindow):
         return 1
 
 
-class Mask(utils.Summand):
+class Mask(cp.utils.Summand):
     """A class representing a spatial 'mask' that can be applied to the wavefunction to reduce it in certain regions."""
 
     def __init__(self):
@@ -65,7 +64,7 @@ class Mask(utils.Summand):
         self.summation_class = MaskSum
 
 
-class MaskSum(utils.Sum, Mask):
+class MaskSum(cp.utils.Sum, Mask):
     """A class representing a combination of masks."""
 
     container_name = 'masks'
@@ -151,9 +150,11 @@ class HarmonicOscillator(PotentialEnergy):
         d = (distance - self.center)
 
         inside = 0.5 * self.spring_constant * (d ** 2)
-        outside = 0.5 * self.spring_constant * (self.cutoff_distance ** 2)
-
-        return np.where(np.less_equal(np.abs(d), self.cutoff_distance), inside, outside)
+        if self.cutoff_distance is not None:
+            outside = 0.5 * self.spring_constant * (self.cutoff_distance ** 2)
+            return np.where(np.less_equal(np.abs(d), self.cutoff_distance), inside, outside)
+        else:
+            return inside
 
     def omega(self, mass):
         """Return the angular frequency for this potential for the given mass."""
