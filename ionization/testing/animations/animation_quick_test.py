@@ -87,7 +87,7 @@ if __name__ == '__main__':
         mass = electron_mass
         pot = ion.HarmonicOscillator.from_energy_spacing_and_mass(energy_spacing = 1 * eV, mass = mass)
 
-        init = ion.QHOState.from_QHO_potential_and_mass(pot, mass, n = 1) + ion.QHOState.from_QHO_potential_and_mass(pot, mass, n = 2)
+        init = ion.QHOState.from_potential(pot, mass, n = 1) + ion.QHOState.from_potential(pot, mass, n = 2)
 
         animators = [
             ion.animators.LineAnimator(postfix = '_nm', target_dir = OUT_DIR, distance_unit = 'nm'),
@@ -97,7 +97,7 @@ if __name__ == '__main__':
                                            x_bound = 50 * nm, x_points = 2 ** 14,
                                            internal_potential = pot,
                                            electric_potential = ion.SineWave.from_photon_energy(1 * eV, amplitude = .05 * atomic_electric_field),
-                                           test_states = (ion.QHOState.from_QHO_potential_and_mass(pot, mass, n = n) for n in range(20)),
+                                           test_states = (ion.QHOState.from_potential(pot, mass, n = n) for n in range(20)),
                                            initial_state = init,
                                            time_initial = t_init * asec, time_final = t_final * 10 * asec, time_step = dt * asec,
                                            mask = ion.RadialCosineMask(inner_radius = 40 * nm, outer_radius = 50 * nm),

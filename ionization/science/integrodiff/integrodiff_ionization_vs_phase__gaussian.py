@@ -53,18 +53,20 @@ if __name__ == '__main__':
         # max_dt = 10
         # method_str = 'max_dt={}as__TperPW={}__eps={}_on_{}'.format(max_dt, t_bound_per_pw, eps, eps_on)
 
-        min_dt_per_pw = 20
+        min_dt_per_pw = 10
         method_str = 'min_dt_per_pw={}__TperPW={}__eps={}_on_{}'.format(min_dt_per_pw, t_bound_per_pw, eps, eps_on)
 
         # pulse_widths = np.array()
         # pulse_widths = np.array([140, 142.5, 145, 147.5, 150], dtype = np.float64)
         # pulse_widths = np.array([50, 100, 150, 200, 250, 300, tau_alpha / asec, 1.5 * tau_alpha / asec], dtype = np.float64)
-        pulse_widths = np.array([50, 100, 150, 200, 250, 300, 400, 600, 800], dtype = np.float64)
+        pulse_widths = np.array([400], dtype = np.float64)
+        # pulse_widths = np.array([50, 100, 150, 200, 250, 300, 400, 600, 800], dtype = np.float64)
 
-        phases = np.linspace(0, pi, 100)
+        phases = np.linspace(0, pi, 200)
 
         # flu = 5
-        for flu in [.1, .5, 1, 5, 10, 20]:
+        # for flu in [.1, .5, 1, 5, 10, 20]:
+        for flu in [10]:
             physics_str = 'gaussian__lambda={}br_flu={}__pw={}asto{}as__{}pws'.format(
                 l,
                 round(flu, 3),
@@ -89,7 +91,8 @@ if __name__ == '__main__':
                                                                                       # maximum_time_step = max_dt * asec,
                                                                                       maximum_time_step = (pw / min_dt_per_pw) * asec,
                                                                                       prefactor = prefactor,
-                                                                                      f = electric_field.get_electric_field_amplitude,
+                                                                                      # f = electric_field.get_electric_field_amplitude,
+                                                                                      electric_potential = electric_field,
                                                                                       kernel = ide.gaussian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha),
                                                                                       pulse_width = pw * asec,
                                                                                       phase = phase,
@@ -100,7 +103,7 @@ if __name__ == '__main__':
 
             a_alpha_final = {pw: dict() for pw in pulse_widths * asec}
             for r in results:
-                a_alpha_final[r.spec.pulse_width][r.spec.phase] = r.y[-1]
+                a_alpha_final[r.spec.pulse_width][r.spec.phase] = r.a[-1]
 
             pw_labels = list(r'$\tau$ = {} $\mathrm{{as}}$'.format(uround(pw, asec, 3)) for pw in sorted(a_alpha_final))
             y = [cp.utils.dict_to_arrays(d) for pw, d in sorted(a_alpha_final.items())]

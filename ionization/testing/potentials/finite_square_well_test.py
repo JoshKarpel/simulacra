@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
         pot = ion.FiniteSquareWell(potential_depth = depth, width = width)
         # init = ion.FiniteSquareWellState.from_square_well_potential(pot, mass, n = 1) + ion.FiniteSquareWellState.from_square_well_potential(pot, mass = mass, n = 2) + ion.FiniteSquareWellState.from_square_well_potential(pot, mass = mass, n = 3)
-        init = ion.FiniteSquareWellState.from_square_well_potential(pot, mass, n = 1)
+        init = ion.FiniteSquareWellState.from_potential(pot, mass, n = 1)
 
         # print('energy', init.energy / eV)
 

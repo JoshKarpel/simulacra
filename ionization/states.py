@@ -528,6 +528,66 @@ class NumericSphericalHarmonicState(QuantumState):
         return self.radial_function(r) * self.spherical_harmonic(theta, phi)
 
 
+class NumericOneDState(QuantumState):
+    discrete_eigenvalues = True
+
+    def __init__(self, psi_mesh, energy, analytic_state = None, bound = True, amplitude = 1):
+        super().__init__(amplitude = amplitude)
+
+        self.psi_mesh = psi_mesh
+
+        self.energy = energy
+
+        self.analytic_state = analytic_state
+
+        self.bound = bound
+
+    def __str__(self):
+        if self.analytic_state is None:
+            return self.ket
+        else:
+            return str(self.analytic_state)
+
+    def __repr__(self):
+        if self.analytic_state is None:
+            return self.ket
+        else:
+            return repr(self.analytic_state)
+
+    @property
+    def tuple(self):
+        if self.analytic_state is None:
+            return (self.energy,)
+        else:
+            return self.analytic_state.tuple
+
+    @property
+    def ket(self):
+        if self.analytic_state is None:
+            return f'|E={uround(self.energy, "eV", 3)} eV>'
+        else:
+            return self.analytic_state.ket
+
+    @property
+    def bra(self):
+        if self.analytic_state is None:
+            return f'<E={uround(self.energy, "eV", 3)} eV|'
+        else:
+            return self.analytic_state.bra
+
+    @property
+    def tex_str(self):
+        """Return a LaTeX-formatted string for the NumericOneDState."""
+        if self.analytic_state is None:
+            return fr'E = {uround(self.energy, "eV", 3)} \mathrm{eV}'
+        else:
+            return self.analytic_state.tex_str
+
+    def __call__(self, x):
+        return self.psi_mesh
+
+
+
 class OneDFreeParticle(QuantumState):
     """A class representing a free particle in one dimension."""
 
@@ -595,6 +655,8 @@ class OneDFreeParticle(QuantumState):
 class QHOState(QuantumState):
     """A class representing a bound state of the quantum harmonic oscillator."""
 
+    smallest_n = 0
+
     def __init__(self, spring_constant, mass = electron_mass, n = 0, amplitude = 1, dimension_label = 'x'):
         """
         Construct a QHOState from a spring constant, mass, and energy index n.
@@ -627,18 +689,18 @@ class QHOState(QuantumState):
         return cls(spring_constant = mass * (omega ** 2), mass = mass, n = n, amplitude = amplitude, dimension_label = dimension_label)
 
     @classmethod
-    def from_QHO_potential_and_mass(cls, qho_potential, mass, n = 0, amplitude = 1, dimension_label = 'x'):
+    def from_potential(cls, potential, mass, n = 0, amplitude = 1, dimension_label = 'x'):
         """
         Construct a QHOState from a HarmonicOscillator, mass, and energy index n.
 
-        :param qho_potential: a HarmonicOscillator instance
+        :param potential: a HarmonicOscillator instance
         :param mass: the mass of the particle
         :param n: the energy index of the state
         :param amplitude: the probability amplitude of the state
         :param dimension_label: a label indicating which dimension the particle is confined in
         :return: a QHOState instance
         """
-        return cls(spring_constant = qho_potential.spring_constant, mass = mass, n = n, amplitude = amplitude, dimension_label = dimension_label)
+        return cls(spring_constant = potential.spring_constant, mass = mass, n = n, amplitude = amplitude, dimension_label = dimension_label)
 
     @property
     def omega(self):
@@ -705,6 +767,8 @@ class QHOState(QuantumState):
 class FiniteSquareWellState(QuantumState):
     """A class representing a bound state of a finite square well."""
 
+    smallest_n = 1
+
     def __init__(self, well_depth, well_width, mass, n = 1, well_center = 0, amplitude = 1, dimension_label = 'x'):
         """
         Construct a FiniteSquareWellState from the well properties, the particle mass, and an energy index.
@@ -752,18 +816,18 @@ class FiniteSquareWellState(QuantumState):
         super(FiniteSquareWellState, self).__init__(amplitude = amplitude)
 
     @classmethod
-    def from_square_well_potential(cls, finite_square_well_potential, mass, n = 1, amplitude = 1, dimension_label = 'x'):
+    def from_potential(cls, potential, mass, n = 1, amplitude = 1, dimension_label = 'x'):
         """
         Construct a FiniteSquareWellState from a FiniteSquareWell potential, the particle mass, and an energy index.
 
-        :param finite_square_well_potential: a FiniteSquareWell potential.
+        :param potential: a FiniteSquareWell potential.
         :param mass: the mass of the particle
         :param n: the energy index of the state
         :param amplitude: the probability amplitude of the state
         :param dimension_label: a label indicating which dimension the particle is confined in
         :return: a FiniteSquareWellState instance
         """
-        return cls(finite_square_well_potential.potential_depth, finite_square_well_potential.width, mass, n = n, well_center = finite_square_well_potential.center, amplitude = amplitude, dimension_label = dimension_label)
+        return cls(potential.potential_depth, potential.width, mass, n = n, well_center = potential.center, amplitude = amplitude, dimension_label = dimension_label)
 
     def __str__(self):
         return self.ket

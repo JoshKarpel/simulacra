@@ -390,6 +390,9 @@ class LineSpecification(ElectricFieldSpecification):
                  x_bound = 10 * nm,
                  x_points = 2 ** 9,
                  fft_cutoff_energy = 1000 * eV,
+                 analytic_eigenstate_type = None,
+                 use_numeric_eigenstates_as_basis = False,
+                 numeric_eigenstate_energy_max = 100 * eV,
                  **kwargs):
         super(LineSpecification, self).__init__(name, mesh_type = LineMesh,
                                                 initial_state = initial_state,
@@ -400,6 +403,10 @@ class LineSpecification(ElectricFieldSpecification):
 
         self.fft_cutoff_energy = fft_cutoff_energy
         self.fft_cutoff_wavenumber = np.sqrt(2 * self.test_mass * self.fft_cutoff_energy) / hbar
+
+        self.analytic_eigenstate_type = analytic_eigenstate_type
+        self.use_numeric_eigenstates_as_basis = use_numeric_eigenstates_as_basis
+        self.numeric_eigenstate_energy_max = numeric_eigenstate_energy_max
 
     def info(self):
         mesh = ['Mesh: {}'.format(self.mesh_type.__name__),
@@ -424,9 +431,16 @@ class LineMesh(QuantumMesh):
         self.delta_k = np.abs(self.wavenumbers[1] - self.wavenumbers[0])
 
         self.inner_product_multiplier = self.delta_x
+        self.g_factor = 1
+
+        if self.spec.use_numeric_eigenstates_as_basis:
+            self.analytic_to_numeric = self._get_numeric_eigenstate_basis(self.spec.numeric_eigenstate_energy_max)
+            self.spec.test_states = sorted(list(self.analytic_to_numeric.values()), key = lambda x: x.energy)
+            self.spec.initial_state = self.analytic_to_numeric[self.spec.initial_state]
+
+            logger.warning('Replaced test states for {} with numeric eigenbasis'.format(self))
 
         self.g_mesh = self.get_g_for_state(self.spec.initial_state)
-        self.g_factor = 1
 
         self.free_evolution_prefactor = -1j * (hbar / (2 * self.spec.test_mass)) * (self.wavenumbers ** 2)  # hbar^2/2m / hbar
         self.wavenumber_mask = np.where(np.abs(self.wavenumbers) < self.spec.fft_cutoff_wavenumber, 1, 0)
@@ -486,7 +500,7 @@ class LineMesh(QuantumMesh):
         self._evolve_potential(time_step / 2)
 
     @cp.utils.memoize
-    def get_kinetic_energy_matrix_operator(self):
+    def _get_kinetic_energy_matrix_operator(self):
         prefactor = -(hbar ** 2) / (2 * self.spec.test_mass * (self.delta_x ** 2))
 
         diag = -2 * prefactor * np.ones(len(self.x_mesh), dtype = np.complex128)
@@ -494,11 +508,19 @@ class LineMesh(QuantumMesh):
 
         return sparse.diags((off_diag, diag, off_diag), (-1, 0, 1))
 
+    @cp.utils.memoize
+    def _get_internal_hamiltonian_matrix_operator(self):
+        kinetic = self._get_kinetic_energy_matrix_operator().copy()
+
+        kinetic.data[1] += self.spec.internal_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh, test_charge = self.spec.test_charge)
+
+        return kinetic
+
     def _evolve_SO(self, time_step):
         self._evolve_potential(time_step / 2)
 
         tau = time_step / (2 * hbar)
-        hamiltonian_x = self.get_kinetic_energy_matrix_operator()
+        hamiltonian_x = self._get_kinetic_energy_matrix_operator()
 
         hamiltonian = -1j * tau * hamiltonian_x
         hamiltonian.data[1] += 1  # add identity to matrix operator
@@ -509,6 +531,72 @@ class LineMesh(QuantumMesh):
         self.g_mesh = cy.tdma(hamiltonian, self.g_mesh)
 
         self._evolve_potential(time_step / 2)
+
+    def _evolve_CN(self, time_step):
+        tau = time_step / (2 * hbar)
+
+        electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.x_mesh, test_charge = self.spec.test_charge)
+
+        hamiltonian_x = self._get_internal_hamiltonian_matrix_operator().copy()
+
+        hamiltonian_x.data[1] += electric_potential_energy_mesh
+
+        hamiltonian = -1j * tau * hamiltonian_x
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        self.g_mesh = hamiltonian.dot(self.g_mesh)
+
+        hamiltonian = 1j * tau * hamiltonian_x
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        self.g_mesh = cy.tdma(hamiltonian, self.g_mesh)
+
+    def _get_numeric_eigenstate_basis(self, energy_max):
+        analytic_to_numeric = {}
+
+        h = self._get_internal_hamiltonian_matrix_operator()
+
+        estimated_spacing = twopi / np.max(self.x_mesh)
+        wavenumber_max = np.real(electron_wavenumber_from_energy(energy_max))
+        number_of_eigenvectors = int(wavenumber_max / estimated_spacing)  # generate an initial guess based on roughly linear wavenumber steps between eigenvalues
+
+        max_eigenvectors = h.shape[0] - 2  # can't generate more than this many eigenvectors using sparse linear algebra methods
+
+        while True:
+            if number_of_eigenvectors > max_eigenvectors:
+                number_of_eigenvectors = max_eigenvectors  # this will cause the loop to break after this attempt
+
+            print(f'getting ev for k = {number_of_eigenvectors}')
+            with cp.utils.Timer() as t:
+                eigenvalues, eigenvectors = sparsealg.eigsh(h, k = number_of_eigenvectors, which = 'SA')
+            print(t)
+
+            if np.max(eigenvalues) > energy_max or number_of_eigenvectors == max_eigenvectors:
+                break
+
+            number_of_eigenvectors = int(number_of_eigenvectors * 1.1 * np.sqrt(np.abs(energy_max / np.max(eigenvalues))))  # based on approximate sqrt scaling of energy to wavenumber, with safety factor
+
+        for nn, (eigenvalue, eigenvector) in enumerate(zip(eigenvalues, eigenvectors.T)):
+            eigenvector /= np.sqrt(self.inner_product_multiplier * np.sum(np.abs(eigenvector) ** 2))  # normalize
+            # eigenvector /= self.g_factor  # go to u from R
+
+            if eigenvalue > energy_max:  # ignore eigenvalues that are too large
+                continue
+            try:
+                bound = True
+                analytic_state = self.spec.analytic_eigenstate_type.from_potential(self.spec.internal_potential, self.spec.test_mass,
+                                                                                   n = nn + self.spec.analytic_eigenstate_type.smallest_n)
+            except states.IllegalQuantumState:
+                bound = False
+                analytic_state = None
+
+            numeric_state = states.NumericOneDState(eigenvector, eigenvalue, bound = bound, analytic_state = analytic_state)
+            if analytic_state is None:
+                analytic_state = numeric_state
+
+            analytic_to_numeric[analytic_state] = numeric_state
+
+        logger.debug('Generated numerical eigenbasis for energy <= {} eV. Found {} states.'.format(uround(energy_max, 'eV', 3), len(analytic_to_numeric)))
+
+        return analytic_to_numeric
 
     def get_mesh_slicer(self, plot_limit):
         if plot_limit is None:
@@ -1335,9 +1423,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.mesh_shape = np.shape(self.r_mesh)
 
         if self.spec.use_numeric_eigenstates_as_basis:
-            with cp.utils.Timer() as t:
-                self.analytic_to_numeric = self._get_numeric_eigenstate_basis(self.spec.numeric_eigenstate_energy_max, self.spec.numeric_eigenstate_l_max)
-            print(t)
+            self.analytic_to_numeric = self._get_numeric_eigenstate_basis(self.spec.numeric_eigenstate_energy_max, self.spec.numeric_eigenstate_l_max)
             self.spec.test_states = sorted(list(self.analytic_to_numeric.values()), key = lambda x: x.energy)
             self.spec.initial_state = self.analytic_to_numeric[self.spec.initial_state]
 
@@ -1760,6 +1846,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         r_kinetic, l_kinetic = self._get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
 
+        r_kinetic = r_kinetic.copy()
         r_kinetic.data[1] += self.flatten_mesh(potential_mesh, 'r')
 
         return r_kinetic, l_kinetic

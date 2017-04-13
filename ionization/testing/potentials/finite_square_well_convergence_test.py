@@ -88,7 +88,7 @@ if __name__ == '__main__':
         # width = 1
 
         fsw_potential = ion.FiniteSquareWell(potential_depth = depth * eV, width = width * nm)
-        init = ion.FiniteSquareWellState.from_square_well_potential(fsw_potential, mass, n = 1)
+        init = ion.FiniteSquareWellState.from_potential(fsw_potential, mass, n = 1)
 
         test_states = ion.FiniteSquareWellState.all_states_of_well_from_well(fsw_potential, mass)
 

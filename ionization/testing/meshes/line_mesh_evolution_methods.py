@@ -24,6 +24,11 @@ def run(spec):
         sim.plot_test_state_overlaps_vs_time(target_dir = OUT_DIR,
                                              grouped_free_states = {})
 
+        cp.utils.xy_plot(f'{sim.name}__energy_vs_time',
+                         sim.times, sim.energy_expectation_value_vs_time_internal,
+                         x_label = '$t$', x_scale = 'asec', y_label = 'Energy', y_scale = 'eV',
+                         target_dir = OUT_DIR)
+
 if __name__ == '__main__':
     with log as logger:
         energy_spacing = 1 * eV
@@ -31,8 +36,8 @@ if __name__ == '__main__':
 
         qho = ion.HarmonicOscillator.from_energy_spacing_and_mass(energy_spacing = energy_spacing, mass = mass)
 
-        initial_state = ion.QHOState.from_QHO_potential_and_mass(qho, mass, n = 0)
-        test_states = [ion.QHOState.from_QHO_potential_and_mass(qho, mass, n = n) for n in range(31)]
+        initial_state = ion.QHOState.from_potential(qho, mass, n = 0)
+        test_states = [ion.QHOState.from_potential(qho, mass, n = n) for n in range(31)]
 
         efield = ion.SineWave.from_photon_energy(energy_spacing, amplitude = .005 * atomic_electric_field)
         # efield = ion.NoElectricField()
@@ -44,7 +49,7 @@ if __name__ == '__main__':
 
         ani = [
             ion.animators.LineAnimator(postfix = '_full', **ani_kwargs),
-            ion.animators.LineAnimator(postfix = '_10', plot_limit = 10 * nm, **ani_kwargs),
+            ion.animators.LineAnimator(postfix = '_zoom', plot_limit = 10 * nm, **ani_kwargs),
         ]
 
         spec_kwargs = dict(
@@ -61,10 +66,10 @@ if __name__ == '__main__':
         )
 
         specs = []
-        for method in ('S', 'SO'):
+        for method in ('S', 'SO', 'CN'):
             specs.append(ion.LineSpecification(method,
                                                **spec_kwargs,
                                                evolution_method = method,
                                                ))
 
-        cp.utils.multi_map(run, specs, processes = 2)
+        cp.utils.multi_map(run, specs, processes = 3)

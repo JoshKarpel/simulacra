@@ -80,8 +80,8 @@ if __name__ == '__main__':
             cp.utils.try_loop(
                 ft.partial(suspend_processes, dropbox_processes),
                 ft.partial(synchronize_with_cluster, ci),
-                ft.partial(process_jobs, jobs_dir),
                 ft.partial(resume_processes, dropbox_processes),
+                ft.partial(process_jobs, jobs_dir),
                 wait_after_success = dt.timedelta(hours = 3),
                 wait_after_failure = dt.timedelta(hours = 1),
             )

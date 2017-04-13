@@ -1,17 +1,13 @@
-import sys
 import os
 import shutil
-import logging
 import argparse
-import json
-import pickle
-import functools as ft
 
 import numpy as np
 
 import compy as cp
 import ionization as ion
 import ionization.cluster as clu
+import ionization.integrodiff as ide
 from compy.units import *
 
 if __name__ == '__main__':
@@ -37,7 +33,7 @@ if __name__ == '__main__':
 
     with cp.utils.Logger('compy', 'ionization', stdout_level = 31 - ((args.verbosity + 1) * 10)) as logger:
         # job type options
-        job_processor = ion.cluster.PulseJobProcessor
+        job_processor = ion.cluster.IDEJobProcessor
 
         job_dir = os.path.join(args.dir, args.job_name)
 
@@ -49,44 +45,47 @@ if __name__ == '__main__':
 
         parameters = []
 
-        # get input from the user to define the job
-        # spec_type, mesh_kwargs = clu.ask_mesh_type()
-
-        spec_type = ion.LineSpecification
-
-        x_bound = nm * clu.ask_for_input('X Bound (in nm)?', default = 1000, cast_to = float)
-        parameters.append(clu.Parameter(name = 'x_bound',
-                                        value = x_bound))
-
-        potential = ion.FiniteSquareWell(potential_depth = eV * clu.ask_for_input('Finite Square Well Depth (in eV)?', default = 5, cast_to = float),
-                                         width = nm * clu.ask_for_input('Finite Square Well Width (in nm)?', default = 1, cast_to = float))
-
-        parameters.append(clu.Parameter(name = 'internal_potential',
-                                        value = potential))
-
+        test_charge = electron_charge * clu.ask_for_input('Test Particle Electric Charge (in electron charges)?', default = 1, cast_to = float)
         test_mass = electron_mass * clu.ask_for_input('Test Particle Mass (in electron masses)?', default = 1, cast_to = float)
+        test_width = bohr_radius * clu.ask_for_input('Gaussian Test Wavefunction Width (in Bohr radii)?', default = 1, cast_to = float)
+
+        prefactor = -((test_charge / test_mass) ** 2) / (4 * (test_width ** 2))
+        tau_alpha = 2 * test_mass * (test_width ** 2) / hbar
+
+        parameters.append(clu.Parameter(name = 'test_charge',
+                                        value = test_charge))
         parameters.append(clu.Parameter(name = 'test_mass',
                                         value = test_mass))
-        initial_state = clu.Parameter(name = 'initial_state',
-                                      value = ion.FiniteSquareWellState.from_potential(potential, test_mass, clu.ask_for_input('Initial State n?', default = 1, cast_to = int)))
-        parameters.append(initial_state)
+        parameters.append(clu.Parameter(name = 'test_width',
+                                        value = test_width))
 
-        parameters.append(clu.Parameter(name = 'test_states',
-                                        value = ion.FiniteSquareWellState.all_states_of_well_from_well(potential, test_mass)))
+        parameters.append(clu.Parameter(name = 'prefactor',
+                                        value = prefactor))
+
+        parameters.append(clu.Parameter(name = 'kernel',
+                                        value = ide.velocity_guassian_kernel))
+
+        parameters.append(clu.Parameter(name = 'kernel_kwargs',
+                                        value = dict(tau_alpha = tau_alpha, width = test_width)))
+
+        # parameters.append(clu.Parameter(name = 'minimum_time_step',
+        #                                 value = asec * clu.ask_for_input('Minimum Time Step (in as)?', default = .01, cast_to = float)))
+        #
+        # parameters.append(clu.Parameter(name = 'maximum_time_step',
+        #                                 value = asec * clu.ask_for_input('Maximum Time Step (in as)?', default = 10, cast_to = float)))
 
         parameters.append(clu.Parameter(name = 'time_step',
-                                        value = asec * clu.ask_for_input('Time Step (in as)?', default = 1, cast_to = float)))
+                                        value = asec * clu.ask_for_input('Initial Time Step (in as)?', default = .1, cast_to = float)))
+
+        # parameters.append(clu.Parameter(name = 'error_on',
+        #                                 value = clu.ask_for_input('Fractional Truncation Error Control on y or dydt?', default = 'dydt', cast_to = str)))
+        #
+        # parameters.append(clu.Parameter(name = 'epsilon',
+        #                                 value = clu.ask_for_input('Fractional Truncation Error Limit?', default = 1e-6, cast_to = float)))
 
         time_bound_in_pw = clu.Parameter(name = 'time_bound_in_pw',
                                          value = clu.ask_for_input('Time Bound (in pulse widths)?', default = 30, cast_to = float))
         parameters.append(time_bound_in_pw)
-
-        minimum_time_final = clu.Parameter(name = 'minimum_time_final',
-                                           value = asec * clu.ask_for_input('Minimum Final Time (in as)?', default = 0, cast_to = float))
-        parameters.append(minimum_time_final)
-        if minimum_time_final.value > 0:
-            parameters.append(clu.Parameter(name = 'extra_time_step',
-                                            value = asec * clu.ask_for_input('Extra Time Step (in as)?', default = 1, cast_to = float)))
 
         checkpoints = clu.ask_for_bool('Checkpoints?', default = True)
         parameters.append(clu.Parameter(name = 'checkpoints',
@@ -94,12 +93,6 @@ if __name__ == '__main__':
         if checkpoints:
             parameters.append(clu.Parameter(name = 'checkpoint_every',
                                             value = clu.ask_for_input('How many time steps per checkpoint?', default = 50, cast_to = int)))
-
-        outer_radius_default = x_bound / nm
-        parameters.append(clu.Parameter(name = 'mask',
-                                        value = ion.RadialCosineMask(inner_radius = nm * clu.ask_for_input('Mask Inner Radius (in nm)?', default = outer_radius_default * .8, cast_to = float),
-                                                                     outer_radius = nm * clu.ask_for_input('Mask Outer Radius (in nm)?', default = outer_radius_default, cast_to = float),
-                                                                     smoothness = clu.ask_for_input('Mask Smoothness?', default = 8, cast_to = int))))
 
         # pulse parameters
         pulse_parameters = []
@@ -125,14 +118,14 @@ if __name__ == '__main__':
         pulse_parameters.append(fluence)
 
         phases = clu.Parameter(name = 'phase',
-                               value = np.linspace(0, twopi, clu.ask_for_input('Number of Phases?', default = 100, cast_to = int)),
+                               value = np.array(clu.ask_for_eval('Pulse CEP (in rad)?', default = 'np.linspace(0, pi, 50)')),
                                expandable = True)
         pulse_parameters.append(phases)
 
         window_time_in_pw = clu.Parameter(name = 'window_time_in_pw',
-                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 1, cast_to = float))
+                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 2, cast_to = float))
         window_width_in_pw = clu.Parameter(name = 'window_width_in_pw',
-                                           value = clu.ask_for_input('Window Width (in pulse widths)?', default = 0.5, cast_to = float))
+                                           value = clu.ask_for_input('Window Width (in pulse widths)?', default = 0.2, cast_to = float))
         parameters.append(window_time_in_pw)
         parameters.append(window_width_in_pw)
 
@@ -155,18 +148,6 @@ if __name__ == '__main__':
                                         value = pulses,
                                         expandable = True))
 
-        parameters.append(clu.Parameter(name = 'evolution_method',
-                                        value = clu.ask_for_input('Evolution Method (S or SO)?', default = 'SO', cast_to = str)))
-
-        parameters.append(clu.Parameter(name = 'store_data_every',
-                                        value = clu.ask_for_input('Store Data Every?', default = 1, cast_to = int)))
-
-        parameters.append(clu.Parameter(name = 'snapshot_indices',
-                                        value = clu.ask_for_eval('Snapshot Indices?')))
-
-        parameters.append(clu.Parameter(name = 'snapshot_times',
-                                        value = asec * np.array(clu.ask_for_eval('Snapshot Times?', default = 'np.array([])'))))
-
         print('Generating parameters...')
 
         spec_kwargs_list = clu.expand_parameters_to_dicts(parameters)
@@ -183,10 +164,10 @@ if __name__ == '__main__':
             )
 
             time_bound = spec_kwargs['time_bound_in_pw'] * spec_kwargs['electric_potential'].pulse_width
-            spec = spec_type(name,
-                             file_name = str(ii),
-                             time_initial = -time_bound, time_final = time_bound,
-                             **spec_kwargs)
+            spec = ide.VelocityGaugeIntegroDifferentialEquationSpecification(name,
+                                                                             file_name = str(ii),
+                                                                             time_initial = -time_bound, time_final = time_bound,
+                                                                             **spec_kwargs)
 
             spec.pulse_type = pulse_type
             spec.pulse_width = spec_kwargs['electric_potential'].pulse_width

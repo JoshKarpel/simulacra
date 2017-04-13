@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
         # init = ion.Superposition({ion.QHOState(omega = pot.omega(mass), mass = mass, n = 0): 1,
         #                           ion.QHOState(omega = pot.omega(mass), mass = mass, n = 1): 1})
-        init = ion.QHOState.from_QHO_potential_and_mass(pot, mass, n = 20)
+        init = ion.QHOState.from_potential(pot, mass, n = 20)
 
         electric = ion.SineWave.from_photon_energy(1 * eV, amplitude = .01 * atomic_electric_field)
 
@@ -34,7 +34,7 @@ if __name__ == '__main__':
                                     # internal_potential = ion.NoPotentialEnergy(),
                                     electric_potential = electric,
                                     test_mass = mass,
-                                    test_states = (ion.QHOState.from_QHO_potential_and_mass(pot, mass, n = n) for n in range(60)),
+                                    test_states = (ion.QHOState.from_potential(pot, mass, n = n) for n in range(60)),
                                     dipole_gauges = (),
                                     initial_state = init,
                                     time_initial = 0, time_final = 10 * fsec, time_step = 10 * asec,
