@@ -682,27 +682,27 @@ def hash_args_kwargs(*args, **kwargs):
     return hash(args + tuple(kwargs.items()))
 
 
-def memoize(function):
+def memoize(func):
     """Memoize a function by storing a dictionary of {inputs: outputs}."""
     memo = {}
 
-    @ft.wraps(function)
+    @ft.wraps(func)
     def memoizer(*args, **kwargs):
         key = hash_args_kwargs(*args, **kwargs)
         if key not in memo:
-            memo[key] = function(*args, **kwargs)
+            memo[key] = func(*args, **kwargs)
         return memo[key]
 
     return memoizer
 
 
-def watcher(watcher):
+def watcher(watch):
     """
     Returns a decorator that memoizes the result of a method call until the watcher function returns a different value.
 
     The watcher function is passed the instance that the original method is bound to.
 
-    :param watcher: a function which is called to check whether to recompute the wrapped function
+    :param watch: a function which is called to check whether to recompute the wrapped function
     :return: a Watcher decorator
     """
 
@@ -723,7 +723,7 @@ def watcher(watcher):
             return 'watcher({})'.format(repr(self.func))
 
         def __call__(self, instance, *args, **kwargs):
-            check = watcher(instance)
+            check = watch(instance)
 
             if self.watched.get(instance) != check:
                 self.cached[instance] = self.func(instance, *args, **kwargs)

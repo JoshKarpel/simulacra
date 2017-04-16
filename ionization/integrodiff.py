@@ -772,16 +772,29 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
 
         self.a[self.time_index + 1] = (self.a[self.time_index] + (self.time_step * (k_1 + k_2) / 2)) / (1 - .5 * self.spec.prefactor * ((self.time_step * self.vector_potential_vs_time[self.time_index + 1]) ** 2))
 
-    # def evolve_TRAP(self):
-    #     dt = self.times[self.time_index + 1] - self.time
-    #
-    #     k_1 = self.spec.prefactor * self.electric_field_vs_time[self.time_index + 1] * self.integrate(y = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(self.times[self.time_index + 1] - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
-    #                                                                                                   x = self.times[:self.time_index + 1])
-    #
-    #     k_2 = self.spec.prefactor * self.electric_field_vs_time[self.time_index] * self.integrate(y = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(self.times[self.time_index] - self.times[:self.time_index + 1], **self.spec.kernel_kwargs),
-    #                                                                                               x = self.times[:self.time_index + 1])
-    #
-    #     self.a[self.time_index + 1] = (self.a[self.time_index] + (dt * (k_1 + k_2) / 2)) / (1 - .5 * self.spec.prefactor * ((dt * self.electric_field_vs_time[self.time_index + 1]) ** 2))  # estimate next point
+    def evolve_RK4(self):
+        times_curr = self.times[:self.time_index + 1]
+        times_half = np.append(self.times[:self.time_index + 1], self.time + self.time_step / 2)
+        times_next = self.times[:self.time_index + 2]
+
+        time_difference_curr = self.time - times_curr  # slice up to current time index
+        time_difference_half = (self.time + self.time_step / 2) - times_half
+        time_difference_next = self.times[self.time_index + 1] - times_next
+
+        quiver_half = (self.quiver_motion_vs_time[self.time_index] + self.quiver_motion_vs_time[self.time_index + 1]) / 2  # not convinced this is right
+
+        quiver_diff_curr = self.quiver_motion_vs_time[self.time_index] - self.quiver_motion_vs_time[:self.time_index + 1]
+        quiver_diff_half = quiver_half - self.quiver_motion_vs_time[:self.time_index + 1]  # not right
+        quiver_diff_next = self.quiver_motion_vs_time[self.time_index + 1] - self.quiver_motion_vs_time[:self.time_index + 2]
+
+        kernel_curr = self.spec.kernel(time_difference_curr, quiver_diff_curr, **self.spec.kernel_kwargs)
+        kernel_half = self.spec.kernel(time_difference_half, quiver_diff_half, **self.spec.kernel_kwargs)
+        kernel_next = self.spec.kernel(time_difference_next, quiver_diff_next, **self.spec.kernel_kwargs)
+
+        integral_curr = self.integrate(y = self.vector_potential_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(time_diff_curr, quiver_diff_curr, **self.spec.kernel_kwargs),
+                                       x = self.times[:self.time_index + 1])
+
+        raise NotImplementedError
 
     # def evolve_RK4(self):
     #     dt = self.times[self.time_index + 1] - self.time

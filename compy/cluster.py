@@ -376,33 +376,36 @@ class JobProcessor(utils.Beet):
         
         :param force_reprocess: if True, process all Simulations in the output directory regardless of prior processing status
         """
-        start_time = dt.datetime.now()
-        logger.info('Loading simulations from job {}'.format(self.name))
+        with cp.utils.Timer() as t:
+            logger.info('Loading simulations from job {}'.format(self.name))
 
-        if force_reprocess:
-            sim_names = tqdm(copy(self.sim_names))
-        else:
-            new_sims = self.unprocessed_sim_names.intersection(self.get_sim_names_from_sims())  # only process newly-downloaded Simulations
-            sim_names = tqdm(new_sims)
+            if force_reprocess:
+                sim_names = tqdm(copy(self.sim_names))
+            else:
+                new_sims = self.unprocessed_sim_names.intersection(self.get_sim_names_from_sims())  # only process newly-downloaded Simulations
+                sim_names = tqdm(new_sims)
 
-        for sim_name in sim_names:
-            sim = self.load_sim(sim_name)
+            for sim_name in sim_names:
+                sim = self.load_sim(sim_name)
 
-            if sim is not None:
-                try:
-                    self.data[sim_name] = self.simulation_result_type(sim, job_processor = self)
-                    self.unprocessed_sim_names.discard(sim_name)
-                except AttributeError as e:
-                    logger.exception('Exception encountered while processing simulation {}'.format(sim_name))
+                if sim is not None:
+                    try:
+                        self.data[sim_name] = self.simulation_result_type(sim, job_processor = self)
+                        self.unprocessed_sim_names.discard(sim_name)
+                    except AttributeError as e:
+                        logger.exception('Exception encountered while processing simulation {}'.format(sim_name))
 
-            self.save(target_dir = self.job_dir_path)
+                self.save(target_dir = self.job_dir_path)
 
-        # self.write_to_txt()
-        # self.write_to_csv()
-        self.make_summary_plots()
+        logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, t.time_elapsed))
 
-        end_time = dt.datetime.now()
-        logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, end_time - start_time))
+        with cp.utils.Timer() as t:
+            # self.write_to_txt()
+            # self.write_to_csv()
+
+            self.make_summary_plots()
+
+        logger.info('Finished summary plots for job {}. Elapsed time: {}'.format(self.name, t.time_elapsed))
 
     def write_to_csv(self):
         raise NotImplementedError
@@ -678,7 +681,7 @@ requirements = (OpSysMajorVer == 6) || (OpSysMajorVer == 7)
 queue {}"""
 
 
-def format_chtc_submit_string(job_name, specification_count, memory = 2, disk = 1, checkpoints = True):
+def format_chtc_submit_string(job_name, specification_count, memory = 4, disk = 1, checkpoints = True):
     """
     Return a formatted submit string for an HTCondor job.
     

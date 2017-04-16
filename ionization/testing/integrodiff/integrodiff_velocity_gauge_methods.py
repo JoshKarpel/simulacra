@@ -31,7 +31,7 @@ if __name__ == '__main__':
         pw = 100 * asec
         t_bound = 10
 
-        L = 1 * bohr_radius
+        L = bohr_radius
         m = electron_mass
         q = electron_charge
 
@@ -45,7 +45,7 @@ if __name__ == '__main__':
         tau_alpha = 2 * m * (L ** 2) / hbar
 
         specs = []
-        for method in ('FE', 'BE', 'TRAP'):
+        for method in ('FE', 'BE', 'TRAP', 'RK4'):
             specs.append(ide.VelocityGaugeIntegroDifferentialEquationSpecification(method,
                                                                                    time_initial = - t_bound * pw, time_final = t_bound * pw, time_step = 1 * asec,
                                                                                    electric_potential = efield,
