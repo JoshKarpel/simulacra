@@ -774,71 +774,55 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
 
     def evolve_RK4(self):
         times_curr = self.times[:self.time_index + 1]
-        times_half = np.append(self.times[:self.time_index + 1], self.time + self.time_step / 2)
+        time_at_half = self.time + self.time_step / 2
+        times_half = np.append(self.times[:self.time_index + 1], time_at_half)
         times_next = self.times[:self.time_index + 2]
 
         time_difference_curr = self.time - times_curr  # slice up to current time index
-        time_difference_half = (self.time + self.time_step / 2) - times_half
+        time_difference_half = time_at_half - times_half
         time_difference_next = self.times[self.time_index + 1] - times_next
 
-        quiver_half = (self.quiver_motion_vs_time[self.time_index] + self.quiver_motion_vs_time[self.time_index + 1]) / 2  # not convinced this is right
+        vector_potential_curr = self.vector_potential_vs_time[self.time_index]
+        vector_potential_half = (self.vector_potential_vs_time[self.time_index] + self.vector_potential_vs_time[self.time_index + 1]) / 2
+        vector_potential_next = self.vector_potential_vs_time[self.time_index + 1]
+
+        quiver_at_half = (self.quiver_motion_vs_time[self.time_index] + self.quiver_motion_vs_time[self.time_index + 1]) / 2
+        quiver_half = np.append(self.quiver_motion_vs_time[:self.time_index + 1], quiver_at_half)
 
         quiver_diff_curr = self.quiver_motion_vs_time[self.time_index] - self.quiver_motion_vs_time[:self.time_index + 1]
-        quiver_diff_half = quiver_half - self.quiver_motion_vs_time[:self.time_index + 1]  # not right
+        quiver_diff_half = quiver_at_half - quiver_half  # not right
         quiver_diff_next = self.quiver_motion_vs_time[self.time_index + 1] - self.quiver_motion_vs_time[:self.time_index + 2]
 
         kernel_curr = self.spec.kernel(time_difference_curr, quiver_diff_curr, **self.spec.kernel_kwargs)
         kernel_half = self.spec.kernel(time_difference_half, quiver_diff_half, **self.spec.kernel_kwargs)
         kernel_next = self.spec.kernel(time_difference_next, quiver_diff_next, **self.spec.kernel_kwargs)
 
-        integral_curr = self.integrate(y = self.vector_potential_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1] * self.spec.kernel(time_diff_curr, quiver_diff_curr, **self.spec.kernel_kwargs),
-                                       x = self.times[:self.time_index + 1])
+        A_times_a_curr = self.vector_potential_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1]
 
-        raise NotImplementedError
+        integrand_for_k1 = A_times_a_curr * kernel_curr
+        integral_for_k1 = self.integrate(y = integrand_for_k1,
+                                         x = times_curr)
+        k1 = self.spec.prefactor * vector_potential_curr * integral_for_k1
+        a_midpoint_for_k2 = self.a[self.time_index] + (self.time_step * k1 / 2)
 
-    # def evolve_RK4(self):
-    #     dt = self.times[self.time_index + 1] - self.time
-    #     # print('dt (as)', dt / asec)
-    #
-    #     times_curr = self.times[:self.time_index + 1]
-    #     times_half = np.append(self.times[:self.time_index + 1], self.time + dt / 2)
-    #     times_next = self.times[:self.time_index + 2]
-    #
-    #     time_difference_curr = self.time - times_curr  # slice up to current time index
-    #     time_difference_half = (self.time + dt / 2) - times_half
-    #     time_difference_next = self.times[self.time_index + 1] - times_next
-    #
-    #     kernel_curr = self.spec.kernel(time_difference_curr, **self.spec.kernel_kwargs)
-    #     kernel_half = self.spec.kernel(time_difference_half, **self.spec.kernel_kwargs)
-    #     kernel_next = self.spec.kernel(time_difference_next, **self.spec.kernel_kwargs)
-    #
-    #     f_curr = self.electric_field_vs_time[self.time_index]
-    #     f_half = self.spec.electric_potential.get_electric_field_amplitude(self.time + (dt / 2))
-    #     f_next = self.electric_field_vs_time[self.time_index + 1]
-    #
-    #     f_times_y_curr = self.electric_field_vs_time[:self.time_index + 1] * self.a[:self.time_index + 1]
-    #
-    #     # integrate through the current time step
-    #     integrand_for_k1 = f_times_y_curr * kernel_curr
-    #     integral_for_k1 = self.integrate(y = integrand_for_k1, x = times_curr)
-    #     k1 = self.spec.prefactor * f_curr * integral_for_k1
-    #     y_midpoint_for_k2 = self.a[self.time_index] + (dt * k1 / 2)  # dt / 2 here because we moved forward to midpoint
-    #
-    #     integrand_for_k2 = np.append(f_times_y_curr, f_half * y_midpoint_for_k2) * kernel_half
-    #     integral_for_k2 = self.integrate(y = integrand_for_k2, x = times_half)
-    #     k2 = self.spec.prefactor * f_half * integral_for_k2  # dt / 2 because it's half of an interval that we're integrating over
-    #     y_midpoint_for_k3 = self.a[self.time_index] + (dt * k2 / 2)  # estimate midpoint based on estimate of slope at midpoint
-    #
-    #     integrand_for_k3 = np.append(f_times_y_curr, f_half * y_midpoint_for_k3) * kernel_half
-    #     integral_for_k3 = self.integrate(y = integrand_for_k3, x = times_half)
-    #     k3 = self.spec.prefactor * f_half * integral_for_k3  # dt / 2 because it's half of an interval that we're integrating over
-    #     y_end_for_k4 = self.a[self.time_index] + (dt * k3)  # estimate midpoint based on estimate of slope at midpoint
-    #
-    #     integrand_for_k4 = np.append(f_times_y_curr, f_next * y_end_for_k4) * kernel_next
-    #     integral_for_k4 = self.integrate(y = integrand_for_k4, x = times_next)
-    #     k4 = self.spec.prefactor * f_next * integral_for_k4
-    #
-    #     self.a[self.time_index + 1] = self.a[self.time_index] + (dt * (k1 + (2 * k2) + (2 * k3) + k4) / 6)  # estimate next point
+        integrand_for_k2 = np.append(A_times_a_curr, vector_potential_half * a_midpoint_for_k2) * kernel_half
+        integral_for_k2 = self.integrate(y = integrand_for_k2,
+                                         x = times_half)
+        k2 = self.spec.prefactor * vector_potential_half * integral_for_k2
+        a_midpoint_for_k3 = self.a[self.time_index] + (self.time_step * k2 / 2)
+
+        integrand_for_k3 = np.append(A_times_a_curr, vector_potential_half * a_midpoint_for_k3) * kernel_half
+        integral_for_k3 = self.integrate(y = integrand_for_k3,
+                                         x = times_half)
+        k3 = self.spec.prefactor * vector_potential_half * integral_for_k3
+        a_end_for_k4 = self.a[self.time_index] + (self.time_step * k3)
+
+        integrand_for_k4 = np.append(A_times_a_curr, vector_potential_next * a_end_for_k4) * kernel_next
+        integral_for_k4 = self.integrate(y = integrand_for_k4,
+                                         x = times_next)
+        k4 = self.spec.prefactor * vector_potential_next * integral_for_k4
+
+        self.a[self.time_index + 1] = self.a[self.time_index] + (self.time_step * (k1 + (2 * k2) + (2 * k3) + k4) / 6)  # estimate next point
 
     def run_simulation(self):
         logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))

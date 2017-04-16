@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class CompyException(Exception):  # base exception for all compy-specific exceptions
+class CompyException(Exception):
+    """Base exception for all compy exceptions."""
     pass
 
 

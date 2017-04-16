@@ -1,5 +1,6 @@
 import logging
 import os
+import itertools as it
 
 from tqdm import tqdm
 
@@ -14,7 +15,7 @@ from compy.units import *
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG)
+log = cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO)
 
 
 def run(spec):
@@ -36,7 +37,7 @@ if __name__ == '__main__':
         q = electron_charge
 
         sinc = ion.SincPulse(pulse_width = pw)
-        efield = ion.GaussianPulse(pulse_width = pw, fluence = 1 * Jcm2, omega_carrier = sinc.omega_carrier)
+        efield = ion.GaussianPulse(pulse_width = pw, fluence = 20 * Jcm2, omega_carrier = sinc.omega_carrier)
         # efield = ion.SincPulse(pulse_width = pw, fluence = 1 * Jcm2)
 
         # efield = ion.Rectangle(start_time = -100 * asec, end_time = 100 * asec, amplitude = .01 * atomic_electric_field)
@@ -58,9 +59,31 @@ if __name__ == '__main__':
             target_dir = OUT_DIR,
         )
 
-        results = cp.utils.multi_map(run, specs, processes = 3)
+        results = cp.utils.multi_map(run, specs, processes = 4)
 
         for r in results:
-            print(r.name, r.a)
+            print(r.info())
             r.plot_fields_vs_time(**plt_kwargs)
             r.plot_a_vs_time(**plt_kwargs)
+
+        for log, rel in it.product((True, False), repeat = 2):
+            plot_name = 'comparison'
+            if log:
+                plot_name += '__log'
+
+            if rel:
+                plot_name += '__rel'
+                y = [(np.abs(r.a) ** 2) / (np.abs(results[-1].a) ** 2) for r in results]
+                y_lab = r'$ \left| a(t) \right|^2 / \left| a_{\mathrm{RK4}}(t) \right|^2$'
+            else:
+                y = [np.abs(r.a) ** 2 for r in results]
+                y_lab = r'$ \left| a(t) \right|^2 $'
+
+            cp.utils.xy_plot(plot_name,
+                             results[0].times,
+                             *y,
+                             line_labels = [r.name for r in results],
+                             x_label = r'Time $t$', x_scale = 'asec',
+                             y_label = y_lab,
+                             y_log_axis = log,
+                             **plt_kwargs)
