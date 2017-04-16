@@ -50,7 +50,7 @@ if __name__ == '__main__':
             h.data[1] -= sim.spec.initial_state.energy
             h = h.tocsc()
 
-            with cp.utils.Timer() as t:
+            with cp.utils.BlockTimer() as t:
                 h_inv = sparsealg.inv(h)
             print(t)
 

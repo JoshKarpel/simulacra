@@ -1,4 +1,3 @@
-import datetime as dt
 import functools as ft
 import logging
 import itertools as it
@@ -17,7 +16,7 @@ import scipy.special as special
 from cycler import cycler
 
 import compy as cp
-import compy.cy as cy
+from compy.cy import tdma
 from compy.units import *
 from . import potentials, states
 
@@ -528,7 +527,7 @@ class LineMesh(QuantumMesh):
 
         hamiltonian = 1j * tau * hamiltonian_x
         hamiltonian.data[1] += 1  # add identity to matrix operator
-        self.g_mesh = cy.tdma(hamiltonian, self.g_mesh)
+        self.g_mesh = tdma(hamiltonian, self.g_mesh)
 
         self._evolve_potential(time_step / 2)
 
@@ -547,7 +546,7 @@ class LineMesh(QuantumMesh):
 
         hamiltonian = 1j * tau * hamiltonian_x
         hamiltonian.data[1] += 1  # add identity to matrix operator
-        self.g_mesh = cy.tdma(hamiltonian, self.g_mesh)
+        self.g_mesh = tdma(hamiltonian, self.g_mesh)
 
     def _get_numeric_eigenstate_basis(self, energy_max):
         analytic_to_numeric = {}
@@ -564,10 +563,7 @@ class LineMesh(QuantumMesh):
             if number_of_eigenvectors > max_eigenvectors:
                 number_of_eigenvectors = max_eigenvectors  # this will cause the loop to break after this attempt
 
-            print(f'getting ev for k = {number_of_eigenvectors}')
-            with cp.utils.Timer() as t:
-                eigenvalues, eigenvectors = sparsealg.eigsh(h, k = number_of_eigenvectors, which = 'SA')
-            print(t)
+            eigenvalues, eigenvectors = sparsealg.eigsh(h, k = number_of_eigenvectors, which = 'SA')
 
             if np.max(eigenvalues) > energy_max or number_of_eigenvectors == max_eigenvectors:
                 break
@@ -899,7 +895,7 @@ class CylindricalSliceMesh(QuantumMesh):
         hamiltonian = hamiltonian_z.copy()
         hamiltonian.data[1] += 1  # add identity to matrix operator
         g_vector = self.flatten_mesh(self.g_mesh, 'z')
-        g_vector = cy.tdma(hamiltonian, g_vector)
+        g_vector = tdma(hamiltonian, g_vector)
 
         # STEP 3
         hamiltonian = -1 * hamiltonian_z
@@ -911,7 +907,7 @@ class CylindricalSliceMesh(QuantumMesh):
         hamiltonian = hamiltonian_rho.copy()
         hamiltonian.data[1] += 1  # add identity to matrix operator
         g_vector = self.flatten_mesh(self.g_mesh, 'rho')
-        g_vector = cy.tdma(hamiltonian, g_vector)
+        g_vector = tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'rho')
 
     @cp.utils.memoize
@@ -1250,7 +1246,7 @@ class SphericalSliceMesh(QuantumMesh):
         hamiltonian = hamiltonian_r.copy()
         hamiltonian.data[1] += 1  # add identity to matrix operator
         g_vector = self.flatten_mesh(self.g_mesh, 'r')
-        g_vector = cy.tdma(hamiltonian, g_vector)
+        g_vector = tdma(hamiltonian, g_vector)
 
         # STEP 3
         hamiltonian = -1 * hamiltonian_r
@@ -1262,7 +1258,7 @@ class SphericalSliceMesh(QuantumMesh):
         hamiltonian = hamiltonian_theta.copy()
         hamiltonian.data[1] += 1  # add identity to matrix operator
         g_vector = self.flatten_mesh(self.g_mesh, 'theta')
-        g_vector = cy.tdma(hamiltonian, g_vector)
+        g_vector = tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'theta')
 
     @cp.utils.memoize
@@ -1917,7 +1913,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         hamiltonian = hamiltonian_r.copy()
         hamiltonian.data[1] += 1  # add identity to matrix operator
         g_vector = self.flatten_mesh(self.g_mesh, 'r')
-        g_vector = cy.tdma(hamiltonian, g_vector)
+        g_vector = tdma(hamiltonian, g_vector)
 
         # STEP 3
         hamiltonian = -1 * hamiltonian_r
@@ -1929,7 +1925,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         hamiltonian = hamiltonian_l.copy()
         hamiltonian.data[1] += 1  # add identity to matrix operator
         g_vector = self.flatten_mesh(self.g_mesh, 'l')
-        g_vector = cy.tdma(hamiltonian, g_vector)
+        g_vector = tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'l')
 
     def _get_split_operator_evolution_matrices(self, a):
@@ -1977,7 +1973,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         hamiltonian_3.data[1] += 1  # add identity to sparse matrix operator
         hamiltonian_4 = hamiltonian_r.copy()
         hamiltonian_4.data[1] += 1  # add identity to sparse matrix operator
-        self.g_mesh = self.wrap_vector(cy.tdma(hamiltonian_4, hamiltonian_3.dot(self.flatten_mesh(self.g_mesh, 'r'))), 'r')
+        self.g_mesh = self.wrap_vector(tdma(hamiltonian_4, hamiltonian_3.dot(self.flatten_mesh(self.g_mesh, 'r'))), 'r')
 
         # STEP 5 & 6
         self.g_mesh = self.wrap_vector(even.dot(odd.dot(self.flatten_mesh(self.g_mesh, 'l'))), 'l')

@@ -3,7 +3,6 @@ import sys
 import unittest
 import shutil
 
-import utils
 from . import core, utils, math, cluster
 
 TEST_DIR = os.path.join(os.getcwd(), 'temp__unit_testing')

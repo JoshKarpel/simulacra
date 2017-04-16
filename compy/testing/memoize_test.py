@@ -1,6 +1,6 @@
 import time
 
-from compy.utils import Timer, memoize
+from compy.utils import BlockTimer, memoize
 
 
 def fib(n):
@@ -19,23 +19,23 @@ def foo(a = 5):
 if __name__ == '__main__':
     test = 25
 
-    with Timer() as t_bare:
+    with BlockTimer() as t_bare:
         print([(n, fib(n)) for n in range(test)])
 
     print('no memo:', t_bare)
 
     fib = memoize()(fib)
-    with Timer() as t_memo:
+    with BlockTimer() as t_memo:
         print([(n, fib(n)) for n in range(test)])
 
     print('memo:', t_memo)
 
-    with Timer() as t_foo_bare:
+    with BlockTimer() as t_foo_bare:
         print([(n, foo(a = n)) for n in range(5)])
 
     print('foo', t_foo_bare)
 
-    with Timer() as t_foo_memo:
+    with BlockTimer() as t_foo_memo:
         print([(n, foo(a = n)) for n in range(5)])
 
     print('foo', t_foo_memo)

@@ -155,7 +155,12 @@ class ClusterInterface:
         raise NotImplementedError
 
     def is_file_synced(self, remote_stat, local_path):
-        """Determine if a local file is the same as a remote file by checking the file size and modification times."""
+        """
+        Determine if a local file is the same as a remote file by checking the file size and modification times.
+        
+        :return: True if the file is synced, False otherwise
+        :rtype: bool
+        """
         if os.path.exists(local_path):
             local_stat = os.stat(local_path)
             if local_stat.st_size == remote_stat.st_size and local_stat.st_mtime == remote_stat.st_mtime:
@@ -309,8 +314,8 @@ class JobProcessor(utils.Beet):
         self.plots_dir = os.path.join(self.job_dir_path, 'plots')  # plots from the JobProcessor go here
         self.movies_dir = os.path.join(self.job_dir_path, 'movies')
 
-        for dir in (self.input_dir, self.output_dir, self.plots_dir, self.movies_dir):
-            cp.utils.ensure_dir_exists(dir)
+        for directory in (self.input_dir, self.output_dir, self.plots_dir, self.movies_dir):
+            cp.utils.ensure_dir_exists(directory)
 
         self.sim_names = self.get_sim_names_from_specs()
         self.sim_count = len(self.sim_names)
@@ -376,7 +381,7 @@ class JobProcessor(utils.Beet):
         
         :param force_reprocess: if True, process all Simulations in the output directory regardless of prior processing status
         """
-        with cp.utils.Timer() as t:
+        with cp.utils.BlockTimer() as t:
             logger.info('Loading simulations from job {}'.format(self.name))
 
             if force_reprocess:
@@ -392,14 +397,14 @@ class JobProcessor(utils.Beet):
                     try:
                         self.data[sim_name] = self.simulation_result_type(sim, job_processor = self)
                         self.unprocessed_sim_names.discard(sim_name)
-                    except AttributeError as e:
+                    except AttributeError:
                         logger.exception('Exception encountered while processing simulation {}'.format(sim_name))
 
                 self.save(target_dir = self.job_dir_path)
 
         logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, t.time_elapsed))
 
-        with cp.utils.Timer() as t:
+        with cp.utils.BlockTimer() as t:
             # self.write_to_txt()
             # self.write_to_csv()
 

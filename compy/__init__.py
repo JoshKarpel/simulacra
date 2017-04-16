@@ -25,7 +25,7 @@ mpl.rcParams.update(mpl_rcParams_update)
 
 import matplotlib.pyplot as _plt
 
-_plt.set_cmap(_plt.cm.inferno)  # set default colormap
+_plt.set_cmap(_plt.cm.get_cmap('inferno'))  # set default colormap
 
 # set up platform-independent runtime cython compilation and imports
 import numpy as _np

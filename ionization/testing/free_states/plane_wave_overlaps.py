@@ -149,7 +149,7 @@ if __name__ == '__main__':
             #                  y_log_axis = log,
             #                  target_dir = OUT_DIR)
 
-            with cp.utils.Timer() as t:
+            with cp.utils.BlockTimer() as t:
                 sim.mesh.plot_electron_momentum_spectrum(r_type = 'energy', r_scale = 'eV', r_lower_lim = .1 * eV, r_upper_lim = 50 * eV,
                                                          log = log,
                                                          **spectrum_kwargs)
@@ -162,7 +162,7 @@ if __name__ == '__main__':
                                                          **spectrum_kwargs)
             print('RAW PLOTS', t)
 
-            with cp.utils.Timer() as t:
+            with cp.utils.BlockTimer() as t:
                 sim.mesh.plot_electron_momentum_spectrum(r_type = 'energy', r_scale = 'eV', r_lower_lim = .1 * eV, r_upper_lim = 50 * eV,
                                                          log = log,
                                                          g_mesh = sim.mesh.get_g_with_states_removed(sim.bound_states),

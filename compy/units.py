@@ -337,7 +337,7 @@ unit_names_to_values.update({
     'PJ': PJ,
     'J/cm^2': Jcm2,
     'Jcm2': Jcm2,
-})
+    })
 unit_names_to_tex_strings.update({
     'J': r'\mathrm{J}',
     'mJ': r'\mathrm{mJ}',
@@ -352,7 +352,7 @@ unit_names_to_tex_strings.update({
     'PJ': r'\mathrm{PJ}',
     'J/cm^2': r'\mathrm{J/cm^2}',
     'Jcm2': r'\mathrm{J/cm^2}'
-})
+    })
 
 # voltage
 V = 1 * J / C
@@ -555,7 +555,7 @@ unit_names_to_tex_strings.update({'c': r'c',
 atomic_energy = hartree
 atomic_electric_field = coulomb_force_constant * proton_charge / (bohr_radius ** 2)
 atomic_electric_potential = coulomb_force_constant * proton_charge / bohr_radius
-atomic_electric_dipole = proton_charge * bohr_radius  # TODO: check whether + or -
+atomic_electric_dipole = proton_charge * bohr_radius
 atomic_velocity = alpha * c
 atomic_momentum = electron_mass * atomic_velocity
 atomic_time = hbar / hartree
@@ -567,7 +567,7 @@ unit_names_to_values.update({'atomic_electric_field': atomic_electric_field,
                              'atomic_electric_dipole': atomic_electric_dipole,
                              'atomic_velocity': atomic_velocity,
                              'atomic_momentum': atomic_momentum})
-unit_names_to_tex_strings.update({'atomic_electric_field': r'\mathrm{a.u.}',  # TODO: add these
+unit_names_to_tex_strings.update({'atomic_electric_field': r'\mathrm{a.u.}',
                                   'aef': r'\mathrm{a.u.}',
                                   'AEF': r'\mathrm{a.u.}',
                                   'atomic_electric_potential': r'\mathrm{a.u.}',

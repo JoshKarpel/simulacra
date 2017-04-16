@@ -79,12 +79,12 @@ if __name__ == '__main__':
         cyl_sim.file_name = 'cyl_slice__init_no_mesh'
         cyl_sim.save(target_dir = OUT_DIR, save_mesh = False)
 
-        with cp.utils.Timer() as t:
+        with cp.utils.BlockTimer() as t:
             cyl_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 
-        with cp.utils.Timer() as t:
+        with cp.utils.BlockTimer() as t:
             cyl_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
@@ -96,12 +96,12 @@ if __name__ == '__main__':
         # for k, v in sorted(vars(test_sim).items()):
         #     print(k, '  :  ', v)
 
-        with cp.utils.Timer() as t:
+        with cp.utils.BlockTimer() as t:
             test_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 
-        with cp.utils.Timer() as t:
+        with cp.utils.BlockTimer() as t:
             test_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
@@ -172,12 +172,12 @@ if __name__ == '__main__':
         sph_sim.file_name = 'sph_slice__init_no_mesh'
         sph_sim.save(target_dir = OUT_DIR, save_mesh = False)
 
-        with cp.utils.Timer() as t:
+        with cp.utils.BlockTimer() as t:
             sph_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 
-        with cp.utils.Timer() as t:
+        with cp.utils.BlockTimer() as t:
             sph_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
@@ -189,12 +189,12 @@ if __name__ == '__main__':
         # for k, v in sorted(vars(test_sim).items()):
         #     print(k, '  :  ', v)
 
-        with cp.utils.Timer() as t:
+        with cp.utils.BlockTimer() as t:
             test_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)
 
-        with cp.utils.Timer() as t:
+        with cp.utils.BlockTimer() as t:
             test_sim.mesh._get_kinetic_energy_matrix_operators()
 
         print(t)

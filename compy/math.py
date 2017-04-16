@@ -191,9 +191,6 @@ def prime_factorization(n):
     return factors
 
 
-# TODO: recursive prime factorization
-
-
 def centered_first_derivative(y, dx = 1):
     """
     Return the centered first derivative of the array y, using spacing dx.

@@ -45,7 +45,7 @@ if __name__ == '__main__':
         for l in range(l_max + 1):
             logger.info('working on l = {}'.format(l))
             h = sim.mesh._get_internal_hamiltonian_matrix_operator_single_l(l = l)
-            with cp.utils.Timer() as t:
+            with cp.utils.BlockTimer() as t:
                 eigenvalues, eigenvectors = sparsealg.eigsh(h, k = h.shape[0] - 2, which = 'SA')
             logger.info('Matrix diagonalization took: {}'.format(t))
 

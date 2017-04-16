@@ -69,6 +69,7 @@ def field_str(obj, *fields, digits = 3):
 
 
 def now_string():
+    """Return a formatted string with the current year-month-day_hour-minute-second."""
     return dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S')
 
 
@@ -738,8 +739,26 @@ def watcher(watch):
     return Watcher
 
 
-class Timer:
-    """A context manager that times the code in the with block. Print the Timer after exiting the block to see the results."""
+def timed(func):
+    """A decorator that times the execution of the decorated function. A log message is emitted at level DEBUG, and the function output is replaced with a tuple (output, time_elapsed)."""
+
+    @ft.wraps(func)
+    def timed_wrapper(*args, **kwargs):
+        time_start = dt.datetime.now()
+        val = func(*args, **kwargs)
+        time_end = dt.datetime.now()
+
+        time_elapsed = time_end - time_start
+
+        logger.debug(f'Execution of {func} took {time_elapsed}')
+
+        return val, time_elapsed
+
+    return timed_wrapper
+
+
+class BlockTimer:
+    """A context manager that times the code in the with block. Print the BlockTimer after exiting the block to see the results."""
 
     __slots__ = ('time_start', 'time_end', 'time_elapsed')
 
@@ -889,7 +908,7 @@ def try_loop(*functions_to_run,
     while True:
         logger.info(begin_text)
 
-        with Timer() as timer:
+        with BlockTimer() as timer:
             failed = False
             for f in functions_to_run:
                 try:

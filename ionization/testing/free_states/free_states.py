@@ -22,7 +22,7 @@ if __name__ == '__main__':
         # r = np.linspace(.01 * bohr_radius, 50 * bohr_radius, 1e4) + 5000 * bohr_radius
         r = np.linspace(0, 10 * bohr_radius, 1e3)[1:]
 
-        with cp.utils.Timer() as timer:
+        with cp.utils.BlockTimer() as timer:
             radial_function = free_state.radial_function(r)
             # print(radial_function)
         print('full:', timer)

@@ -156,6 +156,7 @@ class Simulation(utils.Beet):
 
         :param file_path: the path to load a Simulation from
         :return: the loaded Simulation
+        :rtype: Simulation
         """
         sim = super(Simulation, cls).load(file_path)
 
@@ -234,7 +235,7 @@ class Animator:
 
     def __init__(self, postfix = '', target_dir = None,
                  length = 60, fps = 30,
-                 colormap = _plt.cm.inferno):
+                 colormap = _plt.cm.get_cmap('inferno')):
         """
         Construct an Animator instance.
 
@@ -375,5 +376,3 @@ class Animator:
         self.ffmpeg.stdin.write(self.fig.canvas.tostring_argb())
 
         logger.debug('{} sent frame to ffpmeg from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
-
-
