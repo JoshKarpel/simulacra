@@ -1,13 +1,7 @@
 import os
-import sys
-import time
 import datetime as dt
 import logging
-import argparse
 import functools as ft
-import psutil
-from pprint import pprint
-import multiprocessing as mp
 
 import compy as cp
 import ionization.cluster as clu
@@ -15,7 +9,7 @@ import ionization.cluster as clu
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-log_file = f"{__file__.strip('.py')}__{dt.datetime.now().strftime('%Y-%m-%d_%H_%M_%S')}"
+log_file = f"{__file__.strip('.py')}__{dt.datetime.now().strftime('%Y-%m-%d')}"
 cp_logger = cp.utils.Logger('__main__', 'compy', 'ionization',
                             stdout_logs = True, stdout_level = logging.INFO,
                             file_logs = True, file_level = logging.INFO, file_name = log_file, file_dir = 'logs', file_mode = 'a')

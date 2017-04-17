@@ -2,7 +2,6 @@ import collections
 import datetime as dt
 import json
 import functools as ft
-
 import logging
 import os
 import sys
@@ -18,7 +17,6 @@ from collections import OrderedDict, defaultdict
 from pprint import pprint
 
 from tqdm import tqdm
-import numpy as np
 import paramiko
 
 from compy.units import *
@@ -685,7 +683,7 @@ requirements = (OpSysMajorVer == 6) || (OpSysMajorVer == 7)
 queue {}"""
 
 
-def format_chtc_submit_string(job_name, specification_count, memory = 4, disk = 1, checkpoints = True):
+def format_chtc_submit_string(job_name, specification_count, checkpoints = True):
     """
     Return a formatted submit string for an HTCondor job.
     
@@ -700,6 +698,9 @@ def format_chtc_submit_string(job_name, specification_count, memory = 4, disk = 
         check = 'true'
     else:
         check = 'false'
+
+    memory = ask_for_input('Memory (in GB)?', default = 4, cast_to = float)
+    disk = ask_for_input('Disk (in GB)?', default = 1, cast_to = float)
 
     submit_string = CHTC_SUBMIT_STRING.format(job_name, check, check, check, memory, disk, specification_count)
 

@@ -5,8 +5,9 @@ import argparse
 import numpy as np
 
 import compy as cp
+import compy.cluster as clu
 import ionization as ion
-import ionization.cluster as clu
+import ionization.cluster as iclu
 from compy.units import *
 
 if __name__ == '__main__':
@@ -32,7 +33,7 @@ if __name__ == '__main__':
 
     with cp.utils.Logger('compy', 'ionization', stdout_level = 31 - ((args.verbosity + 1) * 10)) as logger:
         # job type options
-        job_processor = ion.cluster.PulseJobProcessor
+        job_processor = iclu.PulseJobProcessor
 
         job_dir = os.path.join(args.dir, args.job_name)
 
@@ -45,7 +46,7 @@ if __name__ == '__main__':
         parameters = []
 
         # get input from the user to define the job
-        spec_type, mesh_kwargs = clu.ask_mesh_type()
+        spec_type, mesh_kwargs = iclu.ask_mesh_type()
 
         initial_state = clu.Parameter(name = 'initial_state',
                                       value = ion.HydrogenBoundState(clu.ask_for_input('Initial State n?', default = 1, cast_to = int),

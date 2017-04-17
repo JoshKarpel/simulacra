@@ -5,8 +5,9 @@ import argparse
 import numpy as np
 
 import compy as cp
+import compy.cluster as clu
 import ionization as ion
-import ionization.cluster as clu
+import ionization.cluster as iclu
 from compy.units import *
 
 if __name__ == '__main__':
@@ -32,7 +33,7 @@ if __name__ == '__main__':
 
     with cp.utils.Logger('compy', 'ionization', stdout_level = 31 - ((args.verbosity + 1) * 10)) as logger:
         # job type options
-        job_processor = ion.cluster.ConvergenceJobProcessor
+        job_processor = iclu.ConvergenceJobProcessor
 
         job_dir = os.path.join(args.dir, args.job_name)
 
