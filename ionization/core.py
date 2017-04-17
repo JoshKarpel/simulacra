@@ -74,7 +74,7 @@ class ElectricFieldSpecification(cp.core.Specification):
                  minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
-                 store_norm_diff_mask = False,
+                 store_norm_diff_mask = False, store_internal_energy_expectation_value = False,
                  simulation_type = None,
                  store_data_every = 1,
                  snapshot_times = (), snapshot_indices = (), snapshot_type = None, snapshot_kwargs = None,
@@ -154,6 +154,7 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.animators = deepcopy(tuple(animators))
 
         self.store_norm_diff_mask = store_norm_diff_mask
+        self.store_internal_energy_expectation_value = store_internal_energy_expectation_value
 
         self.store_data_every = int(store_data_every)
 
@@ -1956,14 +1957,15 @@ class SphericalHarmonicMesh(QuantumMesh):
         even_offdiag[0::2] = -1j * np.sin(a_even)
 
         odd_diag = np.zeros(len(a) + 1, dtype = np.complex128)
-        odd_diag[0] = odd_diag[-1] = 1
+        odd_diag[0] = 1
+        odd_diag[-1] = 1
         odd_diag[1:-1] = np.cos(a_odd).repeat(2)
 
         odd_offdiag = np.zeros(len(a), dtype = np.complex128)
         odd_offdiag[1::2] = -1j * np.sin(a_odd)
 
-        even = sparse.diags([even_offdiag, even_diag, even_offdiag], offsets = [-1, 0, 1])
-        odd = sparse.diags([odd_offdiag, odd_diag, odd_offdiag], offsets = [-1, 0, 1])
+        even = sparse.diags((even_offdiag, even_diag, even_offdiag), offsets = [-1, 0, 1])
+        odd = sparse.diags((odd_offdiag, odd_diag, odd_offdiag), offsets = [-1, 0, 1])
 
         return even, odd
 
@@ -2394,7 +2396,6 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.data_time_steps = len(self.data_times)
         self.norm_vs_time = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
 
-        self.energy_expectation_value_vs_time_internal = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
         self.inner_products_vs_time = {state: np.zeros(self.data_time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
         self.electric_field_amplitude_vs_time = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.data_time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
@@ -2405,6 +2406,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if self.spec.store_norm_diff_mask:
             self.norm_diff_mask_vs_time = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
+
+        if self.spec.store_internal_energy_expectation_value:
+            self.internal_energy_expectation_value_vs_time_internal = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
 
         # populate the snapshot times from the two ways of entering snapshot times in the spec (by index or by time)
         self.snapshot_times = set()
@@ -2451,7 +2455,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
         except IndexError:
             pass
 
-        self.energy_expectation_value_vs_time_internal[self.data_time_index] = self.mesh.energy_expectation_value
+        if self.spec.store_internal_energy_expectation_value:
+            self.internal_energy_expectation_value_vs_time_internal[self.data_time_index] = self.mesh.energy_expectation_value
 
         for gauge in self.spec.dipole_gauges:
             self.electric_dipole_moment_vs_time[gauge][self.data_time_index] = self.mesh.dipole_moment_expectation_value(gauge = gauge)
