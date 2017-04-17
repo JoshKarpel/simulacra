@@ -24,26 +24,29 @@ if __name__ == '__main__':
 
     with cp.utils.Logger('__main__', 'compy', 'ionization',
                          stdout_logs = False,
-                         file_logs = True, file_level = logging.INFO, file_name = '{}'.format(args.sim_name)) as logger:
+                         file_logs = True, file_level = logging.INFO, file_name = '{}'.format(args.sim_name), file_mode = 'a') as log:
         try:
-            logger.info('Loaded onto execute node {} at {}.'.format(socket.gethostname(), dt.datetime.now()))
-            logger.debug('Local directory contents: {}'.format(os.listdir(os.getcwd())))
+            log.info('Loaded onto execute node {} at {}.'.format(socket.gethostname(), dt.datetime.now()))
+            log.debug('Local directory contents: {}'.format(os.listdir(os.getcwd())))
 
             # try to find existing checkpoint, and start from scratch if that fails
             try:
                 sim_path = os.path.join(os.getcwd(), '{}.sim'.format(args.sim_name))
                 sim = cp.Simulation.load(sim_path)
-                logger.info('Checkpoint found at {}, recovered simulation {}'.format(sim_path, sim))
-                logger.debug('Checkpoint size is {}'.format(cp.utils.get_file_size_as_string(sim_path)))
+                log.info('Checkpoint found at {}, recovered simulation {}'.format(sim_path, sim))
+                log.debug('Checkpoint size is {}'.format(cp.utils.get_file_size_as_string(sim_path)))
             except (FileNotFoundError, EOFError):
                 sim = cp.Specification.load(os.path.join(os.getcwd(), '{}.spec'.format(args.sim_name))).to_simulation()
-                logger.info('Checkpoint not found, started simulation {}'.format(sim))
+                log.info('Checkpoint not found, started simulation {}'.format(sim))
 
             # run the simulation and save it
-            logger.info(sim.info())
+            log.info(sim.info())
+
             sim.run_simulation()
-            logger.info(sim.info())
+
+            log.info(sim.info())
+
             sim.save()
         except Exception as e:
-            logger.exception(e)
+            log.exception(e)
             raise e

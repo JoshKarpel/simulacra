@@ -11,7 +11,6 @@ import numpy as np
 import scipy.integrate as integrate
 
 import compy as cp
-import compy.cy as cy
 from compy.units import *
 from . import core, potentials, states
 
@@ -244,7 +243,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
                        show_title = False,
                        plot_name = 'file_name',
                        **kwargs):
-        fig = cp.utils.get_figure('full')
+        fig = cp.plots.get_figure('full')
 
         x_scale_unit, x_scale_name = unit_value_and_name_from_unit(time_scale)
         f_scale_unit, f_scale_name = unit_value_and_name_from_unit(field_scale)
@@ -320,7 +319,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
 
         name = prefix + '__solution_vs_time{}'.format(postfix)
 
-        cp.utils.save_current_figure(name = name, **kwargs)
+        cp.plots.save_current_figure(name = name, **kwargs)
 
         plt.close()
 
@@ -847,7 +846,7 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
 
     def plot_fields_vs_time(self, time_scale = 'asec', field_scale = 'AEF', vector_scale = 'atomic_momentum', quiver_scale = 'bohr_radius',
                             **kwargs):
-        with cp.utils.FigureManager(f'{self.name}__fields_vs_time', **kwargs) as figman:
+        with cp.plots.FigureManager(f'{self.name}__fields_vs_time', **kwargs) as figman:
             fig = figman.fig
             ax = fig.add_subplot(111)
 
@@ -871,7 +870,7 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
                        show_title = False,
                        plot_name = 'file_name',
                        **kwargs):
-        fig = cp.utils.get_figure('full')
+        fig = cp.plots.get_figure('full')
 
         x_scale_unit, x_scale_name = unit_value_and_name_from_unit(time_scale)
         f_scale_unit, f_scale_name = unit_value_and_name_from_unit(field_scale)
@@ -947,6 +946,6 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
 
         name = prefix + '__solution_vs_time{}'.format(postfix)
 
-        cp.utils.save_current_figure(name = name, **kwargs)
+        cp.plots.save_current_figure(name = name, **kwargs)
 
         plt.close()

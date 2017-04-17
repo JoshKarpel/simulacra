@@ -6,6 +6,7 @@ import numpy as np
 
 import compy as cp
 import ionization as ion
+import plots
 from compy.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -29,27 +30,27 @@ if __name__ == '__main__':
         ionization_energy = atomic_energy / 2
         one_to_two = 0.75 * ionization_energy
 
-        cp.utils.xy_plot('energy__vs__pulse_width', pulse_widths, largest_photon_energy,
-                         target_dir = OUT_DIR,
-                         x_scale = 'asec', y_scale = 'eV',
-                         x_label = 'Pulse Width', y_label = 'Largest Photon Energy', title = 'Largest Photon Energy for Sinc Pulses',
-                         hlines = (ionization_energy, one_to_two), )
+        plots.xy_plot('energy__vs__pulse_width', pulse_widths, largest_photon_energy,
+                      target_dir = OUT_DIR,
+                      x_scale = 'asec', y_scale = 'eV',
+                      x_label = 'Pulse Width', y_label = 'Largest Photon Energy', title = 'Largest Photon Energy for Sinc Pulses',
+                      hlines = (ionization_energy, one_to_two), )
 
-        cp.utils.xy_plot('energy__vs__pulse_width__log_x', pulse_widths, largest_photon_energy,
-                         target_dir = OUT_DIR,
-                         x_scale = 'asec', y_scale = 'eV',
-                         x_label = 'Pulse Width', y_label = 'Largest Photon Energy', title = 'Largest Photon Energy for Sinc Pulses',
-                         hlines = (ionization_energy, one_to_two),
-                         x_log_axis = True)
+        plots.xy_plot('energy__vs__pulse_width__log_x', pulse_widths, largest_photon_energy,
+                      target_dir = OUT_DIR,
+                      x_scale = 'asec', y_scale = 'eV',
+                      x_label = 'Pulse Width', y_label = 'Largest Photon Energy', title = 'Largest Photon Energy for Sinc Pulses',
+                      hlines = (ionization_energy, one_to_two),
+                      x_log_axis = True)
 
-        cp.utils.xy_plot('frequency_cutoff__vs__pulse_width', pulse_widths, frequency_cutoff,
-                         target_dir = OUT_DIR,
-                         x_scale = 'asec', y_scale = 'THz',
-                         x_label = 'Pulse Width', y_label = 'Frequency Cutoff', title = 'Frequency Cutoff for Sinc Pulses',
-                         )
+        plots.xy_plot('frequency_cutoff__vs__pulse_width', pulse_widths, frequency_cutoff,
+                      target_dir = OUT_DIR,
+                      x_scale = 'asec', y_scale = 'THz',
+                      x_label = 'Pulse Width', y_label = 'Frequency Cutoff', title = 'Frequency Cutoff for Sinc Pulses',
+                      )
 
-        cp.utils.xy_plot('frequency_cutoff__vs__pulse_width__log_x', pulse_widths, frequency_cutoff,
-                         target_dir = OUT_DIR,
-                         x_scale = 'asec', y_scale = 'THz',
-                         x_label = 'Pulse Width', y_label = 'Frequency Cutoff', title = 'Frequency Cutoff for Sinc Pulses',
-                         x_log_axis = True)
+        plots.xy_plot('frequency_cutoff__vs__pulse_width__log_x', pulse_widths, frequency_cutoff,
+                      target_dir = OUT_DIR,
+                      x_scale = 'asec', y_scale = 'THz',
+                      x_label = 'Pulse Width', y_label = 'Frequency Cutoff', title = 'Frequency Cutoff for Sinc Pulses',
+                      x_log_axis = True)

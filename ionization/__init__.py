@@ -1,4 +1,4 @@
-__all__ = ['core', 'potentials', 'animators']
+__all__ = ['core', 'potentials', 'states', 'animators']
 
 import logging
 

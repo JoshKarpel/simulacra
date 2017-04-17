@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class PotentialEnergy(cp.utils.Summand):
+class PotentialEnergy(cp.Summand):
     """A class representing some kind of potential energy. Can be summed to form a PotentialEnergySum."""
 
     def __init__(self, *args, **kwargs):
@@ -19,7 +19,7 @@ class PotentialEnergy(cp.utils.Summand):
         self.summation_class = PotentialEnergySum
 
 
-class PotentialEnergySum(cp.utils.Sum, PotentialEnergy):
+class PotentialEnergySum(cp.Sum, PotentialEnergy):
     """A class representing a combination of potential energies."""
 
     container_name = 'potentials'
@@ -36,7 +36,7 @@ class NoPotentialEnergy(PotentialEnergy):
         return 0
 
 
-class TimeWindow(cp.utils.Summand):
+class TimeWindow(cp.Summand):
     """A class representing a time-window that can be attached to another potential."""
 
     def __init__(self):
@@ -44,7 +44,7 @@ class TimeWindow(cp.utils.Summand):
         self.summation_class = TimeWindowSum
 
 
-class TimeWindowSum(cp.utils.Sum, TimeWindow):
+class TimeWindowSum(cp.Sum, TimeWindow):
     """A class representing a combination of time-windows."""
 
     container_name = 'windows'
@@ -56,7 +56,7 @@ class NoTimeWindow(TimeWindow):
         return 1
 
 
-class Mask(cp.utils.Summand):
+class Mask(cp.Summand):
     """A class representing a spatial 'mask' that can be applied to the wavefunction to reduce it in certain regions."""
 
     def __init__(self):
@@ -64,7 +64,7 @@ class Mask(cp.utils.Summand):
         self.summation_class = MaskSum
 
 
-class MaskSum(cp.utils.Sum, Mask):
+class MaskSum(cp.Sum, Mask):
     """A class representing a combination of masks."""
 
     container_name = 'masks'

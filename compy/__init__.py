@@ -1,4 +1,4 @@
-__all__ = ['core', 'math', 'utils', 'units']
+__all__ = ['core', 'math', 'utils', 'units', 'plots']
 
 import logging
 import os
@@ -39,4 +39,4 @@ pyximport.install(setup_args = {"include_dirs": _np.get_include()},
 _np.set_printoptions(linewidth = 200)  # screw character limits
 
 from compy.core import *
-from compy import math, utils, cluster
+from compy import math, utils, plots

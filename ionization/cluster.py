@@ -1,8 +1,11 @@
 import logging
 import itertools as it
+from copy import copy, deepcopy
+
+import numpy as np
 
 import compy as cp
-from compy.cluster import *
+import compy.cluster as clu
 from compy.units import *
 from ionization import core, integrodiff
 
@@ -16,16 +19,16 @@ def ask_mesh_type():
     """
     mesh_kwargs = {}
 
-    mesh_type = cp.cluster.ask_for_input('Mesh Type (cyl | sph | harm)', default = 'harm', cast_to = str)
+    mesh_type = clu.ask_for_input('Mesh Type (cyl | sph | harm)', default = 'harm', cast_to = str)
 
     try:
         if mesh_type == 'cyl':
             spec_type = core.CylindricalSliceSpecification
 
-            mesh_kwargs['z_bound'] = bohr_radius * cp.cluster.ask_for_input('Z Bound (Bohr radii)', default = 30, cast_to = float)
-            mesh_kwargs['rho_bound'] = bohr_radius * cp.cluster.ask_for_input('Rho Bound (Bohr radii)', default = 30, cast_to = float)
-            mesh_kwargs['z_points'] = 2 * (mesh_kwargs['z_bound'] / bohr_radius) * cp.cluster.ask_for_input('Z Points per Bohr Radii', default = 20, cast_to = int)
-            mesh_kwargs['rho_points'] = (mesh_kwargs['rho_bound'] / bohr_radius) * cp.cluster.ask_for_input('Rho Points per Bohr Radii', default = 20, cast_to = int)
+            mesh_kwargs['z_bound'] = bohr_radius * clu.ask_for_input('Z Bound (Bohr radii)', default = 30, cast_to = float)
+            mesh_kwargs['rho_bound'] = bohr_radius * clu.ask_for_input('Rho Bound (Bohr radii)', default = 30, cast_to = float)
+            mesh_kwargs['z_points'] = 2 * (mesh_kwargs['z_bound'] / bohr_radius) * clu.ask_for_input('Z Points per Bohr Radii', default = 20, cast_to = int)
+            mesh_kwargs['rho_points'] = (mesh_kwargs['rho_bound'] / bohr_radius) * clu.ask_for_input('Rho Points per Bohr Radii', default = 20, cast_to = int)
 
             mesh_kwargs['outer_radius'] = max(mesh_kwargs['z_bound'], mesh_kwargs['rho_bound'])
 
@@ -34,9 +37,9 @@ def ask_mesh_type():
         elif mesh_type == 'sph':
             spec_type = core.SphericalSliceSpecification
 
-            mesh_kwargs['r_bound'] = bohr_radius * cp.cluster.ask_for_input('R Bound (Bohr radii)', default = 30, cast_to = float)
-            mesh_kwargs['r_points'] = (mesh_kwargs['r_bound'] / bohr_radius) * cp.cluster.ask_for_input('R Points per Bohr Radii', default = 40, cast_to = int)
-            mesh_kwargs['theta_points'] = cp.cluster.ask_for_input('Theta Points', default = 100, cast_to = int)
+            mesh_kwargs['r_bound'] = bohr_radius * clu.ask_for_input('R Bound (Bohr radii)', default = 30, cast_to = float)
+            mesh_kwargs['r_points'] = (mesh_kwargs['r_bound'] / bohr_radius) * clu.ask_for_input('R Points per Bohr Radii', default = 40, cast_to = int)
+            mesh_kwargs['theta_points'] = clu.ask_for_input('Theta Points', default = 100, cast_to = int)
 
             mesh_kwargs['outer_radius'] = mesh_kwargs['r_bound']
 
@@ -45,9 +48,9 @@ def ask_mesh_type():
         elif mesh_type == 'harm':
             spec_type = core.SphericalHarmonicSpecification
 
-            mesh_kwargs['r_bound'] = bohr_radius * cp.cluster.ask_for_input('R Bound (Bohr radii)', default = 250, cast_to = float)
-            mesh_kwargs['r_points'] = (mesh_kwargs['r_bound'] / bohr_radius) * cp.cluster.ask_for_input('R Points per Bohr Radii', default = 8, cast_to = int)
-            mesh_kwargs['l_bound'] = cp.cluster.ask_for_input('l points', default = 200, cast_to = int)
+            mesh_kwargs['r_bound'] = bohr_radius * clu.ask_for_input('R Bound (Bohr radii)', default = 250, cast_to = float)
+            mesh_kwargs['r_points'] = (mesh_kwargs['r_bound'] / bohr_radius) * clu.ask_for_input('R Points per Bohr Radii', default = 8, cast_to = int)
+            mesh_kwargs['l_bound'] = clu.ask_for_input('l points', default = 200, cast_to = int)
 
             mesh_kwargs['outer_radius'] = mesh_kwargs['r_bound']
 
@@ -58,14 +61,14 @@ def ask_mesh_type():
         else:
             raise ValueError('Mesh type {} not found!'.format(mesh_type))
 
-        logger.warning('Predicted memory usage per Simulation is >{}'.format(utils.convert_bytes(memory_estimate)))
+        logger.warning('Predicted memory usage per Simulation is >{}'.format(cp.utils.convert_bytes(memory_estimate)))
 
         return spec_type, mesh_kwargs
     except ValueError:
         ask_mesh_type()
 
 
-class ElectricFieldSimulationResult(cp.cluster.SimulationResult):
+class ElectricFieldSimulationResult(clu.SimulationResult):
     def __init__(self, sim, job_processor):
         super().__init__(sim, job_processor)
 
@@ -83,10 +86,10 @@ class ElectricFieldSimulationResult(cp.cluster.SimulationResult):
 
     def make_wavefunction_plots(self, sim):
         plot_kwargs = dict(
-            target_dir = self.plots_dir,
-            plot_name = 'name',
-            show_title = True,
-        )
+                target_dir = self.plots_dir,
+                plot_name = 'name',
+                show_title = True,
+                )
 
         # sim.plot_wavefunction_vs_time(**plot_kwargs)
 
@@ -105,7 +108,7 @@ class ElectricFieldSimulationResult(cp.cluster.SimulationResult):
         #                               grouped_free_states = grouped_states, group_labels = group_labels)
 
 
-class ElectricFieldJobProcessor(cp.cluster.JobProcessor):
+class ElectricFieldJobProcessor(clu.JobProcessor):
     simulation_result_type = ElectricFieldSimulationResult
 
     def __init__(self, job_name, job_dir_path):
@@ -116,7 +119,7 @@ parameter_name_to_unit_name = {
     'pulse_width': 'asec',
     'fluence': 'Jcm2',
     'phase': 'rad'
-}
+    }
 
 
 class ConvergenceSimulationResult(ElectricFieldSimulationResult):
@@ -160,7 +163,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                             selector = {
                                 plot_parameter: plot_parameter_value,
                                 line_parameter: line_parameter_value,
-                            }
+                                }
                             results = sorted(self.select_by_kwargs(**selector), key = lambda result: getattr(result, scan_parameter))
 
                             lines.append(np.array([getattr(result, ionization_metric) for result in results]))
@@ -178,7 +181,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                                 y_upper_limit = None
                                 y_lower_limit = None
 
-                            cp.utils.xy_plot(plot_name + f'__log={log}',
+                            cp.plots.xy_plot(f'{plot_name}__log={log}',
                                              x,
                                              *lines,
                                              line_labels = line_labels,
@@ -232,7 +235,7 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
                             selector = {
                                 plot_parameter: plot_parameter_value,
                                 line_parameter: line_parameter_value,
-                            }
+                                }
                             results = sorted(self.select_by_kwargs(**selector), key = lambda result: getattr(result, scan_parameter))
 
                             lines.append(np.array([getattr(result, ionization_metric) for result in results]))
@@ -250,7 +253,7 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
                                 y_upper_limit = None
                                 y_lower_limit = None
 
-                            cp.utils.xy_plot(plot_name + f'__log={log}',
+                            cp.plots.xy_plot(plot_name + f'__log={log}',
                                              x,
                                              *lines,
                                              line_labels = line_labels,
@@ -263,7 +266,7 @@ class PulseJobProcessor(ElectricFieldJobProcessor):
                                              )
 
 
-class IDESimulationResult(cp.cluster.SimulationResult):
+class IDESimulationResult(clu.SimulationResult):
     def __init__(self, sim, job_processor):
         super().__init__(sim, job_processor)
 
@@ -278,17 +281,17 @@ class IDESimulationResult(cp.cluster.SimulationResult):
 
     def make_a_plots(self, sim):
         plot_kwargs = dict(
-            target_dir = self.plots_dir,
-            plot_name = 'name',
-            show_title = True,
-            name_postfix = f'__{sim.file_name}',
-        )
+                target_dir = self.plots_dir,
+                plot_name = 'name',
+                show_title = True,
+                name_postfix = f'__{sim.file_name}',
+                )
 
         sim.plot_a_vs_time(**plot_kwargs)
         sim.plot_a_vs_time(**plot_kwargs, log = True)
 
 
-class IDEJobProcessor(cp.cluster.JobProcessor):
+class IDEJobProcessor(clu.JobProcessor):
     simulation_result_type = IDESimulationResult
 
     def __init__(self, job_name, job_dir_path):
@@ -322,7 +325,7 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
                             selector = {
                                 plot_parameter: plot_parameter_value,
                                 line_parameter: line_parameter_value,
-                            }
+                                }
                             results = sorted(self.select_by_kwargs(**selector), key = lambda result: getattr(result, scan_parameter))
 
                             x = np.array([getattr(result, scan_parameter) for result in results])
@@ -340,7 +343,7 @@ class IDEJobProcessor(cp.cluster.JobProcessor):
                                 y_upper_limit = None
                                 y_lower_limit = None
 
-                            cp.utils.xy_plot(plot_name + f'__log={log}',
+                            cp.plots.xy_plot(plot_name + f'__log={log}',
                                              x,
                                              *lines,
                                              line_labels = line_labels,

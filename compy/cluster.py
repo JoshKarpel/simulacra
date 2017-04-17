@@ -2,6 +2,7 @@ import collections
 import datetime as dt
 import json
 import functools as ft
+
 import logging
 import os
 import sys
@@ -20,10 +21,8 @@ from tqdm import tqdm
 import numpy as np
 import paramiko
 
-import compy as cp
 from compy.units import *
-from . import core
-from . import utils
+from . import core, utils, plots
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -264,7 +263,7 @@ class ClusterInterface:
 
         self.walk_remote_path(self.remote_home_dir,
                               func_on_files = self.mirror_file,
-                              func_on_dirs = lambda d, _: cp.utils.ensure_dir_exists(d),
+                              func_on_dirs = lambda d, _: utils.ensure_dir_exists(d),
                               blacklist_dir_names = blacklist_dir_names,
                               whitelist_file_ext = whitelist_file_ext)
 
@@ -294,7 +293,7 @@ class SimulationResult:
         self.running_time = copy(sim.running_time.total_seconds())
 
 
-class JobProcessor(utils.Beet):
+class JobProcessor(core.Beet):
     """A class that processes a collection of pickled Simulations. Should be subclassed for specialization."""
 
     simulation_result_type = SimulationResult
@@ -315,7 +314,7 @@ class JobProcessor(utils.Beet):
         self.movies_dir = os.path.join(self.job_dir_path, 'movies')
 
         for directory in (self.input_dir, self.output_dir, self.plots_dir, self.movies_dir):
-            cp.utils.ensure_dir_exists(directory)
+            utils.ensure_dir_exists(directory)
 
         self.sim_names = self.get_sim_names_from_specs()
         self.sim_count = len(self.sim_names)
@@ -381,7 +380,7 @@ class JobProcessor(utils.Beet):
         
         :param force_reprocess: if True, process all Simulations in the output directory regardless of prior processing status
         """
-        with cp.utils.BlockTimer() as t:
+        with utils.BlockTimer() as t:
             logger.info('Loading simulations from job {}'.format(self.name))
 
             if force_reprocess:
@@ -404,7 +403,7 @@ class JobProcessor(utils.Beet):
 
         logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, t.time_elapsed))
 
-        with cp.utils.BlockTimer() as t:
+        with utils.BlockTimer() as t:
             # self.write_to_txt()
             # self.write_to_csv()
 
@@ -459,13 +458,13 @@ class JobProcessor(utils.Beet):
         sim_numbers = [result.file_name for result in self.data.values() if result is not None]
         running_time = [result.running_time for result in self.data.values() if result is not None]
 
-        cp.utils.xy_plot(f'{self.name}__diagnostics',
-                         sim_numbers,
-                         running_time,
-                         line_kwargs = [dict(linestyle = '', marker = '.')],
-                         y_scale = 'hours',
-                         x_label = 'Simulation Number', y_label = 'Time',
-                         target_dir = self.plots_dir)
+        plots.xy_plot(f'{self.name}__diagnostics',
+                      sim_numbers,
+                      running_time,
+                      line_kwargs = [dict(linestyle = '', marker = '.')],
+                      y_scale = 'hours',
+                      x_label = 'Simulation Number', y_label = 'Time',
+                      target_dir = self.plots_dir)
 
 
 class Parameter:

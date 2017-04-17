@@ -6,6 +6,7 @@ import scipy.integrate as integrate
 
 import compy as cp
 import ionization as ion
+import plots
 from ionization import integrodiff as ide
 from compy.units import *
 
@@ -30,11 +31,11 @@ def run(spec):
                            field_axis_label = r'${}(t)$'.format(str_efield),
                            field_scale = 'AEF')
 
-        cp.utils.xy_plot(sim.name + '_RI',
-                         sim.times,
-                         np.real(sim.y), np.imag(sim.y), np.abs(sim.y), np.angle(sim.y),
-                         line_labels = ('Real', 'Imag', 'Abs', 'Arg'),
-                         target_dir = OUT_DIR)
+        plots.xy_plot(sim.name + '_RI',
+                      sim.times,
+                      np.real(sim.y), np.imag(sim.y), np.abs(sim.y), np.angle(sim.y),
+                      line_labels = ('Real', 'Imag', 'Abs', 'Arg'),
+                      target_dir = OUT_DIR)
 
         return sim
 

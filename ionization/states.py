@@ -1,5 +1,6 @@
 import datetime as dt
 import functools
+
 import logging
 import os
 import types
@@ -26,7 +27,7 @@ class IllegalQuantumState(cp.CompyException):
     pass
 
 
-class QuantumState(cp.utils.Summand):
+class QuantumState(cp.Summand):
     """A class that represents a quantum state, with an amplitude and some basic multiplication/addition rules. Can be summed to form a Superposition."""
 
     bound = None
@@ -99,7 +100,7 @@ class QuantumState(cp.utils.Summand):
         return 0
 
 
-class Superposition(cp.utils.Sum, QuantumState):
+class Superposition(cp.Sum, QuantumState):
     """A class that represents a superposition of bound states."""
 
     container_name = 'states'

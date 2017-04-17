@@ -3,7 +3,7 @@ import sys
 import unittest
 import shutil
 
-from . import core, utils, math, cluster
+from . import core, utils, math, cluster, plots
 
 TEST_DIR = os.path.join(os.getcwd(), 'temp__unit_testing')
 
@@ -29,7 +29,7 @@ class TestEnsureDirExists(unittest.TestCase):
 
 class TestBeet(unittest.TestCase):
     def setUp(self):
-        self.obj = utils.Beet('foo')
+        self.obj = core.Beet('foo')
         self.obj_name = 'foo'
         self.target_name = 'foo.beet'
         utils.ensure_dir_exists(TEST_DIR)
@@ -45,7 +45,7 @@ class TestBeet(unittest.TestCase):
         path = self.obj.save(target_dir = TEST_DIR)
         self.assertEqual(path, os.path.join(TEST_DIR, self.target_name))  # test if path was constructed correctly
         self.assertTrue(os.path.exists(path))  # path should actually exist on the system
-        loaded = utils.Beet.load(path)
+        loaded = core.Beet.load(path)
         self.assertEqual(loaded, self.obj)  # beets should be equal, but NOT the same object
         self.assertEqual(loaded.uid, self.obj.uid)  # beets should have the same uid
         self.assertEqual(hash(loaded), hash(self.obj))  # beets should have the same hash
@@ -70,8 +70,8 @@ class TestSimulation(TestBeet):
 
 class TestSumming(unittest.TestCase):
     def setUp(self):
-        self.summand_one = utils.Summand()
-        self.summand_two = utils.Summand()
+        self.summand_one = core.Summand()
+        self.summand_two = core.Summand()
         self.sum = self.summand_one + self.summand_two
 
     def test_is(self):
@@ -81,13 +81,13 @@ class TestSumming(unittest.TestCase):
         self.assertFalse(self.summand_one == self.summand_two)
 
     def test_instance_of(self):
-        self.assertTrue(isinstance(self.summand_one, utils.Summand))
-        self.assertTrue(isinstance(self.summand_two, utils.Summand))
-        self.assertTrue(isinstance(self.sum, utils.Summand))
-        self.assertTrue(isinstance(self.sum, utils.Sum))
+        self.assertTrue(isinstance(self.summand_one, core.Summand))
+        self.assertTrue(isinstance(self.summand_two, core.Summand))
+        self.assertTrue(isinstance(self.sum, core.Summand))
+        self.assertTrue(isinstance(self.sum, core.Sum))
 
-        self.assertFalse(isinstance(self.summand_one, utils.Sum))
-        self.assertFalse(isinstance(self.summand_two, utils.Sum))
+        self.assertFalse(isinstance(self.summand_one, core.Sum))
+        self.assertFalse(isinstance(self.summand_two, core.Sum))
 
     def test_container(self):
         self.assertTrue(self.summand_one in self.sum.summands)
@@ -99,12 +99,12 @@ class TestSumming(unittest.TestCase):
 
 class TestSummingSubclassing(unittest.TestCase):
     def setUp(self):
-        class Fruit(utils.Summand):
+        class Fruit(core.Summand):
             def __init__(self):
                 super().__init__()
                 self.summation_class = FruitBasket
 
-        class FruitBasket(utils.Sum, Fruit):
+        class FruitBasket(core.Sum, Fruit):
             container_name = 'basket'
 
         class Apple(Fruit):
@@ -123,13 +123,13 @@ class TestSummingSubclassing(unittest.TestCase):
         self.fruit_basket = self.apple + self.banana
 
     def test_instance_of_bases(self):
-        self.assertTrue(isinstance(self.apple, utils.Summand))
-        self.assertTrue(isinstance(self.banana, utils.Summand))
-        self.assertTrue(isinstance(self.fruit_basket, utils.Summand))
-        self.assertTrue(isinstance(self.fruit_basket, utils.Sum))
+        self.assertTrue(isinstance(self.apple, core.Summand))
+        self.assertTrue(isinstance(self.banana, core.Summand))
+        self.assertTrue(isinstance(self.fruit_basket, core.Summand))
+        self.assertTrue(isinstance(self.fruit_basket, core.Sum))
 
-        self.assertFalse(isinstance(self.apple, utils.Sum))
-        self.assertFalse(isinstance(self.banana, utils.Sum))
+        self.assertFalse(isinstance(self.apple, core.Sum))
+        self.assertFalse(isinstance(self.banana, core.Sum))
 
     def test_instance_of_subclasses(self):
         self.assertTrue(isinstance(self.fruit_basket, self.Fruit))
