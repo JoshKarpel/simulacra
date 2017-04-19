@@ -1,13 +1,10 @@
 import logging
 import os
 
-from tqdm import tqdm
-
 import numpy as np
 import scipy.sparse.linalg as sparsealg
 
 import compy as cp
-import compy.cy as cy
 import ionization as ion
 import plots
 from compy.units import *

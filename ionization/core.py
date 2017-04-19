@@ -1,7 +1,7 @@
-import functools as ft
-import logging
-import itertools as it
 import collections
+import functools as ft
+import itertools as it
+import logging
 from copy import copy, deepcopy
 
 import matplotlib
@@ -16,8 +16,8 @@ import scipy.special as special
 from cycler import cycler
 
 import compy as cp
-from compy.cy import tdma
 from compy.units import *
+from cy import tdma, get_split_operator_evolution_matrices_L
 from . import potentials, states
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,7 @@ class ElectricFieldSpecification(cp.core.Specification):
 
     evolution_equations = cp.utils.RestrictedValues('evolution_equations', {'L', 'H'})
     evolution_method = cp.utils.RestrictedValues('evolution_method', {'CN', 'SO', 'S'})
+    evolution_gauge = cp.utils.RestrictedValues('evolution_gauge', {'L', 'V'})
 
     def __init__(self, name,
                  mesh_type = None,
@@ -192,6 +193,7 @@ class ElectricFieldSpecification(cp.core.Specification):
             '   Time Step: {} as'.format(uround(self.time_step, asec)),
             '   Evolution Equations: {}'.format(self.evolution_equations),
             '   Evolution Method: {}'.format(self.evolution_method),
+            '   Evolution Gauge: {}'.format(self.evolution_gauge),
             ]
 
         if self.minimum_time_final is not 0:
@@ -1948,26 +1950,30 @@ class SphericalHarmonicMesh(QuantumMesh):
 
     def _get_split_operator_evolution_matrices_L(self, a):
         """Calculate split operator evolution matrices for the interaction term in the length gauge."""
-        a_even, a_odd = a[::2], a[1::2]
-
-        even_diag = np.zeros(len(a) + 1, dtype = np.complex128)
-        even_diag[:] = np.cos(a_even).repeat(2)
-
-        even_offdiag = np.zeros(len(a), dtype = np.complex128)
-        even_offdiag[0::2] = -1j * np.sin(a_even)
-
-        odd_diag = np.zeros(len(a) + 1, dtype = np.complex128)
-        odd_diag[0] = 1
-        odd_diag[-1] = 1
-        odd_diag[1:-1] = np.cos(a_odd).repeat(2)
-
-        odd_offdiag = np.zeros(len(a), dtype = np.complex128)
-        odd_offdiag[1::2] = -1j * np.sin(a_odd)
-
-        even = sparse.diags((even_offdiag, even_diag, even_offdiag), offsets = [-1, 0, 1])
-        odd = sparse.diags((odd_offdiag, odd_diag, odd_offdiag), offsets = [-1, 0, 1])
-
-        return even, odd
+        return get_split_operator_evolution_matrices_L(a)
+        # a_even, a_odd = a[::2], a[1::2]
+        #
+        # len_offdiag = len(a)
+        # len_diag = len_offdiag + 1
+        #
+        # even_diag = np.zeros(len_diag, dtype = np.complex128)
+        # even_diag[:] = np.cos(a_even).repeat(2)
+        #
+        # even_offdiag = np.zeros(len_offdiag, dtype = np.complex128)
+        # even_offdiag[0::2] = -1j * np.sin(a_even)
+        #
+        # odd_diag = np.zeros(len_diag, dtype = np.complex128)
+        # odd_diag[0] = 1
+        # odd_diag[-1] = 1
+        # odd_diag[1:-1] = np.cos(a_odd).repeat(2)
+        #
+        # odd_offdiag = np.zeros(len_offdiag, dtype = np.complex128)
+        # odd_offdiag[1::2] = -1j * np.sin(a_odd)
+        #
+        # even = sparse.diags((even_offdiag, even_diag, even_offdiag), offsets = [-1, 0, 1])
+        # odd = sparse.diags((odd_offdiag, odd_diag, odd_offdiag), offsets = [-1, 0, 1])
+        #
+        # return even, odd
 
     def _evolve_SO_L(self, time_step):
         tau = time_step / (2 * hbar)

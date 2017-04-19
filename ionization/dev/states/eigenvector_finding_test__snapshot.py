@@ -1,14 +1,11 @@
+import contextlib
 import logging
 import os
-import contextlib
-
-from tqdm import tqdm
 
 import numpy as np
 import scipy.sparse.linalg as sparsealg
 
 import compy as cp
-import compy.cy as cy
 import ionization as ion
 from compy.units import *
 

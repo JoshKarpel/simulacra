@@ -18,6 +18,7 @@ if __name__ == '__main__':
                                                  test_states = (), use_numeric_eigenstates_as_basis = False,
                                                  time_initial = 0, time_final = 1000 * asec, time_step = 1 * asec,
                                                  dipole_gauges = (),
+                                                 store_data_every = -1,
                                                  ).to_simulation()
 
         logger.info(sim.info())
