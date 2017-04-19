@@ -24,6 +24,8 @@ if __name__ == '__main__':
     os.chdir('..')
 
     # copy various scripts into the deploy directory
+    shutil.copy2('compy/scripts/make_dag.py', 'deploy')
+
     shutil.copy2('ionization/scripts/run_sim.py', 'deploy')
     shutil.copy2('ionization/scripts/run_sim.sh', 'deploy')
     shutil.copy2('ionization/scripts/sync_and_process.py', 'deploy')
@@ -34,7 +36,7 @@ if __name__ == '__main__':
     shutil.copy2('ionization/scripts/cluster_job_creation/create_job__fsw__scan_width_phase_fluence.py', 'deploy')
     shutil.copy2('ionization/scripts/cluster_job_creation/create_job__hyd__convergence_test.py', 'deploy')
 
-    # custom paths for copying the deploy dir into dropbox for snyc with other computers
+    # custom paths for copying the deploy dir into Dropbox for sync with other computers
     for path in (r'C:\Users\Josh\Dropbox\Research\deploy',  # laptop
                  r'D:\Dropbox\Research\deploy'  # desktop
                  ):

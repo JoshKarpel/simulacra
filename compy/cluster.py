@@ -465,6 +465,25 @@ class JobProcessor(core.Beet):
                       target_dir = self.plots_dir)
 
 
+def combine_job_processors(*job_processors):
+    """
+    
+    JobProcessor and Simulation types are inherited from the first JobProcessor in the arguments
+    
+    :param job_processors: 
+    :return: 
+    """
+    j_type = job_processors[0].simulation_type
+    jp_type = job_processors[0].__class__
+    combined_jp = jp_type(name = '-'.join(jp.name for jp in job_processors),
+                          job_dir_path = None,
+                          simulation_type = j_type)
+
+    combined_jp.data = collections.OrderedDict((ii, copy(sim_result)) for ii, (sim_name, sim_result) in enumerate(it.chain(jp.data for jp in job_processors)))
+
+    return combined_jp
+
+
 class Parameter:
     """A class that represents a parameter of a Specification."""
 

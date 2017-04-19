@@ -2,13 +2,11 @@ import logging
 import os
 
 import numpy as np
-import scipy.sparse.linalg as sparsealg
 
 import compy as cp
-import compy.cy as cy
 import ionization as ion
-from ionization import integrodiff as ide
 from compy.units import *
+from ionization import integrodiff as ide
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)

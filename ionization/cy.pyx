@@ -30,9 +30,9 @@ def tdma(matrix, np.ndarray[complex_t, ndim = 1] d):
 
     cdef int n = diagonal.shape[0]  # dimension of the matrix, also the number of equations we have to solve
 
-    cdef np.ndarray[complex_t, ndim = 1] new_superdiagonal = np.zeros(n - 1, dtype=complex)  # allocate in advance so we don't have to keep appending
-    cdef np.ndarray[complex_t, ndim = 1] new_d = np.zeros(n, dtype=complex)
-    cdef np.ndarray[complex_t, ndim = 1] x = np.zeros(n, dtype=complex)
+    cdef np.ndarray[complex_t, ndim = 1] new_superdiagonal = np.zeros(n - 1, dtype = complex)  # allocate in advance so we don't have to keep appending
+    cdef np.ndarray[complex_t, ndim = 1] new_d = np.zeros(n, dtype = complex)
+    cdef np.ndarray[complex_t, ndim = 1] x = np.zeros(n, dtype = complex)
 
     cdef unsigned int i
     cdef complex_t subi
@@ -54,12 +54,39 @@ def tdma(matrix, np.ndarray[complex_t, ndim = 1] d):
 
     return x
 
+@cython.boundscheck(False)
+@cython.nonecheck(False)
+def get_split_operator_evolution_matrices_L(np.ndarray[complex_t, ndim = 1] a):
+    cdef np.ndarray[complex_t, ndim = 1] a_even = a[::2]
+    cdef np.ndarray[complex_t, ndim = 1] a_odd = a[1::2]
+
+    cdef unsigned int len_offdiag = len(a)
+    cdef unsigned int len_diag = len_offdiag + 1
+
+    cdef np.ndarray[complex_t, ndim = 1] even_diag = np.zeros(len_diag, dtype = np.complex128)
+    even_diag[:] = np.cos(a_even).repeat(2)
+
+    cdef np.ndarray[complex_t, ndim = 1] even_offdiag = np.zeros(len_offdiag, dtype = np.complex128)
+    even_offdiag[0::2] = -1j * np.sin(a_even)
+
+    cdef np.ndarray[complex_t, ndim = 1] odd_diag = np.zeros(len_diag, dtype = np.complex128)
+    odd_diag[0] = 1
+    odd_diag[-1] = 1
+    odd_diag[1:-1] = np.cos(a_odd).repeat(2)
+
+    cdef np.ndarray[complex_t, ndim = 1] odd_offdiag = np.zeros(len_offdiag, dtype = np.complex128)
+    odd_offdiag[1::2] = -1j * np.sin(a_odd)
+
+    even = sparse.diags((even_offdiag, even_diag, even_offdiag), offsets = [-1, 0, 1])
+    odd = sparse.diags((odd_offdiag, odd_diag, odd_offdiag), offsets = [-1, 0, 1])
+
+    return even, odd
 
 @cython.boundscheck(False)
 @cython.nonecheck(False)
 # @cython.cdivision(True)
 def chebyshev_fit(np.ndarray[float_t, ndim = 1] rescaled_z, np.ndarray[float_t, ndim = 1] rescaled_rho, np.ndarray[float_t, ndim = 2] g_mesh, int terms):
-    cdef unsigned int n, m, i ,j
+    cdef unsigned int n, m, i, j
 
     cdef np.ndarray[float_t, ndim = 2] c_nm = np.zeros((terms, terms), dtype = float)
 
@@ -82,15 +109,15 @@ def chebyshev_fit(np.ndarray[float_t, ndim = 1] rescaled_z, np.ndarray[float_t, 
             spline_mesh[i, j] = spline(eval_points[i], eval_points[j])[0, 0]
 
     for n in range(terms):
-            for m in range(terms):
-                if n == 0:
-                    n_check = 1
-                if m == 0:
-                    m_check = 1
-                prefactor = (2 - n_check) * (2 - m_check) / (terms ** 2)
-                for i in range(terms):
-                    for j in range(terms):
-                        c_nm[n, m] += spline_mesh[i, j] * np.cos(n * arg[i]) * np.cos(m * arg[j])
-                c_nm[n, m] *= prefactor
+        for m in range(terms):
+            if n == 0:
+                n_check = 1
+            if m == 0:
+                m_check = 1
+            prefactor = (2 - n_check) * (2 - m_check) / (terms ** 2)
+            for i in range(terms):
+                for j in range(terms):
+                    c_nm[n, m] += spline_mesh[i, j] * np.cos(n * arg[i]) * np.cos(m * arg[j])
+            c_nm[n, m] *= prefactor
 
     return c_nm
