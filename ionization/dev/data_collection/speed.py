@@ -18,6 +18,7 @@ if __name__ == '__main__':
                                                  test_states = (), use_numeric_eigenstates_as_basis = False,
                                                  time_initial = 0, time_final = 1000 * asec, time_step = 1 * asec,
                                                  dipole_gauges = (),
+                                                 store_data_every = -1,
                                                  ).to_simulation()
 
         logger.info(sim.info())
@@ -25,7 +26,7 @@ if __name__ == '__main__':
         logger.info(sim.info())
 
         mesh_points = sim.mesh.mesh_points
-        time_points = sim.time_steps
+        time_points = sim.time_steps - 1
         space_time_points = mesh_points * time_points
 
         logger.info(f'Number of Space Points: {mesh_points}')

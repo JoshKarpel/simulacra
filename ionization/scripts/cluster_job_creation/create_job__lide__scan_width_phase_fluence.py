@@ -157,23 +157,25 @@ if __name__ == '__main__':
         print('Generating specifications...')
 
         for ii, spec_kwargs in enumerate(spec_kwargs_list):
+            electric_potential = spec_kwargs['electric_potential']
+
             name = '{}_pw={}asec_flu={}Jcm2_phase={}pi'.format(
                 pulse_type_q,
-                uround(spec_kwargs['electric_potential'].pulse_width, asec),
-                uround(spec_kwargs['electric_potential'].fluence, Jcm2),
-                uround(spec_kwargs['electric_potential'].phase, pi)
+                uround(electric_potential.pulse_width, asec),
+                uround(electric_potential.fluence, Jcm2),
+                uround(electric_potential.phase, pi)
             )
 
-            time_bound = spec_kwargs['time_bound_in_pw'] * spec_kwargs['electric_potential'].pulse_width
+            time_bound = spec_kwargs['time_bound_in_pw'] * electric_potential.pulse_width
             spec = ide.AdaptiveIntegroDifferentialEquationSpecification(name,
                                                                         file_name = str(ii),
                                                                         time_initial = -time_bound, time_final = time_bound,
                                                                         **spec_kwargs)
 
             spec.pulse_type = pulse_type
-            spec.pulse_width = spec_kwargs['electric_potential'].pulse_width
-            spec.fluence = spec_kwargs['electric_potential'].fluence
-            spec.phase = spec_kwargs['electric_potential'].phase
+            spec.pulse_width = electric_potential.pulse_width
+            spec.fluence = electric_potential.fluence
+            spec.phase = electric_potential.phase
 
             specs.append(spec)
 

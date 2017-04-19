@@ -322,11 +322,19 @@ def xy_plot(name,
             y_lower_limit -= .05 * y_range
             y_upper_limit += .05 * y_range
 
+        if y_log_axis:
+            y_lower_limit /= 10
+            y_upper_limit *= 10
+
         # neither of these trigger if both y limits are None
         if y_lower_limit is None:
             y_lower_limit = min([np.nanmin(y) for y in y_data])
+            if y_log_axis:
+                y_lower_limit /= 10
         if y_upper_limit is None:
             y_upper_limit = max([np.nanmax(y) for y in y_data])
+            if y_log_axis:
+                y_upper_limit *= 10
 
         ax.set_xlim(left = x_lower_limit / x_scale, right = x_upper_limit / x_scale)
         ax.set_ylim(bottom = y_lower_limit / y_scale, top = y_upper_limit / y_scale)

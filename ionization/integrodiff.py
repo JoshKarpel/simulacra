@@ -607,7 +607,7 @@ class VelocityGaugeIntegroDifferentialEquationSpecification(cp.Specification):
                  electric_potential_dc_correction = True,
                  kernel = return_one, kernel_kwargs = None,
                  integration_method = 'simpson',
-                 evolution_method = 'FE',
+                 evolution_method = 'RK4',
                  simulation_type = None,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  **kwargs):

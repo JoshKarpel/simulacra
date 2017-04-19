@@ -4,7 +4,8 @@ import logging
 import functools as ft
 
 import compy as cp
-import ionization.cluster as clu
+import compy.cluster as clu
+import ionization.cluster as iclu
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -12,7 +13,7 @@ logger.setLevel(logging.DEBUG)
 log_file = f"{__file__.strip('.py')}__{dt.datetime.now().strftime('%Y-%m-%d')}"
 cp_logger = cp.utils.Logger('__main__', 'compy', 'ionization',
                             stdout_logs = True, stdout_level = logging.INFO,
-                            file_logs = True, file_level = logging.INFO, file_name = log_file, file_dir = 'logs', file_mode = 'a')
+                            file_logs = True, file_level = logging.INFO, file_name = log_file, file_dir = os.path.join(os.getcwd(), 'logs'), file_mode = 'a')
 
 
 def synchronize_with_cluster(cluster_interface):
