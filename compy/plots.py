@@ -3,9 +3,11 @@ import os
 import logging
 
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 
 from . import core, utils
+from .units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -174,7 +176,9 @@ class FigureManager:
         self.path = None
 
     def save(self):
-        return save_current_figure(name = self.name, name_postfix = self.name_postfix, target_dir = self.target_dir, img_format = self.img_format, img_scale = self.img_scale)
+        path = save_current_figure(name = self.name, name_postfix = self.name_postfix, target_dir = self.target_dir, img_format = self.img_format, img_scale = self.img_scale)
+
+        self.path = path
 
     def __enter__(self):
         if self.close_before:
@@ -381,5 +385,136 @@ def xy_plot(name,
         np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
 
         logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
+
+    return path
+
+
+def xyz_plot(name,
+             x_mesh, y_mesh, z_mesh,
+             figure_manager = None,
+             x_scale = 1, y_scale = 1, z_scale = 1,
+             x_log_axis = False, y_log_axis = False, z_log_axis = False,
+             x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, z_lower_limit = None, z_upper_limit = None,
+             x_extra_ticks = None, y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
+             z_label = None, x_label = None, y_label = None,
+             font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10,
+             ticks_on_top = True, ticks_on_right = True,
+             grid_kwargs = None,
+             save_csv = False,
+             **kwargs):
+    # set up figure and axis
+    if figure_manager is None:
+        figure_manager = FigureManager(name, **kwargs)
+    with figure_manager as fm:
+        fig = fm.fig
+        ax = plt.subplot(111)
+
+        # determine if scale_x/y is a unit specifier or a number and set scale and labels accordingly
+        if type(x_scale) == str:
+            scale_x_label = r' (${}$)'.format(utils.unit_names_to_tex_strings[x_scale])
+            x_scale = utils.unit_names_to_values[x_scale]
+        else:
+            scale_x_label = r''
+        if type(y_scale) == str:
+            scale_y_label = r' (${}$)'.format(utils.unit_names_to_tex_strings[y_scale])
+            y_scale = utils.unit_names_to_values[y_scale]
+        else:
+            scale_y_label = r''
+        if type(z_scale) == str:
+            scale_z_label = r' (${}$)'.format(utils.unit_names_to_tex_strings[z_scale])
+            z_scale = utils.unit_names_to_values[z_scale]
+        else:
+            scale_z_label = r''
+
+        if z_lower_limit is None:
+            z_lower_limit = np.nanmin(z_mesh)
+            if z_log_axis:
+                z_lower_limit /= 10
+        if y_upper_limit is None:
+            z_upper_limit = np.nanmax(z_mesh)
+            if z_log_axis:
+                z_upper_limit *= 10
+
+        if z_log_axis:
+            norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_scale, vmax = z_upper_limit / z_scale)
+        else:
+            norm = matplotlib.colors.Normalize(vmin = z_lower_limit / z_scale, vmax = z_upper_limit / z_scale)
+
+        colormesh = ax.pcolormesh(x_mesh / x_scale,
+                                  y_mesh / y_scale,
+                                  z_mesh / z_scale,
+                                  shading = 'gouraud',
+                                  norm = norm)
+
+        if grid_kwargs is not None:
+            grid_kwargs = GRID_KWARGS.update(grid_kwargs)
+        else:
+            grid_kwargs = GRID_KWARGS
+
+        if x_log_axis:
+            ax.set_xscale('log')
+            minor_grid_kwargs = grid_kwargs.copy()
+            minor_grid_kwargs['alpha'] -= .1
+            ax.grid(True, which = 'minor', **minor_grid_kwargs)
+        if y_log_axis:
+            ax.set_yscale('log')
+            minor_grid_kwargs = grid_kwargs.copy()
+            minor_grid_kwargs['alpha'] -= .1
+            ax.grid(True, which = 'minor', **minor_grid_kwargs)
+
+        # set axis limits
+        if x_lower_limit is None:
+            x_lower_limit = np.nanmin(x_mesh)
+        if x_upper_limit is None:
+            x_upper_limit = np.nanmax(x_mesh)
+
+        if y_lower_limit is None:
+            y_lower_limit = np.nanmin(y_mesh)
+        if y_upper_limit is None:
+            y_upper_limit = np.nanmax(y_mesh)
+
+        ax.set_xlim(left = x_lower_limit / x_scale, right = x_upper_limit / x_scale)
+        ax.set_ylim(bottom = y_lower_limit / y_scale, top = y_upper_limit / y_scale)
+
+        ax.grid(True, which = 'major', **grid_kwargs)
+
+        ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
+
+        # make title, axis labels, and legend
+        if z_label is not None:
+            z_label = ax.set_title(r'{}'.format(z_label), fontsize = font_size_title)
+            z_label.set_y(1.06)  # move title up a little
+        if x_label is not None:
+            x_label = ax.set_xlabel(r'{}'.format(x_label) + scale_x_label, fontsize = font_size_axis_labels)
+        if y_label is not None:
+            y_label = ax.set_ylabel(r'{}'.format(y_label) + scale_y_label, fontsize = font_size_axis_labels)
+
+        plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
+
+        fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
+
+        if x_extra_ticks is not None and x_extra_tick_labels is not None:
+            ax.set_xticks(list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_scale))  # append the extra tick labels, scaled appropriately
+            x_tick_labels = list(ax.get_xticklabels())
+            x_tick_labels[-len(x_extra_ticks):] = x_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            ax.set_xticklabels(x_tick_labels)
+
+        if y_extra_ticks is not None and y_extra_tick_labels is not None:
+            ax.set_yticks(list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_scale))  # append the extra tick labels, scaled appropriately
+            y_tick_labels = list(ax.get_yticklabels())
+            y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            ax.set_yticklabels(y_tick_labels)
+
+        # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
+        ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
+
+    path = fm.path
+
+    if save_csv:
+        raise NotImplementedError
+        # csv_path = os.path.splitext(path)[0] + '.csv'
+        # np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
+        #
+        # logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
     return path

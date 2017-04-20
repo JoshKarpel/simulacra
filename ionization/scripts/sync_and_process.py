@@ -13,7 +13,7 @@ logger.setLevel(logging.DEBUG)
 log_file = f"{__file__.strip('.py')}__{dt.datetime.now().strftime('%Y-%m-%d')}"
 cp_logger = cp.utils.Logger('__main__', 'compy', 'ionization',
                             stdout_logs = True, stdout_level = logging.INFO,
-                            file_logs = True, file_level = logging.INFO, file_name = log_file, file_dir = os.path.join(os.getcwd(), 'logs'), file_mode = 'a')
+                            file_logs = False, file_level = logging.INFO, file_name = log_file, file_dir = os.path.join(os.getcwd(), 'logs'), file_mode = 'a')
 
 
 def synchronize_with_cluster(cluster_interface):
@@ -67,19 +67,18 @@ def resume_processes(processes):
 if __name__ == '__main__':
     with cp_logger as l:
         dropbox_processes = cp.utils.get_processes_by_name('Dropbox.exe')
-
         try:
             ci = clu.ClusterInterface('submit-5.chtc.wisc.edu', username = 'karpel', key_path = 'E:\chtc_ssh_private')
             jobs_dir = "E:\Dropbox\Research\Cluster\cluster_mirror\home\karpel\jobs"
 
             cp.utils.try_loop(
-                ft.partial(suspend_processes, dropbox_processes),
-                ft.partial(synchronize_with_cluster, ci),
-                ft.partial(resume_processes, dropbox_processes),
-                ft.partial(process_jobs, jobs_dir),
-                wait_after_success = dt.timedelta(hours = 3),
-                wait_after_failure = dt.timedelta(hours = 1),
-            )
+                    ft.partial(suspend_processes, dropbox_processes),
+                    ft.partial(synchronize_with_cluster, ci),
+                    ft.partial(resume_processes, dropbox_processes),
+                    ft.partial(process_jobs, jobs_dir),
+                    wait_after_success = dt.timedelta(hours = 3),
+                    wait_after_failure = dt.timedelta(hours = 1),
+                    )
         except Exception as e:
             logger.exception(e)
             raise e

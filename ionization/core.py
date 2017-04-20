@@ -17,7 +17,7 @@ from cycler import cycler
 
 import compy as cp
 from compy.units import *
-from cy import tdma, get_split_operator_evolution_matrices_L
+from .cy import tdma, get_split_operator_evolution_matrices_L
 from . import potentials, states
 
 logger = logging.getLogger(__name__)

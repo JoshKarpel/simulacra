@@ -481,6 +481,8 @@ def combine_job_processors(*job_processors):
 
     combined_jp.data = collections.OrderedDict((ii, copy(sim_result)) for ii, (sim_name, sim_result) in enumerate(it.chain(jp.data for jp in job_processors)))
 
+    # TODO: update parameter sets
+
     return combined_jp
 
 
