@@ -83,7 +83,7 @@ if __name__ == '__main__':
         print(sim.info())
 
         plots.xy_plot('fsw_potential', sim.mesh.x_mesh, pot(distance = sim.mesh.x_mesh),
-                      x_scale = 'bohr_radius', y_scale = 'eV', x_lower_limit = -3 * width, x_upper_limit = 3 * width,
+                      x_unit = 'bohr_radius', y_unit = 'eV', x_lower_limit = -3 * width, x_upper_limit = 3 * width,
                       target_dir = OUT_DIR)
 
         sim.run_simulation()
@@ -94,19 +94,19 @@ if __name__ == '__main__':
 
         plots.xy_plot('energy_vs_time',
                       sim.times, sim.energy_expectation_value_vs_time_internal,
-                      x_label = '$t$', x_scale = 'asec', y_label = 'Energy', y_scale = 'eV',
+                      x_label = '$t$', x_unit = 'asec', y_label = 'Energy', y_unit = 'eV',
                       target_dir = OUT_DIR)
 
         plots.xy_plot('energy_vs_time__ratio',
                       sim.times, sim.energy_expectation_value_vs_time_internal / sim.energy_expectation_value_vs_time_internal[0],
-                      x_label = '$t$', x_scale = 'asec', y_label = '$E(t) / E(t=0)$',
+                      x_label = '$t$', x_unit = 'asec', y_label = '$E(t) / E(t=0)$',
                       target_dir = OUT_DIR)
 
         plots.xy_plot('energy_vs_time__ratio_log',
                       sim.times, sim.energy_expectation_value_vs_time_internal / sim.energy_expectation_value_vs_time_internal[0],
-                      x_label = '$t$', x_scale = 'asec', y_label = '$E(t) / E(t=0)$', y_log_axis = True,
+                      x_label = '$t$', x_unit = 'asec', y_label = '$E(t) / E(t=0)$', y_log_axis = True,
                       target_dir = OUT_DIR)
-        # sim.plot_energy_expectation_value_vs_time(target_dir = OUT_DIR, x_scale = 'asec')
+        # sim.plot_energy_expectation_value_vs_time(target_dir = OUT_DIR, x_unit = 'asec')
 
         # overlap_vs_k = np.zeros(len(plane_waves)) * np.NaN
         #
@@ -123,6 +123,6 @@ if __name__ == '__main__':
         #
         # cp.utils.xy_plot('overlap_vs_k',
         #                  wavenumbers, overlap_vs_k,
-        #                  x_scale = twopi / nm, x_label = r'Wavenumber $k$ ($2\pi/\mathrm{nm}$)',
+        #                  x_unit = twopi / nm, x_label = r'Wavenumber $k$ ($2\pi/\mathrm{nm}$)',
         #                  y_lower_limit = 0, y_upper_limit = 1,
         #                  target_dir = OUT_DIR)

@@ -84,7 +84,7 @@ if __name__ == '__main__':
                           results[0].times,
                           *y,
                           line_labels = [r.name for r in results],
-                          x_label = r'Time $t$', x_scale = 'asec',
+                          x_label = r'Time $t$', x_unit = 'asec',
                           y_label = y_lab,
                           y_log_axis = log,
                           **plt_kwargs)

@@ -113,9 +113,9 @@ class Material:
         fig.set_tight_layout(True)
         axis = plt.subplot(111)
 
-        y_scale = (fsec ** 2) / mm
+        y_unit = (fsec ** 2) / mm
 
-        plt.plot(wavelengths / nm, uround(gvd, y_scale, 10), label = self.name)
+        plt.plot(wavelengths / nm, uround(gvd, y_unit, 10), label = self.name)
 
         title = axis.set_title(r'GVD vs. $\lambda$ for {}'.format(self.name), fontsize = 15)
         title.set_y(1.05)
@@ -126,7 +126,7 @@ class Material:
         axis.set_xlim(np.min(wavelengths) / nm, np.max(wavelengths) / nm)
 
         y_range = np.max(gvd) - np.min(gvd)
-        axis.set_ylim((np.min(gvd) - 0.1 * y_range) / y_scale, (np.max(gvd) + 0.1 * y_range) / y_scale)
+        axis.set_ylim((np.min(gvd) - 0.1 * y_range) / y_unit, (np.max(gvd) + 0.1 * y_range) / y_scale)
 
         axis.grid(True, color = 'black', linestyle = ':')
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)
@@ -303,19 +303,19 @@ class ContinuousAmplitudeSpectrumSpecification(cp.Specification):
         if plot_fit:
             cp.plots.xy_plot('{}__power_spectrum_fit_dbm'.format(name),
                              wavelengths, 10 * np.log10(power / mW), 10 * np.log10(fitted_power_for_plotting / mW),
-                             legends = ['Measured', 'Fitted'], x_scale = 'nm',
+                             legends = ['Measured', 'Fitted'], x_unit_value = 'nm',
                              title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power (dBm)',
                              **kwargs)
 
             cp.plots.xy_plot('{}__power_spectrum_fit'.format(name),
                              wavelengths, power, fitted_power_for_plotting,
-                             legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
+                             legends = ['Measured', 'Fitted'], x_unit_value = 'nm', y_unit_value = 'mW',
                              title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
                              **kwargs)
 
             cp.plots.xy_plot('{}__power_spectrum_fit_log'.format(name),
                              wavelengths, power, fitted_power_for_plotting,
-                             legends = ['Measured', 'Fitted'], x_scale = 'nm', y_scale = 'mW',
+                             legends = ['Measured', 'Fitted'], x_unit_value = 'nm', y_unit_value = 'mW',
                              title = r'Ti:Sapph Output Spectrum', x_label = r'Wavelength', y_label = r'Power',
                              y_log_axis = True,
                              **kwargs)

@@ -460,7 +460,7 @@ class JobProcessor(core.Beet):
                       sim_numbers,
                       running_time,
                       line_kwargs = [dict(linestyle = '', marker = '.')],
-                      y_scale = 'hours',
+                      y_unit_value = 'hours',
                       x_label = 'Simulation Number', y_label = 'Time',
                       target_dir = self.plots_dir)
 

@@ -83,7 +83,7 @@ if __name__ == '__main__':
                           y_log_axis = log,
                           y_upper_limit = 1,
                           y_label = r'$\left\langle \Psi | \Psi \right\rangle$',
-                          x_scale = 'asec',
+                          x_unit = 'asec',
                           x_label = r'Time $t$',
                           target_dir = OUT_DIR,
                           )
@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
                 plots.xy_plot(f'snapshot_t={uround(snapshot.time, asec, 3)}__free_only__theta=0__log={log}',
                                  wavenumber[0, :], np.abs(ip[0, :]) ** 2,
-                              x_scale = 'per_nm', x_label = r'Wavenumber $k$',
+                              x_unit = 'per_nm', x_label = r'Wavenumber $k$',
                               y_log_axis = log,
                               **snapshot_spectrum_kwargs
                               )

@@ -27,7 +27,7 @@ def run(spec):
 
         plots.xy_plot(f'{sim.name}__energy_vs_time',
                       sim.times, sim.energy_expectation_value_vs_time_internal,
-                      x_label = '$t$', x_scale = 'asec', y_label = 'Energy', y_scale = 'eV',
+                      x_label = '$t$', x_unit = 'asec', y_label = 'Energy', y_unit = 'eV',
                       target_dir = OUT_DIR)
 
 if __name__ == '__main__':

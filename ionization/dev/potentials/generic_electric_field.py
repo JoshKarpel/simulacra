@@ -46,9 +46,9 @@ if __name__ == '__main__':
 
             plots.xy_plot('generic_electric_field_vs_time__zoom__{}__phase={}'.format(ii, phase / pi),
                           generic.times, np.real(generic.complex_electric_field_vs_time),
-                          x_scale = 'asec', x_label = r'Time $t$',
+                          x_unit = 'asec', x_label = r'Time $t$',
                           x_lower_limit = times[0], x_upper_limit = times[-1],
-                          y_scale = 'atomic_electric_field', y_label = r'Electric Field $E(t)$',
+                          y_unit = 'atomic_electric_field', y_label = r'Electric Field $E(t)$',
                           target_dir = OUT_DIR)
 
             print(ii, phase, phase / pi)
@@ -63,20 +63,20 @@ if __name__ == '__main__':
             #
             # cp.utils.xy_plot('power_spectrum',
             #                  generic.frequency, generic.power_vs_frequency,
-            #                  x_scale = 'THz', x_label = r'Frequency $f$',
+            #                  x_unit = 'THz', x_label = r'Frequency $f$',
             #                  target_dir = OUT_DIR)
             #
             # cp.utils.xy_plot('generic_electric_field_vs_time',
             #                  generic.times, np.real(generic.complex_electric_field_vs_time),
-            #                  x_scale = 'asec', x_label = r'Time $t$',
-            #                  y_scale = 'atomic_electric_field', y_label = r'Electric Field $E(t)$',
+            #                  x_unit = 'asec', x_label = r'Time $t$',
+            #                  y_unit = 'atomic_electric_field', y_label = r'Electric Field $E(t)$',
             #                  target_dir = OUT_DIR)
             #
             # cp.utils.xy_plot('generic_electric_field_vs_time__zoom',
             #                  generic.times, np.real(generic.complex_electric_field_vs_time),
-            #                  x_scale = 'asec', x_label = r'Time $t$',
+            #                  x_unit = 'asec', x_label = r'Time $t$',
             #                  x_lower_limit = times[0], x_upper_limit = times[-1],
-            #                  y_scale = 'atomic_electric_field', y_label = r'Electric Field $E(t)$',
+            #                  y_unit = 'atomic_electric_field', y_label = r'Electric Field $E(t)$',
             #                  target_dir = OUT_DIR)
             #
             # sinc_field = sinc.get_electric_field_amplitude(times)
@@ -93,6 +93,6 @@ if __name__ == '__main__':
             #                  times,
             #                  sinc_field, generic_field,
             #                  line_labels = ('Sinc Pulse', 'Generic Pulse'),
-            #                  x_scale = 'asec', x_label = r'Time $t$',
-            #                  y_scale = 'atomic_electric_field', y_label = r'Electric Field $E(t)$',
+            #                  x_unit = 'asec', x_label = r'Time $t$',
+            #                  y_unit = 'atomic_electric_field', y_label = r'Electric Field $E(t)$',
             #                  target_dir = OUT_DIR)

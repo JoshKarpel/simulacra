@@ -67,5 +67,5 @@ if __name__ == '__main__':
                 plots.xy_plot(name,
                               sim.mesh.r, *y,
                               line_labels = labels,
-                              x_scale = 'bohr_radius', x_label = r'$r$', y_label = r'$\left| g \right|^2$', title = 'Energy = {} eV, $\ell$ = {}'.format(energy, l),
+                              x_unit = 'bohr_radius', x_label = r'$r$', y_label = r'$\left| g \right|^2$', title = 'Energy = {} eV, $\ell$ = {}'.format(energy, l),
                               target_dir = OUT_DIR_tmp)

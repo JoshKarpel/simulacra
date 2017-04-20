@@ -66,5 +66,5 @@ if __name__ == '__main__':
                           sim.mesh.x_mesh,
                           np.abs(numeric_eigenstate(sim.mesh.x_mesh)) ** 2, np.abs(numeric_eigenstate.analytic_state(sim.mesh.x_mesh)) ** 2,
                           line_labels = ('numeric ', 'analytic'),
-                          x_label = r'$x$', x_scale = 'nm', x_lower_limit = -10 * nm, x_upper_limit = 10 * nm,
+                          x_label = r'$x$', x_unit = 'nm', x_lower_limit = -10 * nm, x_upper_limit = 10 * nm,
                           target_dir = OUT_DIR, img_format = 'png', img_scale = 3)

@@ -70,8 +70,8 @@ if __name__ == '__main__':
         plots.xy_plot('time_step',
                       ark4.times,
                       ark4.time_steps_list,
-                      x_axis_label = r'Time $t$', x_scale = 'asec',
-                      y_axis_label = r'Time Step $\Delta t$', y_scale = 'asec',
+                      x_axis_label = r'Time $t$', x_unit = 'asec',
+                      y_axis_label = r'Time Step $\Delta t$', y_unit = 'asec',
                       y_log_axis = True,
                       target_dir = OUT_DIR,
                       )
@@ -109,14 +109,14 @@ if __name__ == '__main__':
             plots.xy_plot('dt={}as__compare'.format(dt),
                           t,
                           *y,
-                          x_label = r'Time $t$', x_scale = 'asec', y_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
+                          x_label = r'Time $t$', x_unit = 'asec', y_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
                           **plt_kwargs, y_upper_limit = 1, y_lower_limit = 0,
                           )
 
             plots.xy_plot('dt={}as__compare_log'.format(dt),
                           t,
                           *y,
-                          x_label = r'Time $t$', x_scale = 'asec', y_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
+                          x_label = r'Time $t$', x_unit = 'asec', y_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
                           y_log_axis = True, y_upper_limit = 1, y_lower_limit = 1e-2,
                           **plt_kwargs
                           )

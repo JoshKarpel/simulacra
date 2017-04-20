@@ -634,7 +634,7 @@ class LineMesh(QuantumMesh):
 
     def plot_mesh(self, mesh, distance_unit = 'nm', **kwargs):
         cp.plots.xy_plot(self.sim.name + '_' + kwargs.pop('name'), self.x_mesh, mesh,
-                         x_label = 'Distance $x$', x_scale = distance_unit, **kwargs)
+                         x_label = 'Distance $x$', x_unit_value = distance_unit, **kwargs)
 
     def plot_fft(self):
         raise NotImplementedError
@@ -2612,11 +2612,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         return grouped_states, group_labels
 
-    def plot_test_state_overlaps_vs_time(self, log = False, x_scale = 'asec',
+    def plot_test_state_overlaps_vs_time(self, log = False, x_unit = 'asec',
                                          **kwargs):
         fig = cp.plots.get_figure('full')
 
-        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(x_scale)
+        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(x_unit)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
         ax_overlaps = plt.subplot(grid_spec[0])
@@ -2688,7 +2688,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         plt.close()
 
-    def plot_wavefunction_vs_time(self, log = False, x_scale = 'asec',
+    def plot_wavefunction_vs_time(self, log = False, x_unit = 'asec',
                                   bound_state_max_n = 5,
                                   collapse_bound_state_angular_momentums = False,
                                   grouped_free_states = None,
@@ -2699,7 +2699,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         """
         
         :param log: 
-        :param x_scale: 
+        :param x_unit: 
         :param bound_state_max_n: 
         :param collapse_bound_state_angular_momentums: 
         :param grouped_free_states: 
@@ -2710,7 +2710,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         """
         fig = cp.plots.get_figure('full')
 
-        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(x_scale)
+        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(x_unit)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
         ax_overlaps = plt.subplot(grid_spec[0])
@@ -3020,7 +3020,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             prefix = self.name
         cp.plots.xy_plot(prefix + '__dipole_moment_vs_time',
                          self.times, np.real(self.electric_dipole_moment_vs_time[gauge]),
-                         x_scale = 'as', y_scale = 'atomic_electric_dipole',
+                         x_unit_value = 'as', y_unit_value = 'atomic_electric_dipole',
                          x_label = 'Time $t$', y_label = 'Dipole Moment $d(t)$',
                          **kwargs)
 
@@ -3050,7 +3050,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         cp.plots.xy_plot(prefix + '__dipole_moment_vs_frequency',
                          frequency, np.abs(dipole_moment) ** 2,
-                         x_scale = 'THz', y_scale = atomic_electric_dipole ** 2,
+                         x_unit_value = 'THz', y_unit_value = atomic_electric_dipole ** 2,
                          y_log_axis = True,
                          x_label = 'Frequency $f$', y_label = r'Dipole Moment $\left| d(\omega) \right|^2$ $\left( e^2 \, a_0^2 \right)$',
                          x_lower_limit = 0, x_upper_limit = frequency_range,

@@ -51,8 +51,8 @@ if __name__ == '__main__':
         plots.xy_plot('time_step',
                       sim.times,
                       sim.time_steps_by_times,
-                      x_axis_label = r'Time $t$', x_scale = 'asec',
-                      y_axis_label = r'Time Step $\Delta t$', y_scale = 'asec',
+                      x_axis_label = r'Time $t$', x_unit = 'asec',
+                      y_axis_label = r'Time Step $\Delta t$', y_unit = 'asec',
                       y_log_axis = True,
                       target_dir = OUT_DIR,
                       )

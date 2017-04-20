@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
         plots.xy_plot(identifier + '__overlap_by_energy',
                       energy, overlap_by_energy,
-                      x_scale = 'eV',
+                      x_unit = 'eV',
                       target_dir = OUT_DIR)
 
         plots.xy_plot(identifier + '__overlap_by_l',

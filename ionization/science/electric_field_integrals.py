@@ -81,7 +81,7 @@ if __name__ == '__main__':
                                  dict(color = 'C2', linestyle = '-', linewidth = 0.5),
                                  dict(color = 'C2', linestyle = '--', linewidth = 0.5),
                              ),
-                          x_scale = 'asec', y_scale = 'atomic_electric_field',
+                          x_unit = 'asec', y_unit = 'atomic_electric_field',
                           x_label = r'Time $t$', y_label = r'Electric Field $E(t)$',
                           target_dir = OUT_DIR)
 
@@ -108,6 +108,6 @@ if __name__ == '__main__':
                                  dict(color = 'C2', linestyle = '-', linewidth = 0.5),
                                  dict(color = 'C2', linestyle = '--', linewidth = 0.5),
                              ),
-                          x_scale = 'asec', y_scale = 'atomic_momentum',
+                          x_unit = 'asec', y_unit = 'atomic_momentum',
                           x_label = r'Time $t$', y_label = r'$e \, \int_{-\infty}^{t} E(\tau) \, \mathrm{d}\tau$',
                           target_dir = OUT_DIR)

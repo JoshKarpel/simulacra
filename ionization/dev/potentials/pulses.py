@@ -50,9 +50,9 @@ if __name__ == '__main__':
 
         plot_kwargs = {
             'x_label': r'Time $t$',
-            'x_scale': 'asec',
+            'x_unit': 'asec',
             'y_label': r'Electric Field $\mathcal{E}(t)$',
-            'y_scale': 'AEF',
+            'y_unit': 'AEF',
             'target_dir': OUT_DIR}
 
         plots.xy_plot(prefix + '__pulse_comparison',

@@ -98,7 +98,7 @@ def plot_final_norm_vs_time_step(name, sims, ref, **kwargs):
             plots.xy_plot(plot_name,
                           time_steps,
                           final_norms,
-                          x_label = 'Time Step', x_scale = 'asec',
+                          x_label = 'Time Step', x_unit = 'asec',
                           y_label = 'Relative Final Wavefunction Norm',
                           y_log_axis = log_y, x_log_axis = log_x,
                           **kwargs)
@@ -123,7 +123,7 @@ def plot_final_initial_state_vs_time_step(name, sims, ref, **kwargs):
             plots.xy_plot(plot_name,
                           time_steps,
                           final_norms,
-                          x_label = 'Time Step', x_scale = 'asec',
+                          x_label = 'Time Step', x_unit = 'asec',
                           y_label = 'Relative Final Initial State Overlap',
                           y_log_axis = log_y, x_log_axis = log_x,
                           **kwargs)

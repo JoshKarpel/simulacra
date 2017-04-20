@@ -121,14 +121,14 @@ if __name__ == '__main__':
             # cp.utils.xy_plot('along_theta=0__log={}__wavenumber'.format(log),
             #                  wavenumbers[0],
             #                  np.abs(along_z[0]) ** 2,
-            #                  x_scale = 'per_nm', x_label = 'Wavenumber $k$',
+            #                  x_unit = 'per_nm', x_label = 'Wavenumber $k$',
             #                  y_log_axis = log,
             #                  target_dir = OUT_DIR)
             #
             # cp.utils.xy_plot('along_theta=0__log={}__momentum'.format(log),
             #                  wavenumbers[0] * hbar,
             #                  np.abs(along_z[0]) ** 2,
-            #                  x_scale = 'atomic_momentum', x_label = 'Momentum $p$',
+            #                  x_unit = 'atomic_momentum', x_label = 'Momentum $p$',
             #                  y_log_axis = log,
             #                  target_dir = OUT_DIR)
 
@@ -138,14 +138,14 @@ if __name__ == '__main__':
             # cp.utils.xy_plot('along_theta=0__log={}__wavenumber__at_inf'.format(log),
             #                  wavenumbers[0],
             #                  np.abs(along_z[0]) ** 2,
-            #                  x_scale = 'per_nm', x_label = 'Wavenumber $k$',
+            #                  x_unit = 'per_nm', x_label = 'Wavenumber $k$',
             #                  y_log_axis = log,
             #                  target_dir = OUT_DIR)
             #
             # cp.utils.xy_plot('along_theta=0__log={}__momentum__at_inf'.format(log),
             #                  wavenumbers[0] * hbar,
             #                  np.abs(along_z[0]) ** 2,
-            #                  x_scale = 'atomic_momentum', x_label = 'Momentum $p$',
+            #                  x_unit = 'atomic_momentum', x_label = 'Momentum $p$',
             #                  y_log_axis = log,
             #                  target_dir = OUT_DIR)
 

@@ -41,7 +41,7 @@ if __name__ == '__main__':
                       r,
                       np.abs(r * radial_function) ** 2,  # np.abs(r * radial_function_asymptotic) ** 2,
                          # line_labels = ('exact', 'asymp'),
-                         x_scale = 'bohr_radius', x_label = '$r$',
+                      x_unit = 'bohr_radius', x_label = '$r$',
                       y_label = r'$\left|r \, R(r) \right|^2$',
                       target_dir = OUT_DIR)
 
@@ -49,7 +49,7 @@ if __name__ == '__main__':
                       r,
                       np.real(r * radial_function), np.real(r * radial_function),  # np.abs(r * radial_function_asymptotic) ** 2,
                          line_labels = ('real', 'imag'),
-                      x_scale = 'bohr_radius', x_label = '$r$',
+                      x_unit = 'bohr_radius', x_label = '$r$',
                       y_label = r'$r \, R(r)$',
                       target_dir = OUT_DIR)
         #
@@ -57,7 +57,7 @@ if __name__ == '__main__':
                       r,
                       np.abs(radial_function) ** 2,  # np.abs(radial_function_asymptotic) ** 2,
                          # line_labels = ('exact', 'asymp'),
-                         x_scale = 'bohr_radius', x_label = r'$r$',
+                      x_unit = 'bohr_radius', x_label = r'$r$',
                       y_label = r'$\left|R(r) \right|^2$',
                       target_dir = OUT_DIR)
 
@@ -65,7 +65,7 @@ if __name__ == '__main__':
                       r,
                       np.real(radial_function), np.imag(radial_function),  # np.abs(radial_function_asymptotic) ** 2,
                          line_labels = ('real', 'imag'),
-                      x_scale = 'bohr_radius', x_label = r'$r$',
+                      x_unit = 'bohr_radius', x_label = r'$r$',
                       y_label = r'$R(r)$',
                       target_dir = OUT_DIR)
 

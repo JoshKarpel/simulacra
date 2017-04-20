@@ -71,6 +71,6 @@ if __name__ == '__main__':
             plots.xy_plot(f'ionization_vs_pulse_width__flu={uround(flu, Jcm2, 3)}Jcm2_phase={uround(phase)}__log={log}',
                           [r.spec.pulse_width for r in results],
                           [np.abs(r.a[-1]) ** 2 for r in results],
-                          x_label = r'Pulse Width $  \tau  $', x_scale = 'asec',
+                          x_label = r'Pulse Width $  \tau  $', x_unit = 'asec',
                           y_label = r'$  \left| a_{\mathrm{final}} \right|^2  $', y_log_axis = log, y_upper_limit = 1,
                           **plt_kwargs)
