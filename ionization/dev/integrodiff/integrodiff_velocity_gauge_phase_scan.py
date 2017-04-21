@@ -8,7 +8,6 @@ import scipy.integrate as integrate
 
 import compy as cp
 import ionization as ion
-import plots
 from ionization import integrodiff as ide
 from compy.units import *
 
@@ -74,16 +73,16 @@ if __name__ == '__main__':
             else:
                 y_lower_limit = None
 
-            plots.xy_plot(f'ionization_vs_phase__pw={uround(pw, asec, 3)}as_flu={uround(flu, Jcm2, 3)}Jcm2__log={log}',
-                          [r.spec.phase / pi for r in results],
-                          [np.abs(r.a[-1]) ** 2 for r in results],
-                          x_label = r'CEP $\varphi$ ($\pi$)',
-                          y_label = r'$  \left| a_{\mathrm{final}} \right|^2  $', y_log_axis = log, y_upper_limit = 1, y_lower_limit = y_lower_limit,
-                          **plt_kwargs)
+            cp.plots.xy_plot(f'ionization_vs_phase__pw={uround(pw, asec, 3)}as_flu={uround(flu, Jcm2, 3)}Jcm2__log={log}',
+                             [r.spec.phase for r in results],
+                             [np.abs(r.a[-1]) ** 2 for r in results],
+                             x_label = r'CEP $\varphi$ ($\pi$)', x_unit = 'rad',
+                             y_label = r'$  \left| a_{\mathrm{final}} \right|^2  $', y_log_axis = log, y_upper_limit = 1, y_lower_limit = y_lower_limit,
+                             **plt_kwargs)
 
-            plots.xy_plot(f'ionization_vs_phase__pw={uround(pw, asec, 3)}as_flu={uround(flu, Jcm2, 3)}Jcm2__log={log}__rel',
-                          [r.spec.phase / pi for r in results],
-                          [(np.abs(r.a[-1]) ** 2) / (np.abs(results[0].a[-1]) ** 2) for r in results],
-                          x_label = r'CEP $\varphi$ ($\pi$)',
-                          y_label = r'$  \left| a_{\mathrm{final}}(\varphi) \right|^2 / \left| a_{\mathrm{final}}(\varphi = 0) \right|^2  $', y_log_axis = log,
-                          **plt_kwargs)
+            cp.plots.xy_plot(f'ionization_vs_phase__pw={uround(pw, asec, 3)}as_flu={uround(flu, Jcm2, 3)}Jcm2__log={log}__rel',
+                             [r.spec.phase for r in results],
+                             [(np.abs(r.a[-1]) ** 2) / (np.abs(results[0].a[-1]) ** 2) for r in results],
+                             x_label = r'CEP $\varphi$ ($\pi$)', x_unit = 'rad',
+                             y_label = r'$  \left| a_{\mathrm{final}}(\varphi) \right|^2 / \left| a_{\mathrm{final}}(\varphi = 0) \right|^2  $', y_log_axis = log,
+                             **plt_kwargs)

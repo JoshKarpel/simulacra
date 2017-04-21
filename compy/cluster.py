@@ -19,6 +19,8 @@ from pprint import pprint
 from tqdm import tqdm
 import paramiko
 
+import numpy as np
+
 from compy.units import *
 from . import core, utils, plots
 
@@ -308,8 +310,9 @@ class JobProcessor(core.Beet):
         self.job_dir_path = job_dir_path
         self.input_dir = os.path.join(self.job_dir_path, 'inputs')  # Specifications go here
         self.output_dir = os.path.join(self.job_dir_path, 'outputs')  # finished Simulations go here
-        self.plots_dir = os.path.join(self.job_dir_path, 'plots')  # plots from the JobProcessor go here
-        self.movies_dir = os.path.join(self.job_dir_path, 'movies')
+        self.plots_dir = os.path.join(self.job_dir_path, 'plots')  # plots from the SimulationResults go here
+        self.movies_dir = os.path.join(self.job_dir_path, 'movies')  # movies get renamed and sent here
+        self.summary_dir = os.path.join(self.job_dir_path, 'summary')  # summary plots get put here
 
         for directory in (self.input_dir, self.output_dir, self.plots_dir, self.movies_dir):
             utils.ensure_dir_exists(directory)
@@ -324,6 +327,17 @@ class JobProcessor(core.Beet):
 
     def __str__(self):
         return '{} for job {}, processed {}/{} Simulations'.format(self.__class__.__name__, self.name, self.sim_count - len(self.unprocessed_sim_names), self.sim_count)
+
+    @property
+    def running_time(self):
+        return sum(r.running_time for r in self.data.values() if r is not None)
+
+    @property
+    def elapsed_time(self):
+        earliest = min(r.start_time for r in self.data.values() if r is not None)
+        latest = max(r.end_time for r in self.data.values() if r is not None)
+
+        return latest - earliest
 
     def get_sim_names_from_specs(self):
         """Get a list of Simulation file names based on their Specifications."""
@@ -439,6 +453,7 @@ class JobProcessor(core.Beet):
         """
         return list([sim_result for sim_result in self.data.values() if test_function(sim_result) and sim_result is not None])
 
+    @utils.memoize
     def parameter_set(self, parameter):
         """Get the set of values of the parameter from the collected data."""
         return set(getattr(result, parameter) for result in self.data.values())
@@ -460,9 +475,9 @@ class JobProcessor(core.Beet):
                       sim_numbers,
                       running_time,
                       line_kwargs = [dict(linestyle = '', marker = '.')],
-                      y_unit_value = 'hours',
+                      y_unit = 'hours',
                       x_label = 'Simulation Number', y_label = 'Time',
-                      target_dir = self.plots_dir)
+                      target_dir = self.summary_dir)
 
 
 def combine_job_processors(*job_processors):

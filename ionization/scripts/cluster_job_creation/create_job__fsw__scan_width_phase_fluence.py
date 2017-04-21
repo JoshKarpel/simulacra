@@ -55,12 +55,15 @@ if __name__ == '__main__':
 
         spec_type = ion.LineSpecification
 
-        x_bound = nm * clu.ask_for_input('X Bound (in nm)?', default = 1000, cast_to = float)
+        x_bound = bohr_radius * clu.ask_for_input('X Bound (in Bohr radii)?', default = 500, cast_to = float)
         parameters.append(clu.Parameter(name = 'x_bound',
                                         value = x_bound))
 
-        potential = ion.FiniteSquareWell(potential_depth = eV * clu.ask_for_input('Finite Square Well Depth (in eV)?', default = 5, cast_to = float),
-                                         width = nm * clu.ask_for_input('Finite Square Well Width (in nm)?', default = 1, cast_to = float))
+        parameters.append(clu.Parameter(name = 'x_points',
+                                        value = 2 ** clu.ask_for_input('X Points? (2 ** input)', default = 16, cast_to = int)))
+
+        potential = ion.FiniteSquareWell(potential_depth = eV * clu.ask_for_input('Finite Square Well Depth (in eV)?', default = 36.831335, cast_to = float),
+                                         width = bohr_radius * clu.ask_for_input('Finite Square Well Width (in Bohr radii)?', default = 1, cast_to = float))
 
         parameters.append(clu.Parameter(name = 'internal_potential',
                                         value = potential))
@@ -72,8 +75,20 @@ if __name__ == '__main__':
                                       value = ion.FiniteSquareWellState.from_potential(potential, test_mass, clu.ask_for_input('Initial State n?', default = 1, cast_to = int)))
         parameters.append(initial_state)
 
-        parameters.append(clu.Parameter(name = 'test_states',
-                                        value = ion.FiniteSquareWellState.all_states_of_well_from_well(potential, test_mass)))
+        numeric_basis_q = clu.ask_for_bool('Use numeric eigenstate basis?', default = True)
+        if numeric_basis_q:
+            parameters.append(clu.Parameter(name = 'use_numeric_eigenstates_as_basis',
+                                            value = True))
+            parameters.append(clu.Parameter(name = 'numeric_eigenstate_energy_max',
+                                            value = eV * clu.ask_for_input('Numeric Eigenstate Max Energy (in eV)?', default = 50, cast_to = float)))
+
+        if not numeric_basis_q:
+            if clu.ask_for_bool('Overlap only with initial state?', default = 'yes'):
+                parameters.append(clu.Parameter(name = 'test_states',
+                                                value = [initial_state.value]))
+            else:
+                parameters.append(clu.Parameter(name = 'test_states',
+                                                value = ion.FiniteSquareWellState.all_states_of_well_from_well(potential, test_mass)))
 
         parameters.append(clu.Parameter(name = 'time_step',
                                         value = asec * clu.ask_for_input('Time Step (in as)?', default = 1, cast_to = float)))
@@ -96,10 +111,10 @@ if __name__ == '__main__':
             parameters.append(clu.Parameter(name = 'checkpoint_every',
                                             value = clu.ask_for_input('How many time steps per checkpoint?', default = 50, cast_to = int)))
 
-        outer_radius_default = x_bound / nm
+        outer_radius_default = x_bound / bohr_radius
         parameters.append(clu.Parameter(name = 'mask',
-                                        value = ion.RadialCosineMask(inner_radius = nm * clu.ask_for_input('Mask Inner Radius (in nm)?', default = outer_radius_default * .8, cast_to = float),
-                                                                     outer_radius = nm * clu.ask_for_input('Mask Outer Radius (in nm)?', default = outer_radius_default, cast_to = float),
+                                        value = ion.RadialCosineMask(inner_radius = bohr_radius * clu.ask_for_input('Mask Inner Radius (in Bohr radii)?', default = outer_radius_default * .8, cast_to = float),
+                                                                     outer_radius = bohr_radius * clu.ask_for_input('Mask Outer Radius (in Bohr radii)?', default = outer_radius_default, cast_to = float),
                                                                      smoothness = clu.ask_for_input('Mask Smoothness?', default = 8, cast_to = int))))
 
         # pulse parameters
@@ -126,7 +141,7 @@ if __name__ == '__main__':
         pulse_parameters.append(fluence)
 
         phases = clu.Parameter(name = 'phase',
-                               value = np.linspace(0, twopi, clu.ask_for_input('Number of Phases?', default = 100, cast_to = int)),
+                               value = np.array(clu.ask_for_eval('Pulse CEP (in rad)?', default = 'np.linspace(0, pi, 50)')),
                                expandable = True)
         pulse_parameters.append(phases)
 
@@ -157,16 +172,16 @@ if __name__ == '__main__':
                                         expandable = True))
 
         parameters.append(clu.Parameter(name = 'evolution_method',
-                                        value = clu.ask_for_input('Evolution Method (S or SO)?', default = 'SO', cast_to = str)))
+                                        value = clu.ask_for_input('Evolution Method (S, SO, or CN)?', default = 'SO', cast_to = str)))
 
         parameters.append(clu.Parameter(name = 'store_data_every',
                                         value = clu.ask_for_input('Store Data Every?', default = 1, cast_to = int)))
 
         parameters.append(clu.Parameter(name = 'snapshot_indices',
-                                        value = clu.ask_for_eval('Snapshot Indices?')))
+                                        value = clu.ask_for_eval('Snapshot Indices?', default = '[]')))
 
-        parameters.append(clu.Parameter(name = 'snapshot_times',
-                                        value = asec * np.array(clu.ask_for_eval('Snapshot Times?', default = 'np.array([])'))))
+        snapshot_times = asec * np.array(clu.ask_for_eval('Snapshot Times (in asec)?', default = '[]'))
+        snapshot_times_in_pw = np.array(clu.ask_for_eval('Snapshot Times (in pulse widths)?', default = '[]'))
 
         print('Generating parameters...')
 

@@ -1393,7 +1393,7 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
         :param l_bound:
         :param evolution_equations: 'L' (recommended) or 'H'
         :param evolution_method: 'SO' (recommended) or 'CN'
-        :param evolution_gauge: 'V' (recommended) or ''L"
+        :param evolution_gauge: 'V' (recommended) or 'L'
         :param kwargs: passed to ElectricFieldSpecification
         """
         super(SphericalHarmonicSpecification, self).__init__(name,

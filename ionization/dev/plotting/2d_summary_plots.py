@@ -11,10 +11,14 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization'):
-        jp = clu.JobProcessor.load('test_ide.job')
+        jp = clu.JobProcessor.load('hyd__sinc__25pw_20ph_20flu__v2.job')
 
         print(jp)
 
         jp.plots_dir = OUT_DIR
+        jp.summary_dir = OUT_DIR
 
-        jp.make_pulse_parameter_scans_2d()
+        with cp.utils.BlockTimer() as t:
+            jp.make_pulse_parameter_scans_2d()
+
+        print(t)
