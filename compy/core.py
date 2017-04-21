@@ -418,7 +418,9 @@ class Animator:
                           '-q:v', '1',  # maximum quality
                           self.file_path)
 
-        self.ffmpeg = subprocess.Popen(self.cmdstring, stdin = subprocess.PIPE, bufsize = -1)
+        self.ffmpeg = subprocess.Popen(self.cmdstring,
+                                       stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE,
+                                       bufsize = -1)
 
         logger.info('Initialized {}'.format(self))
 

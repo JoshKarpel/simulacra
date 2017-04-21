@@ -460,6 +460,7 @@ def xyz_plot(name,
              ticks_on_top = True, ticks_on_right = True,
              grid_kwargs = None,
              save_csv = False,
+             colormap = plt.get_cmap('viridis'),
              **kwargs):
     # set up figure and axis
     if figure_manager is None:
@@ -467,6 +468,8 @@ def xyz_plot(name,
     with figure_manager as fm:
         fig = fm.fig
         ax = plt.subplot(111)
+
+        plt.set_cmap(colormap)
 
         x_unit_value, x_unit_name = unit_value_and_name_from_unit(x_unit)
         if x_unit_name != '':
@@ -604,50 +607,57 @@ def xyt_plot(name,
              ticks_on_top = True, ticks_on_right = True, legend_on_right = False,
              grid_kwargs = None,
              length = 30,
+             fig_dpi_scale = 3,
              save_csv = False,
              **kwargs):
     """
-    Generate and save a generic x-y plot.
-
+    
     :param name: filename for the plot
-    :param x_data: a single array to plot the y data against
-    :param y_data: any number of arrays of the same length as x_data to plot
+    :param x_data: a single array to ploy the y values against
+    :param t_data: a single array whose values will be animated over
+    :param y_funcs: functions of the form f(x, t, **kwargs), where kwargs are from y_func_kwargs
+    :param y_func_kwargs: keyword arguments for the y_funcs
     :param line_labels: the labels for the lines
     :param line_kwargs: other keyword arguments for each line's .plot() call (None for default)
-    :param x_unit: a number to scale the x_data by. Can be a string corresponding to a key in the unit name/value dict.
-    :param y_unit: a number to scale the y_data by. Can be a string corresponding to a key in the unit name/value dict.
-    :param x_log_axis: if True, log the x axis
-    :param y_log_axis: if True, log the y axis
-    :param x_lower_limit: lower limit for the x axis, defaults to np.nanmin(x_data)
-    :param x_upper_limit: upper limit for the x axis, defaults to np.nanmax(x_data)
-    :param y_lower_limit: lower limit for the y axis, defaults to min(np.nanmin(y_data))
-    :param y_upper_limit: upper limit for the y axis, defaults to min(np.nanmin(y_data))
-    :param vlines: a list of x positions to place vertical lines
-    :param vline_kwargs: a list of kwargs for each vline (None for default)
-    :param hlines: a list of y positions to place horizontal lines
-    :param hline_kwargs: a list of kwargs for each hline (None for default)
-    :param x_extra_ticks:
-    :param x_extra_tick_labels:
-    :param y_extra_ticks:
-    :param y_extra_tick_labels:
-    :param title: a title for the plot
-    :param x_label: a label for the x axis
-    :param y_label: a label for the y axis
-    :param font_size_title: font size for the title
-    :param font_size_axis_labels: font size for the axis labels
-    :param font_size_tick_labels: font size for the tick labels
-    :param font_size_legend: font size for the legend
-    :param ticks_on_top:
-    :param ticks_on_right:
-    :param legend_on_right:
-    :param grid_kwargs:
-    :param save_csv: if True, save x_data and y_data to a CSV file
-    :param kwargs: kwargs are passed to a FigureManager context manager
-    :return: the path the plot was saved to
+    :param figure_manager: 
+    :param x_unit: 
+    :param y_unit: 
+    :param t_unit: 
+    :param t_fmt_string: 
+    :param t_text_kwargs: 
+    :param x_log_axis: 
+    :param y_log_axis: 
+    :param x_lower_limit: 
+    :param x_upper_limit: 
+    :param y_lower_limit: 
+    :param y_upper_limit: 
+    :param vlines: 
+    :param vline_kwargs: 
+    :param hlines: 
+    :param hline_kwargs: 
+    :param x_extra_ticks: 
+    :param y_extra_ticks: 
+    :param x_extra_tick_labels: 
+    :param y_extra_tick_labels: 
+    :param title: 
+    :param x_label: 
+    :param y_label: 
+    :param font_size_title: 
+    :param font_size_axis_labels: 
+    :param font_size_tick_labels: 
+    :param font_size_legend: 
+    :param ticks_on_top: 
+    :param ticks_on_right: 
+    :param legend_on_right: 
+    :param grid_kwargs: 
+    :param length: 
+    :param save_csv: 
+    :param kwargs: 
+    :return: 
     """
     # set up figure and axis
     if figure_manager is None:
-        figure_manager = FigureManager(name, save_on_exit = False, **kwargs)
+        figure_manager = FigureManager(name, save_on_exit = False, fig_dpi_scale = fig_dpi_scale, **kwargs)
     with figure_manager as fm:
         fig = fm.fig
         ax = fig.add_axes([.15, .15, .75, .7])
@@ -787,7 +797,7 @@ def xyt_plot(name,
                 y_kwargs = {}
             if kw is None:  # means there are no kwargs for this y data
                 kw = {}
-            lines.append(plt.plot(x_data / x_unit_value, y_func(x_data, t_data[0], **y_kwargs) / y_unit_value, label = lab, **kw, animated = True)[0])
+            lines.append(plt.plot(x_data / x_unit_value, np.array(y_func(x_data, t_data[0], **y_kwargs)) / y_unit_value, label = lab, **kw, animated = True)[0])
 
         if len(line_labels) > 0:
             if not legend_on_right:
@@ -803,7 +813,6 @@ def xyt_plot(name,
 
         t_text_kwarg_defaults.update(t_text_kwargs)  # TODO: Messy, messy...
 
-        print(t_fmt_string)
         t_fmt_string.format(t_data[0])
 
         t_str = t_fmt_string.format(uround(t_data[0], t_unit, digits = 3))
@@ -820,6 +829,8 @@ def xyt_plot(name,
         path = f"{os.path.join(kwargs['target_dir'], name)}.mp4"
         utils.ensure_dir_exists(path)
 
+        print(path)
+
         fig.canvas.draw()
         background = fig.canvas.copy_from_bbox(fig.bbox)
         canvas_width, canvas_height = fig.canvas.get_width_height()
@@ -833,25 +844,32 @@ def xyt_plot(name,
                      '-vcodec', 'mpeg4',  # output encoding
                      '-q:v', '1',  # maximum quality
                      path)
+        try:
+            ffmpeg = subprocess.Popen(cmdstring,
+                                      stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE,
+                                      bufsize = -1)
 
-        ffmpeg = subprocess.Popen(cmdstring, stdin = subprocess.PIPE, bufsize = -1)
+            for t in tqdm(t_data):
+                fig.canvas.restore_region(background)
 
-        for t in tqdm(t_data):
-            fig.canvas.restore_region(background)
+                for line, y_func, y_kwargs in zip(lines, y_funcs, y_func_kwargs):
+                    line.set_ydata(np.array(y_func(x_data, t, **y_kwargs)) / y_unit_value)
+                    fig.draw_artist(line)
 
-            for line, y_func, y_kwargs in zip(lines, y_funcs, y_func_kwargs):
-                line.set_ydata(y_func(x_data, t, **y_kwargs) / y_unit_value)
-                fig.draw_artist(line)
+                t_str = t_fmt_string.format(uround(t, t_unit, digits = 3))
+                if t_unit_name != '':
+                    t_str += fr' ${t_unit_name}$'
+                t_text.set_text(t_str)
+                fig.draw_artist(t_text)
 
-            t_str = t_fmt_string.format(uround(t, t_unit, digits = 3))
-            if t_unit_name != '':
-                t_str += fr' ${t_unit_name}$'
-            t_text.set_text(t_str)
-            fig.draw_artist(t_text)
+                fig.canvas.blit(fig.bbox)
 
-            fig.canvas.blit(fig.bbox)
-
-            ffmpeg.stdin.write(fig.canvas.tostring_argb())
+                ffmpeg.stdin.write(fig.canvas.tostring_argb())
+        finally:
+            try:
+                ffmpeg.communicate()
+            except NameError:
+                pass
 
     if save_csv:
         raise NotImplementedError

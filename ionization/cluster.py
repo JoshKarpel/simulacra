@@ -163,8 +163,7 @@ class PulseParameterScanMixin:
 
             # for plot_parameter, x_parameter, y_parameter in it.permutations(self.scan_parameters):
             for plot_parameter in self.scan_parameters:
-                for x_parameter, y_parameter in it.combinations((p for p in self.scan_parameters if p != plot_parameter), r = 2):  # overkill
-                    print(plot_parameter, x_parameter, y_parameter)
+                for x_parameter, y_parameter in it.combinations((p for p in self.scan_parameters if p != plot_parameter), r = 2):  # overkill, but whatever
                     plot_parameter_name, x_parameter_name, y_parameter_name = plot_parameter.replace('_', ' ').title(), x_parameter.replace('_', ' ').title(), y_parameter.replace('_', ' ').title()
                     plot_parameter_unit, x_parameter_unit, y_parameter_unit = parameter_name_to_unit_name[plot_parameter], parameter_name_to_unit_name[x_parameter], parameter_name_to_unit_name[y_parameter]
                     plot_parameter_set, x_parameter_set, y_parameter_set = self.parameter_set(plot_parameter), self.parameter_set(x_parameter), self.parameter_set(y_parameter)
