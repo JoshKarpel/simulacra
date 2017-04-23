@@ -3,6 +3,7 @@ import datetime as dt
 import functools as ft
 import itertools as it
 import multiprocessing as mp
+import subprocess
 import os
 import sys
 import time
@@ -571,3 +572,26 @@ def get_processes_by_name(process_name):
     return [p for p in psutil.process_iter() if p.name() == process_name]
 
 
+class SubprocessManager:
+    def __init__(self, cmd_string, **subprocess_kwargs):
+        self.cmd_string = cmd_string
+        self.subprocess_kwargs = subprocess_kwargs
+
+        self.name = self.cmd_string[0]
+
+        self.subprocess = None
+
+    def __enter__(self):
+        self.subprocess = subprocess.Popen(self.cmd_string,
+                                           **self.subprocess_kwargs)
+
+        logger.debug(f'Opened subprocess {self.name}')
+
+        return self.subprocess
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            self.subprocess.communicate()
+            logger.debug(f'Closed subprocess {self.name}')
+        except AttributeError:
+            logger.warning(f'Exception while trying to close subprocess {self.name}, possibly not closed')

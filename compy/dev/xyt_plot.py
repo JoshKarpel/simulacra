@@ -30,4 +30,5 @@ if __name__ == '__main__':
                           x_label = '$x$', y_label = '$\mathcal{H}$',
                           x_unit = 'cm', t_unit = 's',
                           fig_dpi_scale = 3,
+                          progress_bar = False,
                           target_dir = OUT_DIR)

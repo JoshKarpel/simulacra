@@ -609,6 +609,7 @@ def xyt_plot(name,
              length = 30,
              fig_dpi_scale = 3,
              save_csv = False,
+             progress_bar = True,
              **kwargs):
     """
     
@@ -829,8 +830,6 @@ def xyt_plot(name,
         path = f"{os.path.join(kwargs['target_dir'], name)}.mp4"
         utils.ensure_dir_exists(path)
 
-        print(path)
-
         fig.canvas.draw()
         background = fig.canvas.copy_from_bbox(fig.bbox)
         canvas_width, canvas_height = fig.canvas.get_width_height()
@@ -844,18 +843,28 @@ def xyt_plot(name,
                      '-vcodec', 'mpeg4',  # output encoding
                      '-q:v', '1',  # maximum quality
                      path)
-        try:
-            ffmpeg = subprocess.Popen(cmdstring,
-                                      stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE,
-                                      bufsize = -1)
+        subprocess_kwargs = dict(
+                stdin = subprocess.PIPE,
+                stdout = subprocess.PIPE,
+                stderr = subprocess.PIPE,
+                bufsize = -1,
+                )
 
-            for t in tqdm(t_data):
+        if progress_bar:
+            t_iter = tqdm(t_data)
+        else:
+            t_iter = t_data
+
+        with utils.SubprocessManager(cmdstring, **subprocess_kwargs) as ffmpeg:
+            for t in t_iter:
                 fig.canvas.restore_region(background)
 
+                # update and redraw y lines
                 for line, y_func, y_kwargs in zip(lines, y_funcs, y_func_kwargs):
                     line.set_ydata(np.array(y_func(x_data, t, **y_kwargs)) / y_unit_value)
                     fig.draw_artist(line)
 
+                # update and redraw t strings
                 t_str = t_fmt_string.format(uround(t, t_unit, digits = 3))
                 if t_unit_name != '':
                     t_str += fr' ${t_unit_name}$'
@@ -865,11 +874,9 @@ def xyt_plot(name,
                 fig.canvas.blit(fig.bbox)
 
                 ffmpeg.stdin.write(fig.canvas.tostring_argb())
-        finally:
-            try:
-                ffmpeg.communicate()
-            except NameError:
-                pass
+
+                if not progress_bar:
+                    logger.debug(f'Wrote frame for t = {uround(t, t_unit, 3)} {t_unit} to ffmpeg')
 
     if save_csv:
         raise NotImplementedError
