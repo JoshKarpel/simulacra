@@ -32,6 +32,7 @@ class QuantumState(cp.Summand):
 
     bound = None
     discrete_eigenvalues = None
+    analytic = None
 
     def __init__(self, amplitude = 1):
         """
@@ -44,6 +45,10 @@ class QuantumState(cp.Summand):
         super(QuantumState, self).__init__()
         self.amplitude = amplitude
         self.summation_class = Superposition
+
+    @property
+    def numeric(self):
+        return not self.analytic
 
     @property
     def free(self):
@@ -127,6 +132,7 @@ class FreeSphericalWave(QuantumState):
 
     bound = False
     discrete_eigenvalues = False
+    analytic = True
 
     def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
         """
@@ -221,6 +227,7 @@ class HydrogenBoundState(QuantumState):
 
     bound = True
     discrete_eigenvalues = True
+    analytic = True
 
     def __init__(self, n = 1, l = 0, m = 0, amplitude = 1):
         """
@@ -348,6 +355,7 @@ class HydrogenCoulombState(QuantumState):
 
     bound = False
     discrete_eigenvalues = False
+    analytic = True
 
     def __init__(self, energy = 1 * eV, l = 0, m = 0, amplitude = 1):
         """
@@ -471,12 +479,14 @@ class HydrogenCoulombState(QuantumState):
 
 
 class NumericSphericalHarmonicState(QuantumState):
-    discrete_eigenvalues = True
 
-    def __init__(self, radial_mesh, l, m, energy, analytic_state, bound = True, amplitude = 1):
+    discrete_eigenvalues = True
+    analytic = False
+
+    def __init__(self, g_mesh, l, m, energy, analytic_state, bound = True, amplitude = 1):
         super().__init__(amplitude = amplitude)
 
-        self.radial_mesh = radial_mesh
+        self.g_mesh = g_mesh
 
         self.l = l
         self.m = m
@@ -523,19 +533,21 @@ class NumericSphericalHarmonicState(QuantumState):
         return cp.math.SphericalHarmonic(l = self.l, m = self.m)
 
     def radial_function(self, r):
-        return self.radial_mesh
+        return self.g_mesh
 
     def __call__(self, r, theta, phi):
         return self.radial_function(r) * self.spherical_harmonic(theta, phi)
 
 
 class NumericOneDState(QuantumState):
-    discrete_eigenvalues = True
 
-    def __init__(self, psi_mesh, energy, analytic_state = None, bound = True, amplitude = 1):
+    discrete_eigenvalues = True
+    analytic = False
+
+    def __init__(self, g_mesh, energy, analytic_state = None, bound = True, amplitude = 1):
         super().__init__(amplitude = amplitude)
 
-        self.psi_mesh = psi_mesh
+        self.g_mesh = g_mesh
 
         self.energy = energy
 
@@ -585,12 +597,16 @@ class NumericOneDState(QuantumState):
             return self.analytic_state.tex_str
 
     def __call__(self, x):
-        return self.psi_mesh
+        return self.g_mesh
 
 
 
 class OneDFreeParticle(QuantumState):
     """A class representing a free particle in one dimension."""
+
+    bound = False
+    discrete_eigenvalues = True
+    analytic = True
 
     def __init__(self, wavenumber = twopi / nm, mass = electron_mass, amplitude = 1, dimension_label = 'x'):
         """
@@ -657,6 +673,10 @@ class QHOState(QuantumState):
     """A class representing a bound state of the quantum harmonic oscillator."""
 
     smallest_n = 0
+
+    bound = True
+    discrete_eigenvalues = True
+    analytic = True
 
     def __init__(self, spring_constant, mass = electron_mass, n = 0, amplitude = 1, dimension_label = 'x'):
         """
@@ -769,6 +789,10 @@ class FiniteSquareWellState(QuantumState):
     """A class representing a bound state of a finite square well."""
 
     smallest_n = 1
+
+    bound = True
+    discrete_eigenvalues = True
+    analytic = True
 
     def __init__(self, well_depth, well_width, mass, n = 1, well_center = 0, amplitude = 1, dimension_label = 'x'):
         """

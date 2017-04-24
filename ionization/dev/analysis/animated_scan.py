@@ -31,7 +31,7 @@ if __name__ == '__main__':
             cp.plots.xyt_plot(f'phase_fluence__pw={uround(pw, "asec", 3)}as',
                               x, fluences, f,
                               x_unit = 'rad', t_unit = 'Jcm2', t_fmt_string = r'$H = {}$',
-                              y_log_axis = True,
+                              y_log_axis = False,
                               length = 10,
                               target_dir = OUT_DIR)
 

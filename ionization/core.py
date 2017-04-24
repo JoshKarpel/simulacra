@@ -4,6 +4,7 @@ import itertools as it
 import logging
 from copy import copy, deepcopy
 
+from tqdm import tqdm
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,12 +38,12 @@ GRID_KWARGS = {
     'color': 'black',
     'linewidth': .25,
     'alpha': 0.4
-    }
+}
 
 COLORMESH_GRID_KWARGS = dict(
-        linestyle = '--',
-        linewidth = .75,
-        )
+    linestyle = '--',
+    linewidth = .75,
+)
 
 
 def electron_energy_from_wavenumber(k):
@@ -194,13 +195,13 @@ class ElectricFieldSpecification(cp.core.Specification):
             '   Evolution Equations: {}'.format(self.evolution_equations),
             '   Evolution Method: {}'.format(self.evolution_method),
             '   Evolution Gauge: {}'.format(self.evolution_gauge),
-            ]
+        ]
 
         if self.minimum_time_final != 0:
             time_evolution += [
                 '   Minimum Final Time: {} as'.format(uround(self.minimum_time_final, asec)),
                 '   Extra Time Step: {} as'.format(uround(self.extra_time_step, asec)),
-                ]
+            ]
 
         potentials = ['Potentials and Masks:']
         potentials += ['   {}'.format(x) for x in it.chain(self.internal_potential, self.electric_potential, self.mask)]
@@ -214,7 +215,7 @@ class ElectricFieldSpecification(cp.core.Specification):
             '   Storing Data Every {} Time Steps'.format(self.store_data_every),
             '   Snapshot Indices: {}'.format(', '.join(sorted(self.snapshot_indices)) if len(self.snapshot_indices) > 0 else 'None'),
             '   Snapshot Times: {}'.format(' as, '.join([uround(st, asec, 3) for st in self.snapshot_times]) if len(self.snapshot_times) > 0 else 'None'),
-            ]
+        ]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials + analysis)
 
@@ -2400,13 +2401,17 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.data_times = self.times[self.data_mask]
         self.data_indices = time_indices[self.data_mask]
         self.data_time_steps = len(self.data_times)
+
+        # data storage initialization
         self.norm_vs_time = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
 
         self.inner_products_vs_time = {state: np.zeros(self.data_time_steps, dtype = np.complex128) * np.NaN for state in self.spec.test_states}
+
         self.electric_field_amplitude_vs_time = np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN
+
         self.electric_dipole_moment_vs_time = {gauge: np.zeros(self.data_time_steps, dtype = np.complex128) * np.NaN for gauge in self.spec.dipole_gauges}
 
-        # optional data storage
+        # optional data storage initialization
         if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:
             self.norm_by_harmonic_vs_time = {sph_harm: np.zeros(self.data_time_steps, dtype = np.float64) * np.NaN for sph_harm in self.spec.spherical_harmonics}
 
@@ -2429,13 +2434,48 @@ class ElectricFieldSimulation(cp.core.Simulation):
         self.snapshots = dict()
 
     def info(self):
-        mem = ['Memory Usage:']
-        # mesh
-        # evolution matrices
-        # numeric eigenstates
-        # sim data
+        mem_mesh = self.mesh.g_mesh.nbytes if self.mesh is not None else 0
 
-        return super().info() + '\n'.join(*mem)
+        mem_matrix_operators = 6 * mem_mesh
+        mem_numeric_eigenstates = sum(state.g_mesh.nbytes for state in self.spec.test_states if state.numeric if state.g_mesh is not None)
+        mem_inner_products = sum(overlap.nbytes for overlap in self.inner_products_vs_time.values())
+
+        mem_other_time_data = sum(x.nbytes for x in (
+            self.electric_field_amplitude_vs_time,
+            *self.electric_dipole_moment_vs_time.values(),
+            self.norm_vs_time,
+        ))
+
+        for attr in ('internal_energy_expectation_value_vs_time_internal',
+                     'norm_diff_mask_vs_time'):
+            try:
+                mem_other_time_data += getattr(self, attr).nbytes
+            except AttributeError:
+                pass
+
+        try:
+            mem_other_time_data += sum(h.nbytes for h in self.norm_by_harmonic_vs_time.values())
+        except AttributeError:
+            pass
+
+        mem_misc = sum(x.nbytes for x in (
+            self.times,
+            self.data_times,
+            self.data_mask,
+            self.data_indices,
+        ))
+
+        mem_total = mem_mesh + mem_matrix_operators + mem_numeric_eigenstates + mem_inner_products + mem_other_time_data + mem_misc
+
+        mem = [f'Memory Usage (approx): {cp.utils.bytes_to_str(mem_total)}']
+        mem += [f'   g Mesh: {cp.utils.bytes_to_str(mem_mesh)}']
+        mem += [f'   Matrix Operators: {cp.utils.bytes_to_str(mem_matrix_operators)}']
+        mem += [f'   Numeric Eigenstates: {cp.utils.bytes_to_str(mem_numeric_eigenstates)}']
+        mem += [f'   State Inner Products: {cp.utils.bytes_to_str(mem_inner_products)}']
+        mem += [f'   Other Time-Indexed Data: {cp.utils.bytes_to_str(mem_other_time_data)}']
+        mem += [f'   Miscellaneous: {cp.utils.bytes_to_str(mem_misc)}']
+
+        return '\n'.join((super().info(), *mem))
 
     @property
     def available_animation_frames(self):
@@ -2502,13 +2542,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         logger.info('Stored {} of {} at time {} as (time index {})'.format(snapshot.__class__.__name__, self.name, uround(self.time, asec, 3), self.time_index))
 
-    def run_simulation(self, store_intermediate_meshes = False):
+    def run_simulation(self, progress_bar = False):
         """
         Run the simulation by repeatedly evolving the mesh by the time step and recovering various data from it.
-
-        :param only_end_data: only store data from the last time step (does not change memory/disk usage, only runtime)
-        :param store_intermediate_meshes: store the mesh at every time step (very memory-intensive)
-        :return: None
         """
         logger.info(f'Performing time evolution on {self.name} ({self.file_name}), starting from time index {self.time_index}')
         try:
@@ -2516,6 +2552,9 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
             for animator in self.animators:
                 animator.initialize(self)
+
+            if progress_bar:
+                pbar = tqdm(total = self.time_steps)
 
             while True:
                 if self.time in self.data_times:
@@ -2548,6 +2587,16 @@ class ElectricFieldSimulation(cp.core.Simulation):
                         self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
                         self.status = cp.STATUS_RUN
                         logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
+
+                try:
+                    pbar.update(1)
+                except NameError:
+                    pass
+
+            try:
+                pbar.close()
+            except NameError:
+                pass
 
             self.status = cp.STATUS_FIN
 
@@ -3065,7 +3114,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
                          x_lower_limit = 0, x_upper_limit = frequency_range,
                          **kwargs)
 
-    def save(self, target_dir = None, file_extension = '.sim', save_mesh = False):
+    def save(self, target_dir = None, file_extension = '.sim', save_mesh = False, **kwargs):
         """
         Atomically pickle the Simulation to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
 
@@ -3078,7 +3127,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if not save_mesh:
             try:
                 for state in self.spec.test_states:  # remove numeric eigenstate information
-                    state.radial_mesh = None
+                    state.g_mesh = None
 
                 mesh = self.mesh.copy()
                 self.mesh = None
@@ -3089,7 +3138,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         if len(self.animators) > 0:
             raise cp.CompyException('Cannot pickle Simulation with Animators')
 
-        out = super().save(target_dir = target_dir, file_extension = file_extension)
+        out = super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
         if not save_mesh:
             self.mesh = mesh

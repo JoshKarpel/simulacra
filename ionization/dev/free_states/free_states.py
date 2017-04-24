@@ -33,7 +33,7 @@ if __name__ == '__main__':
         #     print(radial_function_asymptotic)
         # print('full:', timer)
 
-        print('mem usage: {}'.format(cp.utils.convert_bytes(radial_function.nbytes)))
+        print('mem usage: {}'.format(cp.utils.bytes_to_str(radial_function.nbytes)))
 
         print(free_state.epsilon)
 

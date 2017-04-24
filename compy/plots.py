@@ -763,11 +763,11 @@ def xyt_plot(name,
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
-        if x_unit_name == 'rad':
+        if x_unit == 'rad':
             ticks, labels = get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
             ax.set_xticks(ticks)
             ax.set_xticklabels(labels)
-        if y_unit_name == 'rad':
+        if y_unit == 'rad':
             ticks, labels = get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
             ax.set_yticks(ticks)
             ax.set_yticklabels(labels)
@@ -846,7 +846,7 @@ def xyt_plot(name,
         subprocess_kwargs = dict(
                 stdin = subprocess.PIPE,
                 stdout = subprocess.PIPE,
-                stderr = subprocess.PIPE,
+            # stderr = subprocess.PIPE,
                 bufsize = -1,
                 )
 

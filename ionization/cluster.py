@@ -62,7 +62,7 @@ def ask_mesh_type():
         else:
             raise ValueError('Mesh type {} not found!'.format(mesh_type))
 
-        logger.warning('Predicted memory usage per Simulation is >{}'.format(cp.utils.convert_bytes(memory_estimate)))
+        logger.warning('Predicted memory usage per Simulation is >{}'.format(cp.utils.bytes_to_str(memory_estimate)))
 
         return spec_type, mesh_kwargs
     except ValueError:

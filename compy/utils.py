@@ -491,7 +491,7 @@ class Checked(Descriptor):
             super(Checked, self).__set__(instance, value)
 
 
-def convert_bytes(num):
+def bytes_to_str(num):
     """Return a number of bytes as a human-readable string."""
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
         if num < 1024.0:
@@ -508,7 +508,7 @@ def get_file_size_as_string(file_path):
     """Return the size of the file at file_path as a human-readable string."""
     if os.path.isfile(file_path):
         file_info = os.stat(file_path)
-        return convert_bytes(file_info.st_size)
+        return bytes_to_str(file_info.st_size)
 
 
 def try_loop(*functions_to_run,

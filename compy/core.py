@@ -68,7 +68,7 @@ class Beet:
         """Return a deepcopy of the Beet."""
         return deepcopy(self)
 
-    def save(self, target_dir = None, file_extension = '.beet'):
+    def save(self, target_dir = None, file_extension = '.beet', compressed = True):
         """
         Atomically pickle the Beet to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
 
@@ -84,7 +84,12 @@ class Beet:
 
         utils.ensure_dir_exists(file_path_working)
 
-        with gzip.open(file_path_working, mode = 'wb') as file:
+        if compressed:
+            op = gzip.open
+        else:
+            op = open
+
+        with op(file_path_working, mode = 'wb') as file:
             pickle.dump(self, file, protocol = -1)
 
         os.replace(file_path_working, file_path)
@@ -101,8 +106,12 @@ class Beet:
         :param file_path: the path to load a Beet from
         :return: the loaded Beet
         """
-        with gzip.open(file_path, mode = 'rb') as file:
-            beet = pickle.load(file)
+        try:
+            with gzip.open(file_path, mode = 'rb') as file:
+                beet = pickle.load(file)
+        except OSError:
+            with open(file_path, mode = 'rb') as file:
+                beet = pickle.load(file)
 
         logger.debug('Loaded {} {} from {}'.format(beet.__class__.__name__, beet.name, file_path))
 
@@ -139,7 +148,7 @@ class Specification(Beet):
             setattr(self, k, v)
             logger.debug('{} stored additional attribute {} = {}'.format(self.name, k, v))
 
-    def save(self, target_dir = None, file_extension = '.spec'):
+    def save(self, target_dir = None, file_extension = '.spec', **kwargs):
         """
         Atomically pickle the Specification to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
 
@@ -230,7 +239,7 @@ class Simulation(Beet):
 
         logger.debug("{} {} ({}) status set to {}".format(self.__class__.__name__, self.name, self.file_name, s))
 
-    def save(self, target_dir = None, file_extension = '.sim'):
+    def save(self, target_dir = None, file_extension = '.sim', **kwargs):
         """
         Atomically pickle the Simulation to {target_dir}/{self.file_name}.{file_extension}, and gzip it.
 
@@ -243,7 +252,7 @@ class Simulation(Beet):
         if self.status != STATUS_FIN:
             self.status = STATUS_PAU
 
-        return super(Simulation, self).save(target_dir, file_extension)
+        return super(Simulation, self).save(target_dir, file_extension, **kwargs)
 
     @classmethod
     def load(cls, file_path, **kwargs):
@@ -254,7 +263,7 @@ class Simulation(Beet):
         :return: the loaded Simulation
         :rtype: Simulation
         """
-        sim = super(Simulation, cls).load(file_path)
+        sim = super(Simulation, cls).load(file_path, **kwargs)
 
         return sim
 
