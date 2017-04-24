@@ -227,7 +227,7 @@ def downsample(dense_x_array, sparse_x_array, dense_y_array):
     return sparse_y_array
 
 
-def run_in_thread(function, args = (), kwargs = {}, name = None):
+def run_in_thread(function, args = (), kwargs = None, name = None):
     """
     Run a function in a separate thread.
     
@@ -236,6 +236,9 @@ def run_in_thread(function, args = (), kwargs = {}, name = None):
     :param kwargs: keyword arguments for function
     :param name: a name for the process
     """
+    if kwargs is None:
+        kwargs = {}
+
     p = mp.Process(target = function, args = args, kwargs = kwargs, name = name)
     p.start()
     p.join()
@@ -283,7 +286,7 @@ class cached_property:
 
 
 def method_dispatch(func):
-    """Works the same as ft.singledispatch, but uses the second argument instead of the first so that it can be used for instance methods."""
+    """Works the same as functools.singledispatch, but uses the second argument instead of the first so that it can be used for instance methods."""
     dispatcher = ft.singledispatch(func)
 
     def wrapper(*args, **kw):

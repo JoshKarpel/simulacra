@@ -219,7 +219,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         self.a[self.time_index + 1] = self.a[self.time_index] + (dt * (k1 + (2 * k2) + (2 * k3) + k4) / 6)  # estimate next point
 
     def run_simulation(self):
-        logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
+        logger.info(f'Performing time evolution on {self.name} ({self.file_name}), starting from time index {self.time_index}')
         self.status = 'running'
 
         while self.time < self.spec.time_final:
@@ -237,7 +237,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
                     logger.info('Checkpointed {} {} ({}) at time step {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1))
 
         self.status = 'finished'
-        logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
+        logger.info(f'Finished performing time evolution on {self.name} ({self.file_name})')
 
     def plot_a_vs_time(self, log = False, time_scale = 'asec', field_scale = 'AEF',
                        show_title = False,
@@ -575,7 +575,7 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
             self.evolve_ARK4()  # retry with new time step
 
     def run_simulation(self):
-        logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
+        logger.info(f'Performing time evolution on {self.name} ({self.file_name}), starting from time index {self.time_index}')
         self.status = cp.STATUS_RUN
 
         while self.time < self.spec.time_final:
@@ -592,7 +592,7 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
                     logger.info('Checkpointed {} {} ({}) at time step {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1))
 
         self.status = cp.STATUS_FIN
-        logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
+        logger.info(f'Finished performing time evolution on {self.name} ({self.file_name})')
 
 
 class VelocityGaugeIntegroDifferentialEquationSpecification(cp.Specification):
@@ -824,7 +824,7 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
         self.a[self.time_index + 1] = self.a[self.time_index] + (self.time_step * (k1 + (2 * k2) + (2 * k3) + k4) / 6)  # estimate next point
 
     def run_simulation(self):
-        logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
+        logger.info(f'Performing time evolution on {self.name} ({self.file_name}), starting from time index {self.time_index}')
         self.status = 'running'
 
         while self.time < self.spec.time_final:
@@ -842,7 +842,7 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
                     logger.info('Checkpointed {} {} ({}) at time step {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1))
 
         self.status = 'finished'
-        logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
+        logger.info(f'Finished performing time evolution on {self.name} ({self.file_name})')
 
     def plot_fields_vs_time(self, time_scale = 'asec', field_scale = 'AEF', vector_scale = 'atomic_momentum', quiver_scale = 'bohr_radius',
                             **kwargs):

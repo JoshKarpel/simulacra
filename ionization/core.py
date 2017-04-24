@@ -196,7 +196,7 @@ class ElectricFieldSpecification(cp.core.Specification):
             '   Evolution Gauge: {}'.format(self.evolution_gauge),
             ]
 
-        if self.minimum_time_final is not 0:
+        if self.minimum_time_final != 0:
             time_evolution += [
                 '   Minimum Final Time: {} as'.format(uround(self.minimum_time_final, asec)),
                 '   Extra Time Step: {} as'.format(uround(self.extra_time_step, asec)),
@@ -212,8 +212,8 @@ class ElectricFieldSpecification(cp.core.Specification):
             '   Test States (first 10): {}'.format(', '.join(str(s) for s in sorted(self.test_states[:10]))),
             '   Dipole Gauges: {}'.format(', '.join(self.dipole_gauges)),
             '   Storing Data Every {} Time Steps'.format(self.store_data_every),
-            '   Snapshot Indices: {}'.format(self.snapshot_indices),
-            '   Snapshot Times: {}'.format([uround(st, asec, 3) for st in self.snapshot_times]),
+            '   Snapshot Indices: {}'.format(', '.join(sorted(self.snapshot_indices)) if len(self.snapshot_indices) > 0 else 'None'),
+            '   Snapshot Times: {}'.format(' as, '.join([uround(st, asec, 3) for st in self.snapshot_times]) if len(self.snapshot_times) > 0 else 'None'),
             ]
 
         return '\n'.join(checkpoint + animation + time_evolution + potentials + analysis)
@@ -2428,6 +2428,15 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         self.snapshots = dict()
 
+    def info(self):
+        mem = ['Memory Usage:']
+        # mesh
+        # evolution matrices
+        # numeric eigenstates
+        # sim data
+
+        return super().info() + '\n'.join(*mem)
+
     @property
     def available_animation_frames(self):
         return self.time_steps
@@ -2501,7 +2510,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         :param store_intermediate_meshes: store the mesh at every time step (very memory-intensive)
         :return: None
         """
-        logger.info('Performing time evolution on {} ({})'.format(self.name, self.file_name))
+        logger.info(f'Performing time evolution on {self.name} ({self.file_name}), starting from time index {self.time_index}')
         try:
             self.status = cp.STATUS_RUN
 
@@ -2542,7 +2551,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
             self.status = cp.STATUS_FIN
 
-            logger.info('Finished performing time evolution on {} {} ({})'.format(self.__class__.__name__, self.name, self.file_name))
+            logger.info(f'Finished performing time evolution on {self.name} ({self.file_name})')
         except Exception as e:
             raise e
         finally:
