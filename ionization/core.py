@@ -24,26 +24,7 @@ from . import potentials, states
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-RED = '#d62728'  # the color to use on cp.plots for the electric field
-BLUE = '#1f77b4'
-ORANGE = '#ff7f0e'
-GREEN = '#2ca02c'
-
-COLOR_ELECTRIC_FIELD = RED
-COLOR_OPPOSITE_PLASMA = GREEN
-COLOR_OPPOSITE_VIRIDIS = RED
-
-GRID_KWARGS = {
-    'linestyle': '-',
-    'color': 'black',
-    'linewidth': .25,
-    'alpha': 0.4
-}
-
-COLORMESH_GRID_KWARGS = dict(
-    linestyle = '--',
-    linewidth = .75,
-)
+COLOR_ELECTRIC_FIELD = cp.plots.RED
 
 
 def electron_energy_from_wavenumber(k):
@@ -574,7 +555,7 @@ class LineMesh(QuantumMesh):
     def _get_numeric_eigenstate_basis(self, energy_max):
         analytic_to_numeric = {}
 
-        h = self._get_internal_hamiltonian_matrix_operator()
+        h = self._get_internal_hamiltonian_matrix_operators()
 
         estimated_spacing = twopi / np.max(self.x_mesh)
         wavenumber_max = np.real(electron_wavenumber_from_energy(energy_max))
@@ -981,8 +962,11 @@ class CylindricalSliceMesh(QuantumMesh):
     def plot_mesh(self, mesh, name = '', target_dir = None, title = None,
                   overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
                   distance_unit = 'nm',
+                  color_map = plt.get_cmap('inferno'),
                   **kwargs):
         plt.close()
+
+        plt.set_cmap(color_map)
 
         unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
 
@@ -1006,7 +990,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         axis.axis('tight')  # removes blank space between color mesh and axes
 
-        axis.grid(True, color = COLOR_OPPOSITE_PLASMA, linestyle = ':')  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = cp.plots.CMAP_TO_OPPOSITE[color_map], **cp.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
 
         axis.tick_params(labelright = True, labeltop = True)  # ticks on all sides
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
@@ -1319,8 +1303,11 @@ class SphericalSliceMesh(QuantumMesh):
                   name = '', title = None,
                   overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
                   distance_unit = 'nm',
+                  color_map = plt.get_cmap('inferno'),
                   **kwargs):
         plt.close()  # close any old figures
+
+        plt.set_cmap(color_map)
 
         unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
 
@@ -1344,12 +1331,12 @@ class SphericalSliceMesh(QuantumMesh):
         cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
         cbar.ax.tick_params(labelsize = 10)
 
-        axis.grid(True, color = COLOR_OPPOSITE_PLASMA, **COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = cp.plots.CMAP_TO_OPPOSITE[color_map], **cp.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
-        axis.tick_params(axis = 'y', which = 'major', colors = COLOR_OPPOSITE_PLASMA, pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'y', which = 'major', colors = cp.plots.COLOR_OPPOSITE_INFERNO, pad = 3)  # make r ticks a color that shows up against the colormesh
         axis.tick_params(axis = 'both', which = 'both', length = 0)
 
         axis.set_rlabel_position(80)
@@ -2117,6 +2104,7 @@ class SphericalHarmonicMesh(QuantumMesh):
                   overlay_probability_current = False, probability_current_time_step = 0, plot_limit = None,
                   color_map_min = 0,
                   distance_unit = 'bohr_radius',
+                  color_map = plt.get_cmap('inferno'),
                   **kwargs):
         """
 
@@ -2141,6 +2129,8 @@ class SphericalHarmonicMesh(QuantumMesh):
             axis.set_theta_zero_location('N')
             axis.set_theta_direction('clockwise')
 
+            plt.set_cmap(color_map)
+
             color_mesh = self.attach_mesh_to_axis(axis, mesh, plot_limit = plot_limit, color_map_min = color_map_min, distance_unit = distance_unit)
             if overlay_probability_current:
                 quiv = self.attach_probability_current_to_axis(axis, plot_limit = plot_limit, distance_unit = distance_unit)
@@ -2155,12 +2145,12 @@ class SphericalHarmonicMesh(QuantumMesh):
             cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
             cbar.ax.tick_params(labelsize = 8)
 
-            axis.grid(True, color = COLOR_OPPOSITE_PLASMA, linestyle = ':')  # change grid color to make it show up against the colormesh
+            axis.grid(True, color = cp.plots.CMAP_TO_OPPOSITE[color_map], **cp.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
             angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
             axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
             axis.tick_params(axis = 'both', which = 'major', labelsize = 8)  # increase size of tick labels
-            axis.tick_params(axis = 'y', which = 'major', colors = COLOR_OPPOSITE_PLASMA, pad = 3)  # make r ticks a color that shows up against the colormesh
+            axis.tick_params(axis = 'y', which = 'major', colors = cp.plots.COLOR_OPPOSITE_INFERNO, pad = 3)  # make r ticks a color that shows up against the colormesh
             axis.tick_params(axis = 'both', which = 'both', length = 0)
 
             axis.set_rlabel_position(80)
@@ -2284,12 +2274,12 @@ class SphericalHarmonicMesh(QuantumMesh):
             cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
             cbar.ax.tick_params(labelsize = 10)
 
-            axis.grid(True, color = COLOR_OPPOSITE_VIRIDIS, **COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
+            axis.grid(True, color = cp.plots.COLOR_OPPOSITE_VIRIDIS, **cp.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
             angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
             axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
             axis.tick_params(axis = 'both', which = 'major', labelsize = 8)  # increase size of tick labels
-            axis.tick_params(axis = 'y', which = 'major', colors = COLOR_OPPOSITE_VIRIDIS, pad = 3)  # make r ticks a color that shows up against the colormesh
+            axis.tick_params(axis = 'y', which = 'major', colors = cp.plots.COLOR_OPPOSITE_VIRIDIS, pad = 3)  # make r ticks a color that shows up against the colormesh
             axis.tick_params(axis = 'both', which = 'both', length = 0)
 
             axis.set_rlabel_position(80)
@@ -2700,11 +2690,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_overlaps.set_yscale('log')
             min_overlap = min([np.min(overlap) for overlap in state_overlaps.values()])
             ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-            ax_overlaps.grid(True, which = 'both', **GRID_KWARGS)
+            ax_overlaps.grid(True, which = 'both', **cp.plots.GRID_KWARGS)
         else:
             ax_overlaps.set_ylim(0.0, 1.0)
             ax_overlaps.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-            ax_overlaps.grid(True, **GRID_KWARGS)
+            ax_overlaps.grid(True, **cp.plots.GRID_KWARGS)
 
         ax_overlaps.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
@@ -2733,7 +2723,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_field.tick_params(axis = 'both', which = 'major', labelsize = 10)
         ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
-        ax_field.grid(True, **GRID_KWARGS)
+        ax_field.grid(True, **cp.plots.GRID_KWARGS)
 
         postfix = ''
         if log:
@@ -2833,11 +2823,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
             ax_overlaps.set_yscale('log')
             min_overlap = min([np.min(overlap) for overlap in state_overlaps.values()])
             ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-            ax_overlaps.grid(True, which = 'both', **GRID_KWARGS)
+            ax_overlaps.grid(True, which = 'both', **cp.plots.GRID_KWARGS)
         else:
             ax_overlaps.set_ylim(0.0, 1.0)
             ax_overlaps.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-            ax_overlaps.grid(True, **GRID_KWARGS)
+            ax_overlaps.grid(True, **cp.plots.GRID_KWARGS)
 
         ax_overlaps.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
@@ -2880,7 +2870,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         ax_field.tick_params(axis = 'both', which = 'major', labelsize = 10)
         ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
-        ax_field.grid(True, **GRID_KWARGS)
+        ax_field.grid(True, **cp.plots.GRID_KWARGS)
 
         if show_title:
             title = ax_overlaps.set_title(self.name)
@@ -2979,7 +2969,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
                                                       label = labels,
                                                       )
 
-            ax.grid(True, **GRID_KWARGS)
+            ax.grid(True, **cp.plots.GRID_KWARGS)
 
             x_range = energy_upper_bound - energy_lower_bound
             ax.set_xlim(energy_lower_bound - .05 * x_range, energy_upper_bound + .05 * x_range)

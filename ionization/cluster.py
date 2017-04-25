@@ -387,7 +387,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
         for ionization_metric in self.ionization_metrics:
             ionization_metric_name = ionization_metric.replace('_', ' ').title()
 
-            for x_parameter, y_parameter in it.permutations(self.scan_parameters):
+            for x_parameter, y_parameter in it.combinations(self.scan_parameters, r = 2):
                 x_parameter_name, y_parameter_name = x_parameter.replace('_', ' ').title(), y_parameter.replace('_', ' ').title()
                 x_parameter_unit, y_parameter_unit = parameter_name_to_unit_name[x_parameter], parameter_name_to_unit_name[y_parameter]
                 x_parameter_set, y_parameter_set = self.parameter_set(x_parameter), self.parameter_set(y_parameter)
@@ -441,7 +441,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
         for ionization_metric in self.ionization_metrics:
             ionization_metric_name = ionization_metric.replace('_', ' ').title()
 
-            for x_parameter, y_parameter in it.permutations(self.scan_parameters):
+            for x_parameter, y_parameter in it.combinations(self.scan_parameters, r = 2):
                 x_parameter_name, y_parameter_name = x_parameter.replace('_', ' ').title(), y_parameter.replace('_', ' ').title()
                 x_parameter_unit, y_parameter_unit = parameter_name_to_unit_name[x_parameter], parameter_name_to_unit_name[y_parameter]
                 x_parameter_set, y_parameter_set = self.parameter_set(x_parameter), self.parameter_set(y_parameter)

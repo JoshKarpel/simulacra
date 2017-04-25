@@ -227,11 +227,11 @@ def downsample(dense_x_array, sparse_x_array, dense_y_array):
     return sparse_y_array
 
 
-def run_in_thread(function, args = (), kwargs = None, name = None):
+def run_in_process(func, args = (), kwargs = None, name = None):
     """
     Run a function in a separate thread.
     
-    :param function: the function to run
+    :param func: the function to run
     :param args: positional arguments for function
     :param kwargs: keyword arguments for function
     :param name: a name for the process
@@ -239,9 +239,10 @@ def run_in_thread(function, args = (), kwargs = None, name = None):
     if kwargs is None:
         kwargs = {}
 
-    p = mp.Process(target = function, args = args, kwargs = kwargs, name = name)
-    p.start()
-    p.join()
+    with mp.Pool(processes = 1) as pool:
+        output = pool.apply(func, args, kwargs)
+
+    return output
 
 
 def multi_map(function, targets, processes = None, **kwargs):

@@ -206,7 +206,7 @@ class Simulation(Beet):
         self.start_time = None
         self.end_time = None
         self.elapsed_time = None
-        self.latest_run_time = dt.datetime.now()
+        self.latest_run_time = None
         self.running_time = dt.timedelta()
 
         self._status = ''
@@ -226,12 +226,16 @@ class Simulation(Beet):
         if s == STATUS_INI:
             self.init_time = now
         elif s == STATUS_RUN:
+            if self.latest_run_time is None:
+                self.start_time = now
             self.latest_run_time = now
             self.runs += 1
         elif s == STATUS_PAU:
-            self.running_time += now - self.latest_run_time
+            if self.latest_run_time is not None:
+                self.running_time += now - self.latest_run_time
         elif s == STATUS_FIN:
-            self.running_time += now - self.latest_run_time
+            if self.latest_run_time is not None:
+                self.running_time += now - self.latest_run_time
             self.end_time = now
             self.elapsed_time = self.end_time - self.init_time
 

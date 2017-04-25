@@ -303,7 +303,7 @@ class LineAxis(QuantumMeshAxis):
         self.mesh = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, distance_unit = self.distance_unit, animated = True)
         self.redraw += [self.mesh]
 
-        self.axis.grid(True, color = core.COLOR_OPPOSITE_PLASMA, linestyle = ':')  # change grid color to make it show up against the colormesh
+        self.axis.grid(True, color = cp.plots.COLOR_OPPOSITE_INFERNO, linestyle = ':')  # change grid color to make it show up against the colormesh
 
         self.axis.set_xlabel(r'$x$ (${}$)'.format(unit_name), fontsize = 24)
         self.axis.set_ylabel(r'$\left|\psi\right|^2$', fontsize = 30)
@@ -353,7 +353,7 @@ class CylindricalSliceAxis(QuantumMeshAxis):
             self.quiver = self.sim.mesh.attach_probability_current_quiver(self.axis, plot_limit = self.plot_limit, distance_unit = self.distance_unit, animated = True)
             self.redraw += [self.quiver]
 
-        self.axis.grid(True, color = core.COLOR_OPPOSITE_PLASMA, linestyle = ':', linewidth = 2)  # change grid color to make it show up against the colormesh
+        self.axis.grid(True, color = cp.plots.COLOR_OPPOSITE_INFERNO, linestyle = ':', linewidth = 2)  # change grid color to make it show up against the colormesh
 
         self.axis.set_xlabel(r'$z$ ({})'.format(unit_name), fontsize = 24)
         self.axis.set_ylabel(r'$\rho$ ({})'.format(unit_name), fontsize = 24)
@@ -404,12 +404,12 @@ class PhiSliceAxis(QuantumMeshAxis):
         self.axis.set_theta_direction('clockwise')
         self.axis.set_rlabel_position(80)
 
-        self.axis.grid(True, color = core.COLOR_OPPOSITE_PLASMA, linestyle = ':', linewidth = 2, alpha = 0.8)  # change grid color to make it show up against the colormesh
+        self.axis.grid(True, color = cp.plots.COLOR_OPPOSITE_INFERNO, linestyle = ':', linewidth = 2, alpha = 0.8)  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         self.axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         self.axis.tick_params(axis = 'both', which = 'major', labelsize = 20)  # increase size of tick labels
-        self.axis.tick_params(axis = 'y', which = 'major', colors = core.COLOR_OPPOSITE_PLASMA, pad = 3)  # make r ticks a color that shows up against the colormesh
+        self.axis.tick_params(axis = 'y', which = 'major', colors = cp.plots.COLOR_OPPOSITE_INFERNO, pad = 3)  # make r ticks a color that shows up against the colormesh
 
         self.axis.set_rlabel_position(80)
 

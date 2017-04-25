@@ -16,13 +16,33 @@ from .units import *
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# default kwargs for various purposes
-GRID_KWARGS = {
-    'linestyle': '-',
-    'color': 'black',
-    'linewidth': .25,
-    'alpha': 0.4
+RED = '#d62728'
+BLUE = '#1f77b4'
+ORANGE = '#ff7f0e'
+GREEN = '#2ca02c'
+
+COLOR_OPPOSITE_PLASMA = GREEN
+COLOR_OPPOSITE_INFERNO = GREEN
+COLOR_OPPOSITE_MAGMA = GREEN
+COLOR_OPPOSITE_VIRIDIS = RED
+
+CMAP_TO_OPPOSITE = {
+    plt.get_cmap('viridis'): COLOR_OPPOSITE_VIRIDIS,
+    plt.get_cmap('plasma'): COLOR_OPPOSITE_PLASMA,
+    plt.get_cmap('inferno'): COLOR_OPPOSITE_INFERNO,
+    plt.get_cmap('magma'): COLOR_OPPOSITE_MAGMA,
 }
+
+GRID_KWARGS = dict(
+    linestyle = '-',
+    color = 'black',
+    linewidth = .25,
+    alpha = 0.4)
+
+COLORMESH_GRID_KWARGS = dict(
+    linestyle = ':',
+    linewidth = .5,
+)
 
 
 def _get_fig_dims(fig_scale, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0):
@@ -347,9 +367,9 @@ def xy_plot(name,
             ax.axhline(y = hl / y_unit_value, **kw)
 
         if grid_kwargs is not None:
-            grid_kwargs = GRID_KWARGS.update(grid_kwargs)
+            grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
         else:
-            grid_kwargs = GRID_KWARGS
+            grid_kwargs = {**GRID_KWARGS}
 
         if x_log_axis:
             ax.set_xscale('log')
@@ -510,9 +530,14 @@ def xyz_plot(name,
                                   norm = norm)
 
         if grid_kwargs is not None:
-            grid_kwargs = GRID_KWARGS.update(grid_kwargs)
+            grid_kwargs = {**COLORMESH_GRID_KWARGS, **grid_kwargs}
         else:
-            grid_kwargs = GRID_KWARGS
+            grid_kwargs = {**COLORMESH_GRID_KWARGS}
+
+        if colormap in CMAP_TO_OPPOSITE:
+            grid_kwargs.update(dict(color = CMAP_TO_OPPOSITE[colormap]))
+
+        ax.grid(True, which = 'major', **grid_kwargs)
 
         if x_log_axis:
             ax.set_xscale('log')
@@ -539,7 +564,6 @@ def xyz_plot(name,
         ax.set_xlim(left = x_lower_limit / x_unit_value, right = x_upper_limit / x_unit_value)
         ax.set_ylim(bottom = y_lower_limit / y_unit_value, top = y_upper_limit / y_unit_value)
 
-        ax.grid(True, which = 'major', **grid_kwargs)
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
@@ -706,9 +730,9 @@ def xyt_plot(name,
             ax.axhline(y = hl / y_unit_value, **kw)
 
         if grid_kwargs is not None:
-            grid_kwargs = GRID_KWARGS.update(grid_kwargs)
+            grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
         else:
-            grid_kwargs = GRID_KWARGS
+            grid_kwargs = {**GRID_KWARGS}
 
         if x_log_axis:
             ax.set_xscale('log')
@@ -886,3 +910,7 @@ def xyt_plot(name,
         # logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
     return path
+
+
+def xyzt_plot():
+    raise NotImplementedError

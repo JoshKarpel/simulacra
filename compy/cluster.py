@@ -287,6 +287,7 @@ class SimulationResult:
         self.file_name = copy(int(sim.file_name))
         self.plots_dir = job_processor.plots_dir
 
+        self.init_time = copy(sim.init_time)
         self.start_time = copy(sim.start_time)
         self.end_time = copy(sim.end_time)
         self.elapsed_time = copy(sim.elapsed_time.total_seconds())
@@ -330,14 +331,16 @@ class JobProcessor(core.Beet):
 
     @property
     def running_time(self):
-        return sum(r.running_time for r in self.data.values() if r is not None)
+        return dt.timedelta(seconds = sum(r.running_time for r in self.data.values() if r is not None))
 
     @property
     def elapsed_time(self):
-        earliest = min(r.start_time for r in self.data.values() if r is not None)
-        latest = max(r.end_time for r in self.data.values() if r is not None)
+        # earliest = min(r.init_time for r in self.data.values() if r is not None)
+        # latest = max(r.end_time for r in self.data.values() if r is not None)
 
-        return latest - earliest
+        # return latest - earliest
+
+        return dt.timedelta()
 
     def get_sim_names_from_specs(self):
         """Get a list of Simulation file names based on their Specifications."""
@@ -347,7 +350,7 @@ class JobProcessor(core.Beet):
         """Get a list of Simulation file names actually found in the output directory."""
         return sorted([f.strip('.sim') for f in os.listdir(self.output_dir)], key = int)
 
-    def save(self, target_dir = None, file_extension = '.job'):
+    def save(self, target_dir = None, file_extension = '.job', **kwargs):
         """
         Atomically pickle the JobProcessor to {job_dir}/{job_name}.job, and gzip it for reduced disk usage.
 
@@ -355,7 +358,7 @@ class JobProcessor(core.Beet):
         :param file_extension: file extension to name the JobProcessor with
         :return: the path to the saved JobProcessor
         """
-        return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension)
+        return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
     def load_sim(self, sim_name, **load_kwargs):
         """
@@ -416,12 +419,16 @@ class JobProcessor(core.Beet):
         logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, t.time_elapsed))
 
         with utils.BlockTimer() as t:
+            if len(self.unprocessed_sim_names) < self.sim_count:
+                self.make_time_diagnostics_plot()
+                self.write_time_diagnostics_to_file()
+
             # self.write_to_txt()
             # self.write_to_csv()
 
             self.make_summary_plots()
 
-        logger.info('Finished summary plots for job {}. Elapsed time: {}'.format(self.name, t.time_elapsed))
+        logger.info('Finished summaries for job {}. Elapsed time: {}'.format(self.name, t.time_elapsed))
 
     def write_to_csv(self):
         raise NotImplementedError
@@ -460,13 +467,32 @@ class JobProcessor(core.Beet):
 
     def make_summary_plots(self):
         """Hook method for making automatic summary plots from collected data."""
-        if len(self.unprocessed_sim_names) < self.sim_count:
-            self.make_time_diagnostics_plot()
+        pass
+
+    def write_time_diagnostics_to_file(self):
+        path = os.path.join(self.job_dir_path, f'{self.name}_diagnostics.txt')
+        with open(path, mode = 'w') as f:
+            f.write('\n'.join((
+                f'Diagnostic Data for Job {self.name}:',
+                '',
+                f'{self.sim_count} {self.simulation_type.__name__}s',
+                f'Simulation Result Type: {self.simulation_result_type.__name__}',
+                '',
+                f'Elapsed Time: {self.elapsed_time}',
+                f'Combined Runtime: {self.running_time}',
+                '',
+                # f'Earliest Sim Init: {min(r.init_time for r in self.data.values() if r is not None)}',
+                # f'Latest Sim Init: {max(r.init_time for r in self.data.values() if r is not None)}',
+                # f'Earliest Sim Start: {min(r.start_time for r in self.data.values() if r is not None)}',  # TODO: uncomment, eventually
+                # f'Latest Sim Start: {max(r.start_time for r in self.data.values() if r is not None)}',
+                f'Earliest Sim Finish: {min(r.end_time for r in self.data.values() if r is not None)}',
+                f'Latest Sim Finish: {max(r.end_time for r in self.data.values() if r is not None)}',
+            )))
+
+        logger.debug(f'Wrote diagnostic information for job {self.name} to {path}')
 
     def make_time_diagnostics_plot(self):
         """Generate a diagnostics plot based on Simulation runtimes."""
-
-        logger.info(f'Generating diagnostics plot for job {self.name}')
 
         sim_numbers = [result.file_name for result in self.data.values() if result is not None]
         running_time = [result.running_time for result in self.data.values() if result is not None]
@@ -477,7 +503,10 @@ class JobProcessor(core.Beet):
                       line_kwargs = [dict(linestyle = '', marker = '.')],
                       y_unit = 'hours',
                       x_label = 'Simulation Number', y_label = 'Time',
+                      title = f'{self.name} Diagnostics',
                       target_dir = self.summary_dir)
+
+        logger.debug(f'Generated diagnostics plot for job {self.name}')
 
 
 def combine_job_processors(*job_processors):

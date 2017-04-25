@@ -41,15 +41,27 @@ def process_job(job_name, jobs_dir = None):
 
         jp.save(target_dir = os.path.join(os.getcwd(), 'job_processors'))
 
+        return jp.running_time, jp.sim_count
+
 
 def process_jobs(jobs_dir):
+    jobs_processed = 0
+    total_runtime = dt.timedelta()
+    total_sim_count = 0
+
     for job_name in (f for f in os.listdir(jobs_dir) if os.path.isdir(os.path.join(jobs_dir, f))):
         try:
             logger.info('Found job {}'.format(job_name))
-            cp.utils.run_in_thread(process_job, args = (job_name, jobs_dir))
+            runtime, sim_count = cp.utils.run_in_process(process_job, args = (job_name, jobs_dir))
+
+            jobs_processed += 1
+            total_runtime += runtime
+            total_sim_count += sim_count
         except Exception as e:
             logger.exception('Encountered exception while processing job {}'.format(job_name))
             raise e
+
+    logger.info(f'Processed {jobs_processed} jobs containing {total_sim_count} simulations, with total runtime {total_runtime}')
 
 
 def suspend_processes(processes):
@@ -72,13 +84,13 @@ if __name__ == '__main__':
             jobs_dir = "E:\Dropbox\Research\Cluster\cluster_mirror\home\karpel\jobs"
 
             cp.utils.try_loop(
-                    ft.partial(suspend_processes, dropbox_processes),
-                    ft.partial(synchronize_with_cluster, ci),
-                    ft.partial(resume_processes, dropbox_processes),
-                    ft.partial(process_jobs, jobs_dir),
-                    wait_after_success = dt.timedelta(hours = 3),
-                    wait_after_failure = dt.timedelta(hours = 1),
-                    )
+                ft.partial(suspend_processes, dropbox_processes),
+                ft.partial(synchronize_with_cluster, ci),
+                ft.partial(process_jobs, jobs_dir),
+                ft.partial(resume_processes, dropbox_processes),
+                wait_after_success = dt.timedelta(hours = 3),
+                wait_after_failure = dt.timedelta(hours = 1),
+            )
         except Exception as e:
             logger.exception(e)
             raise e
