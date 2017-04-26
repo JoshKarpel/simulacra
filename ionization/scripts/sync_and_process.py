@@ -76,23 +76,34 @@ def resume_processes(processes):
         logger.info('Resumed {}'.format(p))
 
 
+def suspend_processes_by_name(process_name):
+    processes = cp.utils.get_processes_by_name(process_name)
+
+    suspend_processes(processes)
+
+
+def resume_processes_by_name(process_name):
+    processes = cp.utils.get_processes_by_name(process_name)
+
+    resume_processes(processes)
+
+
 if __name__ == '__main__':
     with cp_logger as l:
-        dropbox_processes = cp.utils.get_processes_by_name('Dropbox.exe')
         try:
             ci = clu.ClusterInterface('submit-5.chtc.wisc.edu', username = 'karpel', key_path = 'E:\chtc_ssh_private')
             jobs_dir = "E:\Dropbox\Research\Cluster\cluster_mirror\home\karpel\jobs"
 
             cp.utils.try_loop(
-                ft.partial(suspend_processes, dropbox_processes),
-                ft.partial(synchronize_with_cluster, ci),
-                ft.partial(process_jobs, jobs_dir),
-                ft.partial(resume_processes, dropbox_processes),
-                wait_after_success = dt.timedelta(hours = 3),
-                wait_after_failure = dt.timedelta(hours = 1),
-            )
+                    ft.partial(suspend_processes_by_name, 'Dropbox.exe'),
+                    ft.partial(synchronize_with_cluster, ci),
+                    ft.partial(process_jobs, jobs_dir),
+                    ft.partial(resume_processes_by_name, 'Dropbox.exe'),
+                    wait_after_success = dt.timedelta(hours = 3),
+                    wait_after_failure = dt.timedelta(hours = 1),
+                    )
         except Exception as e:
             logger.exception(e)
             raise e
         finally:
-            resume_processes(dropbox_processes)
+            resume_processes_by_name('Dropbox.exe')
