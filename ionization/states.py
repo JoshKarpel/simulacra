@@ -205,7 +205,7 @@ class FreeSphericalWave(QuantumState):
     @property
     def tex_str(self):
         """Return a LaTeX-formatted string for the HydrogenCoulombState."""
-        return r'\Psi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
+        return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
 
     def radial_function(self, r):
         return np.sqrt(2 * (self.k ** 2) / pi) * special.spherical_jn(self.l, self.k * r)
@@ -479,7 +479,6 @@ class HydrogenCoulombState(QuantumState):
 
 
 class NumericSphericalHarmonicState(QuantumState):
-
     discrete_eigenvalues = True
     analytic = False
 
@@ -540,7 +539,6 @@ class NumericSphericalHarmonicState(QuantumState):
 
 
 class NumericOneDState(QuantumState):
-
     discrete_eigenvalues = True
     analytic = False
 
@@ -596,9 +594,12 @@ class NumericOneDState(QuantumState):
         else:
             return self.analytic_state.tex_str
 
+    @property
+    def n(self):
+        return self.analytic_state.n
+
     def __call__(self, x):
         return self.g_mesh
-
 
 
 class OneDFreeParticle(QuantumState):
@@ -821,15 +822,16 @@ class FiniteSquareWellState(QuantumState):
         left_bound = (n - 1) * pi / 2
         right_bound = min(z_0, left_bound + (pi / 2))
 
-        # determine the energy of the state by solving a transcendental equation
-        if n % 2 != 0:  # n is odd
-            z = optimize.brentq(lambda z: np.tan(z) - np.sqrt(((z_0 / z) ** 2) - 1), left_bound, right_bound)
-            self.function_inside_well = np.cos
-            self.symmetry = 'symmetric'
-        else:  # n is even
-            z = optimize.brentq(lambda z: (1 / np.tan(z)) + np.sqrt(((z_0 / z) ** 2) - 1), left_bound, right_bound)
-            self.function_inside_well = np.sin
-            self.symmetry = 'antisymmetric'
+        with np.errstate(divide = 'ignore'):  # ignore division by zero on the edges
+            # determine the energy of the state by solving a transcendental equation
+            if n % 2 != 0:  # n is odd
+                z = optimize.brentq(lambda z: np.tan(z) - np.sqrt(((z_0 / z) ** 2) - 1), left_bound, right_bound)
+                self.function_inside_well = np.cos
+                self.symmetry = 'symmetric'
+            else:  # n is even
+                z = optimize.brentq(lambda z: (1 / np.tan(z)) + np.sqrt(((z_0 / z) ** 2) - 1), left_bound, right_bound)
+                self.function_inside_well = np.sin
+                self.symmetry = 'antisymmetric'
 
         self.wavenumber_inside_well = z / (well_width / 2)
         self.energy = (((hbar * self.wavenumber_inside_well) ** 2) / (2 * mass)) - well_depth

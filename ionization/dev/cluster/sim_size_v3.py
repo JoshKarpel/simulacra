@@ -13,9 +13,11 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 if __name__ == '__main__':
     with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO) as logger:
         sim = ion.SphericalHarmonicSpecification('info_test',
-                                                 r_bound = 100 * bohr_radius,
-                                                 r_points = 400, l_bound = 100,
-                                                 use_numeric_eigenstates_as_basis = True, numeric_eigenstate_l_max = 20, numeric_eigenstate_energy_max = 50 * eV,
+                                                 r_bound = 250 * bohr_radius,
+                                                 r_points = 1000, l_bound = 500,
+                                                 use_numeric_eigenstates_as_basis = True,
+                                                 numeric_eigenstate_l_max = 20,
+                                                 numeric_eigenstate_energy_max = 100 * eV,
                                                  time_initial = 0, time_final = 1000 * asec, time_step = 1 * asec,
                                                  electric_potential = ion.SineWave.from_photon_energy(10 * eV, amplitude = 1 * atomic_electric_field),
                                                  store_data_every = 1,

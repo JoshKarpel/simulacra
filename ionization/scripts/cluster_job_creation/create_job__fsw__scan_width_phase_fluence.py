@@ -146,7 +146,7 @@ if __name__ == '__main__':
         pulse_parameters.append(phases)
 
         window_time_in_pw = clu.Parameter(name = 'window_time_in_pw',
-                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 1, cast_to = float))
+                                          value = clu.ask_for_input('Window Time (in pulse widths)?', default = time_bound_in_pw.value - 2, cast_to = float))
         window_width_in_pw = clu.Parameter(name = 'window_width_in_pw',
                                            value = clu.ask_for_input('Window Width (in pulse widths)?', default = 0.5, cast_to = float))
         parameters.append(window_time_in_pw)
@@ -204,6 +204,7 @@ if __name__ == '__main__':
             spec = spec_type(name,
                              file_name = str(ii),
                              time_initial = -time_bound, time_final = time_bound,
+                             analytic_eigenstate_type = ion.FiniteSquareWellState,
                              **spec_kwargs)
 
             spec.pulse_type = pulse_type

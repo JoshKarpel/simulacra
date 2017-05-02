@@ -15,11 +15,14 @@ cp_logger = cp.utils.Logger('__main__', 'compy', 'ionization',
                             stdout_logs = True, stdout_level = logging.INFO,
                             file_logs = False, file_level = logging.INFO, file_name = log_file, file_dir = os.path.join(os.getcwd(), 'logs'), file_mode = 'a')
 
+DROPBOX_PROCESS_NAMES = ['Dropbox.exe']
+
 
 def synchronize_with_cluster(cluster_interface):
-    with cluster_interface as ci:
-        logger.info(ci.get_job_status())
-        ci.mirror_remote_home_dir()
+    with cp.utils.SuspendProcesses(*DROPBOX_PROCESS_NAMES):
+        with cluster_interface as ci:
+            logger.info(ci.get_job_status())
+            ci.mirror_remote_home_dir()
 
 
 def process_job(job_name, jobs_dir = None):
@@ -37,9 +40,12 @@ def process_job(job_name, jobs_dir = None):
             jp = job_info['job_processor_type'](job_name, job_dir)
             l.info('Created new job processor for job {}'.format(job_name))
 
-        jp.process_job(force_reprocess = False)
+        with cp.utils.SuspendProcesses(*DROPBOX_PROCESS_NAMES):
+            jp.load_sims(force_reprocess = False)
 
         jp.save(target_dir = os.path.join(os.getcwd(), 'job_processors'))
+
+        jp.summarize()
 
         return jp.running_time, jp.sim_count
 
@@ -64,30 +70,6 @@ def process_jobs(jobs_dir):
     logger.info(f'Processed {jobs_processed} jobs containing {total_sim_count} simulations, with total runtime {total_runtime}')
 
 
-def suspend_processes(processes):
-    for p in processes:
-        p.suspend()
-        logger.info('Suspended {}'.format(p))
-
-
-def resume_processes(processes):
-    for p in processes:
-        p.resume()
-        logger.info('Resumed {}'.format(p))
-
-
-def suspend_processes_by_name(process_name):
-    processes = cp.utils.get_processes_by_name(process_name)
-
-    suspend_processes(processes)
-
-
-def resume_processes_by_name(process_name):
-    processes = cp.utils.get_processes_by_name(process_name)
-
-    resume_processes(processes)
-
-
 if __name__ == '__main__':
     with cp_logger as l:
         try:
@@ -95,15 +77,11 @@ if __name__ == '__main__':
             jobs_dir = "E:\Dropbox\Research\Cluster\cluster_mirror\home\karpel\jobs"
 
             cp.utils.try_loop(
-                    ft.partial(suspend_processes_by_name, 'Dropbox.exe'),
-                    ft.partial(synchronize_with_cluster, ci),
-                    ft.partial(process_jobs, jobs_dir),
-                    ft.partial(resume_processes_by_name, 'Dropbox.exe'),
-                    wait_after_success = dt.timedelta(hours = 3),
-                    wait_after_failure = dt.timedelta(hours = 1),
-                    )
+                ft.partial(synchronize_with_cluster, ci),
+                ft.partial(process_jobs, jobs_dir),
+                wait_after_success = dt.timedelta(hours = 3),
+                wait_after_failure = dt.timedelta(hours = 1),
+            )
         except Exception as e:
             logger.exception(e)
             raise e
-        finally:
-            resume_processes_by_name('Dropbox.exe')

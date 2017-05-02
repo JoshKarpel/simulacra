@@ -2511,15 +2511,20 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         self.electric_field_amplitude_vs_time[self.data_time_index] = self.spec.electric_potential.get_electric_field_amplitude(t = self.data_times[self.data_time_index])
 
-        if 'l' in self.mesh.mesh_storage_method and self.spec.store_norm_by_l:  # if spherical harmonic mesh and we want to do this
-            norm_by_l = self.mesh.norm_by_l
-            for sph_harm, l_norm in zip(self.spec.spherical_harmonics, norm_by_l):
-                self.norm_by_harmonic_vs_time[sph_harm][self.data_time_index] = l_norm
+        if 'l' in self.mesh.mesh_storage_method:
+            if self.spec.store_norm_by_l:
+                norm_by_l = self.mesh.norm_by_l
+                for sph_harm, l_norm in zip(self.spec.spherical_harmonics, norm_by_l):
+                    self.norm_by_harmonic_vs_time[sph_harm][self.data_time_index] = l_norm
 
-            largest_l = self.spec.spherical_harmonics[-1]
-            norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][self.data_time_index]
-            if norm_in_largest_l > self.norm_vs_time[self.data_time_index] / 1000:
-                logger.warning('Wavefunction norm in largest angular momentum state is large (l = {}, norm = {}), consider increasing l bound'.format(largest_l, norm_in_largest_l))
+                norm_in_largest_l = self.norm_by_harmonic_vs_time[self.spec.spherical_harmonics[-1]][self.data_time_index]
+
+            else:
+                largest_l_mesh = self.mesh.g_mesh[-1]
+                norm_in_largest_l = self.mesh.state_overlap(largest_l_mesh, largest_l_mesh)
+
+            if norm_in_largest_l > self.norm_vs_time[self.data_time_index] / 1e6:
+                logger.warning(f'Wavefunction norm in largest angular momentum state is large at time index {self.time_index} (norm at bound = {norm_in_largest_l}, fraction of norm = {norm_in_largest_l / self.norm_vs_time[self.time_index]}), consider increasing l bound')
 
         logger.debug('{} {} stored data for time index {} (data time index {})'.format(self.__class__.__name__, self.name, self.time_index, self.data_time_index))
 
@@ -2738,7 +2743,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
     def plot_wavefunction_vs_time(self, log = False, x_unit = 'asec',
                                   bound_state_max_n = 5,
-                                  collapse_bound_state_angular_momentums = False,
+                                  collapse_bound_state_angular_momentums = True,
                                   grouped_free_states = None,
                                   group_labels = None,
                                   show_title = False,
@@ -2771,7 +2776,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if grouped_free_states is None:
             try:
-                grouped_free_states, group_labels = self.group_free_states_by_discrete_attr('l')
+                grouped_free_states, group_labels = self.group_free_states_by_continuous_attr('energy')
             except AttributeError:
                 grouped_free_states, group_labels = {}, {}
         overlaps = []
@@ -2795,7 +2800,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             for state in sorted(self.bound_states):
                 if state.n <= bound_state_max_n:
                     overlaps.append(state_overlaps[state])
-                    labels.append(r'$\left| \left\langle \Psi | \psi_{{ {}, {} }} \right\rangle \right|^2$'.format(state.n, state.l))
+                    labels.append(r'$\left| \left\langle \Psi | {} \right\rangle \right|^2$'.format(state.tex_str))
                     colors.append(matplotlib.colors.to_rgba('C' + str((state.n - 1) % 10), alpha = 1 - state.l / state.n))
                 else:
                     extra_bound_overlap += state_overlaps[state]

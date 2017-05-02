@@ -14,16 +14,18 @@ from compy.units import *
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG)
+log = cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO)
 
 
 def run(spec):
     with log as logger:
         sim = spec.to_simulation()
+
         sim.run_simulation()
+
         logger.info(sim.info())
 
-        # sim.plot_a_vs_time(target_dir = OUT_DIR)
+        sim.plot_a_vs_time(log = True, target_dir = OUT_DIR)
 
     return sim
 
@@ -32,7 +34,7 @@ if __name__ == '__main__':
     with log as logger:
         # pulse_widths = np.linspace(50, 600, 50) * asec
         pw = 400 * asec
-        phases = np.linspace(0, twopi, 200)
+        phases = np.linspace(0, pi, 50)
         t_bound = 5
 
         flu = 10 * Jcm2
@@ -55,7 +57,7 @@ if __name__ == '__main__':
                                                                                    electric_potential = efield,
                                                                                    prefactor = prefactor,
                                                                                    kernel = ide.velocity_guassian_kernel, kernel_kwargs = dict(tau_alpha = tau_alpha, width = L),
-                                                                                   evolution_method = 'TRAP',
+                                                                                   evolution_method = 'RK4',
                                                                                    pulse_width = pw,
                                                                                    phase = phase,
                                                                                    flu = flu,
@@ -65,7 +67,7 @@ if __name__ == '__main__':
             target_dir = OUT_DIR,
         )
 
-        results = cp.utils.multi_map(run, specs, processes = 4)
+        results = cp.utils.multi_map(run, specs, processes = 2)
 
         for log in (True, False):
             if not log:

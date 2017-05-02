@@ -252,7 +252,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         ax_a = plt.subplot(grid_spec[0])
         ax_f = plt.subplot(grid_spec[1], sharex = ax_a)
 
-        ax_f.plot(self.times / x_scale_unit, self.spec.electric_potential.get_electric_field_amplitude(self.times) / f_scale_unit, color = core.RED, linewidth = 2)
+        ax_f.plot(self.times / x_scale_unit, self.spec.electric_potential.get_electric_field_amplitude(self.times) / f_scale_unit, color = cp.plots.RED, linewidth = 2)
 
         overlap = np.abs(self.a) ** 2
         ax_a.plot(self.times / x_scale_unit, overlap, color = 'black', linewidth = 2)
@@ -261,17 +261,17 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
             ax_a.set_yscale('log')
             min_overlap = np.min(overlap)
             ax_a.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-            ax_a.grid(True, which = 'both', **core.GRID_KWARGS)
+            ax_a.grid(True, which = 'both', **cp.plots.GRID_KWARGS)
         else:
             ax_a.set_ylim(0.0, 1.0)
             ax_a.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-            ax_a.grid(True, **core.GRID_KWARGS)
+            ax_a.grid(True, **cp.plots.GRID_KWARGS)
 
         ax_a.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
         ax_f.set_xlabel(r'Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
         ax_a.set_ylabel(r'$\left| a_{\alpha}(t) \right|^2$', fontsize = 13)
-        ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = core.RED)
+        ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = cp.plots.RED)
 
         plt.rcParams['xtick.major.pad'] = 5
         plt.rcParams['ytick.major.pad'] = 5
@@ -306,7 +306,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
                          left = True,
                          right = True)
 
-        ax_f.grid(True, **core.GRID_KWARGS)
+        ax_f.grid(True, **cp.plots.GRID_KWARGS)
 
         if show_title:
             title = ax_a.set_title(self.name)
@@ -863,7 +863,7 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
 
             ax.set_xlabel(fr'Time $t$ (${t_scale_name}$)')
 
-            ax.grid(True, **core.GRID_KWARGS)
+            ax.grid(True, **cp.plots.GRID_KWARGS)
             ax.legend(loc = 'best')
 
     def plot_a_vs_time(self, log = False, time_scale = 'asec', field_scale = 'AEF',
@@ -879,7 +879,7 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
         ax_a = plt.subplot(grid_spec[0])
         ax_f = plt.subplot(grid_spec[1], sharex = ax_a)
 
-        ax_f.plot(self.times / x_scale_unit, self.spec.electric_potential.get_electric_field_amplitude(self.times) / f_scale_unit, color = core.RED, linewidth = 2)
+        ax_f.plot(self.times / x_scale_unit, self.spec.electric_potential.get_electric_field_amplitude(self.times) / f_scale_unit, color = cp.plots.RED, linewidth = 2)
 
         overlap = np.abs(self.a) ** 2
         ax_a.plot(self.times / x_scale_unit, overlap, color = 'black', linewidth = 2)
@@ -888,17 +888,17 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
             ax_a.set_yscale('log')
             min_overlap = np.min(overlap)
             ax_a.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-            ax_a.grid(True, which = 'both', **core.GRID_KWARGS)
+            ax_a.grid(True, which = 'both', **cp.plots.GRID_KWARGS)
         else:
             ax_a.set_ylim(0.0, 1.0)
             ax_a.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-            ax_a.grid(True, **core.GRID_KWARGS)
+            ax_a.grid(True, **cp.plots.GRID_KWARGS)
 
         ax_a.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
         ax_f.set_xlabel(r'Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
         ax_a.set_ylabel(r'$\left| a_{\alpha}(t) \right|^2$', fontsize = 13)
-        ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = core.RED)
+        ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = cp.plots.RED)
 
         plt.rcParams['xtick.major.pad'] = 5
         plt.rcParams['ytick.major.pad'] = 5
@@ -933,7 +933,7 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
                          left = True,
                          right = True)
 
-        ax_f.grid(True, **core.GRID_KWARGS)
+        ax_f.grid(True, **cp.plots.GRID_KWARGS)
 
         if show_title:
             title = ax_a.set_title(self.name)

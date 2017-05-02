@@ -153,7 +153,7 @@ class PulseParameterScanMixin:
                                              y_lower_limit = y_lower_limit, y_upper_limit = y_upper_limit, y_log_axis = log_y, x_log_axis = log_x,
                                              y_label = ionization_metric_name,
                                              legend_on_right = True,
-                                             target_dir = self.summary_dir
+                                             target_dir = self.summaries_dir
 
                                              )
 
@@ -212,7 +212,7 @@ class PulseParameterScanMixin:
                                               x_log_axis = log_x, y_log_axis = log_y,
                                               z_log_axis = True, z_lower_limit = z_lower_limit, z_upper_limit = z_upper_limit,
                                               z_label = f"{ionization_metric_name} for {plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
-                                              target_dir = self.summary_dir)
+                                              target_dir = self.summaries_dir)
 
 
 class ElectricFieldSimulationResult(clu.SimulationResult):
@@ -335,7 +335,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                                          y_lower_limit = y_lower_limit, y_upper_limit = y_upper_limit, y_log_axis = log_y,
                                          y_label = ionization_metric_name,
                                          legend_on_right = True,
-                                         target_dir = self.summary_dir
+                                         target_dir = self.summaries_dir
                                          )
 
     def make_pulse_parameter_scans_1d_relative(self):
@@ -380,7 +380,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                                          y_lower_limit = None, y_upper_limit = None, y_log_axis = log_y,
                                          y_label = ionization_metric_name,
                                          legend_on_right = True,
-                                         target_dir = self.summary_dir
+                                         target_dir = self.summaries_dir
                                          )
 
     def make_pulse_parameter_scans_2d(self):
@@ -435,7 +435,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                                       x_log_axis = log_x, y_log_axis = log_y, z_log_axis = log_z,
                                       z_lower_limit = z_lower_limit, z_upper_limit = z_upper_limit,
                                       z_label = ionization_metric_name,
-                                      target_dir = self.summary_dir)
+                                      target_dir = self.summaries_dir)
 
     def make_pulse_parameter_scans_2d_relative(self):
         for ionization_metric in self.ionization_metrics:
@@ -489,7 +489,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                                       x_log_axis = log_x, y_log_axis = log_y, z_log_axis = log_z,
                                       z_lower_limit = None, z_upper_limit = None,
                                       z_label = ionization_metric_name + ' (Diff from Best)',
-                                      target_dir = self.summary_dir)
+                                      target_dir = self.summaries_dir)
 
 
 class PulseSimulationResult(ElectricFieldSimulationResult):

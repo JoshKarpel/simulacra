@@ -565,17 +565,6 @@ def grouper(iterable, n, fill_value = None):
     return it.zip_longest(*args, fillvalue = fill_value)
 
 
-def get_processes_by_name(process_name):
-    """
-    Return an iterable of processes that match the given name.
-    
-    :param process_name: the name to search for
-    :type process_name: str
-    :return: an iterable of psutil Process instances
-    """
-    return [p for p in psutil.process_iter() if p.name() == process_name]
-
-
 class SubprocessManager:
     def __init__(self, cmd_string, **subprocess_kwargs):
         self.cmd_string = cmd_string
@@ -599,3 +588,58 @@ class SubprocessManager:
             logger.debug(f'Closed subprocess {self.name}')
         except AttributeError:
             logger.warning(f'Exception while trying to close subprocess {self.name}, possibly not closed')
+
+
+def get_processes_by_name(process_name):
+    """
+    Return an iterable of processes that match the given name.
+
+    :param process_name: the name to search for
+    :type process_name: str
+    :return: an iterable of psutil Process instances
+    """
+    return [p for p in psutil.process_iter() if p.name() == process_name]
+
+
+def suspend_processes(processes):
+    for p in processes:
+        p.suspend()
+        logger.info('Suspended {}'.format(p))
+
+
+def resume_processes(processes):
+    for p in processes:
+        p.resume()
+        logger.info('Resumed {}'.format(p))
+
+
+def suspend_processes_by_name(process_name):
+    processes = get_processes_by_name(process_name)
+
+    suspend_processes(processes)
+
+
+def resume_processes_by_name(process_name):
+    processes = get_processes_by_name(process_name)
+
+    resume_processes(processes)
+
+
+class SuspendProcesses:
+    def __init__(self, *processes):
+        """
+        
+        :param processes: psutil.Process objects or strings to search for using get_process_by_name
+        """
+        self.processes = []
+        for process in processes:
+            if type(process) == str:
+                self.processes += get_processes_by_name(process)
+            elif type(process) == psutil.Process:
+                self.processes.append(process)
+
+    def __enter__(self):
+        suspend_processes(self.processes)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        resume_processes(self.processes)

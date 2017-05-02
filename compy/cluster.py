@@ -309,13 +309,8 @@ class JobProcessor(core.Beet):
         """
         super(JobProcessor, self).__init__(job_name)
         self.job_dir_path = job_dir_path
-        self.input_dir = os.path.join(self.job_dir_path, 'inputs')  # Specifications go here
-        self.output_dir = os.path.join(self.job_dir_path, 'outputs')  # finished Simulations go here
-        self.plots_dir = os.path.join(self.job_dir_path, 'plots')  # plots from the SimulationResults go here
-        self.movies_dir = os.path.join(self.job_dir_path, 'movies')  # movies get renamed and sent here
-        self.summary_dir = os.path.join(self.job_dir_path, 'summary')  # summary plots get put here
 
-        for directory in (self.input_dir, self.output_dir, self.plots_dir, self.movies_dir):
+        for directory in (self.inputs_dir, self.outputs_dir, self.plots_dir, self.movies_dir, self.summaries_dir):
             utils.ensure_dir_exists(directory)
 
         self.sim_names = self.get_sim_names_from_specs()
@@ -328,6 +323,26 @@ class JobProcessor(core.Beet):
 
     def __str__(self):
         return '{} for job {}, processed {}/{} Simulations'.format(self.__class__.__name__, self.name, self.sim_count - len(self.unprocessed_sim_names), self.sim_count)
+
+    @property
+    def inputs_dir(self):
+        return os.path.join(self.job_dir_path, 'inputs')
+
+    @property
+    def outputs_dir(self):
+        return os.path.join(self.job_dir_path, 'outputs')
+
+    @property
+    def plots_dir(self):
+        return os.path.join(self.job_dir_path, 'plots')
+
+    @property
+    def movies_dir(self):
+        return os.path.join(self.job_dir_path, 'movies')
+
+    @property
+    def summaries_dir(self):
+        return os.path.join(self.job_dir_path, 'summaries')
 
     @property
     def running_time(self):
@@ -344,11 +359,11 @@ class JobProcessor(core.Beet):
 
     def get_sim_names_from_specs(self):
         """Get a list of Simulation file names based on their Specifications."""
-        return sorted([f.strip('.spec') for f in os.listdir(self.input_dir)], key = int)
+        return sorted([f.strip('.spec') for f in os.listdir(self.inputs_dir)], key = int)
 
     def get_sim_names_from_sims(self):
         """Get a list of Simulation file names actually found in the output directory."""
-        return sorted([f.strip('.sim') for f in os.listdir(self.output_dir)], key = int)
+        return sorted([f.strip('.sim') for f in os.listdir(self.outputs_dir)], key = int)
 
     def save(self, target_dir = None, file_extension = '.job', **kwargs):
         """
@@ -360,7 +375,7 @@ class JobProcessor(core.Beet):
         """
         return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
-    def load_sim(self, sim_name, **load_kwargs):
+    def _load_sim(self, sim_name, **load_kwargs):
         """
         Load a Simulation from the job by its file_name. load_kwargs are passed to the Simulation's load method.
 
@@ -369,7 +384,7 @@ class JobProcessor(core.Beet):
         :return: the loaded Simulation, or None if it wasn't found
         """
         sim = None
-        sim_path = os.path.join(self.output_dir, '{}.sim'.format(sim_name))
+        sim_path = os.path.join(self.outputs_dir, '{}.sim'.format(sim_name))
 
         try:
             sim = self.simulation_type.load(os.path.join(sim_path), **load_kwargs)
@@ -389,7 +404,7 @@ class JobProcessor(core.Beet):
 
         return sim
 
-    def process_job(self, force_reprocess = False):
+    def load_sims(self, force_reprocess = False):
         """
         Process the job by loading newly-downloaded Simulations and generating SimulationResults from them.
         
@@ -405,9 +420,9 @@ class JobProcessor(core.Beet):
                 sim_names = tqdm(new_sims)
 
             for sim_name in sim_names:
-                sim = self.load_sim(sim_name)
+                sim = self._load_sim(sim_name)
 
-                if sim is not None:
+                if sim is not None and sim.status == core.STATUS_FIN:
                     try:
                         self.data[sim_name] = self.simulation_result_type(sim, job_processor = self)
                         self.unprocessed_sim_names.discard(sim_name)
@@ -418,6 +433,7 @@ class JobProcessor(core.Beet):
 
         logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, t.time_elapsed))
 
+    def summarize(self):
         with utils.BlockTimer() as t:
             if len(self.unprocessed_sim_names) < self.sim_count:
                 self.make_time_diagnostics_plot()
@@ -475,7 +491,7 @@ class JobProcessor(core.Beet):
             f.write('\n'.join((
                 f'Diagnostic Data for Job {self.name}:',
                 '',
-                f'{self.sim_count} {self.simulation_type.__name__}s',
+                f'{self.sim_count - len(self.unprocessed_sim_names)} {self.simulation_type.__name__}s',
                 f'Simulation Result Type: {self.simulation_result_type.__name__}',
                 '',
                 f'Elapsed Time: {self.elapsed_time}',
@@ -504,7 +520,7 @@ class JobProcessor(core.Beet):
                       y_unit = 'hours',
                       x_label = 'Simulation Number', y_label = 'Time',
                       title = f'{self.name} Diagnostics',
-                      target_dir = self.summary_dir)
+                      target_dir = self.summaries_dir)
 
         logger.debug(f'Generated diagnostics plot for job {self.name}')
 
