@@ -247,12 +247,15 @@ class ElectricFieldSimulationResult(clu.SimulationResult):
         #                               collapse_bound_state_angular_momentums = True,
         #                               grouped_free_states = grouped_states, group_labels = group_labels)
 
-        grouped_states, group_labels = sim.group_free_states_by_discrete_attr('l', cutoff_value = 10)
-        sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = f'__l__{sim.file_name}',
-                                      grouped_free_states = grouped_states, group_labels = group_labels)
-        # sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__l__collapsed',
-        #                               collapse_bound_state_angular_momentums = True,
-        #                               grouped_free_states = grouped_states, group_labels = group_labels)
+        try:
+            grouped_states, group_labels = sim.group_free_states_by_discrete_attr('l', cutoff_value = 10)
+            sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = f'__l__{sim.file_name}',
+                                          grouped_free_states = grouped_states, group_labels = group_labels)
+            # sim.plot_wavefunction_vs_time(**plot_kwargs, name_postfix = '__l__collapsed',
+            #                               collapse_bound_state_angular_momentums = True,
+            #                               grouped_free_states = grouped_states, group_labels = group_labels)
+        except AttributeError:  # free states must not have l
+            pass
 
 
 class ElectricFieldJobProcessor(PulseParameterScanMixin, clu.JobProcessor):
