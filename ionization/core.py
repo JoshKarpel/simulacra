@@ -3149,3 +3149,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
             sim.initialize_mesh()
 
         return sim
+
+
+class AdapativeElectricFieldSimulation(ElectricFieldSimulation):
+    pass
+
+    # maybe instead of a class it should just be an option in there? the entire data store is different though... maybe it shouldn't even inherit? may need to use composition instead of inheritance
+    # it's already sort of agnostic about what time each time index represenents. May just need to modify what the time attribute means!
+    # maybe a spec comes with a rule for time steps, which is by default a lambda that returns the time step, or something

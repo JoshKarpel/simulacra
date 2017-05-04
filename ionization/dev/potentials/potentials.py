@@ -48,4 +48,4 @@ if __name__ == '__main__':
 
         rect = ion.Rectangle(start_time = 0, end_time = 1 * s, amplitude = 1 * V / m)
         print(rect)
-        print(rect.get_total_electric_field_numeric(dense_t))
+        print(rect.get_electric_field_integral_numeric(dense_t))
