@@ -31,7 +31,7 @@ EA_LOG_PLT_KWARGS = dict(
 )
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         pw = 100 * asec
 
         window = ion.SymmetricExponentialTimeWindow(window_time = 28 * pw, window_width = .2 * pw) + ion.RectangularTimeWindow(on_time = -31 * pw, off_time = 31 * pw)

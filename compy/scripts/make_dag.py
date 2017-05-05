@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    with cp.utils.Logger('compy', 'ionization', stdout_level = 31 - ((args.verbosity + 1) * 10)) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_level = 31 - ((args.verbosity + 1) * 10)) as logger:
         submit_file_paths = get_submit_file_paths(*args.job_names)
 
         dag_file_name = write_dag_files(args.dag_name, args.job_names, submit_file_paths, max_jobs_idle = args.max_jobs, overwrite = args.overwrite)

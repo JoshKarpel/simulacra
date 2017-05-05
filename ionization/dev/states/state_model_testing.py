@@ -11,7 +11,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization') as logger:
+    with cp.utils.LogManager('compy', 'ionization') as logger:
         for n in range(1, 4):
             for l in range(n):
                 for m in range(-l, l + 1):

@@ -12,7 +12,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         bound = 50
         # points = 2 ** 8
         points = bound * 4

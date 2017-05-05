@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     print(logger.handlers)
 
-    with cp.utils.Logger(file_logs = True, file_dir = OUT_DIR) as withlogger:
+    with cp.utils.LogManager(file_logs = True, file_dir = OUT_DIR) as withlogger:
         print(withlogger.handlers)
         print(withlogger.handlers)
         withlogger.info('im a fancy logger. should print only once')

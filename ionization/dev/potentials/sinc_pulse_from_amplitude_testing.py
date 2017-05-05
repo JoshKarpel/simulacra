@@ -10,7 +10,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def run(spec):
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
         sim = spec.to_simulation()
 
         sim.run_simulation()
@@ -21,7 +21,7 @@ def run(spec):
 
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.INFO, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.INFO, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
         source = ion.SincPulse(pulse_width = 200 * asec, fluence = 1 * (J / (cm ** 2)))
         pulse_widths = [290, 310, 390, 410]
         # pulse_widths = [50, 100, 200, 400, 600, 800]

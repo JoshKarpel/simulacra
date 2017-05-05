@@ -12,7 +12,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         mass = electron_mass
         pw = 200
 

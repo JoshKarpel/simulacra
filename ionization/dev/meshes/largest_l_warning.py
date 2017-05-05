@@ -14,8 +14,8 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def run_sim(spec):
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG,
-                         file_logs = True, file_name = spec.name, file_dir = OUT_DIR, file_mode = 'w') as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG,
+                             file_logs = True, file_name = spec.name, file_dir = OUT_DIR, file_mode = 'w') as logger:
         sim = spec.to_simulation()
 
         logger.info(sim.info())
@@ -26,7 +26,7 @@ def run_sim(spec):
 
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         bound = 50
         # points = 2 ** 8
         points = bound * 4

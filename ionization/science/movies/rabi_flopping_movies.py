@@ -11,13 +11,13 @@ from compy.units import *
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
+log = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
 
 
 def run(spec):
-    with cp.utils.Logger('compy', 'ionization',
-                         stdout_logs = True, stdout_level = logging.INFO,
-                         file_logs = True, file_dir = spec.out_dir, file_name = spec.name, file_level = logging.INFO, file_mode = 'w') as logger:
+    with cp.utils.LogManager('compy', 'ionization',
+                             stdout_logs = True, stdout_level = logging.INFO,
+                             file_logs = True, file_dir = spec.out_dir, file_name = spec.name, file_level = logging.INFO, file_mode = 'w') as logger:
         try:
             sim = spec.to_simulation()
 

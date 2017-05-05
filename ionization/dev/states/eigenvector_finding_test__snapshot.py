@@ -34,7 +34,7 @@ if __name__ == '__main__':
     OUT_DIR = os.path.join(OUT_DIR, 'bound={}_ppbr={}'.format(bound, points_per_bohr_radius))
     sim = ion.SphericalHarmonicSpecification('eig', **spec_kwargs).to_simulation()
 
-    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = True, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = True, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
 
         # CONSTRUCT EIGENBASIS
         numerical_basis = {}

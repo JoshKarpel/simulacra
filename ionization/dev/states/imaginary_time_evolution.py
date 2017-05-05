@@ -12,7 +12,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
         test_states = [ion.HydrogenBoundState(n, l) for n in range(6) for l in range(n)]
         spec_kwargs = {'r_bound': 100 * bohr_radius,
                        'r_points': 400,

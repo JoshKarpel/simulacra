@@ -11,7 +11,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization'):
+    with cp.utils.LogManager('compy', 'ionization'):
         jp = clu.JobProcessor.load('ide__sinc__25pw_20ph_20flu__v2.job')
 
         jp.plots_dir = OUT_DIR

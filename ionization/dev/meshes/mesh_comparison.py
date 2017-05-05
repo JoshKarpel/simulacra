@@ -8,7 +8,7 @@ from compy.units import *
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 BASE_OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-logger = cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = BASE_OUT_DIR, file_level = logging.DEBUG)
+logger = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = BASE_OUT_DIR, file_level = logging.DEBUG)
 
 
 def run(spec):

@@ -12,7 +12,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         pw = 200
         flu = 1
 
@@ -31,18 +31,18 @@ if __name__ == '__main__':
 
         logger.info('Sinc cutoff frequency: {} THz'.format(uround(sinc.frequency_max, THz)))
 
-        generic = ion.GenericElectricField(lambda f: np.where(np.abs(f) < sinc.frequency_max, sinc.amplitude_per_frequency, 0),
-                                           lambda f: np.where(f >= 0, pi / 2, -pi / 2),
-                                           frequency_upper_limit = sinc.frequency_max * 20,
-                                           frequency_points = 2 ** 15
-                                           )
-
-        for ii, phase in enumerate(np.arange(0, twopi + 0.01, pi / 8)):
-            generic = ion.GenericElectricField(lambda f: np.where(np.abs(f) < sinc.frequency_max, sinc.amplitude_per_frequency, 0),
-                                               lambda f: np.where(f >= 0, phase, -phase),
+        generic = ion.GenericElectricPotential(lambda f: np.where(np.abs(f) < sinc.frequency_max, sinc.amplitude_per_frequency, 0),
+                                               lambda f: np.where(f >= 0, pi / 2, -pi / 2),
                                                frequency_upper_limit = sinc.frequency_max * 20,
                                                frequency_points = 2 ** 15
                                                )
+
+        for ii, phase in enumerate(np.arange(0, twopi + 0.01, pi / 8)):
+            generic = ion.GenericElectricPotential(lambda f: np.where(np.abs(f) < sinc.frequency_max, sinc.amplitude_per_frequency, 0),
+                                                   lambda f: np.where(f >= 0, phase, -phase),
+                                                   frequency_upper_limit = sinc.frequency_max * 20,
+                                                   frequency_points = 2 ** 15
+                                                   )
 
             plots.xy_plot('generic_electric_field_vs_time__zoom__{}__phase={}'.format(ii, phase / pi),
                           generic.times, np.real(generic.complex_electric_field_vs_time),
