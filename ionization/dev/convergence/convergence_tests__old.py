@@ -564,7 +564,7 @@ def spherical_harmonic_time_stability(r_point_count, states, spherical_harmonics
 
 
 def run_test(spec):
-    with cp.utils.Logger() as logger:
+    with cp.utils.LogManager() as logger:
         sim = test.StaticConvergenceTestingSimulation(spec)
         sim.run_simulation()
 
@@ -591,7 +591,7 @@ if __name__ == '__main__':
 
     linear_points = 2 ** np.array([6, 7, 8, 9, 10, 11, 12])
 
-    with cp.utils.Logger() as logger:
+    with cp.utils.LogManager() as logger:
         # cylindrical_slice_norm_energy(linear_points, states, bound = bound)
         # spherical_slice_norm_energy(radial_points, states, bound = bound, theta_points = angular_points)
         # spherical_harmonic_norm_energy(radial_points, states, bound = bound, spherical_harmonics = angular_points)

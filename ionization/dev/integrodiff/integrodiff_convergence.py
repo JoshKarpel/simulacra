@@ -180,8 +180,8 @@ if __name__ == '__main__':
     # method = 'trapezoid'
     method = 'simpson'
 
-    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO,
-                         file_logs = True, file_dir = OUT_DIR, file_name = method, file_mode = 'w', file_level = logging.INFO) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO,
+                             file_logs = True, file_dir = OUT_DIR, file_name = method, file_mode = 'w', file_level = logging.INFO) as logger:
         for dt in dt_list:
             spec = ide.IntegroDifferentialEquationSpecification('{}__{}__dt={}as'.format(method, electric_field.__class__.__name__, round(dt, 3)),
                                                                 time_initial = -t_bound * asec, time_final = t_bound * asec, time_step = dt * asec,

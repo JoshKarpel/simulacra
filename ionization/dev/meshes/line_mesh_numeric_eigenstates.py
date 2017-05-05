@@ -11,7 +11,7 @@ from compy.units import *
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.Logger('compy', 'ionization', stdout_level = logging.DEBUG)
+log = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG)
 
 if __name__ == '__main__':
     with log as logger:
@@ -24,7 +24,7 @@ if __name__ == '__main__':
         test_states = [ion.QHOState.from_potential(qho, mass, n = n) for n in range(31)]
 
         # efield = ion.SineWave.from_photon_energy(energy_spacing, amplitude = .005 * atomic_electric_field)
-        efield = ion.NoElectricField()
+        efield = ion.NoElectricPotential()
 
         ani_kwargs = dict(
             target_dir = OUT_DIR,

@@ -12,7 +12,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def run_sim(spec):
-    with cp.utils.Logger(stdout_level = logging.INFO) as logger:
+    with cp.utils.LogManager(stdout_level = logging.INFO) as logger:
         FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
         OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
         if 'disp' in spec.name:
@@ -59,7 +59,7 @@ def run_sim(spec):
 
 
 if __name__ == '__main__':
-    with cp.utils.Logger(stdout_level = logging.INFO, file_logs = True, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager(stdout_level = logging.INFO, file_logs = True, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
 
         f_min = 50 * THz
         f_max = 5000 * THz

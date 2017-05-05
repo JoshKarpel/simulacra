@@ -169,6 +169,15 @@ class Specification(Beet):
         """Return a string describing the parameters of the Specification."""
         return ''
 
+    def clone(self, **kwargs):
+        """Return a clone of the Specification, with modifications defined by the kwargs."""
+        new_spec = deepcopy(self)
+
+        for k, v in kwargs.items():
+            setattr(new_spec, k, v)
+
+        return new_spec
+
 
 # Simulation status names
 STATUS_INI = 'initialized'

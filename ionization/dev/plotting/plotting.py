@@ -22,7 +22,7 @@ def make_plots(spec):
 
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization') as logger:
+    with cp.utils.LogManager('compy', 'ionization') as logger:
         n = 5
         bounds = [10, 20, 50]
         angular_points = 100

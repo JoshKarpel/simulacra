@@ -12,7 +12,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME + '_modulated')
 
 if __name__ == '__main__':
-    with cp.utils.Logger(stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager(stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
         f_min = 50 * THz
         f_max = 5000 * THz
         wavelength_min = c / f_max

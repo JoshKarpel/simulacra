@@ -1,11 +1,14 @@
 import logging
+import functools as ft
 
 import numpy as np
 import numpy.fft as nfft
 import scipy.integrate as integ
+import scipy.optimize as opt
 
 import compy as cp
 from compy.units import *
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -24,8 +27,13 @@ class PotentialEnergySum(cp.Sum, PotentialEnergy):
 
     container_name = 'potentials'
 
+    # TODO: try to figure out alternate way to do the below
+
     def get_electric_field_amplitude(self, t):
         return sum(x.get_electric_field_amplitude(t) for x in self._container)
+
+    def get_electric_field_integral_numeric(self, t):
+        return sum(x.get_electric_field_integral_numeric(t) for x in self._container)
 
 
 class NoPotentialEnergy(PotentialEnergy):
@@ -49,9 +57,13 @@ class TimeWindowSum(cp.Sum, TimeWindow):
 
     container_name = 'windows'
 
+    def __call__(self, *args, **kwargs):
+        return ft.reduce(lambda a, b: a * b, (x(*args, **kwargs) for x in self._container))  # windows should be multiplied together, not summed
+
 
 class NoTimeWindow(TimeWindow):
     """A class representing the lack of a time-window."""
+
     def __call__(self, t):
         return 1
 
@@ -68,6 +80,9 @@ class MaskSum(cp.Sum, Mask):
     """A class representing a combination of masks."""
 
     container_name = 'masks'
+
+    def __call__(self, *args, **kwargs):
+        return ft.reduce(lambda a, b: a * b, (x(*args, **kwargs) for x in self._container))  # masks should be multiplied together, not summed
 
 
 class NoMask(Mask):
@@ -232,9 +247,22 @@ class RadialImaginary(PotentialEnergy):
         return self.prefactor * np.exp(-(((r - self.center) / self.width) ** 2))
 
 
-class UniformLinearlyPolarizedElectricField(PotentialEnergy):
+def DC_correct_electric_potential(electric_field, times):
+    def func_to_minimize(amp, original_pulse):
+        test_correction_field = Rectangle(start_time = times[0], end_time = times[-1], amplitude = amp, window = electric_field.window)
+        test_pulse = original_pulse + test_correction_field
+
+        return np.abs(test_pulse.get_electric_field_integral_numeric(times)[-1])
+
+    correction_amp = opt.minimize_scalar(func_to_minimize, args = (electric_field,)).x
+    correction_field = Rectangle(start_time = times[0], end_time = times[-1], amplitude = correction_amp, window = electric_field.window)
+
+    return electric_field + correction_field
+
+
+class UniformLinearlyPolarizedElectricPotential(PotentialEnergy):
     def __init__(self, window = NoTimeWindow()):
-        super(UniformLinearlyPolarizedElectricField, self).__init__()
+        super(UniformLinearlyPolarizedElectricPotential, self).__init__()
 
         self.window = window
 
@@ -248,7 +276,7 @@ class UniformLinearlyPolarizedElectricField(PotentialEnergy):
     def __call__(self, *, t, distance_along_polarization, test_charge, **kwargs):
         return distance_along_polarization * test_charge * self.get_electric_field_amplitude(t)
 
-    def get_total_electric_field_numeric(self, times):
+    def get_electric_field_integral_numeric(self, times):
         """Return the integral of the electric field amplitude from the start of times for each interval in times."""
         return np.cumsum(self.get_electric_field_amplitude(times)) * np.abs(times[1] - times[0])
 
@@ -256,18 +284,18 @@ class UniformLinearlyPolarizedElectricField(PotentialEnergy):
         return epsilon_0 * c * np.sum(np.abs(self.get_electric_field_amplitude(times)) ** 2) * np.abs(times[1] - times[0])
 
 
-class NoElectricField(UniformLinearlyPolarizedElectricField):
+class NoElectricPotential(UniformLinearlyPolarizedElectricPotential):
     """A class representing the lack of an electric field."""
 
     def __str__(self):
-        return self.__class__.__name__ + super(NoElectricField, self).__str__()
+        return self.__class__.__name__ + super(NoElectricPotential, self).__str__()
 
     def get_electric_field_amplitude(self, t):
         """Return the electric field amplitude at time t."""
-        return np.zeros(np.shape(t)) * super(NoElectricField, self).get_electric_field_amplitude(t)
+        return np.zeros(np.shape(t)) * super(NoElectricPotential, self).get_electric_field_amplitude(t)
 
 
-class Rectangle(UniformLinearlyPolarizedElectricField):
+class Rectangle(UniformLinearlyPolarizedElectricPotential):
     """A class representing an electric with a sharp turn-on and turn-off time."""
 
     def __init__(self, start_time = 0 * asec, end_time = 50 * asec, amplitude = 1 * atomic_electric_field, **kwargs):
@@ -313,7 +341,7 @@ class Rectangle(UniformLinearlyPolarizedElectricField):
         return out
 
 
-class SineWave(UniformLinearlyPolarizedElectricField):
+class SineWave(UniformLinearlyPolarizedElectricPotential):
     def __init__(self, omega, amplitude = 1 * atomic_electric_field, phase = 0, **kwargs):
         """
         Construct a SineWave from the angular frequency, electric field amplitude, and phase.
@@ -417,7 +445,7 @@ class SineWave(UniformLinearlyPolarizedElectricField):
         return 0.5 * c * epsilon_0 * (np.abs(self.amplitude) ** 2)  # TODO: check factor of 1/2 here
 
 
-class SumOfSinesPulse(UniformLinearlyPolarizedElectricField):
+class SumOfSinesPulse(UniformLinearlyPolarizedElectricPotential):
     def __init__(self, pulse_width = 200 * asec, pulse_frequency_ratio = 5, fluence = 1 * Jcm2, phase = 0, pulse_center = 0 * asec,
                  number_of_modes = 71,
                  **kwargs):
@@ -516,7 +544,8 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricField):
         return amp * self.amplitude_time * super().get_electric_field_amplitude(t)
 
 
-class SincPulse(UniformLinearlyPolarizedElectricField):
+class SincPulse(UniformLinearlyPolarizedElectricPotential):
+    # def __init__(self, pulse_width = 200 * asec, omega_min = twopi * 1000 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
     def __init__(self, pulse_width = 200 * asec, omega_min = twopi * 500 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
                  **kwargs):
         """
@@ -562,6 +591,10 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
         return hbar * self.omega_min
 
     @property
+    def carrier_photon_energy(self):
+        return hbar * self.omega_carrier
+
+    @property
     def largest_photon_energy(self):
         return hbar * self.omega_max
 
@@ -588,6 +621,7 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
                                  ('fluence', 'J/cm^2'),
                                  'phase',
                                  ('smallest_photon_energy', 'eV'),
+                                 ('carrier_photon_energy', 'eV'),
                                  ('largest_photon_energy', 'eV'),
                                  'omega_carrier',
                                  )
@@ -601,6 +635,7 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
                                   'fluence',
                                   'phase',
                                   'smallest_photon_energy',
+                                  'carrier_photon_energy',
                                   'largest_photon_energy',
                                   'omega_carrier',
                                   )
@@ -617,8 +652,8 @@ class SincPulse(UniformLinearlyPolarizedElectricField):
         return amp * self.amplitude_time * super().get_electric_field_amplitude(t)
 
 
-class GaussianPulse(UniformLinearlyPolarizedElectricField):
-    def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 3000 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+class GaussianPulse(UniformLinearlyPolarizedElectricPotential):
+    def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 3500 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
                  **kwargs):
         """
 
@@ -646,6 +681,10 @@ class GaussianPulse(UniformLinearlyPolarizedElectricField):
     #     fluence = (amplitude_density ** 2) * (2 * epsilon_0 * c * omega_cutoff)
     #     return cls(pulse_width = pulse_width, fluence = fluence, phase = phase, pulse_center = pulse_center, **kwargs)
 
+    @property
+    def carrier_photon_energy(self):
+        return hbar * self.omega_carrier
+
     def __str__(self):
         out = cp.utils.field_str(self,
                                  ('pulse_width', 'asec'),
@@ -653,6 +692,7 @@ class GaussianPulse(UniformLinearlyPolarizedElectricField):
                                  ('fluence', 'J/cm^2'),
                                  'phase',
                                  'omega_carrier',
+                                 ('carrier_photon_energy', 'eV'),
                                  )
 
         return out + super().__str__()
@@ -678,8 +718,8 @@ class GaussianPulse(UniformLinearlyPolarizedElectricField):
         return amp * self.amplitude_time * super().get_electric_field_amplitude(t)
 
 
-class SechPulse(UniformLinearlyPolarizedElectricField):
-    def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 3000 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+class SechPulse(UniformLinearlyPolarizedElectricPotential):
+    def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 3500 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
                  **kwargs):
         """
 
@@ -739,7 +779,7 @@ class SechPulse(UniformLinearlyPolarizedElectricField):
         return amp * self.amplitude_time * super().get_electric_field_amplitude(t)
 
 
-class GenericElectricField(UniformLinearlyPolarizedElectricField):
+class GenericElectricPotential(UniformLinearlyPolarizedElectricPotential):
     """Generate an electric field from a Fourier transform of a frequency-amplitude spectrum."""
 
     def __init__(self, amplitude_function, phase_function = lambda f: 0,
@@ -823,6 +863,7 @@ class GenericElectricField(UniformLinearlyPolarizedElectricField):
                 amp[ii] = self.complex_electric_field_vs_time[index]
 
         return np.real(amp) * super().get_electric_field_amplitude(t)
+
 
 # class RandomizedSincPulse(UniformLinearlyPolarizedElectricField):
 #     def __init__(self, pulse_width = 100 * asec, fluence = 1 * J / (cm ** 2), divisions = 100, **kwargs):

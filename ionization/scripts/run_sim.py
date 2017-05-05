@@ -22,9 +22,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    with cp.utils.Logger('__main__', 'compy', 'ionization',
-                         stdout_logs = False,
-                         file_logs = True, file_level = logging.INFO, file_name = '{}'.format(args.sim_name), file_mode = 'a') as log:
+    with cp.utils.LogManager('__main__', 'compy', 'ionization',
+                             stdout_logs = False,
+                             file_logs = True, file_level = logging.INFO, file_name = '{}'.format(args.sim_name), file_mode = 'a') as log:
         try:
             log.info('Loaded onto execute node {} at {}.'.format(socket.gethostname(), dt.datetime.now()))
             log.debug('Local directory contents: {}'.format(os.listdir(os.getcwd())))

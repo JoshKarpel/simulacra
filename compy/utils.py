@@ -69,7 +69,7 @@ def now_string():
     return dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S')
 
 
-class Logger:
+class LogManager:
     """A context manager to easily set up logging."""
 
     def __init__(self, *logger_names,

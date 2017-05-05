@@ -20,7 +20,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization') as logger:
+    with cp.utils.LogManager('compy', 'ionization') as logger:
         jp_lide = cp.cluster.JobProcessor.load('compare_to_velocity.job')
         jp_vide = cp.cluster.JobProcessor.load('vide_compare.job')
 

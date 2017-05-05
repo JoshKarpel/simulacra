@@ -14,8 +14,8 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def make_movie(spec):
-    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO,
-                         file_logs = True, file_name = spec.name, file_dir = OUT_DIR, file_mode = 'w', file_level = logging.INFO) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO,
+                             file_logs = True, file_name = spec.name, file_dir = OUT_DIR, file_mode = 'w', file_level = logging.INFO) as logger:
         sim = ion.ElectricFieldSimulation(spec)
 
         logger.info(sim.info())
@@ -26,7 +26,7 @@ def make_movie(spec):
 
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
         states = [ion.HydrogenBoundState(n, l) for n in range(3) for l in range(n)]
 
         bound = 225

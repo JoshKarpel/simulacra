@@ -10,7 +10,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger() as logger:
+    with cp.utils.LogManager() as logger:
         t = np.array([0, .25, .5, .75, 1])
         # t = .25
         r = 1 * bohr_radius
@@ -48,4 +48,4 @@ if __name__ == '__main__':
 
         rect = ion.Rectangle(start_time = 0, end_time = 1 * s, amplitude = 1 * V / m)
         print(rect)
-        print(rect.get_total_electric_field_numeric(dense_t))
+        print(rect.get_electric_field_integral_numeric(dense_t))

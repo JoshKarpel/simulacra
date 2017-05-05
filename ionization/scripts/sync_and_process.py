@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 log_file = f"{__file__.strip('.py')}__{dt.datetime.now().strftime('%Y-%m-%d')}"
-cp_logger = cp.utils.Logger('__main__', 'compy', 'ionization',
-                            stdout_logs = True, stdout_level = logging.INFO,
-                            file_logs = False, file_level = logging.INFO, file_name = log_file, file_dir = os.path.join(os.getcwd(), 'logs'), file_mode = 'a')
+cp_logger = cp.utils.LogManager('__main__', 'compy', 'ionization',
+                                stdout_logs = True, stdout_level = logging.INFO,
+                                file_logs = False, file_level = logging.INFO, file_name = log_file, file_dir = os.path.join(os.getcwd(), 'logs'), file_mode = 'a')
 
 DROPBOX_PROCESS_NAMES = ['Dropbox.exe']
 

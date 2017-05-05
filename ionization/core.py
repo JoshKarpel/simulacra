@@ -49,12 +49,11 @@ class ElectricFieldSpecification(cp.core.Specification):
                  test_states = tuple(),
                  dipole_gauges = ('length',),
                  internal_potential = potentials.Coulomb(charge = proton_charge),
-                 electric_potential = potentials.NoElectricField(),
+                 electric_potential = potentials.NoElectricPotential(),
                  electric_potential_dc_correction = False,
                  mask = potentials.NoMask(),
                  evolution_method = 'SO', evolution_equations = 'H', evolution_gauge = 'L',
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
-                 minimum_time_final = 0 * asec, extra_time_step = 1 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
                  store_norm_diff_mask = False, store_internal_energy_expectation_value = False,
@@ -127,9 +126,6 @@ class ElectricFieldSpecification(cp.core.Specification):
         self.time_final = time_final
         self.time_step = time_step
 
-        self.minimum_time_final = minimum_time_final
-        self.extra_time_step = extra_time_step
-
         self.checkpoints = checkpoints
         self.checkpoint_every = checkpoint_every
         self.checkpoint_dir = checkpoint_dir
@@ -171,18 +167,17 @@ class ElectricFieldSpecification(cp.core.Specification):
             'Time Evolution:',
             '   Initial State: {}'.format(self.initial_state),
             '   Initial Time: {} as'.format(uround(self.time_initial, asec)),
-            '   Final Time: {} as'.format(uround(self.time_final, asec)),
-            '   Time Step: {} as'.format(uround(self.time_step, asec)),
+            '   Final Time: {} as'.format(uround(self.time_final, asec))
+        ]
+        if not callable(self.time_step):
+            time_evolution.append(f'   Time Step: {uround(self.time_step, asec)} as')
+        else:
+            time_evolution.append(f'   Time Steps determined by {self.time_step}')
+        time_evolution += [
             '   Evolution Equations: {}'.format(self.evolution_equations),
             '   Evolution Method: {}'.format(self.evolution_method),
             '   Evolution Gauge: {}'.format(self.evolution_gauge),
         ]
-
-        if self.minimum_time_final != 0:
-            time_evolution += [
-                '   Minimum Final Time: {} as'.format(uround(self.minimum_time_final, asec)),
-                '   Extra Time Step: {} as'.format(uround(self.extra_time_step, asec)),
-            ]
 
         potentials = ['Potentials and Masks:']
         potentials += ['   {}'.format(x) for x in it.chain(self.internal_potential, self.electric_potential, self.mask)]
@@ -2360,22 +2355,13 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         self.animators = self.spec.animators
 
-        total_time = self.spec.time_final - self.spec.time_initial
-        self.times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
+        self.times = self.get_times()
 
         if self.spec.electric_potential_dc_correction:
-            electric_field_vs_time = self.spec.electric_potential.get_electric_field_amplitude(self.times)
-            average_electric_field = integrate.simps(electric_field_vs_time, x = self.times) / total_time
-
             old_pot = self.spec.electric_potential
-
-            self.spec.electric_potential += potentials.Rectangle(start_time = self.times[0], end_time = self.times[-1], amplitude = -average_electric_field)
+            self.spec.electric_potential = potentials.DC_correct_electric_potential(self.spec.electric_potential, self.times)
 
             logger.warning('Replaced electric potential {} --> {} for {} {}'.format(old_pot, self.spec.electric_potential, self.__class__.__name__, self.name))
-
-        if self.spec.time_final < self.spec.minimum_time_final:
-            extra_times = np.delete(np.linspace(self.spec.time_final, self.spec.minimum_time_final, ((self.spec.minimum_time_final - self.spec.time_final) / self.spec.extra_time_step) + 1), 0)
-            self.times = np.concatenate((self.times, extra_times))
 
         self.time_index = 0
         self.data_time_index = 0
@@ -2482,6 +2468,26 @@ class ElectricFieldSimulation(cp.core.Simulation):
     @property
     def total_overlap_vs_time(self):
         return np.sum(overlap for overlap in self.state_overlaps_vs_time.values())
+
+    def get_times(self):
+        if not callable(self.spec.time_step):
+            total_time = self.spec.time_final - self.spec.time_initial
+            times = np.linspace(self.spec.time_initial, self.spec.time_final, int(total_time / self.spec.time_step) + 1)
+        else:
+            t = self.spec.time_initial
+            times = [t]
+
+            while t < self.spec.time_final:
+                t += self.spec.time_step(t, self.spec)
+
+                if t > self.spec.time_final:
+                    t = self.spec.time_final
+
+                times.append(t)
+
+            times = np.array(times)
+
+        return times
 
     def initialize_mesh(self):
         self.mesh = self.spec.mesh_type(self)
@@ -3149,3 +3155,11 @@ class ElectricFieldSimulation(cp.core.Simulation):
             sim.initialize_mesh()
 
         return sim
+
+
+class AdapativeElectricFieldSimulation(ElectricFieldSimulation):
+    pass
+
+    # maybe instead of a class it should just be an option in there? the entire data store is different though... maybe it shouldn't even inherit? may need to use composition instead of inheritance
+    # it's already sort of agnostic about what time each time index represenents. May just need to modify what the time attribute means!
+    # maybe a spec comes with a rule for time steps, which is by default a lambda that returns the time step, or something

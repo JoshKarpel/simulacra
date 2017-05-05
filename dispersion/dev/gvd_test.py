@@ -10,7 +10,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 if __name__ == '__main__':
-    with cp.utils.Logger(stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager(stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
         # x = np.linspace(0, 1, 100)
         # y = 0.5 * x ** 2
         #

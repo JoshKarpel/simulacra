@@ -11,7 +11,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger(stdout_level = logging.DEBUG) as logger:
+    with cp.utils.LogManager(stdout_level = logging.DEBUG) as logger:
         with open('after_cavity.csv') as f:
             _, _, position, delay, signal = np.loadtxt(f, skiprows = 1, unpack = True, delimiter = ',')
 
