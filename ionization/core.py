@@ -18,8 +18,9 @@ from cycler import cycler
 
 import compy as cp
 from compy.units import *
-from .cy import tdma, get_split_operator_evolution_matrices_L
+from .cy import tdma, make_split_operator_evolution_matrices_LEN
 from . import potentials, states
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -35,24 +36,30 @@ def electron_wavenumber_from_energy(energy):
     return np.sqrt(2 * electron_mass * energy + 0j) / hbar
 
 
+@cp.utils.memoize
+def three_j_coefficient(l):
+    "3j coefficient"
+    return (l + 1) / np.sqrt(((2 * l) + 1) * ((2 * l) + 3))
+
+
 class ElectricFieldSpecification(cp.core.Specification):
     """A base Specification for a Simulation with an electric field."""
 
-    evolution_equations = cp.utils.RestrictedValues('evolution_equations', {'L', 'H'})
+    evolution_equations = cp.utils.RestrictedValues('evolution_equations', {'LAG', 'HAM'})
     evolution_method = cp.utils.RestrictedValues('evolution_method', {'CN', 'SO', 'S'})
-    evolution_gauge = cp.utils.RestrictedValues('evolution_gauge', {'L', 'V'})
+    evolution_gauge = cp.utils.RestrictedValues('evolution_gauge', {'LEN', 'VEL'})
 
     def __init__(self, name,
                  mesh_type = None,
                  test_mass = electron_mass_reduced, test_charge = electron_charge,
                  initial_state = states.HydrogenBoundState(1, 0),
                  test_states = tuple(),
-                 dipole_gauges = ('length',),
+                 dipole_gauges = (),
                  internal_potential = potentials.Coulomb(charge = proton_charge),
                  electric_potential = potentials.NoElectricPotential(),
                  electric_potential_dc_correction = False,
                  mask = potentials.NoMask(),
-                 evolution_method = 'SO', evolution_equations = 'H', evolution_gauge = 'L',
+                 evolution_method = 'SO', evolution_equations = 'HAM', evolution_gauge = 'LEN',
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
                  checkpoints = False, checkpoint_every = 20, checkpoint_dir = None,
                  animators = tuple(),
@@ -282,14 +289,23 @@ class QuantumMesh:
         return self.g_mesh / self.g_factor
 
     @cp.utils.memoize
-    def _get_kinetic_energy_matrix_operators(self):
-        return getattr(self, f'_get_kinetic_energy_matrix_operators_{self.spec.evolution_equations}')()
+    def get_kinetic_energy_matrix_operators(self):
+        try:
+            return getattr(self, f'_get_kinetic_energy_matrix_operators_{self.spec.evolution_equations}')()
+        except AttributeError:
+            raise NotImplementedError
 
-    def _get_internal_hamiltonian_matrix_operators(self):
+    def get_internal_hamiltonian_matrix_operators(self):
         raise NotImplementedError
 
+    def apply_operators(self, g, split_operators = (), crank_nicolson_operators = (), adi_operators = ()):
+        """wrapping direction for cn and adi operators ((op, direction), (op, direction)) etc"""
+
     def evolve(self, time_step):
-        method = getattr(self, f'_evolve_{self.spec.evolution_method}_{self.spec.evolution_gauge}')
+        try:
+            method = getattr(self, f'_evolve_{self.spec.evolution_method}')
+        except AttributeError:
+            raise NotImplementedError
 
         if self.spec.store_norm_diff_mask:
             pre_evolve_norm = self.norm()
@@ -490,7 +506,7 @@ class LineMesh(QuantumMesh):
     def _evolve_free(self, time_step):
         self.g_mesh = self.ifft(self.fft(self.g_mesh) * np.exp(self.free_evolution_prefactor * time_step) * self.wavenumber_mask)
 
-    def _get_kinetic_energy_matrix_operators_H(self):
+    def _get_kinetic_energy_matrix_operators_HAM(self):
         prefactor = -(hbar ** 2) / (2 * self.spec.test_mass * (self.delta_x ** 2))
 
         diag = -2 * prefactor * np.ones(len(self.x_mesh), dtype = np.complex128)
@@ -499,25 +515,25 @@ class LineMesh(QuantumMesh):
         return sparse.diags((off_diag, diag, off_diag), (-1, 0, 1))
 
     @cp.utils.memoize
-    def _get_internal_hamiltonian_matrix_operators(self):
-        kinetic_x = self._get_kinetic_energy_matrix_operators().copy()
+    def get_internal_hamiltonian_matrix_operators(self):
+        kinetic_x = self.get_kinetic_energy_matrix_operators().copy()
 
         kinetic_x.data[1] += self.spec.internal_potential(t = self.sim.time, r = self.x_mesh, distance = self.x_mesh, test_charge = self.spec.test_charge)
 
         return kinetic_x
 
-    def _evolve_S_L(self, time_step):
+    def _evolve_S_LEN(self, time_step):
         """Spectral evolution in the Length gauge."""
         self._evolve_potential(time_step / 2)
         self._evolve_free(time_step)  # splitting order chosen for computational efficiency (only one FFT per time step)
         self._evolve_potential(time_step / 2)
 
-    def _evolve_SO_L(self, time_step):
+    def _evolve_SO_LEN(self, time_step):
         """Split-Operator evolution in the Length gauge."""
         self._evolve_potential(time_step / 2)
 
         tau = time_step / (2 * hbar)
-        hamiltonian_x = self._get_kinetic_energy_matrix_operators()
+        hamiltonian_x = self.get_kinetic_energy_matrix_operators()
 
         hamiltonian = -1j * tau * hamiltonian_x
         hamiltonian.data[1] += 1  # add identity to matrix operator
@@ -529,13 +545,13 @@ class LineMesh(QuantumMesh):
 
         self._evolve_potential(time_step / 2)
 
-    def _evolve_CN_L(self, time_step):
+    def _evolve_CN_LEN(self, time_step):
         """Crank-Nicholson evolution in the Length gauge."""
         tau = time_step / (2 * hbar)
 
         electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.x_mesh, test_charge = self.spec.test_charge)
 
-        hamiltonian_x = self._get_internal_hamiltonian_matrix_operators().copy()
+        hamiltonian_x = self.get_internal_hamiltonian_matrix_operators().copy()
 
         hamiltonian_x.data[1] += electric_potential_energy_mesh
 
@@ -550,7 +566,7 @@ class LineMesh(QuantumMesh):
     def _get_numeric_eigenstate_basis(self, energy_max):
         analytic_to_numeric = {}
 
-        h = self._get_internal_hamiltonian_matrix_operators()
+        h = self.get_internal_hamiltonian_matrix_operators()
 
         estimated_spacing = twopi / np.max(self.x_mesh)
         wavenumber_max = np.real(electron_wavenumber_from_energy(energy_max))
@@ -735,8 +751,7 @@ class CylindricalSliceMesh(QuantumMesh):
         elif gauge == 'velocity':
             raise NotImplementedError
 
-    @cp.utils.memoize
-    def _get_kinetic_energy_matrix_operators_H(self):
+    def _get_kinetic_energy_matrix_operators_HAM(self):
         """Get the mesh kinetic energy operator matrices for z and rho."""
         z_prefactor = -(hbar ** 2) / (2 * self.spec.test_mass * (self.delta_z ** 2))
         rho_prefactor = -(hbar ** 2) / (2 * self.spec.test_mass * (self.delta_rho ** 2))
@@ -762,9 +777,9 @@ class CylindricalSliceMesh(QuantumMesh):
         return z_kinetic, rho_kinetic
 
     @cp.utils.memoize
-    def _get_internal_hamiltonian_matrix_operators(self):
+    def get_internal_hamiltonian_matrix_operators(self):
         """Get the mesh internal Hamiltonian matrix operators for z and rho."""
-        z_kinetic, rho_kinetic = self._get_kinetic_energy_matrix_operators()
+        z_kinetic, rho_kinetic = self.get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
 
         z_kinetic.data[1] += 0.5 * self.flatten_mesh(potential_mesh, 'z')
@@ -773,7 +788,7 @@ class CylindricalSliceMesh(QuantumMesh):
         return z_kinetic, rho_kinetic
 
     def tg_mesh(self, use_abs_g = False):
-        hamiltonian_z, hamiltonian_rho = self._get_kinetic_energy_matrix_operators()
+        hamiltonian_z, hamiltonian_rho = self.get_kinetic_energy_matrix_operators()
 
         if use_abs_g:
             g_mesh = np.abs(self.g_mesh)
@@ -791,7 +806,7 @@ class CylindricalSliceMesh(QuantumMesh):
         return hg_mesh_z + hg_mesh_rho
 
     def hg_mesh(self):
-        hamiltonian_z, hamiltonian_rho = self._get_internal_hamiltonian_matrix_operators()
+        hamiltonian_z, hamiltonian_rho = self.get_internal_hamiltonian_matrix_operators()
 
         g_vector_z = self.flatten_mesh(self.g_mesh, 'z')
         hg_vector_z = hamiltonian_z.dot(g_vector_z)
@@ -860,7 +875,7 @@ class CylindricalSliceMesh(QuantumMesh):
     def get_spline_for_mesh(self, mesh):
         return sp.interp.RectBivariateSpline(self.z, self.rho, mesh)
 
-    def evolve_CN_L(self, time_step):
+    def _evolve_CN(self, time_step):
         """
         Evolve the mesh forward in time by time_step.
         
@@ -874,7 +889,7 @@ class CylindricalSliceMesh(QuantumMesh):
         electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
 
         # add the external potential to the Hamiltonian matrices and multiply them by i * tau to get them ready for the next steps
-        hamiltonian_z, hamiltonian_rho = self._get_internal_hamiltonian_matrix_operators()
+        hamiltonian_z, hamiltonian_rho = self.get_internal_hamiltonian_matrix_operators()
         hamiltonian_z, hamiltonian_rho = hamiltonian_z.copy(), hamiltonian_rho.copy()
 
         hamiltonian_z.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'z')
@@ -1120,8 +1135,7 @@ class SphericalSliceMesh(QuantumMesh):
         elif gauge == 'velocity':
             raise NotImplementedError
 
-    @cp.utils.memoize
-    def _get_kinetic_energy_matrix_operators_H(self):
+    def _get_kinetic_energy_matrix_operators_HAM(self):
         r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
         theta_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * ((self.delta_r * self.delta_theta) ** 2))
 
@@ -1169,7 +1183,7 @@ class SphericalSliceMesh(QuantumMesh):
 
     @cp.utils.memoize
     def get_internal_hamiltonian_matrix_operators(self):
-        r_kinetic, theta_kinetic = self._get_kinetic_energy_matrix_operators()
+        r_kinetic, theta_kinetic = self.get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
 
         r_kinetic.data[1] += 0.5 * self.flatten_mesh(potential_mesh, 'r')
@@ -1178,7 +1192,7 @@ class SphericalSliceMesh(QuantumMesh):
         return r_kinetic, theta_kinetic
 
     def tg_mesh(self, use_abs_g = False):
-        hamiltonian_r, hamiltonian_theta = self._get_kinetic_energy_matrix_operators()
+        hamiltonian_r, hamiltonian_theta = self.get_kinetic_energy_matrix_operators()
 
         if use_abs_g:
             g_mesh = np.abs(self.g_mesh)
@@ -1222,7 +1236,7 @@ class SphericalSliceMesh(QuantumMesh):
     def get_spline_for_mesh(self, mesh):
         return sp.interp.RectBivariateSpline(self.r, self.theta, mesh)
 
-    def evolve_CN_L(self, time_step):
+    def _evolve_CN(self, time_step):
         """Crank-Nicholson evolution in the Length gauge."""
         tau = time_step / (2 * hbar)
 
@@ -1429,7 +1443,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.mesh_shape = np.shape(self.r_mesh)
 
         if self.spec.use_numeric_eigenstates_as_basis:
-            self.analytic_to_numeric = self._get_numeric_eigenstate_basis(self.spec.numeric_eigenstate_energy_max, self.spec.numeric_eigenstate_l_max)
+            self.analytic_to_numeric = self.get_numeric_eigenstate_basis(self.spec.numeric_eigenstate_energy_max, self.spec.numeric_eigenstate_l_max)
             self.spec.test_states = sorted(list(self.analytic_to_numeric.values()), key = lambda x: x.energy)
             self.spec.initial_state = self.analytic_to_numeric[self.spec.initial_state]
 
@@ -1450,10 +1464,6 @@ class SphericalHarmonicMesh(QuantumMesh):
     @property
     def g_factor(self):
         return self.r
-
-    @cp.utils.memoize
-    def c(self, l):
-        return (l + 1) / np.sqrt(((2 * l) + 1) * ((2 * l) + 3))
 
     def flatten_mesh(self, mesh, flatten_along):
         """Return a mesh flattened along one of the mesh coordinates ('theta' or 'r')."""
@@ -1496,7 +1506,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         if mesh_b is None:
             mesh_b = self.g_mesh
         if gauge == 'length':
-            _, operator = self._get_kinetic_energy_matrix_operators()
+            _, operator = self.get_kinetic_energy_matrix_operators()
             g = self.wrap_vector(operator.dot(self.flatten_mesh(mesh_b, 'l')), 'l')
             return self.spec.test_charge * self.inner_product(a = mesh_a, b = g)
         elif gauge == 'velocity':
@@ -1518,28 +1528,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
             return g
         else:
-            raise NotImplementedError('States with non-definite angular momentum are not currently supported by SphericalHarmonicMesh')
-
-    # def get_g_with_states_removed(self, states, g_mesh = None):
-    #     """
-    #     Get a g mesh with the contributions from the states removed.
-    #
-    #     Optimized for SphericalHarmonicMeshes.
-    #
-    #     :param states: a list of states to remove from g_mesh
-    #     :param g_mesh: a g_mesh to remove the state contributions from. Defaults to self.g_mesh
-    #     :return:
-    #     """
-    #
-    #     if all(hasattr(s, 'spherical_harmonic') for s in states) and g_mesh is None:
-    #         g_mesh = self.g_mesh.copy()
-    #
-    #         for s in states:
-    #             g_mesh[s.l, :] -= self.inner_product_multiplier * np.sum(np.conj(self.get_radial_g_for_state(s)) * g_mesh[s.l, :]) * self.get_radial_g_for_state(s)
-    #
-    #         return g_mesh
-    #     else:
-    #         return super().get_g_with_states_removed(states, g_mesh = g_mesh)
+            raise NotImplementedError('States with non-definite angular momentum components are not currently supported by SphericalHarmonicMesh')
 
     @cp.utils.memoize
     def get_radial_g_for_state(self, state):
@@ -1611,6 +1600,8 @@ class SphericalHarmonicMesh(QuantumMesh):
     def inner_product_with_plane_waves_at_infinity(self, thetas, wavenumbers, g_mesh = None):
         """
         Return the inner products for each plane wave state in the Cartesian product of thetas and wavenumbers.
+        
+        WARNING: NOT WORKING
 
         :param wavenumbers:
         :param thetas:
@@ -1686,32 +1677,18 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return theta_mesh, wavenumber_mesh, inner_product_mesh
 
-    def _get_kinetic_energy_matrix_operators_H(self):
+    def _get_kinetic_energy_matrix_operators_HAM(self):
         r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
-        l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: ???
 
         r_diagonal = r_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         r_offdiagonal = r_prefactor * np.ones(self.mesh_points - 1, dtype = np.complex128)
-
-        @cp.utils.memoize
-        def a(l):
-            return l * np.sqrt(1 / (4 * (l ** 2) - 1))
-
-        l_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
-        l_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
-        for l_index in range(self.mesh_points - 1):
-            if (l_index + 1) % self.spec.l_bound != 0:
-                l = (l_index % self.spec.l_bound) + 1
-                l_offdiagonal[l_index] = a(l)
-        l_offdiagonal *= l_prefactor
 
         effective_potential_mesh = ((hbar ** 2) / (2 * electron_mass_reduced)) * self.l_mesh * (self.l_mesh + 1) / (self.r_mesh ** 2)
         r_diagonal += self.flatten_mesh(effective_potential_mesh, 'r')
 
         r_kinetic = sparse.diags([r_offdiagonal, r_diagonal, r_offdiagonal], offsets = (-1, 0, 1))
-        l_kinetic = sparse.diags([l_offdiagonal, l_diagonal, l_offdiagonal], offsets = (-1, 0, 1))
 
-        return r_kinetic, l_kinetic
+        return r_kinetic
 
     def _get_kinetic_energy_matrix_operator_single_l(self, l):
         def alpha(j):
@@ -1727,7 +1704,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
         effective_potential = ((hbar ** 2) / (2 * electron_mass_reduced)) * l * (l + 1) / (self.r ** 2)
 
-        r_beta = beta(np.array(range(len(self.r)), dtype = np.complex128))
+        r_beta = beta(np.array(self.spec.r_points, dtype = np.complex128))
         if l == 0:
             dr = self.delta_r / bohr_radius
             r_beta[0] += dr * (1 + dr) / 8
@@ -1744,7 +1721,79 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return r_kinetic
 
-    def _get_numeric_eigenstate_basis(self, energy_max, l_max):
+    def _get_kinetic_energy_matrix_operators_LAG(self):
+        """Get the radial kinetic energy matrix operator."""
+        r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
+
+        @cp.utils.memoize
+        def alpha(j):
+            x = (j ** 2) + (2 * j)
+            return (x + 1) / (x + 0.75)
+
+        @cp.utils.memoize
+        def beta(j):
+            x = 2 * (j ** 2) + (2 * j)
+            return (x + 1) / (x + 0.5)
+
+        r_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
+        r_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
+        for r_index in range(self.mesh_points):
+            j = r_index % self.spec.r_points
+            r_diagonal[r_index] = beta(j)
+        dr = self.delta_r / bohr_radius
+        r_diagonal[0] += dr * (1 + dr) / 8  # modify beta_j (see notes)
+
+        for r_index in range(self.mesh_points - 1):
+            if (r_index + 1) % self.spec.r_points != 0:  # TODO: should be possible to clean this if up
+                j = (r_index % self.spec.r_points)
+                r_offdiagonal[r_index] = alpha(j)
+        r_diagonal *= -2 * r_prefactor
+        r_offdiagonal *= r_prefactor
+
+        effective_potential_mesh = ((hbar ** 2) / (2 * electron_mass_reduced)) * self.l_mesh * (self.l_mesh + 1) / (self.r_mesh ** 2)
+        r_diagonal += self.flatten_mesh(effective_potential_mesh, 'r')
+
+        r_kinetic = sparse.diags([r_offdiagonal, r_diagonal, r_offdiagonal], offsets = (-1, 0, 1))
+
+        return r_kinetic
+
+    @cp.utils.memoize
+    def get_internal_hamiltonian_matrix_operators(self):
+        r_kinetic = self.get_kinetic_energy_matrix_operators().copy()
+
+        potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
+
+        r_kinetic.data[1] += self.flatten_mesh(potential_mesh, 'r')
+
+        return r_kinetic
+
+    @cp.utils.memoize
+    def get_interaction_hamiltonian_matrix_operators(self):
+        return getattr(self, f'_get_interaction_hamiltonian_matrix_operators_{self.spec.evolution_gauge}')()
+
+    def _get_interaction_hamiltonian_matrix_operators_LEN(self):
+        """Get the angular momentum interaction term calculated from the Lagrangian evolution equations, without the "field" term included."""
+        l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: double check this???
+
+        electric_field_amplitude = self.spec.electric_potential.get_electric_field_amplitude(self.sim.time)
+        l_prefactor *= self.spec.test_charge * electric_field_amplitude
+
+        l_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
+        l_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
+        for l_index in range(self.mesh_points - 1):
+            if (l_index + 1) % self.spec.l_bound != 0:
+                l = (l_index % self.spec.l_bound) + 1
+                l_offdiagonal[l_index] = three_j_coefficient(l)
+        l_offdiagonal *= l_prefactor
+
+        return sparse.diags([l_offdiagonal, l_diagonal, l_offdiagonal], offsets = (-1, 0, 1))
+
+    def _get_interaction_hamiltonian_matrix_operators_VEL(self):
+        vector_potential_amplitude = -self.spec.electric_potential.get_electric_field_integral_numeric(self.sim.times_to_current)
+
+        raise NotImplementedError
+
+    def get_numeric_eigenstate_basis(self, energy_max, l_max):
         analytic_to_numeric = {}
 
         for l in range(l_max + 1):
@@ -1793,65 +1842,8 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return analytic_to_numeric
 
-    # TODO: REFACTORRRRRRRRRR using tensor products
-
-    def _get_kinetic_energy_matrix_operators_L(self):
-        r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
-        l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: ???
-
-        @cp.utils.memoize
-        def alpha(j):
-            x = (j ** 2) + (2 * j)
-            return (x + 1) / (x + 0.75)
-
-        @cp.utils.memoize
-        def beta(j):
-            x = 2 * (j ** 2) + (2 * j)
-            return (x + 1) / (x + 0.5)
-
-        r_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
-        r_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
-        for r_index in range(self.mesh_points):
-            j = r_index % self.spec.r_points
-            r_diagonal[r_index] = beta(j)
-        dr = self.delta_r / bohr_radius
-        r_diagonal[0] += dr * (1 + dr) / 8
-
-        for r_index in range(self.mesh_points - 1):
-            if (r_index + 1) % self.spec.r_points != 0:  # TODO: should be possible to clean this if up
-                j = (r_index % self.spec.r_points)
-                r_offdiagonal[r_index] = alpha(j)
-        r_diagonal *= -2 * r_prefactor
-        r_offdiagonal *= r_prefactor
-
-        l_diagonal = np.zeros(self.mesh_points, dtype = np.complex128)
-        l_offdiagonal = np.zeros(self.mesh_points - 1, dtype = np.complex128)
-        for l_index in range(self.mesh_points - 1):
-            if (l_index + 1) % self.spec.l_bound != 0:
-                l = (l_index % self.spec.l_bound) + 1
-                l_offdiagonal[l_index] = self.c(l)
-        l_offdiagonal *= l_prefactor
-
-        effective_potential_mesh = ((hbar ** 2) / (2 * electron_mass_reduced)) * self.l_mesh * (self.l_mesh + 1) / (self.r_mesh ** 2)
-        r_diagonal += self.flatten_mesh(effective_potential_mesh, 'r')
-
-        r_kinetic = sparse.diags([r_offdiagonal, r_diagonal, r_offdiagonal], offsets = (-1, 0, 1))
-        l_kinetic = sparse.diags([l_offdiagonal, l_diagonal, l_offdiagonal], offsets = (-1, 0, 1))
-
-        return r_kinetic, l_kinetic
-
-    @cp.utils.memoize
-    def _get_internal_hamiltonian_matrix_operators(self):
-        r_kinetic, l_kinetic = self._get_kinetic_energy_matrix_operators()
-        potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
-
-        r_kinetic = r_kinetic.copy()
-        r_kinetic.data[1] += self.flatten_mesh(potential_mesh, 'r')
-
-        return r_kinetic, l_kinetic
-
     def tg_mesh(self, use_abs_g = False):
-        hamiltonian_r, hamiltonian_l = self._get_kinetic_energy_matrix_operators()
+        hamiltonian_r, hamiltonian_l = self.get_kinetic_energy_matrix_operators()
 
         if use_abs_g:
             g_mesh = np.abs(self.g_mesh)
@@ -1869,7 +1861,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         return hg_mesh_r + hg_mesh_l
 
     def hg_mesh(self):
-        hamiltonian_r, hamiltonian_l = self._get_internal_hamiltonian_matrix_operators()
+        hamiltonian_r, hamiltonian_l = self.get_internal_hamiltonian_matrix_operators()
 
         g_vector_r = self.flatten_mesh(self.g_mesh, 'r')
         hg_vector_r = hamiltonian_r.dot(g_vector_r)
@@ -1893,17 +1885,14 @@ class SphericalHarmonicMesh(QuantumMesh):
     def get_probability_current_vector_field(self):
         raise NotImplementedError
 
-    def _evolve_CN_L(self, time_step):
+    def _evolve_CN(self, time_step):
+        if self.spec.evolution_gauge == "VEL":
+            raise NotImplementedError
+
         tau = time_step / (2 * hbar)
 
-        electric_field_amplitude = self.spec.electric_potential.get_electric_field_amplitude(self.sim.time)
-        l_multiplier = self.spec.test_charge * electric_field_amplitude
-
-        hamiltonian_r, hamiltonian_l = self._get_internal_hamiltonian_matrix_operators()
-        hamiltonian_r, hamiltonian_l = hamiltonian_r.copy(), hamiltonian_l.copy()
-        hamiltonian_r *= 1j * tau
-        hamiltonian_l.data[0] *= 1j * tau * l_multiplier
-        hamiltonian_l.data[2] *= 1j * tau * l_multiplier
+        hamiltonian_r = 1j * tau * self.get_internal_hamiltonian_matrix_operators().copy()
+        hamiltonian_l = 1j * tau * self.get_interaction_hamiltonian_matrix_operators().copy()
 
         # STEP 1
         hamiltonian = -1 * hamiltonian_l
@@ -1931,48 +1920,35 @@ class SphericalHarmonicMesh(QuantumMesh):
         g_vector = tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'l')
 
-    def _get_split_operator_evolution_matrices_L(self, a):
-        """Calculate split operator evolution matrices for the interaction term in the length gauge."""
-        return get_split_operator_evolution_matrices_L(a)
-        # a_even, a_odd = a[::2], a[1::2]
-        #
-        # len_offdiag = len(a)
-        # len_diag = len_offdiag + 1
-        #
-        # even_diag = np.zeros(len_diag, dtype = np.complex128)
-        # even_diag[:] = np.cos(a_even).repeat(2)
-        #
-        # even_offdiag = np.zeros(len_offdiag, dtype = np.complex128)
-        # even_offdiag[0::2] = -1j * np.sin(a_even)
-        #
-        # odd_diag = np.zeros(len_diag, dtype = np.complex128)
-        # odd_diag[0] = 1
-        # odd_diag[-1] = 1
-        # odd_diag[1:-1] = np.cos(a_odd).repeat(2)
-        #
-        # odd_offdiag = np.zeros(len_offdiag, dtype = np.complex128)
-        # odd_offdiag[1::2] = -1j * np.sin(a_odd)
-        #
-        # even = sparse.diags((even_offdiag, even_diag, even_offdiag), offsets = [-1, 0, 1])
-        # odd = sparse.diags((odd_offdiag, odd_diag, odd_offdiag), offsets = [-1, 0, 1])
-        #
-        # return even, odd
+    def make_split_operator_evolution_matrices(self, *args):
+        return getattr(self, f'_make_split_operator_evolution_matrices_{self.spec.evolution_gauge}')(*args)
 
-    def _evolve_SO_L(self, time_step):
+    def _make_split_operator_evolution_matrices_LEN(self, a):
+        """Calculate split operator evolution matrices for the interaction term in the length gauge."""
+        return make_split_operator_evolution_matrices_LEN(a)  # cython call, marginally faster than pure python
+
+    def _make_split_operator_evolution_matrices_VEL(self, a):
+        """Calculate split operator evolution matrices for the interaction term in the velocity gauge."""
+        raise NotImplementedError
+
+    def _evolve_SO(self, time_step):
+        """Evolve the mesh forward in time by using a split-operator algorithm with length-gauge evolution operators."""
         tau = time_step / (2 * hbar)
 
         electric_field_amplitude = self.spec.electric_potential.get_electric_field_amplitude(self.sim.time + time_step / 2)
         l_multiplier = self.spec.test_charge * electric_field_amplitude
 
-        hamiltonian_r, hamiltonian_l = self._get_internal_hamiltonian_matrix_operators()
-        hamiltonian_r, hamiltonian_l = hamiltonian_r.copy(), hamiltonian_l.copy()
+        hamiltonian_r = self.get_internal_hamiltonian_matrix_operators().copy()
+        hamiltonian_l = self.get_interaction_hamiltonian_matrix_operators().copy()
         hamiltonian_r *= 1j * tau
         hamiltonian_l.data[0] *= tau * l_multiplier
 
-        even, odd = self._get_split_operator_evolution_matrices_L(hamiltonian_l.data[0][:-1])
+        even, odd = self._make_split_operator_evolution_matrices_LEN(hamiltonian_l.data[0][:-1])
+        # split_operators = self._make_split_operator_evolution_matrices_LEN(hamiltonian_l.data[0][:-1])
 
         # STEP 1 & 2
         self.g_mesh = self.wrap_vector(odd.dot(even.dot(self.flatten_mesh(self.g_mesh, 'l'))), 'l')
+        # self.g_mesh = self.wrap_vector(ft.reduce(np.dot, reversed(split_operators), self.flatten_mesh(self.g_mesh, 'l')), 'l')
 
         # STEP 3 & 4
         hamiltonian_3 = -1 * hamiltonian_r
@@ -1983,13 +1959,8 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         # STEP 5 & 6
         self.g_mesh = self.wrap_vector(even.dot(odd.dot(self.flatten_mesh(self.g_mesh, 'l'))), 'l')
+        # self.g_mesh = self.wrap_vector(ft.reduce(np.dot, split_operators, self.flatten_mesh(self.g_mesh, 'l')), 'l')
 
-    def _get_split_operator_evolution_matrices_V(self, a):
-        """Calculate split operator evolution matrices for the interaction term in the velocity gauge."""
-        raise NotImplementedError
-
-    def _evolve_SO_V(self, time_step):
-        raise NotImplementedError
 
     @cp.utils.memoize
     def get_mesh_slicer(self, distance_from_center = None):
@@ -2460,6 +2431,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
     @property
     def time(self):
         return self.times[self.time_index]
+
+    @property
+    def times_to_current(self):
+        return self.times[:self.time_index + 1]
 
     @property
     def state_overlaps_vs_time(self):

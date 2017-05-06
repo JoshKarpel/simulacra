@@ -56,7 +56,7 @@ def tdma(matrix, np.ndarray[complex_t, ndim = 1] d):
 
 @cython.boundscheck(False)
 @cython.nonecheck(False)
-def get_split_operator_evolution_matrices_L(np.ndarray[complex_t, ndim = 1] a):
+def make_split_operator_evolution_matrices_LEN(np.ndarray[complex_t, ndim = 1] a):
     cdef np.ndarray[complex_t, ndim = 1] a_even = a[::2]
     cdef np.ndarray[complex_t, ndim = 1] a_odd = a[1::2]
 
