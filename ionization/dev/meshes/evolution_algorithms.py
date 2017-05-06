@@ -37,28 +37,45 @@ if __name__ == '__main__':
 
         bound = 25 * bohr_radius
 
-        spec_base = dict(
-            r_bound = bound, rho_bound = bound, z_bound = bound,
-            l_bound = 50,
-            r_points = 400, theta_points = 400, rho_points = int(bound / bohr_radius) * 10, z_points = int(bound / bohr_radius) * 20,
-            initial_state = ion.HydrogenBoundState(2, 0),
-            test_states = tuple(ion.HydrogenBoundState(n, l) for n in range(5) for l in range(n)),
-            electric_potential = efield,
-            time_initial = 0 * asec, time_final = 500 * asec, time_step = 1 * asec,
+        hyd_spec_base = dict(
+                r_bound = bound, rho_bound = bound, z_bound = bound,
+                l_bound = 50,
+                r_points = 400, theta_points = 400, rho_points = int(bound / bohr_radius) * 10, z_points = int(bound / bohr_radius) * 20,
+                initial_state = ion.HydrogenBoundState(2, 0),
+                test_states = tuple(ion.HydrogenBoundState(n, l) for n in range(5) for l in range(n)),
+                electric_potential = efield,
+                time_initial = 0 * asec, time_final = 500 * asec, time_step = 1 * asec,
         )
+
+        line_potential = ion.HarmonicOscillator.from_energy_spacing_and_mass(1 * eV, electron_mass)
+        line_spec_base = hyd_spec_base.copy()
+        line_spec_base.update(dict(
+                x_bound = bound, x_points = 2 ** 10,
+                internal_potential = line_potential,
+                electric_potential = ion.SineWave.from_photon_energy(1 * eV, amplitude = .1 * atomic_electric_field),
+                initial_state = ion.QHOState.from_potential(line_potential, electron_mass),
+                test_states = tuple(ion.QHOState.from_potential(line_potential, electron_mass, n) for n in range(20)),
+        ))
 
         specs = []
 
-        for spec_type, method, equations, gauge in it.product(
-                (ion.CylindricalSliceSpecification, ion.SphericalSliceSpecification, ion.SphericalHarmonicSpecification),
+        for method, equations, gauge in it.product(
                 ('CN', 'SO', 'S'),
                 ('HAM', 'LAG'),
                 ('LEN', 'VEL')):
+            for spec_type in (ion.CylindricalSliceSpecification, ion.SphericalSliceSpecification, ion.SphericalHarmonicSpecification):
+                specs.append(
+                        spec_type(f'{spec_type.__name__[:-13]}_{method}_{equations}_{gauge}',
+                                  **hyd_spec_base,
+                                  evolution_method = method, evolution_equations = equations, evolution_gauge = gauge,
+                                  )
+                )
+
             specs.append(
-                spec_type(f'{spec_type.__name__[:-13]}_{method}_{equations}_{gauge}',
-                          **spec_base,
-                          evolution_method = method, evolution_equations = equations, evolution_gauge = gauge,
-                          )
+                    ion.LineSpecification(f'Line_{method}_{equations}_{gauge}',
+                                          **line_spec_base,
+                                          evolution_method = method, evolution_equations = equations, evolution_gauge = gauge,
+                                          )
             )
 
         results = cp.utils.multi_map(run_spec, specs)

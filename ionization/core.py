@@ -298,8 +298,12 @@ class QuantumMesh:
     def get_internal_hamiltonian_matrix_operators(self):
         raise NotImplementedError
 
-    def apply_operators(self, g, split_operators = (), crank_nicolson_operators = (), adi_operators = ()):
-        """wrapping direction for cn and adi operators ((op, direction), (op, direction)) etc"""
+    @cp.utils.memoize
+    def get_interaction_hamiltonian_matrix_operators(self):
+        try:
+            return getattr(self, f'_get_interaction_hamiltonian_matrix_operators_{self.spec.evolution_gauge}')()
+        except AttributeError:
+            raise NotImplementedError
 
     def evolve(self, time_step):
         try:
@@ -522,30 +526,7 @@ class LineMesh(QuantumMesh):
 
         return kinetic_x
 
-    def _evolve_S_LEN(self, time_step):
-        """Spectral evolution in the Length gauge."""
-        self._evolve_potential(time_step / 2)
-        self._evolve_free(time_step)  # splitting order chosen for computational efficiency (only one FFT per time step)
-        self._evolve_potential(time_step / 2)
-
-    def _evolve_SO_LEN(self, time_step):
-        """Split-Operator evolution in the Length gauge."""
-        self._evolve_potential(time_step / 2)
-
-        tau = time_step / (2 * hbar)
-        hamiltonian_x = self.get_kinetic_energy_matrix_operators()
-
-        hamiltonian = -1j * tau * hamiltonian_x
-        hamiltonian.data[1] += 1  # add identity to matrix operator
-        self.g_mesh = hamiltonian.dot(self.g_mesh)
-
-        hamiltonian = 1j * tau * hamiltonian_x
-        hamiltonian.data[1] += 1  # add identity to matrix operator
-        self.g_mesh = tdma(hamiltonian, self.g_mesh)
-
-        self._evolve_potential(time_step / 2)
-
-    def _evolve_CN_LEN(self, time_step):
+    def _evolve_CN(self, time_step):
         """Crank-Nicholson evolution in the Length gauge."""
         tau = time_step / (2 * hbar)
 
@@ -562,6 +543,29 @@ class LineMesh(QuantumMesh):
         hamiltonian = 1j * tau * hamiltonian_x
         hamiltonian.data[1] += 1  # add identity to matrix operator
         self.g_mesh = tdma(hamiltonian, self.g_mesh)
+
+    def _evolve_SO(self, time_step):
+        """Split-Operator evolution in the Length gauge."""
+        self._evolve_potential(time_step / 2)
+
+        tau = time_step / (2 * hbar)
+        hamiltonian_x = self.get_kinetic_energy_matrix_operators()
+
+        hamiltonian = -1j * tau * hamiltonian_x
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        self.g_mesh = hamiltonian.dot(self.g_mesh)
+
+        hamiltonian = 1j * tau * hamiltonian_x
+        hamiltonian.data[1] += 1  # add identity to matrix operator
+        self.g_mesh = tdma(hamiltonian, self.g_mesh)
+
+        self._evolve_potential(time_step / 2)
+
+    def _evolve_S(self, time_step):
+        """Spectral evolution in the Length gauge."""
+        self._evolve_potential(time_step / 2)
+        self._evolve_free(time_step)  # splitting order chosen for computational efficiency (only one FFT per time step)
+        self._evolve_potential(time_step / 2)
 
     def _get_numeric_eigenstate_basis(self, energy_max):
         analytic_to_numeric = {}
@@ -787,6 +791,20 @@ class CylindricalSliceMesh(QuantumMesh):
 
         return z_kinetic, rho_kinetic
 
+    def _get_interaction_hamiltonian_matrix_operators_LEN(self):
+        """Get the angular momentum interaction term calculated from the Lagrangian evolution equations."""
+        electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
+
+        interaction_mesh_r = self.flatten_mesh(electric_potential_energy_mesh, 'z')
+        interaction_mesh_theta = self.flatten_mesh(electric_potential_energy_mesh, 'rho')
+
+        return interaction_mesh_r, interaction_mesh_theta
+
+    def _get_interaction_hamiltonian_matrix_operators_VEL(self):
+        vector_potential_amplitude = -self.spec.electric_potential.get_electric_field_integral_numeric(self.sim.times_to_current)
+
+        raise NotImplementedError
+
     def tg_mesh(self, use_abs_g = False):
         hamiltonian_z, hamiltonian_rho = self.get_kinetic_energy_matrix_operators()
 
@@ -886,16 +904,17 @@ class CylindricalSliceMesh(QuantumMesh):
         """
         tau = time_step / (2 * hbar)
 
-        electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
-
         # add the external potential to the Hamiltonian matrices and multiply them by i * tau to get them ready for the next steps
         hamiltonian_z, hamiltonian_rho = self.get_internal_hamiltonian_matrix_operators()
         hamiltonian_z, hamiltonian_rho = hamiltonian_z.copy(), hamiltonian_rho.copy()
 
-        hamiltonian_z.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'z')
+        interaction_mesh_z, interaction_mesh_rho = self.get_interaction_hamiltonian_matrix_operators()
+        interaction_mesh_z, interaction_mesh_rho = interaction_mesh_z.copy(), interaction_mesh_rho.copy()
+
+        hamiltonian_z.data[1] += 0.5 * interaction_mesh_z
         hamiltonian_z *= 1j * tau
 
-        hamiltonian_rho.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'rho')
+        hamiltonian_rho.data[1] += 0.5 * interaction_mesh_rho
         hamiltonian_rho *= 1j * tau
 
         # STEP 1
@@ -1191,6 +1210,20 @@ class SphericalSliceMesh(QuantumMesh):
 
         return r_kinetic, theta_kinetic
 
+    def _get_interaction_hamiltonian_matrix_operators_LEN(self):
+        """Get the angular momentum interaction term calculated from the Lagrangian evolution equations."""
+        electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
+
+        interaction_mesh_r = self.flatten_mesh(electric_potential_energy_mesh, 'r')
+        interaction_mesh_theta = self.flatten_mesh(electric_potential_energy_mesh, 'theta')
+
+        return interaction_mesh_r, interaction_mesh_theta
+
+    def _get_interaction_hamiltonian_matrix_operators_VEL(self):
+        vector_potential_amplitude = -self.spec.electric_potential.get_electric_field_integral_numeric(self.sim.times_to_current)
+
+        raise NotImplementedError
+
     def tg_mesh(self, use_abs_g = False):
         hamiltonian_r, hamiltonian_theta = self.get_kinetic_energy_matrix_operators()
 
@@ -1240,16 +1273,17 @@ class SphericalSliceMesh(QuantumMesh):
         """Crank-Nicholson evolution in the Length gauge."""
         tau = time_step / (2 * hbar)
 
-        electric_potential_energy_mesh = self.spec.electric_potential(t = self.sim.time, distance_along_polarization = self.z_mesh, test_charge = self.spec.test_charge)
-
         # add the external potential to the Hamiltonian matrices and multiply them by i * tau to get them ready for the next steps
         hamiltonian_r, hamiltonian_theta = self.get_internal_hamiltonian_matrix_operators()
         hamiltonian_r, hamiltonian_theta = hamiltonian_r.copy(), hamiltonian_theta.copy()
 
-        hamiltonian_r.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'r')
+        interaction_mesh_r, interaction_mesh_theta = self.get_interaction_hamiltonian_matrix_operators()
+        interaction_mesh_r, interaction_mesh_theta = interaction_mesh_r.copy(), interaction_mesh_theta.copy()
+
+        hamiltonian_r.data[1] += 0.5 * interaction_mesh_r
         hamiltonian_r *= 1j * tau
 
-        hamiltonian_theta.data[1] += 0.5 * self.flatten_mesh(electric_potential_energy_mesh, 'theta')
+        hamiltonian_theta.data[1] += 0.5 * interaction_mesh_theta
         hamiltonian_theta *= 1j * tau
 
         # STEP 1
@@ -1767,10 +1801,6 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return r_kinetic
 
-    @cp.utils.memoize
-    def get_interaction_hamiltonian_matrix_operators(self):
-        return getattr(self, f'_get_interaction_hamiltonian_matrix_operators_{self.spec.evolution_gauge}')()
-
     def _get_interaction_hamiltonian_matrix_operators_LEN(self):
         """Get the angular momentum interaction term calculated from the Lagrangian evolution equations, without the "field" term included."""
         l_prefactor = self.flatten_mesh(self.r_mesh, 'l')[:-1]  # TODO: double check this???
@@ -1891,8 +1921,8 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         tau = time_step / (2 * hbar)
 
-        hamiltonian_r = 1j * tau * self.get_internal_hamiltonian_matrix_operators().copy()
-        hamiltonian_l = 1j * tau * self.get_interaction_hamiltonian_matrix_operators().copy()
+        hamiltonian_r = 1j * tau * self.get_internal_hamiltonian_matrix_operators()
+        hamiltonian_l = 1j * tau * self.get_interaction_hamiltonian_matrix_operators()
 
         # STEP 1
         hamiltonian = -1 * hamiltonian_l
@@ -1935,15 +1965,9 @@ class SphericalHarmonicMesh(QuantumMesh):
         """Evolve the mesh forward in time by using a split-operator algorithm with length-gauge evolution operators."""
         tau = time_step / (2 * hbar)
 
-        electric_field_amplitude = self.spec.electric_potential.get_electric_field_amplitude(self.sim.time + time_step / 2)
-        l_multiplier = self.spec.test_charge * electric_field_amplitude
+        hamiltonian_r = 1j * tau * self.get_internal_hamiltonian_matrix_operators()
 
-        hamiltonian_r = self.get_internal_hamiltonian_matrix_operators().copy()
-        hamiltonian_l = self.get_interaction_hamiltonian_matrix_operators().copy()
-        hamiltonian_r *= 1j * tau
-        hamiltonian_l.data[0] *= tau * l_multiplier
-
-        even, odd = self._make_split_operator_evolution_matrices_LEN(hamiltonian_l.data[0][:-1])
+        even, odd = self._make_split_operator_evolution_matrices_LEN(tau * self.get_interaction_hamiltonian_matrix_operators().data[0][:-1])
         # split_operators = self._make_split_operator_evolution_matrices_LEN(hamiltonian_l.data[0][:-1])
 
         # STEP 1 & 2
