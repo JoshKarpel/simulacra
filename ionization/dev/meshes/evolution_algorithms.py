@@ -1,3 +1,7 @@
+"""
+This script tests all of the evolution methods on each mesh.
+"""
+
 import os
 import logging
 import itertools as it
@@ -12,7 +16,9 @@ from compy.units import *
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-logman = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.INFO)
+logman = cp.utils.LogManager('compy', 'ionization',
+                             stdout_level = logging.INFO,
+                             file_logs = True, file_level = logging.WARN, file_dir = OUT_DIR, file_name = FILE_NAME)
 
 
 def run_spec(spec):
@@ -65,14 +71,14 @@ if __name__ == '__main__':
                 ('LEN', 'VEL')):
             for spec_type in (ion.CylindricalSliceSpecification, ion.SphericalSliceSpecification, ion.SphericalHarmonicSpecification):
                 specs.append(
-                        spec_type(f'{spec_type.__name__[:-13]}_{method}_{equations}_{gauge}',
+                        spec_type(f'{spec_type.__name__[:-13]}__method={method}_equations={equations}_gauge={gauge}',
                                   **hyd_spec_base,
                                   evolution_method = method, evolution_equations = equations, evolution_gauge = gauge,
                                   )
                 )
 
             specs.append(
-                    ion.LineSpecification(f'Line_{method}_{equations}_{gauge}',
+                    ion.LineSpecification(f'Line___method={method}_equations={equations}_gauge={gauge}',
                                           **line_spec_base,
                                           evolution_method = method, evolution_equations = equations, evolution_gauge = gauge,
                                           )
