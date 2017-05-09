@@ -205,14 +205,19 @@ class PulseParameterScanMixin:
                             z_lower_limit = np.nanmin(z_mesh)
                             z_upper_limit = 1
 
-                            cp.plots.xyz_plot('2d__' + plot_name + log_str,
-                                              x_mesh, y_mesh, z_mesh,
-                                              x_unit = x_parameter_unit, y_unit = y_parameter_unit,
-                                              x_label = x_parameter_name, y_label = y_parameter_name,
-                                              x_log_axis = log_x, y_log_axis = log_y,
-                                              z_log_axis = True, z_lower_limit = z_lower_limit, z_upper_limit = z_upper_limit,
-                                              z_label = f"{ionization_metric_name} for {plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
-                                              target_dir = self.summaries_dir)
+                            plot_name = '2d__' + plot_name + log_str
+
+                            try:
+                                cp.plots.xyz_plot(plot_name,
+                                                  x_mesh, y_mesh, z_mesh,
+                                                  x_unit = x_parameter_unit, y_unit = y_parameter_unit,
+                                                  x_label = x_parameter_name, y_label = y_parameter_name,
+                                                  x_log_axis = log_x, y_log_axis = log_y,
+                                                  z_log_axis = True, z_lower_limit = z_lower_limit, z_upper_limit = z_upper_limit,
+                                                  z_label = f"{ionization_metric_name} for {plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
+                                                  target_dir = self.summaries_dir)
+                            except ValueError as e:
+                                logger.warning(f'Failed to make plot {plot_name} because of {e}')
 
 
 class ElectricFieldSimulationResult(clu.SimulationResult):
