@@ -22,7 +22,8 @@ if __name__ == '__main__':
                                                  ).to_simulation()
 
         logger.info(sim.info())
-        sim.run_simulation()
+        with cp.utils.BlockTimer() as timer:
+            sim.run_simulation()
         logger.info(sim.info())
 
         mesh_points = sim.mesh.mesh_points
@@ -32,5 +33,8 @@ if __name__ == '__main__':
         logger.info(f'Number of Space Points: {mesh_points}')
         logger.info(f'Number of Time Points: {time_points}')
         logger.info(f'Number of Space-Time Points: {space_time_points}')
+        logger.info(f'Sim Runtime: {sim.running_time}')
+        logger.info(f'BlockTimer: {timer}')
 
-        logger.info(f'Space-Time Points / Runtime: {round(space_time_points / sim.running_time.total_seconds())}')
+        logger.info(f'Space-Time Points / Runtime (according to Sim): {round(space_time_points / sim.running_time.total_seconds())}')
+        logger.info(f'Space-Time Points / Runtime (according to BlockTimer): {round(space_time_points / timer.proc_time_elapsed)}')

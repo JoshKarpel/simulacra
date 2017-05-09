@@ -431,7 +431,7 @@ class JobProcessor(core.Beet):
 
                 self.save(target_dir = self.job_dir_path)
 
-        logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, t.time_elapsed))
+        logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, t.wall_time_elapsed))
 
     def summarize(self):
         with utils.BlockTimer() as t:
@@ -444,7 +444,7 @@ class JobProcessor(core.Beet):
 
             self.make_summary_plots()
 
-        logger.info('Finished summaries for job {}. Elapsed time: {}'.format(self.name, t.time_elapsed))
+        logger.info('Finished summaries for job {}. Elapsed time: {}'.format(self.name, t.wall_time_elapsed))
 
     def write_to_csv(self):
         raise NotImplementedError
