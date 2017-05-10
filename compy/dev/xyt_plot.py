@@ -32,5 +32,5 @@ if __name__ == '__main__':
                           x_unit = 'cm', t_unit = 's',
                           fig_dpi_scale = 3,
                           progress_bar = True,
-                          save_csv = True,
+                          save_csv = False,
                           target_dir = OUT_DIR)

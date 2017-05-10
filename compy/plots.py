@@ -676,7 +676,7 @@ def xyt_plot(name,
              line_labels = (), line_kwargs = (),
              figure_manager = None,
              x_unit = None, y_unit = None, t_unit = None,
-             t_fmt_string = r'$t = {}$', t_text_kwargs = None,
+             t_fmt_string = r'$t = {} \; {}$', t_text_kwargs = None,
              x_log_axis = False, y_log_axis = False,
              x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None,
              vlines = (), vline_kwargs = (), hlines = (), hline_kwargs = (),
@@ -771,7 +771,7 @@ def xyt_plot(name,
         y_unit_label = get_unit_label(y_unit)
 
         t_unit_value, t_unit_tex = get_unit_value_and_tex_from_unit(t_unit)
-        t_unit_label = get_unit_label(t_unit)
+        t_unit_label = t_unit_tex
 
         attach_hv_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
         attach_hv_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
@@ -854,7 +854,7 @@ def xyt_plot(name,
 
         t_text_kwargs = {**T_TEXT_KWARGS, **t_text_kwargs}
 
-        t_str = t_fmt_string.format(uround(t_data[0], t_unit, digits = 3)) + t_unit_label
+        t_str = t_fmt_string.format(uround(t_data[0], t_unit, digits = 3), t_unit_label)
         t_text = plt.figtext(.7, .05, t_str, **t_text_kwargs, animated = True)
 
         # do animation
@@ -894,7 +894,7 @@ def xyt_plot(name,
                     fig.draw_artist(line)
 
                 # update and redraw t strings
-                t_text.set_text(t_fmt_string.format(uround(t, t_unit, digits = 3)) + t_unit_label)
+                t_text.set_text(t_fmt_string.format(uround(t, t_unit, digits = 3), t_unit_label))
                 fig.draw_artist(t_text)
 
                 fig.canvas.blit(fig.bbox)
@@ -918,7 +918,7 @@ def xyzt_plot(name,
               x_mesh, y_mesh, t_data, z_func, z_func_kwargs = None,
               figure_manager = None,
               x_unit = None, y_unit = None, t_unit = None, z_unit = None,
-              t_fmt_string = r'$t = {}$', t_text_kwargs = None,
+              t_fmt_string = r'$t = {} \; {}$', t_text_kwargs = None,
               x_log_axis = False, y_log_axis = False, z_log_axis = False,
               x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, z_lower_limit = None, z_upper_limit = None,
               vlines = (), vline_kwargs = (), hlines = (), hline_kwargs = (),
@@ -966,7 +966,7 @@ def xyzt_plot(name,
         z_unit_label = get_unit_label(z_unit)
 
         t_unit_value, t_unit_tex = get_unit_value_and_tex_from_unit(t_unit)
-        t_unit_label = get_unit_label(t_unit)
+        t_unit_label = t_unit_tex
 
         attach_hv_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
         attach_hv_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
@@ -1052,7 +1052,7 @@ def xyzt_plot(name,
 
         t_text_kwargs = {**T_TEXT_KWARGS, **t_text_kwargs}
 
-        t_str = t_fmt_string.format(uround(t_data[0], t_unit, digits = 3)) + t_unit_label
+        t_str = t_fmt_string.format(uround(t_data[0], t_unit, digits = 3), t_unit_label)
         t_text = plt.figtext(.7, .05, t_str, **t_text_kwargs, animated = True)
 
         # do animation
@@ -1090,7 +1090,7 @@ def xyzt_plot(name,
                 fig.draw_artist(colormesh)
 
                 # update and redraw t strings
-                t_text.set_text(t_fmt_string.format(uround(t, t_unit, digits = 3)) + t_unit_label)
+                t_text.set_text(t_fmt_string.format(uround(t, t_unit, digits = 3), t_unit_label))
                 fig.draw_artist(t_text)
 
                 fig.canvas.blit(fig.bbox)
