@@ -132,17 +132,16 @@ if __name__ == '__main__':
         pulse_parameters.append(phases)
 
         window_time_in_pw = clu.Parameter(name = 'window_time_in_pw',
-                                          value = clu.ask_for_eval('Window Time (in pulse widths)?', default = 'np.linspace(3, 50, 50)'),
-                                          expandable = True)
+                                          value = clu.ask_for_eval('Window Time (in pulse widths)?', default = 'np.linspace(3, 50, 50)'))
         window_width_in_pw = clu.Parameter(name = 'window_width_in_pw',
                                            value = clu.ask_for_input('Window Width (in pulse widths)?', default = 0.2, cast_to = float))
         parameters.append(window_time_in_pw)
         parameters.append(window_width_in_pw)
 
         pulses = tuple(ion.SincPulse(**d,
-                                     window = ion.SymmetricExponentialTimeWindow(window_time = d['pulse_width'] * window_time_in_pw.value,
+                                     window = ion.SymmetricExponentialTimeWindow(window_time = d['pulse_width'] * window,
                                                                                  window_width = d['pulse_width'] * window_width_in_pw.value))
-                       for d in clu.expand_parameters_to_dicts(pulse_parameters))
+                       for d in clu.expand_parameters_to_dicts(pulse_parameters) for window in window_time_in_pw.value)
 
         if pulse_type != ion.SincPulse:
             pulses = tuple(pulse_type(pulse_width = p.pulse_width, fluence = p.fluence, phase = p.phase,

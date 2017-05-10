@@ -24,6 +24,7 @@ import numpy as np
 from compy.units import *
 from . import core, utils, plots
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -735,7 +736,8 @@ def write_parameters_info_to_file(parameters, job_dir):
     logger.debug('Saved Parameter information')
 
 
-CHTC_SUBMIT_STRING = """universe = vanilla
+CHTC_SUBMIT_STRING = """
+universe = vanilla
 log = logs/cluster_$(Cluster).log
 error = logs/$(Process).err
 #
@@ -747,21 +749,25 @@ when_to_transfer_output = ON_EXIT_OR_EVICT
 transfer_input_files = /home/karpel/backend/compy.tar.gz, /home/karpel/backend/ionization.tar.gz, /home/karpel/backend/run_sim.py, inputs/$(Process).spec, http://proxy.chtc.wisc.edu/SQUID/karpel/python.tar.gz
 transfer_output_remaps = "$(Process).sim = outputs/$(Process).sim ; $(Process).log = logs/$(Process).log ; $(Process).mp4 = outputs/$(Process).mp4"
 #
-+JobBatchName = "{}"
++JobBatchName = "{batch_name}"
 #
-+is_resumable = {}
-+WantGlidein = {}
-+WantFlocking = {}
++is_resumable = {checkpoints}
++WantGlidein = {flockglide}
++WantFlocking = {flockglide}
+#
+skip_filechecks = True
+max_materialize = 5000
 #
 on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
 #
 request_cpus = 1
-request_memory = {}GB
-request_disk = {}GB
+request_memory = {memory}GB
+request_disk = {disk}GB
 #
 requirements = (OpSysMajorVer == 6) || (OpSysMajorVer == 7)
 #
-queue {}"""
+queue {num_jobs}
+"""
 
 
 def format_chtc_submit_string(job_name, specification_count, checkpoints = True):
@@ -770,22 +776,19 @@ def format_chtc_submit_string(job_name, specification_count, checkpoints = True)
     
     :param job_name: the name of the job
     :param specification_count: the number of Specifications in the job
-    :param memory: the amount of memory to request for each Simulation, in GB
-    :param disk: the amount of disk to request for each Simulation, in GB
     :param checkpoints: if the Simulations are going to use checkpoints, this should be True
     :return: an HTCondor submit string
     """
-    if checkpoints:
-        check = 'true'
-    else:
-        check = 'false'
+    fmt = dict(
+        batch_name = ask_for_input('Job batch name?', default = job_name, cast_to = str),
+        checkpoints = str(checkpoints).lower(),
+        flockglide = str(ask_for_bool('Flock and Glide?', default = 'y')).lower(),
+        memory = ask_for_input('Memory (in GB)?', default = 4, cast_to = float),
+        disk = ask_for_input('Disk (in GB)?', default = 1, cast_to = float),
+        num_jobs = specification_count,
+    )
 
-    memory = ask_for_input('Memory (in GB)?', default = 4, cast_to = float)
-    disk = ask_for_input('Disk (in GB)?', default = 1, cast_to = float)
-
-    submit_string = CHTC_SUBMIT_STRING.format(job_name, check, check, check, memory, disk, specification_count)
-
-    return submit_string
+    return CHTC_SUBMIT_STRING.format(**fmt).strip()
 
 
 def specification_check(specifications, check = 3):
@@ -842,4 +845,4 @@ def submit_job(job_dir):
 
     os.chdir(job_dir)
 
-    subprocess.run(['condor_submit', 'submit_job.sub'])
+    subprocess.run(['condor_submit', 'submit_job.sub', '-factory'])
