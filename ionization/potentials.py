@@ -27,14 +27,6 @@ class PotentialEnergySum(cp.Sum, PotentialEnergy):
 
     container_name = 'potentials'
 
-    # TODO: try to figure out alternate way to do the below
-
-    def get_electric_field_amplitude(self, t):
-        return sum(x.get_electric_field_amplitude(t) for x in self._container)
-
-    def get_electric_field_integral_numeric(self, t):
-        return sum(x.get_electric_field_integral_numeric(t) for x in self._container)
-
 
 class NoPotentialEnergy(PotentialEnergy):
     """A class representing no potential energy from any source."""

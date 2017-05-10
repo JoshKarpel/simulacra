@@ -6,6 +6,7 @@ import scipy as sp
 
 import compy as cp
 
+
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
@@ -30,5 +31,6 @@ if __name__ == '__main__':
                           x_label = '$x$', y_label = '$\mathcal{H}$',
                           x_unit = 'cm', t_unit = 's',
                           fig_dpi_scale = 3,
-                          progress_bar = False,
+                          progress_bar = True,
+                          save_csv = False,
                           target_dir = OUT_DIR)

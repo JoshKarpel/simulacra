@@ -623,7 +623,7 @@ class LineMesh(QuantumMesh):
         return mesh_slicer
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, distance_unit = 'nm', **kwargs):
-        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
 
         line, = axis.plot(self.x_mesh[self.get_mesh_slicer(plot_limit)] / unit_value, mesh[self.get_mesh_slicer(plot_limit)], **kwargs)
 
@@ -956,7 +956,7 @@ class CylindricalSliceMesh(QuantumMesh):
         return mesh_slicer
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, distance_unit = 'bohr_radius', **kwargs):
-        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
 
         color_mesh = axis.pcolormesh(self.z_mesh[self.get_mesh_slicer(plot_limit)] / unit_value,
                                      self.rho_mesh[self.get_mesh_slicer(plot_limit)] / unit_value,
@@ -967,7 +967,7 @@ class CylindricalSliceMesh(QuantumMesh):
         return color_mesh
 
     def attach_probability_current_to_axis(self, axis, plot_limit = None, distance_unit = 'bohr_radius'):
-        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
 
         current_mesh_z, current_mesh_rho = self.get_probability_current_vector_field()
 
@@ -997,7 +997,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         plt.set_cmap(color_map)
 
-        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
 
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
@@ -1324,7 +1324,7 @@ class SphericalSliceMesh(QuantumMesh):
         return mesh_slicer
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, distance_unit = 'bohr_radius', **kwargs):
-        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
 
         color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer(plot_limit)],
                                      self.r_mesh[self.get_mesh_slicer(plot_limit)] / unit_value,
@@ -1352,7 +1352,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         plt.set_cmap(color_map)
 
-        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
 
         fig = cp.plots.get_figure('full')
         fig.set_tight_layout(True)
@@ -2075,7 +2075,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         :param kwargs:
         :return:
         """
-        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
 
         color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer_spatial(plot_limit)],
                                      self.r_theta_mesh[self.get_mesh_slicer_spatial(plot_limit)] / unit_value,
@@ -2108,7 +2108,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         :param kwargs:
         :return:
         """
-        unit_value, unit_name = unit_value_and_name_from_unit(distance_unit)
+        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
 
         with cp.plots.FigureManager(self.sim.name + '__' + name, **kwargs) as figman:
             fig = figman.fig
@@ -2228,7 +2228,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         if r_type not in ('wavenumber', 'energy', 'momentum'):
             raise ValueError("Invalid argument to plot_electron_spectrum: r_type must be either 'wavenumber', 'energy', or 'momentum'")
 
-        r_unit_value, r_unit_name = unit_value_and_name_from_unit(r_scale)
+        r_unit_value, r_unit_name = get_unit_value_and_tex_from_unit(r_scale)
 
         plot_kwargs = {**dict(aspect_ratio = 1), **kwargs}
 
@@ -2628,7 +2628,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             boundaries = np.linspace(attr_min, cutoff_value, num = divisions)
             boundaries = np.concatenate((boundaries, [attr_max]))
 
-        label_unit, label_unit_str = unit_value_and_name_from_unit(label_unit)
+        label_unit, label_unit_str = get_unit_value_and_tex_from_unit(label_unit)
 
         free_states = list(self.free_states)
 
@@ -2673,7 +2673,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
                                          **kwargs):
         fig = cp.plots.get_figure('full')
 
-        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(x_unit)
+        x_scale_unit, x_scale_name = get_unit_value_and_tex_from_unit(x_unit)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
         ax_overlaps = plt.subplot(grid_spec[0])
@@ -2767,7 +2767,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         """
         fig = cp.plots.get_figure('full')
 
-        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(x_unit)
+        x_scale_unit, x_scale_name = get_unit_value_and_tex_from_unit(x_unit)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
         ax_overlaps = plt.subplot(grid_spec[0])
@@ -2906,8 +2906,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
                              energy_lower_bound = None, energy_upper_bound = None,
                              group_angular_momentum = True, angular_momentum_cutoff = None,
                              **kwargs):
-        energy_unit, energy_unit_str = unit_value_and_name_from_unit(energy_scale)
-        time_unit, time_unit_str = unit_value_and_name_from_unit(time_scale)
+        energy_unit, energy_unit_str = get_unit_value_and_tex_from_unit(energy_scale)
+        time_unit, time_unit_str = get_unit_value_and_tex_from_unit(time_scale)
 
         if states == 'all':
             state_list = self.spec.test_states

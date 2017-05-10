@@ -2,33 +2,37 @@
 
 import numpy as _np
 
-unit_names_to_values = {}
-unit_names_to_tex_strings = {}
+from .utils import memoize
 
 
-def uround(value, units = 1, digits = 3):
-    """Round value to the number of digits, represented in the given units (by name or value)."""
-    if value is None:
-        return None
-    if type(units) == str:
-        units = unit_names_to_values[units]
-
-    return _np.around(value / units, digits)
+UNIT_NAMES_TO_VALUES = {}
+UNIT_NAMES_TO_TEX = {}
 
 
-def unit_value_and_name_from_unit(unit):
-    """Return the (unit_value, unit_tex_string) pair from a unit name."""
+@memoize
+def get_unit_value_and_tex_from_unit(unit):
+    """Return the (unit_value, unit_tex) pair from a unit name."""
     if unit is None:
-        unit_value = 1
-        unit_tex_string = ''
-    elif type(unit) == str:
-        unit_value = unit_names_to_values[unit]
-        unit_tex_string = unit_names_to_tex_strings[unit]
+        unit = 1
+
+    if type(unit) == str:
+        unit_value = UNIT_NAMES_TO_VALUES[unit]
+        unit_tex = UNIT_NAMES_TO_TEX[unit]
     else:
         unit_value = unit
-        unit_tex_string = ''
+        unit_tex = ''
 
-    return unit_value, unit_tex_string
+    return unit_value, unit_tex
+
+
+def uround(value, unit = None, digits = 3):
+    """Round value to the number of digits, represented in the given units (by name or value)."""
+    if value is None:
+        return value
+
+    unit_value, _ = get_unit_value_and_tex_from_unit(unit)
+
+    return _np.around(value / unit_value, digits)
 
 
 # dimensionless constants
@@ -37,11 +41,11 @@ pi = _np.pi
 twopi = 2 * _np.pi
 e = _np.e
 
-unit_names_to_values.update({'alpha': alpha,
+UNIT_NAMES_TO_VALUES.update({'alpha': alpha,
                              'pi': pi,
                              'twopi': twopi,
                              'e': e})
-unit_names_to_tex_strings.update({'alpha': r'\alpha',
+UNIT_NAMES_TO_TEX.update({'alpha': r'\alpha',
                                   'pi': '\pi',
                                   'twopi': r'2\pi',
                                   'e': 'e'})
@@ -55,7 +59,7 @@ K = 1
 rad = 1
 deg = rad * 180 / pi
 
-unit_names_to_values.update({'m': m,
+UNIT_NAMES_TO_VALUES.update({'m': m,
                              's': s,
                              'kg': kg,
                              'A': A,
@@ -65,7 +69,7 @@ unit_names_to_values.update({'m': m,
                              'deg': deg,
                              'degrees': deg,
                              })
-unit_names_to_tex_strings.update({'m': r'\mathrm{m}',
+UNIT_NAMES_TO_TEX.update({'m': r'\mathrm{m}',
                                   's': r'\mathrm{s}',
                                   'kg': r'\mathrm{kg}',
                                   'A': r'\mathrm{A}',
@@ -74,7 +78,7 @@ unit_names_to_tex_strings.update({'m': r'\mathrm{m}',
                                   'radian': r'\mathrm{rad}',
                                   'deg': r'\mathrm{deg}',
                                   'degrees': r'\mathrm{deg}',
-                                  })
+                          })
 
 # distance
 cm = 1e-2 * m
@@ -93,7 +97,7 @@ angstrom = 1e-10 * m
 bohr_radius = 5.2917721067e-11 * m
 inch = 2.54 * cm
 
-unit_names_to_values.update({'cm': cm,
+UNIT_NAMES_TO_VALUES.update({'cm': cm,
                              'mm': mm,
                              'um': um,
                              'nm': nm,
@@ -108,7 +112,7 @@ unit_names_to_values.update({'cm': cm,
                              'bohr_radius': bohr_radius,
                              'inch': inch,
                              'per_nm': per_nm})
-unit_names_to_tex_strings.update({'cm': r'\mathrm{cm}',
+UNIT_NAMES_TO_TEX.update({'cm': r'\mathrm{cm}',
                                   'cetimeter': r'\mathrm{cm}',
                                   'cetimeters': r'\mathrm{cm}',
                                   'mm': r'\mathrm{mm}',
@@ -117,28 +121,28 @@ unit_names_to_tex_strings.update({'cm': r'\mathrm{cm}',
                                   'um': r'\mathrm{um}',
                                   'micrometer': r'\mathrm{um}',
                                   'micrometers': r'\mathrm{um}',
-                                  'micron': r'\mathrm{um}',
-                                  'microns': r'\mathrm{um}',
-                                  'nm': r'\mathrm{nm}',
-                                  'nanometer': r'\mathrm{nm}',
-                                  'nanometers': r'\mathrm{nm}',
-                                  'pm': r'\mathrm{pm}',
-                                  'picometer': r'\mathrm{pm}',
-                                  'picometers': r'\mathrm{pm}',
-                                  'fm': r'\mathrm{fm}',
-                                  'femtometer': r'\mathrm{fm}',
-                                  'femtometers': r'\mathrm{fm}',
-                                  'km': r'\mathrm{km}',
-                                  'kilometer': r'\mathrm{km}',
-                                  'kilometers': r'\mathrm{km}',
-                                  'Mm': r'\mathrm{Mm}',
-                                  'Gm': r'\mathrm{Gm}',
-                                  'Tm': r'\mathrm{Tm}',
-                                  'Pm': r'\mathrm{Pm}',
-                                  'angstrom': r'\mathrm{\AA}',
-                                  'bohr_radius': r'a_0',
-                                  'inch': r'\mathrm{in}',
-                                  'per_nm': r'\mathrm{nm^{-1}}'})
+                          'micron': r'\mathrm{um}',
+                          'microns': r'\mathrm{um}',
+                          'nm': r'\mathrm{nm}',
+                          'nanometer': r'\mathrm{nm}',
+                          'nanometers': r'\mathrm{nm}',
+                          'pm': r'\mathrm{pm}',
+                          'picometer': r'\mathrm{pm}',
+                          'picometers': r'\mathrm{pm}',
+                          'fm': r'\mathrm{fm}',
+                          'femtometer': r'\mathrm{fm}',
+                          'femtometers': r'\mathrm{fm}',
+                          'km': r'\mathrm{km}',
+                          'kilometer': r'\mathrm{km}',
+                          'kilometers': r'\mathrm{km}',
+                          'Mm': r'\mathrm{Mm}',
+                          'Gm': r'\mathrm{Gm}',
+                          'Tm': r'\mathrm{Tm}',
+                          'Pm': r'\mathrm{Pm}',
+                          'angstrom': r'\mathrm{\AA}',
+                          'bohr_radius': r'a_0',
+                          'inch': r'\mathrm{in}',
+                          'per_nm': r'\mathrm{nm^{-1}}'})
 
 # time
 msec = 1e-3 * s
@@ -153,7 +157,7 @@ days = day = 24 * hour
 weeks = week = 7 * day
 years = year = 365 * day
 
-unit_names_to_values.update({'ms': msec,
+UNIT_NAMES_TO_VALUES.update({'ms': msec,
                              'msec': msec,
                              'us': usec,
                              'usec': usec,
@@ -175,7 +179,7 @@ unit_names_to_values.update({'ms': msec,
                              'weeks': week,
                              'year': year,
                              'years': year})
-unit_names_to_tex_strings.update({'ms': r'\mathrm{ms}',
+UNIT_NAMES_TO_TEX.update({'ms': r'\mathrm{ms}',
                                   'msec': r'\mathrm{ms}',
                                   'us': r'\mathrm{us}',
                                   'usec': r'\mathrm{us}',
@@ -184,19 +188,19 @@ unit_names_to_tex_strings.update({'ms': r'\mathrm{ms}',
                                   'ps': r'\mathrm{ps}',
                                   'psec': r'\mathrm{ps}',
                                   'fs': r'\mathrm{fs}',
-                                  'fsec': r'\mathrm{fs}',
-                                  'as': r'\mathrm{as}',
-                                  'asec': r'\mathrm{as}',
-                                  'minute': '\mathrm{minutes}',
-                                  'minutes': '\mathrm{minutes}',
-                                  'hour': '\mathrm{hours}',
-                                  'hours': '\mathrm{hours}',
-                                  'day': '\mathrm{days}',
-                                  'days': '\mathrm{days}',
-                                  'week': '\mathrm{weeks}',
-                                  'weeks': '\mathrm{weeks}',
-                                  'year': '\mathrm{years}',
-                                  'years': '\mathrm{years}'})
+                          'fsec': r'\mathrm{fs}',
+                          'as': r'\mathrm{as}',
+                          'asec': r'\mathrm{as}',
+                          'minute': '\mathrm{minutes}',
+                          'minutes': '\mathrm{minutes}',
+                          'hour': '\mathrm{hours}',
+                          'hours': '\mathrm{hours}',
+                          'day': '\mathrm{days}',
+                          'days': '\mathrm{days}',
+                          'week': '\mathrm{weeks}',
+                          'weeks': '\mathrm{weeks}',
+                          'year': '\mathrm{years}',
+                          'years': '\mathrm{years}'})
 
 # mass
 g = 1e-3 * kg
@@ -210,7 +214,7 @@ neutron_mass = 1.674927471e-27 * kg
 electron_mass = 9.10938356e-31 * kg
 electron_mass_reduced = proton_mass * electron_mass / (proton_mass + electron_mass)
 
-unit_names_to_values.update({'g': g,
+UNIT_NAMES_TO_VALUES.update({'g': g,
                              'mg': mg,
                              'ug': ug,
                              'ng': ng,
@@ -220,7 +224,7 @@ unit_names_to_values.update({'g': g,
                              'neutron_mass': neutron_mass,
                              'electron_mass': electron_mass,
                              'electron_mass_reduced': electron_mass_reduced})
-unit_names_to_tex_strings.update({'g': r'\mathrm{g}',
+UNIT_NAMES_TO_TEX.update({'g': r'\mathrm{g}',
                                   'mg': r'\mathrm{mg}',
                                   'ug': r'\mathrm{ug}',
                                   'ng': r'\mathrm{ng}',
@@ -229,7 +233,7 @@ unit_names_to_tex_strings.update({'g': r'\mathrm{g}',
                                   'proton_mass': r'm_p',
                                   'neutron_mass': r'm_n',
                                   'electron_mass': r'm_e',
-                                  'electron_mass_reduced': r'\mu_e'})
+                          'electron_mass_reduced': r'\mu_e'})
 
 # frequency
 Hz = 1 / s
@@ -244,7 +248,7 @@ GHz = 1e9 * Hz
 THz = 1e12 * Hz
 PHz = 1e15 * Hz
 
-unit_names_to_values.update({'Hz': Hz,
+UNIT_NAMES_TO_VALUES.update({'Hz': Hz,
                              'mHz': mHz,
                              'uHz': uHz,
                              'nHz': nHz,
@@ -255,7 +259,7 @@ unit_names_to_values.update({'Hz': Hz,
                              'GHz': GHz,
                              'THz': THz,
                              'PHz': PHz})
-unit_names_to_tex_strings.update({'Hz': r'\mathrm{Hz}',
+UNIT_NAMES_TO_TEX.update({'Hz': r'\mathrm{Hz}',
                                   'mHz': r'\mathrm{mHz}',
                                   'uHz': r'\mathrm{uHz}',
                                   'nHz': r'\mathrm{nHz}',
@@ -264,8 +268,8 @@ unit_names_to_tex_strings.update({'Hz': r'\mathrm{Hz}',
                                   'kHz': r'\mathrm{kHz}',
                                   'MHz': r'\mathrm{MHz}',
                                   'GHz': r'\mathrm{GHz}',
-                                  'THz': r'\mathrm{THz}',
-                                  'PHz': r'\mathrm{PHz}'})
+                          'THz': r'\mathrm{THz}',
+                          'PHz': r'\mathrm{PHz}'})
 
 # electric charge
 C = 1 * A * s
@@ -282,7 +286,7 @@ PC = 1e15 * C
 proton_charge = 1.6021766208e-19 * C
 electron_charge = -proton_charge
 
-unit_names_to_values.update({'C': C,
+UNIT_NAMES_TO_VALUES.update({'C': C,
                              'mC': mC,
                              'uC': uC,
                              'nC': nC,
@@ -295,7 +299,7 @@ unit_names_to_values.update({'C': C,
                              'PC': PC,
                              'proton_charge': proton_charge,
                              'electron_charge': electron_charge})
-unit_names_to_tex_strings.update({'C': r'\mathrm{C}',
+UNIT_NAMES_TO_TEX.update({'C': r'\mathrm{C}',
                                   'mC': r'\mathrm{mC}',
                                   'uC': r'\mathrm{uC}',
                                   'nC': r'\mathrm{nC}',
@@ -304,8 +308,8 @@ unit_names_to_tex_strings.update({'C': r'\mathrm{C}',
                                   'kC': r'\mathrm{kC}',
                                   'MC': r'\mathrm{MC}',
                                   'GC': r'\mathrm{GC}',
-                                  'TC': r'\mathrm{TC}',
-                                  'PC': r'\mathrm{PC}',
+                          'TC': r'\mathrm{TC}',
+                          'PC': r'\mathrm{PC}',
                                   'proton_charge': r'e',
                                   'electron_charge': r'-e'})
 
@@ -323,7 +327,7 @@ TJ = 1e12 * J
 PJ = 1e15 * J
 Jcm2 = J / (cm ** 2)
 
-unit_names_to_values.update({
+UNIT_NAMES_TO_VALUES.update({
     'J': J,
     'mJ': mJ,
     'uJ': uJ,
@@ -337,8 +341,8 @@ unit_names_to_values.update({
     'PJ': PJ,
     'J/cm^2': Jcm2,
     'Jcm2': Jcm2,
-    })
-unit_names_to_tex_strings.update({
+})
+UNIT_NAMES_TO_TEX.update({
     'J': r'\mathrm{J}',
     'mJ': r'\mathrm{mJ}',
     'uJ': r'\mathrm{uJ}',
@@ -352,7 +356,7 @@ unit_names_to_tex_strings.update({
     'PJ': r'\mathrm{PJ}',
     'J/cm^2': r'\mathrm{J/cm^2}',
     'Jcm2': r'\mathrm{J/cm^2}'
-    })
+})
 
 # voltage
 V = 1 * J / C
@@ -367,7 +371,7 @@ GV = 1e9 * V
 TV = 1e12 * V
 PV = 1e15 * V
 
-unit_names_to_values.update({'V': V,
+UNIT_NAMES_TO_VALUES.update({'V': V,
                              'mV': mV,
                              'uV': uV,
                              'nV': nV,
@@ -378,7 +382,7 @@ unit_names_to_values.update({'V': V,
                              'GV': GV,
                              'TV': TV,
                              'PV': PV})
-unit_names_to_tex_strings.update({'V': r'\mathrm{V}',
+UNIT_NAMES_TO_TEX.update({'V': r'\mathrm{V}',
                                   'mV': r'\mathrm{mV}',
                                   'uV': r'\mathrm{uV}',
                                   'nV': r'\mathrm{nV}',
@@ -398,13 +402,13 @@ GeV = 1e9 * eV
 TeV = 1e12 * eV
 PeV = 1e15 * eV
 
-unit_names_to_values.update({'eV': eV,
+UNIT_NAMES_TO_VALUES.update({'eV': eV,
                              'keV': keV,
                              'MeV': MeV,
                              'GeV': GeV,
                              'TeV': TeV,
                              'PeV': PeV})
-unit_names_to_tex_strings.update({'eV': r'\mathrm{eV}',
+UNIT_NAMES_TO_TEX.update({'eV': r'\mathrm{eV}',
                                   'keV': r'\mathrm{keV}',
                                   'MeV': r'\mathrm{MeV}',
                                   'GeV': r'\mathrm{GeV}',
@@ -424,7 +428,7 @@ GN = 1e9 * N
 TN = 1e12 * N
 PN = 1e15 * N
 
-unit_names_to_values.update({'N': N,
+UNIT_NAMES_TO_VALUES.update({'N': N,
                              'mN': mN,
                              'uN': uN,
                              'nN': nN,
@@ -435,7 +439,7 @@ unit_names_to_values.update({'N': N,
                              'GN': GN,
                              'TN': TN,
                              'PN': PN})
-unit_names_to_tex_strings.update({'N': r'\mathrm{N}',
+UNIT_NAMES_TO_TEX.update({'N': r'\mathrm{N}',
                                   'mN': r'\mathrm{mN}',
                                   'uN': r'\mathrm{uN}',
                                   'nN': r'\mathrm{nN}',
@@ -444,8 +448,8 @@ unit_names_to_tex_strings.update({'N': r'\mathrm{N}',
                                   'kN': r'\mathrm{kN}',
                                   'MN': r'\mathrm{MN}',
                                   'GN': r'\mathrm{GN}',
-                                  'TN': r'\mathrm{TN}',
-                                  'PN': r'\mathrm{PN}'})
+                          'TN': r'\mathrm{TN}',
+                          'PN': r'\mathrm{PN}'})
 
 # power
 W = 1 * J / s
@@ -460,7 +464,7 @@ GW = 1e9 * W
 TW = 1e12 * W
 PW = 1e15 * W
 
-unit_names_to_values.update({'W': W,
+UNIT_NAMES_TO_VALUES.update({'W': W,
                              'mW': mW,
                              'uW': uW,
                              'nW': nW,
@@ -471,7 +475,7 @@ unit_names_to_values.update({'W': W,
                              'GW': GW,
                              'TW': TW,
                              'PW': PW})
-unit_names_to_tex_strings.update({'W': r'\mathrm{W}',
+UNIT_NAMES_TO_TEX.update({'W': r'\mathrm{W}',
                                   'mW': r'\mathrm{mW}',
                                   'uW': r'\mathrm{uW}',
                                   'nW': r'\mathrm{nW}',
@@ -480,8 +484,8 @@ unit_names_to_tex_strings.update({'W': r'\mathrm{W}',
                                   'kW': r'\mathrm{kW}',
                                   'MW': r'\mathrm{MW}',
                                   'GW': r'\mathrm{GW}',
-                                  'TW': r'\mathrm{TW}',
-                                  'PW': r'\mathrm{PW}'})
+                          'TW': r'\mathrm{TW}',
+                          'PW': r'\mathrm{PW}'})
 
 # current
 A = 1 * C / s
@@ -496,7 +500,7 @@ GA = 1e9 * A
 TA = 1e12 * A
 PA = 1e15 * A
 
-unit_names_to_values.update({'A': A,
+UNIT_NAMES_TO_VALUES.update({'A': A,
                              'mA': mA,
                              'uA': uA,
                              'nA': nA,
@@ -507,7 +511,7 @@ unit_names_to_values.update({'A': A,
                              'GA': GA,
                              'TA': TA,
                              'PA': PA})
-unit_names_to_tex_strings.update({'A': r'\mathrm{A}',
+UNIT_NAMES_TO_TEX.update({'A': r'\mathrm{A}',
                                   'mA': r'\mathrm{mA}',
                                   'uA': r'\mathrm{uA}',
                                   'nA': r'\mathrm{nA}',
@@ -525,11 +529,11 @@ hbar = h / twopi
 rydberg = 13.605693009 * eV
 hartree = 27.21138602 * eV
 
-unit_names_to_values.update({'h': h,
+UNIT_NAMES_TO_VALUES.update({'h': h,
                              'hbar': hbar,
                              'rydberg': rydberg,
                              'hartree': hartree})
-unit_names_to_tex_strings.update({'h': r'h',
+UNIT_NAMES_TO_TEX.update({'h': r'h',
                                   'hbar': r'\hbar',
                                   'rydberg': r'\mathrm{Ry}',
                                   'hartree': r'\mathrm{Ha}'})
@@ -541,12 +545,12 @@ epsilon_0 = 1 / (mu_0 * (c ** 2))
 coulomb_force_constant = 1 / (4 * pi * epsilon_0)
 n_vacuum = 1
 
-unit_names_to_values.update({'c': c,
+UNIT_NAMES_TO_VALUES.update({'c': c,
                              'mu_0': mu_0,
                              'epsilon_0': epsilon_0,
                              'coulomb_force_constant': coulomb_force_constant,
                              'n_vacuum': n_vacuum})
-unit_names_to_tex_strings.update({'c': r'c',
+UNIT_NAMES_TO_TEX.update({'c': r'c',
                                   'mu_0': r'\mu_0',
                                   'epsilon_0': r'\epsilon_0',
                                   'coulomb_force_constant': r'k_e',
@@ -560,14 +564,14 @@ atomic_velocity = alpha * c
 atomic_momentum = electron_mass * atomic_velocity
 atomic_time = hbar / hartree
 
-unit_names_to_values.update({'atomic_electric_field': atomic_electric_field,
+UNIT_NAMES_TO_VALUES.update({'atomic_electric_field': atomic_electric_field,
                              'aef': atomic_electric_field,
                              'AEF': atomic_electric_field,
                              'atomic_electric_potential': atomic_electric_potential,
                              'atomic_electric_dipole': atomic_electric_dipole,
                              'atomic_velocity': atomic_velocity,
                              'atomic_momentum': atomic_momentum})
-unit_names_to_tex_strings.update({'atomic_electric_field': r'\mathrm{a.u.}',
+UNIT_NAMES_TO_TEX.update({'atomic_electric_field': r'\mathrm{a.u.}',
                                   'aef': r'\mathrm{a.u.}',
                                   'AEF': r'\mathrm{a.u.}',
                                   'atomic_electric_potential': r'\mathrm{a.u.}',

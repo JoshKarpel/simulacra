@@ -12,7 +12,7 @@ import numpy as np
 import psutil
 
 import logging
-from .units import *
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -38,30 +38,6 @@ def dict_to_arrays(d):
         val_list.append(val)
 
     return key_value_arrays(np.array(key_list), np.array(val_list))
-
-
-def field_str(obj, *fields, digits = 3):
-    """
-    Generate a repr-like string from the object's attributes.
-
-    Each field should be a string containing the name of an attribute or a ('attribute_name', 'unit_name') pair. uround will be used to format in the second case.
-
-    :param obj: the object to get attributes from
-    :param fields: the attributes or (attribute, unit) pairs to get from obj
-    :param digits: the number of digits to round to for uround
-    :return: the formatted string
-    """
-    field_strings = []
-    for field in fields:
-        try:
-            field_name, unit_name = field
-            try:
-                field_strings.append('{} = {} {}'.format(field_name, uround(getattr(obj, field_name), unit_names_to_values[unit_name], digits = digits), unit_name))
-            except TypeError:
-                field_strings.append('{} = {}'.format(field_name, getattr(obj, field_name)))
-        except (ValueError, TypeError):
-            field_strings.append('{} = {}'.format(field, getattr(obj, field)))
-    return '{}({})'.format(obj.__class__.__name__, ', '.join(field_strings))
 
 
 def now_string():
@@ -651,3 +627,30 @@ class SuspendProcesses:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         resume_processes(self.processes)
+
+
+from .units import uround  # avoid circular import
+
+
+def field_str(obj, *fields, digits = 3):
+    """
+    Generate a repr-like string from the object's attributes.
+
+    Each field should be a string containing the name of an attribute or a ('attribute_name', 'unit_name') pair. uround will be used to format in the second case.
+
+    :param obj: the object to get attributes from
+    :param fields: the attributes or (attribute, unit) pairs to get from obj
+    :param digits: the number of digits to round to for uround
+    :return: the formatted string
+    """
+    field_strings = []
+    for field in fields:
+        try:
+            field_name, unit = field
+            try:
+                field_strings.append('{} = {} {}'.format(field_name, uround(getattr(obj, field_name), unit, digits = digits), unit))
+            except TypeError:
+                field_strings.append('{} = {}'.format(field_name, getattr(obj, field_name)))
+        except (ValueError, TypeError):
+            field_strings.append('{} = {}'.format(field, getattr(obj, field)))
+    return '{}({})'.format(obj.__class__.__name__, ', '.join(field_strings))

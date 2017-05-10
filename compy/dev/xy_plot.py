@@ -34,6 +34,9 @@ if __name__ == '__main__':
             dict(),
             dict(name_postfix = 'scale=1', img_format = 'png', img_scale = 1),
             dict(name_postfix = 'scale=2', img_format = 'png', img_scale = 2),
+            dict(name_postfix = 'logX', x_log_axis = True),
+            dict(name_postfix = 'logY', y_log_axis = True),
+            dict(name_postfix = 'logXY', x_log_axis = True, y_log_axis = True),
         ]
 
         for extras in extra_kwargs:

@@ -13,13 +13,13 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.Logger('compy', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
-        x = np.linspace(-5, 5, 200)
-        y = np.linspace(-5, 5, 200)
+    with cp.utils.LogManager('compy', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
+        x = np.linspace(-5, 5, 100)
+        y = np.linspace(-5, 5, 100)
 
         x_mesh, y_mesh = np.meshgrid(x, y, indexing = 'ij')
 
-        t = np.linspace(0, 30, 1000) * pi
+        t = np.linspace(0, 30, 900) * pi
 
 
         def z(x_mesh, y_mesh, t):
@@ -32,6 +32,7 @@ if __name__ == '__main__':
                                x_label = r'$x$', x_unit = 'cm',
                                y_label = r'$y$', y_unit = 'cm',
                                z_unit = 'rad', z_lower_limit = -1, z_upper_limit = 1,
+                               t_unit = 's',
                                title = 'wiggle wobble bobble',
                                colormap = plt.get_cmap(cmap_name),
                                target_dir = OUT_DIR,
