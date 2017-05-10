@@ -245,8 +245,8 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
                        **kwargs):
         fig = cp.plots.get_figure('full')
 
-        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(time_scale)
-        f_scale_unit, f_scale_name = unit_value_and_name_from_unit(field_scale)
+        x_scale_unit, x_scale_name = get_unit_value_and_tex_from_unit(time_scale)
+        f_scale_unit, f_scale_name = get_unit_value_and_tex_from_unit(field_scale)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
         ax_a = plt.subplot(grid_spec[0])
@@ -850,10 +850,10 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
             fig = figman.fig
             ax = fig.add_subplot(111)
 
-            t_scale_unit, t_scale_name = unit_value_and_name_from_unit(time_scale)
-            f_scale_unit, f_scale_name = unit_value_and_name_from_unit(field_scale)
-            a_scale_unit, a_scale_name = unit_value_and_name_from_unit(vector_scale)
-            q_scale_unit, q_scale_name = unit_value_and_name_from_unit(quiver_scale)
+            t_scale_unit, t_scale_name = get_unit_value_and_tex_from_unit(time_scale)
+            f_scale_unit, f_scale_name = get_unit_value_and_tex_from_unit(field_scale)
+            a_scale_unit, a_scale_name = get_unit_value_and_tex_from_unit(vector_scale)
+            q_scale_unit, q_scale_name = get_unit_value_and_tex_from_unit(quiver_scale)
 
             ax.plot(self.times / t_scale_unit, self.electric_field_vs_time / f_scale_unit, label = fr'${str_efield}(t)$ (${f_scale_name}$)')
             ax.plot(self.times / t_scale_unit, np.abs(self.spec.test_charge) * self.vector_potential_vs_time / a_scale_unit, label = fr'$e \, {str_afield}(t)$ (${a_scale_name}$)')
@@ -872,8 +872,8 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
                        **kwargs):
         fig = cp.plots.get_figure('full')
 
-        x_scale_unit, x_scale_name = unit_value_and_name_from_unit(time_scale)
-        f_scale_unit, f_scale_name = unit_value_and_name_from_unit(field_scale)
+        x_scale_unit, x_scale_name = get_unit_value_and_tex_from_unit(time_scale)
+        f_scale_unit, f_scale_name = get_unit_value_and_tex_from_unit(field_scale)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
         ax_a = plt.subplot(grid_spec[0])

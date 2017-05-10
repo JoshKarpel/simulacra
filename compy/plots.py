@@ -1,4 +1,5 @@
 import itertools as it
+import functools as ft
 import os
 import logging
 import fractions
@@ -7,7 +8,6 @@ import subprocess
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.animation as anim
 from tqdm import tqdm
 
 from . import core, utils
@@ -41,10 +41,31 @@ GRID_KWARGS = dict(
     alpha = 0.4
 )
 
+MINOR_GRID_KWARGS = GRID_KWARGS.copy()
+MINOR_GRID_KWARGS['alpha'] -= .1
+
 COLORMESH_GRID_KWARGS = dict(
     linestyle = '-',
     linewidth = .25,
     alpha = 0.4,
+)
+
+HVLINE_KWARGS = dict(
+    linestyle = '-',
+    color = 'black',
+)
+
+T_TEXT_KWARGS = dict(
+    fontsize = 12,
+)
+
+TITLE_OFFSET = 1.1
+
+FFMPEG_PROCESS_KWARGS = dict(
+    stdin = subprocess.PIPE,
+    stdout = subprocess.DEVNULL,
+    stderr = subprocess.DEVNULL,
+    bufsize = -1,
 )
 
 
@@ -138,33 +159,6 @@ def save_current_figure(name,
     return path
 
 
-def get_pi_ticks_and_labels(lower_limit = 0, upper_limit = twopi, denom = 4):
-    """
-    
-    :param lower_limit: 
-    :param upper_limit: 
-    :param num: 
-    :return: ticks, labels
-    """
-
-    low = int(np.floor(lower_limit / pi))
-    high = int(np.ceil(upper_limit / pi))
-
-    ticks = list(fractions.Fraction(n, denom) for n in range((high * denom) + 1))
-    labels = []
-    for tick in ticks:
-        if tick.numerator == 0:
-            labels.append(r'$0$')
-        elif tick.numerator == tick.denominator == 1:
-            labels.append(r'$\pi$')
-        elif tick.denominator == 1:
-            labels.append(fr'$ {tick.numerator} \pi $')
-        else:
-            labels.append(fr'$ \frac{{ {tick.numerator} }}{{ {tick.denominator} }} \pi $')
-
-    return list(float(tick) * pi for tick in ticks), list(labels)
-
-
 class FigureManager:
     """
     A class that manages a matplotlib figure: creating it, showing it, saving it, and cleaning it up.
@@ -255,25 +249,140 @@ class FigureManager:
             plt.close(self.fig)
 
 
+def get_pi_ticks_and_labels(lower_limit = 0, upper_limit = twopi, denom = 4):
+    low = int(np.floor(lower_limit / pi))
+    high = int(np.ceil(upper_limit / pi))
+
+    ticks = list(fractions.Fraction(n, denom) for n in range(low * denom, (high * denom) + 1))
+    labels = []
+    for tick in ticks:
+        if tick.numerator == 0:
+            labels.append(r'$0$')
+        elif tick.numerator == tick.denominator == 1:
+            labels.append(r'$\pi$')
+        elif tick.denominator == 1:
+            labels.append(fr'$ {tick.numerator} \pi $')
+        else:
+            labels.append(fr'$ \frac{{ {tick.numerator} }}{{ {tick.denominator} }} \pi $')
+
+    return list(float(tick) * pi for tick in ticks), list(labels)
+
+
 def set_axis_ticks_and_labels(axis, ticks, labels, direction = 'x'):
-    if direction == 'x':
-        axis.set_xticks(ticks)
-        axis.set_xticklabels(labels)
-    elif direction == 'y':
-        axis.set_yticks(ticks)
-        axis.set_yticklabels(labels)
-    elif direction == 'z':
-        axis.set_zticks(ticks)
-        axis.set_zticklabels(labels)
+    """
+    Set the ticks and labels for `axis` along `direction`.
+    
+    Parameters
+    ----------
+    axis
+        The axis to act on.
+    ticks
+    labels
+    direction : {``'x'``, ``'y'``, ``'z'``}
+    """
+    getattr(axis, f'set_{direction}ticks')(ticks)
+    getattr(axis, f'set_{direction}ticklabels')(labels)
+
+
+def get_axis_limits(*data, lower_limit = None, upper_limit = None, log = False, pad = 0, log_pad = 1, unit = None):
+    unit_value, _ = get_unit_value_and_tex_from_unit(unit)
+
+    if lower_limit is None:
+        lower_limit = min(np.nanmin(d) for d in data)
+    if upper_limit is None:
+        upper_limit = max(np.nanmax(d) for d in data)
+
+    limit_range = np.abs(upper_limit - lower_limit)
+    lower_limit -= pad * limit_range
+    upper_limit += pad * limit_range
+
+    if log:
+        lower_limit /= log_pad
+        upper_limit *= log_pad
+
+    return lower_limit, upper_limit
+
+
+def set_axis_limits(axis, *data, lower_limit = None, upper_limit = None, log = False, pad = 0, log_pad = 1, unit = None, direction = 'x'):
+    """
+    
+    Parameters
+    ----------
+    axis
+    data
+    lower_limit
+    upper_limit
+    log
+    pad
+    log_pad
+    unit
+    direction
+
+    Returns
+    -------
+    lower_limit, upper_limit : tuple of floats
+        The upper and lower limits, in the specified units
+    """
+    unit_value, _ = get_unit_value_and_tex_from_unit(unit)
+
+    lower_limit, upper_limit = get_axis_limits(*data, lower_limit = lower_limit, upper_limit = upper_limit, log = log, pad = pad, log_pad = log_pad, unit = unit)
+
+    if log:
+        getattr(axis, f'set_{direction}scale')('log')
+
+    return getattr(axis, f'set_{direction}lim')(lower_limit / unit_value, upper_limit / unit_value)
+
+
+def get_unit_label(unit):
+    """
+    Get a LaTeX-formatted unit label for `unit`.
+    
+    Parameters
+    ----------
+    unit
+
+    Returns
+    -------
+    :class:`str`
+        The unit label.
+    """
+    _, unit_tex = get_unit_value_and_tex_from_unit(unit)
+
+    if unit_tex != '':
+        unit_label = fr' (${unit_tex}$)'
     else:
-        raise ValueError(f"Invalid direction specifier to set_axis_ticks_and_labels. Got {direction}, should have gotten one of 'x', 'y', or 'z'")
+        unit_label = ''
+
+    return unit_label
+
+
+def attach_hv_lines(axis, line_positions = (), line_kwargs = (), unit = None, direction = 'h'):
+    """
+    
+    Parameters
+    ----------
+    line_positions
+    line_kwargs
+    direction : {``'h'``, ``'v'``}
+
+    Returns
+    -------
+
+    """
+    unit_value, _ = get_unit_value_and_tex_from_unit(unit)
+
+    for position, kw in it.zip_longest(line_positions, line_kwargs):
+        if kw is None:
+            kw = {}
+        kw = {**HVLINE_KWARGS, **kw}
+        getattr(axis, f'ax{direction}line')(position / unit_value, **kw)
 
 
 def xy_plot(name,
             x_data, *y_data,
             line_labels = (), line_kwargs = (),
             figure_manager = None,
-            x_unit = 1, y_unit = 1,
+            x_unit = None, y_unit = None,
             x_log_axis = False, y_log_axis = False,
             x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None,
             vlines = (), vline_kwargs = (), hlines = (), hline_kwargs = (),
@@ -281,7 +390,7 @@ def xy_plot(name,
             title = None, x_label = None, y_label = None,
             font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10, font_size_legend = 12,
             ticks_on_top = True, ticks_on_right = True, legend_on_right = False,
-            grid_kwargs = None,
+            grid_kwargs = None, minor_grid_kwargs = None,
             save_csv = False,
             **kwargs):
     """
@@ -330,96 +439,58 @@ def xy_plot(name,
         fig = fm.fig
         ax = plt.subplot(111)
 
+        if grid_kwargs is None:
+            grid_kwargs = {}
+        if minor_grid_kwargs is None:
+            minor_grid_kwargs = {}
+
+        grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
+        minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
+
         # ensure data is in numpy arrays
         x_data = np.array(x_data)
         y_data = [np.array(y) for y in y_data]
         line_labels = tuple(line_labels)
         line_kwargs = tuple(line_kwargs)
 
-        x_unit_value, x_unit_name = unit_value_and_name_from_unit(x_unit)
-        if x_unit_name != '':
-            x_unit_label = r' (${}$)'.format(x_unit_name)
-        else:
-            x_unit_label = ''
+        x_unit_value, x_unit_tex = get_unit_value_and_tex_from_unit(x_unit)
+        x_unit_label = get_unit_label(x_unit)
 
-        y_unit_value, y_unit_name = unit_value_and_name_from_unit(y_unit)
-        if y_unit_name != '':
-            y_unit_label = r' (${}$)'.format(y_unit_name)
-        else:
-            y_unit_label = ''
+        y_unit_value, y_unit_tex = get_unit_value_and_tex_from_unit(y_unit)
+        y_unit_label = get_unit_label(y_unit)
 
-        # zip together each set of y data with its plotting options
         lines = []
         for y, lab, kw in it.zip_longest(y_data, line_labels, line_kwargs):
-            if kw is None:  # means there are no kwargs for this y data
+            if kw is None:
                 kw = {}
             lines.append(plt.plot(x_data / x_unit_value, y / y_unit_value, label = lab, **kw)[0])
 
-        # make any horizontal and vertical lines
-        for vl, vkw in it.zip_longest(vlines, vline_kwargs):
-            if vkw is None:
-                vkw = {}
-            kw = {'color': 'black', 'linestyle': '-'}
-            kw.update(vkw)
-            ax.axvline(x = vl / x_unit_value, **kw)
-        for hl, hkw in it.zip_longest(hlines, hline_kwargs):
-            if hkw is None:
-                hkw = {}
-            kw = {'color': 'black', 'linestyle': '-'}
-            kw.update(hkw)
-            ax.axhline(y = hl / y_unit_value, **kw)
+        attach_hv_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
+        attach_hv_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
 
-        if grid_kwargs is not None:
-            grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
-        else:
-            grid_kwargs = {**GRID_KWARGS}
-
-        if x_log_axis:
-            ax.set_xscale('log')
-        if y_log_axis:
-            ax.set_yscale('log')
-            minor_grid_kwargs = grid_kwargs.copy()
-            minor_grid_kwargs['alpha'] -= .1
-            ax.grid(True, which = 'minor', **minor_grid_kwargs)
-
-        if x_lower_limit is None:
-            x_lower_limit = np.nanmin(x_data)
-        if x_upper_limit is None:
-            x_upper_limit = np.nanmax(x_data)
-
-        # TODO: THIS CODE IS TOTALLY FUKT
-
-        if y_lower_limit is None and y_upper_limit is None:
-            y_lower_limit = min([np.nanmin(y) for y in y_data])
-            y_upper_limit = max([np.nanmax(y) for y in y_data])
-            y_range = np.abs(y_upper_limit - y_lower_limit)
-            y_lower_limit -= .05 * y_range
-            y_upper_limit += .05 * y_range
-            if y_log_axis:
-                y_lower_limit /= 10
-                y_upper_limit *= 10
-
-        # neither of these trigger if both y limits are None
-        if y_lower_limit is None:
-            y_lower_limit = min([np.nanmin(y) for y in y_data])
-            if y_log_axis:
-                y_lower_limit /= 10
-        if y_upper_limit is None:
-            y_upper_limit = max([np.nanmax(y) for y in y_data])
-            if y_log_axis:
-                y_upper_limit *= 10
-
-        ax.set_xlim(left = x_lower_limit / x_unit_value, right = x_upper_limit / x_unit_value)
-        ax.set_ylim(bottom = y_lower_limit / y_unit_value, top = y_upper_limit / y_unit_value)
+        x_lower_limit, x_upper_limit = set_axis_limits(ax, x_data,
+                                                       lower_limit = x_lower_limit, upper_limit = x_upper_limit,
+                                                       log = x_log_axis,
+                                                       pad = 0, log_pad = 1,
+                                                       unit = x_unit, direction = 'x')
+        y_lower_limit, y_upper_limit = set_axis_limits(ax, y_data,
+                                                       lower_limit = y_lower_limit, upper_limit = y_upper_limit,
+                                                       log = y_log_axis,
+                                                       pad = 0.05, log_pad = 10,
+                                                       unit = y_unit, direction = 'y')
 
         ax.grid(True, which = 'major', **grid_kwargs)
+        if x_log_axis:
+            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+        if y_log_axis:
+            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
         # make title, axis labels, and legend
         if title is not None:
             title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
-            title.set_y(1.06)  # move title up a little
+            title.set_y(TITLE_OFFSET)  # move title up a little
         if x_label is not None:
             x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
         if y_label is not None:
@@ -434,12 +505,10 @@ def xy_plot(name,
 
         if x_unit == 'rad':
             ticks, labels = get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
-            ax.set_xticks(ticks)
-            ax.set_xticklabels(labels)
+            set_axis_ticks_and_labels(ax, ticks, labels, direction = 'x')
         if y_unit == 'rad':
             ticks, labels = get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
-            ax.set_yticks(ticks)
-            ax.set_yticklabels(labels)
+            set_axis_ticks_and_labels(ax, ticks, labels, direction = 'y')
 
         if x_extra_ticks is not None and x_extra_tick_labels is not None:
             ax.set_xticks(list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_unit_value))  # append the extra tick labels, scaled appropriately
@@ -454,8 +523,8 @@ def xy_plot(name,
             ax.set_yticklabels(y_tick_labels)
 
         # set limits again to guarantee we don't see ticks oustide the limits
-        ax.set_xlim(left = x_lower_limit / x_unit_value, right = x_upper_limit / x_unit_value)
-        ax.set_ylim(bottom = y_lower_limit / y_unit_value, top = y_upper_limit / y_unit_value)
+        ax.set_xlim(x_lower_limit, x_upper_limit)
+        ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
         ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
@@ -474,14 +543,14 @@ def xy_plot(name,
 def xyz_plot(name,
              x_mesh, y_mesh, z_mesh,
              figure_manager = None,
-             x_unit = 1, y_unit = 1, z_unit = 1,
+             x_unit = None, y_unit = None, z_unit = None,
              x_log_axis = False, y_log_axis = False, z_log_axis = False,
              x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, z_lower_limit = None, z_upper_limit = None,
              x_extra_ticks = None, y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
              z_label = None, x_label = None, y_label = None,
              font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10,
              ticks_on_top = True, ticks_on_right = True,
-             grid_kwargs = None,
+             grid_kwargs = None, minor_grid_kwargs = None,
              save_csv = False,
              colormap = plt.get_cmap('viridis'),
              **kwargs):
@@ -492,35 +561,44 @@ def xyz_plot(name,
         fig = fm.fig
         ax = plt.subplot(111)
 
+        if grid_kwargs is None:
+            grid_kwargs = {}
+        if minor_grid_kwargs is None:
+            minor_grid_kwargs = {}
+
+        grid_color = CMAP_TO_OPPOSITE.get(colormap, 'black')
+        grid_kwargs['color'] = grid_color
+        minor_grid_kwargs['color'] = grid_color
+        grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
+        minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
+
         plt.set_cmap(colormap)
 
-        x_unit_value, x_unit_name = unit_value_and_name_from_unit(x_unit)
-        if x_unit_name != '':
-            x_unit_label = r' (${}$)'.format(x_unit_name)
-        else:
-            x_unit_label = ''
+        x_unit_value, x_unit_name = get_unit_value_and_tex_from_unit(x_unit)
+        x_unit_label = get_unit_label(x_unit)
 
-        y_unit_value, y_unit_name = unit_value_and_name_from_unit(y_unit)
-        if y_unit_name != '':
-            y_unit_label = r' (${}$)'.format(y_unit_name)
-        else:
-            y_unit_label = ''
+        y_unit_value, y_unit_name = get_unit_value_and_tex_from_unit(y_unit)
+        y_unit_label = get_unit_label(y_unit)
 
-        z_unit_value, z_unit_name = unit_value_and_name_from_unit(z_unit)
-        if z_unit_name != '':
-            z_unit_label = r' (${}$)'.format(z_unit_name)
-        else:
-            z_unit_label = ''
+        z_unit_value, z_unit_name = get_unit_value_and_tex_from_unit(z_unit)
+        z_unit_label = get_unit_label(z_unit)
 
-        if z_lower_limit is None:
-            z_lower_limit = np.nanmin(z_mesh)
-            if z_log_axis:
-                z_lower_limit /= 10
-        if z_upper_limit is None:
-            z_upper_limit = np.nanmax(z_mesh)
-            if z_log_axis:
-                z_upper_limit *= 10
+        x_lower_limit, x_upper_limit = set_axis_limits(ax, x_mesh,
+                                                       lower_limit = x_lower_limit, upper_limit = x_upper_limit,
+                                                       log = x_log_axis,
+                                                       pad = 0, log_pad = 1,
+                                                       unit = x_unit, direction = 'x')
+        y_lower_limit, y_upper_limit = set_axis_limits(ax, y_mesh,
+                                                       lower_limit = y_lower_limit, upper_limit = y_upper_limit,
+                                                       log = y_log_axis,
+                                                       pad = 0, log_pad = 1,
+                                                       unit = y_unit, direction = 'y')
 
+        z_lower_limit, z_upper_limit = get_axis_limits(z_mesh,
+                                                       lower_limit = z_lower_limit, upper_limit = z_upper_limit,
+                                                       log = z_log_axis,
+                                                       pad = 0, log_pad = 10,
+                                                       unit = z_unit)
         if z_log_axis:
             norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
         else:
@@ -532,47 +610,18 @@ def xyz_plot(name,
                                   shading = 'gouraud',
                                   norm = norm)
 
-        if grid_kwargs is not None:
-            grid_kwargs = {**COLORMESH_GRID_KWARGS, **grid_kwargs}
-        else:
-            grid_kwargs = {**COLORMESH_GRID_KWARGS}
-
-        if colormap in CMAP_TO_OPPOSITE:
-            grid_kwargs.update(dict(color = CMAP_TO_OPPOSITE[colormap]))
-
         ax.grid(True, which = 'major', **grid_kwargs)
-
         if x_log_axis:
-            ax.set_xscale('log')
-            minor_grid_kwargs = grid_kwargs.copy()
-            minor_grid_kwargs['alpha'] -= .1
-            ax.grid(True, which = 'minor', **minor_grid_kwargs)
+            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
         if y_log_axis:
-            ax.set_yscale('log')
-            minor_grid_kwargs = grid_kwargs.copy()
-            minor_grid_kwargs['alpha'] -= .1
-            ax.grid(True, which = 'minor', **minor_grid_kwargs)
-
-        # set axis limits
-        if x_lower_limit is None:
-            x_lower_limit = np.nanmin(x_mesh)
-        if x_upper_limit is None:
-            x_upper_limit = np.nanmax(x_mesh)
-
-        if y_lower_limit is None:
-            y_lower_limit = np.nanmin(y_mesh)
-        if y_upper_limit is None:
-            y_upper_limit = np.nanmax(y_mesh)
-
-        ax.set_xlim(left = x_lower_limit / x_unit_value, right = x_upper_limit / x_unit_value)
-        ax.set_ylim(bottom = y_lower_limit / y_unit_value, top = y_upper_limit / y_unit_value)
+            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
         # make title, axis labels, and legend
         if z_label is not None:
             z_label = ax.set_title(r'{}'.format(z_label), fontsize = font_size_title)
-            z_label.set_y(1.075)  # move title up a little
+            z_label.set_y(TITLE_OFFSET)  # move title up a little
         if x_label is not None:
             x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
         if y_label is not None:
@@ -603,6 +652,10 @@ def xyz_plot(name,
             y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_yticklabels(y_tick_labels)
 
+        # set limits again to guarantee we don't see ticks oustide the limits
+        ax.set_xlim(x_lower_limit, x_upper_limit)
+        ax.set_ylim(y_lower_limit, y_upper_limit)
+
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
         ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
 
@@ -622,7 +675,7 @@ def xyt_plot(name,
              x_data, t_data, *y_funcs, y_func_kwargs = (),
              line_labels = (), line_kwargs = (),
              figure_manager = None,
-             x_unit = 1, y_unit = 1, t_unit = 1,
+             x_unit = None, y_unit = None, t_unit = None,
              t_fmt_string = r'$t = {}$', t_text_kwargs = None,
              x_log_axis = False, y_log_axis = False,
              x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None,
@@ -631,7 +684,7 @@ def xyt_plot(name,
              title = None, x_label = None, y_label = None,
              font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10, font_size_legend = 12,
              ticks_on_top = True, ticks_on_right = True, legend_on_right = False,
-             grid_kwargs = None,
+             grid_kwargs = None, minor_grid_kwargs = None,
              length = 30,
              fig_dpi_scale = 3,
              save_csv = False,
@@ -689,6 +742,14 @@ def xyt_plot(name,
         fig = fm.fig
         ax = fig.add_axes([.15, .15, .75, .7])
 
+        if grid_kwargs is None:
+            grid_kwargs = {}
+        if minor_grid_kwargs is None:
+            minor_grid_kwargs = {}
+
+        grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
+        minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
+
         # ensure data is in numpy arrays
         x_data = np.array(x_data)
         line_labels = tuple(line_labels)
@@ -703,85 +764,41 @@ def xyt_plot(name,
 
         y_func_kwargs = _y_func_kwargs
 
-        x_unit_value, x_unit_name = unit_value_and_name_from_unit(x_unit)
-        if x_unit_name != '':
-            x_unit_label = r' (${}$)'.format(x_unit_name)
-        else:
-            x_unit_label = ''
+        x_unit_value, x_unit_tex = get_unit_value_and_tex_from_unit(x_unit)
+        x_unit_label = get_unit_label(x_unit)
 
-        y_unit_value, y_unit_name = unit_value_and_name_from_unit(y_unit)
-        if y_unit_name != '':
-            y_unit_label = r' (${}$)'.format(y_unit_name)
-        else:
-            y_unit_label = ''
+        y_unit_value, y_unit_tex = get_unit_value_and_tex_from_unit(y_unit)
+        y_unit_label = get_unit_label(y_unit)
 
-        t_unit_value, t_unit_name = unit_value_and_name_from_unit(t_unit)
+        t_unit_value, t_unit_tex = get_unit_value_and_tex_from_unit(t_unit)
+        t_unit_label = get_unit_label(t_unit)
 
-        # make any horizontal and vertical lines
-        for vl, vkw in it.zip_longest(vlines, vline_kwargs):
-            if vkw is None:
-                vkw = {}
-            kw = {'color': 'black', 'linestyle': '-'}
-            kw.update(vkw)
-            ax.axvline(x = vl / x_unit_value, **kw)
-        for hl, hkw in it.zip_longest(hlines, hline_kwargs):
-            if hkw is None:
-                hkw = {}
-            kw = {'color': 'black', 'linestyle': '-'}
-            kw.update(hkw)
-            ax.axhline(y = hl / y_unit_value, **kw)
+        attach_hv_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
+        attach_hv_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
 
-        if grid_kwargs is not None:
-            grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
-        else:
-            grid_kwargs = {**GRID_KWARGS}
-
-        if x_log_axis:
-            ax.set_xscale('log')
-        if y_log_axis:
-            ax.set_yscale('log')
-            minor_grid_kwargs = grid_kwargs.copy()
-            minor_grid_kwargs['alpha'] -= .1
-            ax.grid(True, which = 'minor', **minor_grid_kwargs)
-
-        # set axis limits
-        if x_lower_limit is None:
-            x_lower_limit = np.nanmin(x_data)
-        if x_upper_limit is None:
-            x_upper_limit = np.nanmax(x_data)
-
-        if y_lower_limit is None and y_upper_limit is None:
-            y_lower_limit = min(np.nanmin(y_func(x_data, t, **y_kwargs)) for y_func, y_kwargs in zip(y_funcs, y_func_kwargs) for t in t_data)
-            y_upper_limit = max(np.nanmax(y_func(x_data, t, **y_kwargs)) for y_func, y_kwargs in zip(y_funcs, y_func_kwargs) for t in t_data)
-            y_range = np.abs(y_upper_limit - y_lower_limit)
-            y_lower_limit -= .05 * y_range
-            y_upper_limit += .05 * y_range
-
-        if y_log_axis:
-            y_lower_limit /= 10
-            y_upper_limit *= 10
-
-        # neither of these trigger if both y limits are None
-        if y_lower_limit is None:
-            y_lower_limit = min(np.nanmin(y_func(x_data, t, **y_kwargs)) for y_func, y_kwargs in zip(y_funcs, y_func_kwargs) for t in t_data)
-            if y_log_axis:
-                y_lower_limit /= 10
-        if y_upper_limit is None:
-            y_upper_limit = max(np.nanmax(y_func(x_data, t, **y_kwargs)) for y_func, y_kwargs in zip(y_funcs, y_func_kwargs) for t in t_data)
-            if y_log_axis:
-                y_upper_limit *= 10
-
-        ax.set_xlim(left = x_lower_limit / x_unit_value, right = x_upper_limit / x_unit_value)
-        ax.set_ylim(bottom = y_lower_limit / y_unit_value, top = y_upper_limit / y_unit_value)
+        x_lower_limit, x_upper_limit = set_axis_limits(ax, x_data,
+                                                       lower_limit = x_lower_limit, upper_limit = x_upper_limit,
+                                                       log = x_log_axis,
+                                                       pad = 0, log_pad = 1,
+                                                       unit = x_unit, direction = 'x')
+        y_lower_limit, y_upper_limit = set_axis_limits(ax, *(y_func(x_data, t, **y_kwargs) for y_func, y_kwargs in zip(y_funcs, y_func_kwargs) for t in t_data),
+                                                       lower_limit = y_lower_limit, upper_limit = y_upper_limit,
+                                                       log = y_log_axis,
+                                                       pad = 0.05, log_pad = 10,
+                                                       unit = y_unit, direction = 'y')
 
         ax.grid(True, which = 'major', **grid_kwargs)
+        if x_log_axis:
+            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+        if y_log_axis:
+            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
         # make title, axis labels, and legend
         if title is not None:
             title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
-            title.set_y(1.075)  # move title up a little
+            title.set_y(TITLE_OFFSET)  # move title up a little
         if x_label is not None:
             x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
         if y_label is not None:
@@ -811,8 +828,8 @@ def xyt_plot(name,
             ax.set_yticklabels(y_tick_labels)
 
         # set limits again to guarantee we don't see ticks oustide the limits
-        ax.set_xlim(left = x_lower_limit / x_unit_value, right = x_upper_limit / x_unit_value)
-        ax.set_ylim(bottom = y_lower_limit / y_unit_value, top = y_upper_limit / y_unit_value)
+        ax.set_xlim(x_lower_limit, x_upper_limit)
+        ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
         ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
@@ -832,21 +849,13 @@ def xyt_plot(name,
             if legend_on_right:
                 legend = ax.legend(bbox_to_anchor = (1.05, 1), loc = 'upper left', borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17))
 
-        t_text_kwarg_defaults = dict(
-            fontsize = 12,
-        )
         if t_text_kwargs is None:
             t_text_kwargs = {}
 
-        t_text_kwarg_defaults.update(t_text_kwargs)  # TODO: Messy, messy...
+        t_text_kwargs = {**T_TEXT_KWARGS, **t_text_kwargs}
 
-        t_fmt_string.format(t_data[0])
-
-        t_str = t_fmt_string.format(uround(t_data[0], t_unit, digits = 3))
-        if t_unit_name != '':
-            t_str += fr' ${t_unit_name}$'
-
-        t_text = plt.figtext(.7, .05, t_str, **t_text_kwarg_defaults, animated = True)
+        t_str = t_fmt_string.format(uround(t_data[0], t_unit, digits = 3)) + t_unit_label
+        t_text = plt.figtext(.7, .05, t_str, **t_text_kwargs, animated = True)
 
         # do animation
 
@@ -860,28 +869,22 @@ def xyt_plot(name,
         background = fig.canvas.copy_from_bbox(fig.bbox)
         canvas_width, canvas_height = fig.canvas.get_width_height()
 
-        cmdstring = ("ffmpeg",
-                     '-y',
-                     '-r', '{}'.format(fps),  # choose fps
-                     '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
-                     '-pix_fmt', 'argb',  # pixel format
-                     '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
-                     '-vcodec', 'mpeg4',  # output encoding
-                     '-q:v', '1',  # maximum quality
-                     path)
-        subprocess_kwargs = dict(
-            stdin = subprocess.PIPE,
-            stdout = subprocess.PIPE,
-            # stderr = subprocess.PIPE,
-            bufsize = -1,
-        )
+        cmds = ("ffmpeg",
+                '-y',
+                '-r', '{}'.format(fps),  # choose fps
+                '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
+                '-pix_fmt', 'argb',  # pixel format
+                '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
+                '-vcodec', 'mpeg4',  # output encoding
+                '-q:v', '1',  # maximum quality
+                path)
 
         if progress_bar:
             t_iter = tqdm(t_data)
         else:
             t_iter = t_data
 
-        with utils.SubprocessManager(cmdstring, **subprocess_kwargs) as ffmpeg:
+        with utils.SubprocessManager(cmds, **FFMPEG_PROCESS_KWARGS) as ffmpeg:
             for t in t_iter:
                 fig.canvas.restore_region(background)
 
@@ -891,10 +894,7 @@ def xyt_plot(name,
                     fig.draw_artist(line)
 
                 # update and redraw t strings
-                t_str = t_fmt_string.format(uround(t, t_unit, digits = 3))
-                if t_unit_name != '':
-                    t_str += fr' ${t_unit_name}$'
-                t_text.set_text(t_str)
+                t_text.set_text(t_fmt_string.format(uround(t, t_unit, digits = 3)) + t_unit_label)
                 fig.draw_artist(t_text)
 
                 fig.canvas.blit(fig.bbox)
@@ -907,7 +907,7 @@ def xyt_plot(name,
     if save_csv:
         raise NotImplementedError
         # csv_path = os.path.splitext(path)[0] + '.csv'
-        # np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
+        # np.savetxt(csv_path, (x_data, *(y_func(x_data, t, **y_kwargs) for y_func, y_kwargs in zip(y_funcs, y_func_kwargs) for t in t_data)), delimiter = ',')
         #
         # logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
@@ -917,16 +917,16 @@ def xyt_plot(name,
 def xyzt_plot(name,
               x_mesh, y_mesh, t_data, z_func, z_func_kwargs = None,
               figure_manager = None,
-              x_unit = 1, y_unit = 1, t_unit = 1, z_unit = 1,
+              x_unit = None, y_unit = None, t_unit = None, z_unit = None,
               t_fmt_string = r'$t = {}$', t_text_kwargs = None,
               x_log_axis = False, y_log_axis = False, z_log_axis = False,
               x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, z_lower_limit = None, z_upper_limit = None,
               vlines = (), vline_kwargs = (), hlines = (), hline_kwargs = (),
               x_extra_ticks = None, y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
               title = None, x_label = None, y_label = None,
-              font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10, font_size_legend = 12,
-              ticks_on_top = True, ticks_on_right = True, legend_on_right = False,
-              grid_kwargs = None,
+              font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10,
+              ticks_on_top = True, ticks_on_right = True,
+              grid_kwargs = None, minor_grid_kwargs = None,
               length = 30,
               fig_dpi_scale = 3,
               colormap = plt.get_cmap('viridis'),
@@ -940,106 +940,70 @@ def xyzt_plot(name,
         fig = fm.fig
         ax = fig.add_axes([.15, .15, .75, .7])
 
-        plt.set_cmap(colormap)
+        if grid_kwargs is None:
+            grid_kwargs = {}
+        if minor_grid_kwargs is None:
+            minor_grid_kwargs = {}
 
-        x_unit_value, x_unit_name = unit_value_and_name_from_unit(x_unit)
-        if x_unit_name != '':
-            x_unit_label = r' (${}$)'.format(x_unit_name)
-        else:
-            x_unit_label = ''
-
-        y_unit_value, y_unit_name = unit_value_and_name_from_unit(y_unit)
-        if y_unit_name != '':
-            y_unit_label = r' (${}$)'.format(y_unit_name)
-        else:
-            y_unit_label = ''
-
-        z_unit_value, z_unit_name = unit_value_and_name_from_unit(z_unit)
-        if z_unit_name != '':
-            z_unit_label = r' (${}$)'.format(z_unit_name)
-        else:
-            z_unit_label = ''
-
-        t_unit_value, t_unit_name = unit_value_and_name_from_unit(t_unit)
-
-        # make any horizontal and vertical lines
-        for vl, vkw in it.zip_longest(vlines, vline_kwargs):
-            if vkw is None:
-                vkw = {}
-            kw = {'color': 'black', 'linestyle': '-'}
-            kw.update(vkw)
-            ax.axvline(x = vl / x_unit_value, **kw)
-        for hl, hkw in it.zip_longest(hlines, hline_kwargs):
-            if hkw is None:
-                hkw = {}
-            kw = {'color': 'black', 'linestyle': '-'}
-            kw.update(hkw)
-            ax.axhline(y = hl / y_unit_value, **kw)
-
-        if grid_kwargs is not None:
-            grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
-        else:
-            grid_kwargs = {**GRID_KWARGS}
-
-        if x_log_axis:
-            ax.set_xscale('log')
-        if y_log_axis:
-            ax.set_yscale('log')
-            minor_grid_kwargs = grid_kwargs.copy()
-            minor_grid_kwargs['alpha'] -= .1
-            ax.grid(True, which = 'minor', **minor_grid_kwargs)
-
-        # set axis limits
-        if x_lower_limit is None:
-            x_lower_limit = np.nanmin(x_mesh)
-        if x_upper_limit is None:
-            x_upper_limit = np.nanmax(x_mesh)
-
-        if y_lower_limit is None:
-            y_lower_limit = np.nanmin(y_mesh)
-        if y_upper_limit is None:
-            y_upper_limit = np.nanmax(y_mesh)
-
-        ax.set_xlim(left = x_lower_limit / x_unit_value, right = x_upper_limit / x_unit_value)
-        ax.set_ylim(bottom = y_lower_limit / y_unit_value, top = y_upper_limit / y_unit_value)
+        grid_color = CMAP_TO_OPPOSITE.get(colormap, 'black')
+        grid_kwargs['color'] = grid_color
+        minor_grid_kwargs['color'] = grid_color
+        grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
+        minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
 
         if z_func_kwargs is None:
             z_func_kwargs = {}
 
-        if z_lower_limit is None and z_upper_limit is None:
-            z_lower_limit = min(np.nanmin(z_func(x_mesh, y_mesh, t, **z_func_kwargs)) for t in t_data)
-            z_upper_limit = max(np.nanmax(z_func(x_mesh, y_mesh, t, **z_func_kwargs)) for t in t_data)
-            z_range = np.abs(z_upper_limit - z_lower_limit)
-            z_lower_limit -= .05 * z_range
-            z_upper_limit += .05 * z_range
+        plt.set_cmap(colormap)
 
-        if z_log_axis:
-            z_lower_limit /= 10
-            z_upper_limit *= 10
+        x_unit_value, x_unit_tex = get_unit_value_and_tex_from_unit(x_unit)
+        x_unit_label = get_unit_label(x_unit)
 
-        # neither of these trigger if both z limits are None
-        if z_lower_limit is None:
-            z_lower_limit = min(np.nanmin(z_func(x_mesh, y_mesh, t, **z_func_kwargs)) for t in t_data)
-            if z_log_axis:
-                z_lower_limit /= 10
-        if z_upper_limit is None:
-            z_upper_limit = max(np.nanmax(z_func(x_mesh, y_mesh, t, **z_func_kwargs)) for t in t_data)
-            if z_log_axis:
-                z_upper_limit *= 10
+        y_unit_value, y_unit_tex = get_unit_value_and_tex_from_unit(y_unit)
+        y_unit_label = get_unit_label(y_unit)
 
+        z_unit_value, z_unit_name = get_unit_value_and_tex_from_unit(z_unit)
+        z_unit_label = get_unit_label(z_unit)
+
+        t_unit_value, t_unit_tex = get_unit_value_and_tex_from_unit(t_unit)
+        t_unit_label = get_unit_label(t_unit)
+
+        attach_hv_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
+        attach_hv_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
+
+        x_lower_limit, x_upper_limit = set_axis_limits(ax, x_mesh,
+                                                       lower_limit = x_lower_limit, upper_limit = x_upper_limit,
+                                                       log = x_log_axis,
+                                                       pad = 0, log_pad = 1,
+                                                       unit = x_unit, direction = 'x')
+        y_lower_limit, y_upper_limit = set_axis_limits(ax, y_mesh,
+                                                       lower_limit = y_lower_limit, upper_limit = y_upper_limit,
+                                                       log = y_log_axis,
+                                                       pad = 0, log_pad = 1,
+                                                       unit = y_unit, direction = 'y')
+
+        z_lower_limit, z_upper_limit = get_axis_limits(*(z_func(x_mesh, y_mesh, t, **z_func_kwargs) for t in t_data),
+                                                       lower_limit = z_lower_limit, upper_limit = z_upper_limit,
+                                                       log = z_log_axis,
+                                                       pad = 0, log_pad = 10,
+                                                       unit = z_unit)
         if z_log_axis:
             norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
         else:
             norm = matplotlib.colors.Normalize(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
 
         ax.grid(True, which = 'major', **grid_kwargs)
+        if x_log_axis:
+            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+        if y_log_axis:
+            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
         # make title, axis labels, and legend
         if title is not None:
             title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
-            title.set_y(1.075)  # move title up a little
+            title.set_y(TITLE_OFFSET)  # move title up a little
         if x_label is not None:
             x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
         if y_label is not None:
@@ -1069,8 +1033,8 @@ def xyzt_plot(name,
             ax.set_yticklabels(y_tick_labels)
 
         # set limits again to guarantee we don't see ticks oustide the limits
-        ax.set_xlim(left = x_lower_limit / x_unit_value, right = x_upper_limit / x_unit_value)
-        ax.set_ylim(bottom = y_lower_limit / y_unit_value, top = y_upper_limit / y_unit_value)
+        ax.set_xlim(x_lower_limit, x_upper_limit)
+        ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
         ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
@@ -1083,21 +1047,13 @@ def xyzt_plot(name,
 
         plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
 
-        t_text_kwarg_defaults = dict(
-            fontsize = 12,
-        )
         if t_text_kwargs is None:
             t_text_kwargs = {}
 
-        t_text_kwarg_defaults.update(t_text_kwargs)  # TODO: Messy, messy...
+        t_text_kwargs = {**T_TEXT_KWARGS, **t_text_kwargs}
 
-        t_fmt_string.format(t_data[0])
-
-        t_str = t_fmt_string.format(uround(t_data[0], t_unit, digits = 3))
-        if t_unit_name != '':
-            t_str += fr' ${t_unit_name}$'
-
-        t_text = plt.figtext(.7, .05, t_str, **t_text_kwarg_defaults, animated = True)
+        t_str = t_fmt_string.format(uround(t_data[0], t_unit, digits = 3)) + t_unit_label
+        t_text = plt.figtext(.7, .05, t_str, **t_text_kwargs, animated = True)
 
         # do animation
 
@@ -1111,28 +1067,22 @@ def xyzt_plot(name,
         background = fig.canvas.copy_from_bbox(fig.bbox)
         canvas_width, canvas_height = fig.canvas.get_width_height()
 
-        cmdstring = ("ffmpeg",
-                     '-y',
-                     '-r', '{}'.format(fps),  # choose fps
-                     '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
-                     '-pix_fmt', 'argb',  # pixel format
-                     '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
-                     '-vcodec', 'mpeg4',  # output encoding
-                     '-q:v', '1',  # maximum quality
-                     path)
-        subprocess_kwargs = dict(
-            stdin = subprocess.PIPE,
-            stdout = subprocess.PIPE,
-            # stderr = subprocess.PIPE,
-            bufsize = -1,
-        )
+        cmds = ("ffmpeg",
+                '-y',
+                '-r', '{}'.format(fps),  # choose fps
+                '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
+                '-pix_fmt', 'argb',  # pixel format
+                '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
+                '-vcodec', 'mpeg4',  # output encoding
+                '-q:v', '1',  # maximum quality
+                path)
 
         if progress_bar:
             t_iter = tqdm(t_data)
         else:
             t_iter = t_data
 
-        with utils.SubprocessManager(cmdstring, **subprocess_kwargs) as ffmpeg:
+        with utils.SubprocessManager(cmds, **FFMPEG_PROCESS_KWARGS) as ffmpeg:
             for t in t_iter:
                 fig.canvas.restore_region(background)
 
@@ -1140,10 +1090,7 @@ def xyzt_plot(name,
                 fig.draw_artist(colormesh)
 
                 # update and redraw t strings
-                t_str = t_fmt_string.format(uround(t, t_unit, digits = 3))
-                if t_unit_name != '':
-                    t_str += fr' ${t_unit_name}$'
-                t_text.set_text(t_str)
+                t_text.set_text(t_fmt_string.format(uround(t, t_unit, digits = 3)) + t_unit_label)
                 fig.draw_artist(t_text)
 
                 fig.canvas.blit(fig.bbox)

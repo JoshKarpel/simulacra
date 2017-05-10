@@ -23,13 +23,13 @@ class MetricsAndElectricField(cp.AxisManager):
                  label_top = False, label_left = True, ticks_top = False, legend_kwargs = None):
         self.time_unit_str = ''
         if type(time_unit) == str:
-            self.time_unit_str = unit_names_to_tex_strings[time_unit]
-            time_unit = unit_names_to_values[time_unit]
+            self.time_unit_str = UNIT_NAMES_TO_TEX[time_unit]
+            time_unit = UNIT_NAMES_TO_VALUES[time_unit]
         self.time_unit = time_unit
 
         if type(electric_field_unit) == str:
-            self.electric_field_unit_str = unit_names_to_tex_strings[electric_field_unit]
-            self.electric_field_unit = unit_names_to_values[electric_field_unit]
+            self.electric_field_unit_str = UNIT_NAMES_TO_TEX[electric_field_unit]
+            self.electric_field_unit = UNIT_NAMES_TO_VALUES[electric_field_unit]
         else:
             self.electric_field_unit_str = ''
             self.electric_field_unit = electric_field_unit
@@ -160,8 +160,8 @@ class TestStateStackplot(cp.AxisManager):
                  label_top = False, label_left = True, ticks_top = True, ticks_right = True, legend_kwargs = None):
         self.time_unit_str = ''
         if type(time_unit) == str:
-            self.time_unit_str = unit_names_to_tex_strings[time_unit]
-            time_unit = unit_names_to_values[time_unit]
+            self.time_unit_str = UNIT_NAMES_TO_TEX[time_unit]
+            time_unit = UNIT_NAMES_TO_VALUES[time_unit]
         self.time_unit = time_unit
 
         self.log_metrics = log_metrics
@@ -298,7 +298,7 @@ class WavefunctionSimulationAnimator(cp.Animator):
 
 class LineAxis(QuantumMeshAxis):
     def initialize(self):
-        unit_value, unit_name = unit_value_and_name_from_unit(self.distance_unit)
+        unit_value, unit_name = get_unit_value_and_tex_from_unit(self.distance_unit)
 
         self.mesh = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, distance_unit = self.distance_unit, animated = True)
         self.redraw += [self.mesh]
@@ -344,7 +344,7 @@ class LineAnimator(WavefunctionSimulationAnimator):
 
 class CylindricalSliceAxis(QuantumMeshAxis):
     def initialize(self):
-        unit_value, unit_name = unit_value_and_name_from_unit(self.distance_unit)
+        unit_value, unit_name = get_unit_value_and_tex_from_unit(self.distance_unit)
 
         self.mesh = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, distance_unit = self.distance_unit, animated = True)
         self.redraw += [self.mesh]
@@ -398,7 +398,7 @@ class CylindricalSliceAnimator(WavefunctionSimulationAnimator):
 
 class PhiSliceAxis(QuantumMeshAxis):
     def initialize(self):
-        unit_value, unit_name = unit_value_and_name_from_unit(self.distance_unit)
+        unit_value, unit_name = get_unit_value_and_tex_from_unit(self.distance_unit)
 
         self.axis.set_theta_zero_location('N')
         self.axis.set_theta_direction('clockwise')

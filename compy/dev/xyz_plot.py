@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
         z_mesh = np.abs((x_mesh ** 2) + (y_mesh ** 2)) * np.sin(x_mesh * pi)
 
-        for cmap_name in ('viridis', 'magma', 'inferno', 'plasma'):
+        for cmap_name in ('viridis', 'magma', 'inferno', 'plasma', 'seismic', 'PiYG', 'PRGn', 'Spectral'):
             cp.plots.xyz_plot(f'xyz_{cmap_name}',
                               x_mesh, y_mesh, z_mesh,
                               colormap = plt.get_cmap(cmap_name),

@@ -117,7 +117,7 @@ class PulseParameterScanMixin:
 
                             lines.append(np.array([getattr(result, ionization_metric) for result in results]))
 
-                            label = fr"{line_parameter_name}$\, = {uround(line_parameter_value, line_parameter_unit, 3)} \, {unit_names_to_tex_strings[line_parameter_unit]}$"
+                            label = fr"{line_parameter_name}$\, = {uround(line_parameter_value, line_parameter_unit, 3)} \, {UNIT_NAMES_TO_TEX[line_parameter_unit]}$"
                             line_labels.append(label)
 
                         x = np.array([getattr(result, scan_parameter) for result in results])
@@ -148,7 +148,7 @@ class PulseParameterScanMixin:
                                              x,
                                              *lines,
                                              line_labels = line_labels,
-                                             title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
+                                             title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {UNIT_NAMES_TO_TEX[plot_parameter_unit]}$",
                                              x_label = scan_parameter_name, x_unit = scan_parameter_unit,
                                              y_lower_limit = y_lower_limit, y_upper_limit = y_upper_limit, y_log_axis = log_y, x_log_axis = log_x,
                                              y_label = ionization_metric_name,
@@ -214,7 +214,7 @@ class PulseParameterScanMixin:
                                                   x_label = x_parameter_name, y_label = y_parameter_name,
                                                   x_log_axis = log_x, y_log_axis = log_y,
                                                   z_log_axis = True, z_lower_limit = z_lower_limit, z_upper_limit = z_upper_limit,
-                                                  z_label = f"{ionization_metric_name} for {plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
+                                                  z_label = f"{ionization_metric_name} for {plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {UNIT_NAMES_TO_TEX[plot_parameter_unit]}$",
                                                   target_dir = self.summaries_dir)
                             except ValueError as e:
                                 logger.warning(f'Failed to make plot {plot_name} because of {e}')
@@ -338,7 +338,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                         cp.plots.xy_plot('1d__' + plot_name + log_str,
                                          x,
                                          line,
-                                         title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$",
+                                         title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {UNIT_NAMES_TO_TEX[plot_parameter_unit]}$",
                                          x_label = scan_parameter_name, x_unit = scan_parameter_unit, x_log_axis = log_x,
                                          y_lower_limit = y_lower_limit, y_upper_limit = y_upper_limit, y_log_axis = log_y,
                                          y_label = ionization_metric_name,
@@ -383,7 +383,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                         cp.plots.xy_plot('1d__' + plot_name + log_str,
                                          x,
                                          line,
-                                         title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {unit_names_to_tex_strings[plot_parameter_unit]}$ (Diff from Best)",
+                                         title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {UNIT_NAMES_TO_TEX[plot_parameter_unit]}$ (Diff from Best)",
                                          x_label = scan_parameter_name, x_unit = scan_parameter_unit, x_log_axis = log_x,
                                          y_lower_limit = None, y_upper_limit = None, y_log_axis = log_y,
                                          y_label = ionization_metric_name,
