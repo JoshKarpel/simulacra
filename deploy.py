@@ -24,13 +24,12 @@ if __name__ == '__main__':
     os.chdir('..')
 
     # copy various scripts into the deploy directory
-    shutil.copy2('compy/scripts/make_dag.py', 'deploy')
-
     shutil.copy2('ionization/scripts/run_sim.py', 'deploy')
     shutil.copy2('ionization/scripts/run_sim.sh', 'deploy')
     shutil.copy2('ionization/scripts/sync_and_process.py', 'deploy')
 
     shutil.copy2('ionization/scripts/cluster_job_creation/create_job__hyd__scan_width_phase_fluence.py', 'deploy')
+    shutil.copy2('ionization/scripts/cluster_job_creation/create_job__hyd__scan_window.py', 'deploy')
     shutil.copy2('ionization/scripts/cluster_job_creation/create_job__lide__scan_width_phase_fluence.py', 'deploy')
     shutil.copy2('ionization/scripts/cluster_job_creation/create_job__vide__scan_width_phase_fluence.py', 'deploy')
     shutil.copy2('ionization/scripts/cluster_job_creation/create_job__fsw__scan_width_phase_fluence.py', 'deploy')

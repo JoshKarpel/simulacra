@@ -509,6 +509,8 @@ class PulseSimulationResult(ElectricFieldSimulationResult):
         self.fluence = copy(sim.spec.fluence)
         self.phase = copy(sim.spec.phase)
 
+        self.pulse_window = copy(sim.spec.electric_potential.window.window_time)
+
 
 class PulseJobProcessor(ElectricFieldJobProcessor):
     simulation_result_type = PulseSimulationResult
