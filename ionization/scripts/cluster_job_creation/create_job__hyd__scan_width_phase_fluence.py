@@ -83,12 +83,9 @@ if __name__ == '__main__':
         parameters.append(clu.Parameter(name = 'final_time_in_pw',
                                         value = clu.ask_for_input('Final Time (in pulse widths)?', default = 40, cast_to = float)))
 
-        minimum_time_final = clu.Parameter(name = 'minimum_time_final',
-                                           value = asec * clu.ask_for_input('Minimum Final Time (in as)?', default = 0, cast_to = float))
-        parameters.append(minimum_time_final)
-        if minimum_time_final.value > 0:
-            parameters.append(clu.Parameter(name = 'extra_time_step',
-                                            value = asec * clu.ask_for_input('Extra Time Step (in as)?', default = 1, cast_to = float)))
+        extra_time = clu.Parameter(name = 'extra_time',
+                                   value = asec * clu.ask_for_input('Extra Time (in as)?', default = 0, cast_to = float))
+        parameters.append(extra_time)
 
         checkpoints = clu.ask_for_bool('Checkpoints?', default = True)
         parameters.append(clu.Parameter(name = 'checkpoints',
@@ -186,13 +183,12 @@ if __name__ == '__main__':
             )
 
             time_initial = spec_kwargs['initial_time_in_pw'] * electric_potential.pulse_width
-            time_final = spec_kwargs['final_time_in_pw'] * electric_potential.pulse_width
+            time_final = spec_kwargs['final_time_in_pw'] * electric_potential.pulse_width + extra_time
             snapshot_times = np.concatenate((snapshot_times, electric_potential.pulse_width * snapshot_times_in_pw))
 
             spec = spec_type(name,
                              file_name = str(ii),
                              time_initial = time_initial, time_final = time_final,
-
                              **mesh_kwargs, **spec_kwargs)
 
             spec.pulse_type = pulse_type

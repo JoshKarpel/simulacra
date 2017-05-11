@@ -97,12 +97,9 @@ if __name__ == '__main__':
                                          value = clu.ask_for_input('Time Bound (in pulse widths)?', default = 30, cast_to = float))
         parameters.append(time_bound_in_pw)
 
-        minimum_time_final = clu.Parameter(name = 'minimum_time_final',
-                                           value = asec * clu.ask_for_input('Minimum Final Time (in as)?', default = 0, cast_to = float))
-        parameters.append(minimum_time_final)
-        if minimum_time_final.value > 0:
-            parameters.append(clu.Parameter(name = 'extra_time_step',
-                                            value = asec * clu.ask_for_input('Extra Time Step (in as)?', default = 1, cast_to = float)))
+        extra_time = clu.Parameter(name = 'extra_time',
+                                   value = asec * clu.ask_for_input('Extra Time (in as)?', default = 0, cast_to = float))
+        parameters.append(extra_time)
 
         checkpoints = clu.ask_for_bool('Checkpoints?', default = True)
         parameters.append(clu.Parameter(name = 'checkpoints',
@@ -200,10 +197,13 @@ if __name__ == '__main__':
                 uround(electric_potential.phase, pi)
             )
 
+            time_initial = spec_kwargs['initial_time_in_pw'] * electric_potential.pulse_width
+            time_final = spec_kwargs['final_time_in_pw'] * electric_potential.pulse_width + extra_time
+
             time_bound = spec_kwargs['time_bound_in_pw'] * electric_potential.pulse_width
             spec = spec_type(name,
                              file_name = str(ii),
-                             time_initial = -time_bound, time_final = time_bound,
+                             time_initial = time_initial, time_final = time_final,
                              analytic_eigenstate_type = ion.FiniteSquareWellState,
                              **spec_kwargs)
 

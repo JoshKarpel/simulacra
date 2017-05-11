@@ -554,6 +554,7 @@ class Sum(Summand):
         return self.__class__(*self, *other)  # TODO: no protection against adding together non-similar types
 
     def __getattr__(self, item):
+        """Dispatch unknown attributes to the items in the container."""
         try:
             return super().__getattribute__(item)
         except AttributeError:
