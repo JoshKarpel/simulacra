@@ -3,14 +3,14 @@ import logging
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
+log = si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
 
 
 if __name__ == '__main__':
@@ -36,7 +36,7 @@ if __name__ == '__main__':
         sim.mesh.plot_electron_momentum_spectrum(target_dir = OUT_DIR, name_postfix = '__from_sim_directly')
         sim.mesh.plot_electron_momentum_spectrum(target_dir = OUT_DIR, name_postfix = '__from_sim_directly_free_only', g_mesh = sim.mesh.get_g_with_states_removed(sim.bound_states))
 
-        loaded_sim = cp.Simulation.load(saved_sim_path)
+        loaded_sim = si.Simulation.load(saved_sim_path)
 
         for time_index, snapshot in loaded_sim.snapshots.items():
             print(time_index, snapshot, repr(snapshot))

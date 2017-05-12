@@ -1,7 +1,7 @@
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import numpy as np
 
 import ionization as ion
@@ -10,7 +10,7 @@ import ionization as ion
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
+log = si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
 
 if __name__ == '__main__':
     with log as logger:
@@ -34,7 +34,7 @@ if __name__ == '__main__':
         t = t_init
         times = [t]
 
-        with cp.utils.BlockTimer() as timer:
+        with si.utils.BlockTimer() as timer:
             while t < t_final:
                 t += get_time_step(t, efield)
 
@@ -48,4 +48,4 @@ if __name__ == '__main__':
         print(timer)
         print(len(times), times)
 
-        cp.plots.xy_plot('')
+        si.plots.xy_plot('')

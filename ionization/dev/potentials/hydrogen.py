@@ -3,20 +3,20 @@ import os
 import random
 import sys
 
-import compy as cp
+import simulacra as si
 import ionization as ion
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-cp.utils.ensure_dir_exists(OUT_DIR)
+si.utils.ensure_dir_exists(OUT_DIR)
 
 logger = logging.getLogger('compy')
 logger.setLevel(logging.DEBUG)
 
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setLevel(logging.DEBUG)
-stdout_handler.setFormatter(cp.utils.LOG_FORMATTER)
+stdout_handler.setFormatter(si.utils.LOG_FORMATTER)
 logger.addHandler(stdout_handler)
 
 if __name__ == '__main__':

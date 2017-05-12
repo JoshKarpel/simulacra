@@ -4,11 +4,11 @@ import argparse
 
 import numpy as np
 
-import compy as cp
-import compy.cluster as clu
+import simulacra as si
+import simulacra.cluster as clu
 import ionization as ion
 import ionization.cluster as iclu
-from units import *
+from simulacra.units import *
 
 if __name__ == '__main__':
     # get command line arguments
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = 31 - ((args.verbosity + 1) * 10)) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_level = 31 - ((args.verbosity + 1) * 10)) as logger:
         # job type options
         job_processor = iclu.ConvergenceJobProcessor
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
         t_bound = 250 * asec
 
         r_bound = clu.Parameter('r_bound',
-                                value = bohr_radius * cp.cluster.ask_for_input('R Bound (Bohr radii)?', default = 50, cast_to = float))
+                                value = bohr_radius * si.cluster.ask_for_input('R Bound (Bohr radii)?', default = 50, cast_to = float))
         parameters.append(r_bound)
 
         parameters.append(clu.Parameter('delta_r',

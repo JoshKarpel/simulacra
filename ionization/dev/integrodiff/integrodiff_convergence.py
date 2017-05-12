@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.interpolate as interp
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-import plots
-from units import *
+
+from simulacra.units import *
 from ionization import integrodiff as ide
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -16,7 +16,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def comparison_plot(dt_list, t_by_dt, y_by_dt, title):
-    fig = plots.get_figure('full')
+    fig = si.plots.get_figure('full')
     ax = fig.add_subplot(111)
 
     for dt, t, y in zip(dt_list, t_by_dt, y_by_dt):
@@ -30,7 +30,7 @@ def comparison_plot(dt_list, t_by_dt, y_by_dt, title):
     ax.set_ylabel(r'$   \left| a_{\alpha}(t) \right|^2   $')
     ax.grid(True, **ion.GRID_KWARGS)
 
-    plots.save_current_figure('{}__comparison'.format(title), target_dir = OUT_DIR)
+    si.plots.save_current_figure('{}__comparison'.format(title), target_dir = OUT_DIR)
 
     plt.close()
 
@@ -40,7 +40,7 @@ def error_plot(dt_list, t_by_dt, y_by_dt, title):
     longest_t = t_by_dt[dt_min_index]
     best_y = y_by_dt[dt_min_index]
 
-    fig = plots.get_figure('full')
+    fig = si.plots.get_figure('full')
     ax = fig.add_subplot(111)
 
     for dt, t, y in zip(dt_list, t_by_dt, y_by_dt):
@@ -59,7 +59,7 @@ def error_plot(dt_list, t_by_dt, y_by_dt, title):
     ax.set_ylabel(r'$   \left| a_{\alpha}(t) \right|^2 - \left| a_{\alpha}^{\mathrm{best}}(t) \right|^2  $')
     ax.grid(True, **ion.GRID_KWARGS)
 
-    plots.save_current_figure('{}__error'.format(title), target_dir = OUT_DIR)
+    si.plots.save_current_figure('{}__error'.format(title), target_dir = OUT_DIR)
 
     plt.close()
 
@@ -69,7 +69,7 @@ def error_log_plot(dt_list, t_by_dt, y_by_dt, title):
     longest_t = t_by_dt[dt_min_index]
     best_y = y_by_dt[dt_min_index]
 
-    fig = plots.get_figure('full')
+    fig = si.plots.get_figure('full')
     ax = fig.add_subplot(111)
 
     for dt, t, y in zip(dt_list, t_by_dt, y_by_dt):
@@ -93,7 +93,7 @@ def error_log_plot(dt_list, t_by_dt, y_by_dt, title):
     ax.set_yscale('log')
     # ax.set_ylim(bottom = 1e-10, top = 1)
 
-    plots.save_current_figure('{}__error_log'.format(title), target_dir = OUT_DIR)
+    si.plots.save_current_figure('{}__error_log'.format(title), target_dir = OUT_DIR)
 
     plt.close()
 
@@ -103,7 +103,7 @@ def convergence_plot(dt_list, t_by_dt, y_by_dt, title):
     longest_t = t_by_dt[dt_min_index]
     best_y = y_by_dt[dt_min_index]
 
-    fig = plots.get_figure('full')
+    fig = si.plots.get_figure('full')
     ax = fig.add_subplot(111)
 
     final = [np.abs(np.abs(y[-1]) - np.abs(best_y[-1])) for y in y_by_dt]
@@ -120,7 +120,7 @@ def convergence_plot(dt_list, t_by_dt, y_by_dt, title):
     ax.set_yscale('log')
     # ax.set_ylim(bottom = .01 * np.nanmin(final), top = 1)
 
-    plots.save_current_figure('{}__convergence'.format(title), target_dir = OUT_DIR)
+    si.plots.save_current_figure('{}__convergence'.format(title), target_dir = OUT_DIR)
 
     plt.close()
 
@@ -130,7 +130,7 @@ def convergence_plot_squared(dt_list, t_by_dt, y_by_dt, title):
     longest_t = t_by_dt[dt_min_index]
     best_y = y_by_dt[dt_min_index]
 
-    fig = plots.get_figure('full')
+    fig = si.plots.get_figure('full')
     ax = fig.add_subplot(111)
 
     final = [np.abs(np.abs(y[-1]) ** 2 - np.abs(best_y[-1]) ** 2) for y in y_by_dt]
@@ -146,7 +146,7 @@ def convergence_plot_squared(dt_list, t_by_dt, y_by_dt, title):
     ax.set_yscale('log')
     # ax.set_ylim(bottom = .01 * np.nanmin(final), top = 1)
 
-    plots.save_current_figure('{}__convergence_squared'.format(title), target_dir = OUT_DIR)
+    si.plots.save_current_figure('{}__convergence_squared'.format(title), target_dir = OUT_DIR)
 
     plt.close()
 
@@ -180,7 +180,7 @@ if __name__ == '__main__':
     # method = 'trapezoid'
     method = 'simpson'
 
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO,
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO,
                              file_logs = True, file_dir = OUT_DIR, file_name = method, file_mode = 'w', file_level = logging.INFO) as logger:
         for dt in dt_list:
             spec = ide.IntegroDifferentialEquationSpecification('{}__{}__dt={}as'.format(method, electric_field.__class__.__name__, round(dt, 3)),

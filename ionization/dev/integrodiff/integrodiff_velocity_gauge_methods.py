@@ -2,10 +2,10 @@ import itertools as it
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import numpy as np
-import plots
-from units import *
+
+from simulacra.units import *
 
 import ionization as ion
 from ionization import integrodiff as ide
@@ -14,7 +14,7 @@ from ionization import integrodiff as ide
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO)
+log = si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO)
 
 
 def run(spec):
@@ -58,7 +58,7 @@ if __name__ == '__main__':
             target_dir = OUT_DIR,
         )
 
-        results = cp.utils.multi_map(run, specs, processes = 4)
+        results = si.utils.multi_map(run, specs, processes = 4)
 
         for r in results:
             print(r.info())
@@ -78,11 +78,11 @@ if __name__ == '__main__':
                 y = [np.abs(r.a) ** 2 for r in results]
                 y_lab = r'$ \left| a(t) \right|^2 $'
 
-            plots.xy_plot(plot_name,
-                          results[0].times,
-                          *y,
-                          line_labels = [r.name for r in results],
-                          x_label = r'Time $t$', x_unit = 'asec',
-                          y_label = y_lab,
-                          y_log_axis = log,
-                          **plt_kwargs)
+            si.plots.xy_plot(plot_name,
+                             results[0].times,
+                             *y,
+                             line_labels = [r.name for r in results],
+                             x_label = r'Time $t$', x_unit = 'asec',
+                             y_label = y_lab,
+                             y_log_axis = log,
+                             **plt_kwargs)

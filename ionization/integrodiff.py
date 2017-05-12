@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.integrate as integrate
 
-import compy as cp
-from units import *
+import simulacra as si
+from simulacra.units import *
 from . import core, potentials, states
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,8 @@ def gaussian_kernel(x, *, tau_alpha):
     return (1 + (1j * x / tau_alpha)) ** (-1.5)
 
 
-class IntegroDifferentialEquationSpecification(cp.Specification):
-    integration_method = cp.utils.RestrictedValues('integration_method', ('simpson', 'trapezoid'))
+class IntegroDifferentialEquationSpecification(si.Specification):
+    integration_method = si.utils.RestrictedValues('integration_method', ('simpson', 'trapezoid'))
 
     def __init__(self, name,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
@@ -112,7 +112,7 @@ class IntegroDifferentialEquationSpecification(cp.Specification):
         return '\n'.join(checkpoint + ide_parameters + time_evolution)
 
 
-class IntegroDifferentialEquationSimulation(cp.Simulation):
+class IntegroDifferentialEquationSimulation(si.Simulation):
     def __init__(self, spec):
         super().__init__(spec)
 
@@ -233,7 +233,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
             if self.spec.checkpoints:
                 if (self.time_index + 1) % self.spec.checkpoint_every == 0:
                     self.save(target_dir = self.spec.checkpoint_dir)
-                    self.status = cp.STATUS_RUN
+                    self.status = si.STATUS_RUN
                     logger.info('Checkpointed {} {} ({}) at time step {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1))
 
         self.status = 'finished'
@@ -243,7 +243,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
                        show_title = False,
                        plot_name = 'file_name',
                        **kwargs):
-        fig = cp.plots.get_figure('full')
+        fig = si.plots.get_figure('full')
 
         x_scale_unit, x_scale_name = get_unit_value_and_latex_from_unit(time_scale)
         f_scale_unit, f_scale_name = get_unit_value_and_latex_from_unit(field_scale)
@@ -252,7 +252,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
         ax_a = plt.subplot(grid_spec[0])
         ax_f = plt.subplot(grid_spec[1], sharex = ax_a)
 
-        ax_f.plot(self.times / x_scale_unit, self.spec.electric_potential.get_electric_field_amplitude(self.times) / f_scale_unit, color = cp.plots.RED, linewidth = 2)
+        ax_f.plot(self.times / x_scale_unit, self.spec.electric_potential.get_electric_field_amplitude(self.times) / f_scale_unit, color = si.plots.RED, linewidth = 2)
 
         overlap = np.abs(self.a) ** 2
         ax_a.plot(self.times / x_scale_unit, overlap, color = 'black', linewidth = 2)
@@ -261,17 +261,17 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
             ax_a.set_yscale('log')
             min_overlap = np.min(overlap)
             ax_a.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-            ax_a.grid(True, which = 'both', **cp.plots.GRID_KWARGS)
+            ax_a.grid(True, which = 'both', **si.plots.GRID_KWARGS)
         else:
             ax_a.set_ylim(0.0, 1.0)
             ax_a.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-            ax_a.grid(True, **cp.plots.GRID_KWARGS)
+            ax_a.grid(True, **si.plots.GRID_KWARGS)
 
         ax_a.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
         ax_f.set_xlabel(r'Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
         ax_a.set_ylabel(r'$\left| a_{\alpha}(t) \right|^2$', fontsize = 13)
-        ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = cp.plots.RED)
+        ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = si.plots.RED)
 
         plt.rcParams['xtick.major.pad'] = 5
         plt.rcParams['ytick.major.pad'] = 5
@@ -306,7 +306,7 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
                          left = True,
                          right = True)
 
-        ax_f.grid(True, **cp.plots.GRID_KWARGS)
+        ax_f.grid(True, **si.plots.GRID_KWARGS)
 
         if show_title:
             title = ax_a.set_title(self.name)
@@ -319,13 +319,13 @@ class IntegroDifferentialEquationSimulation(cp.Simulation):
 
         name = prefix + '__solution_vs_time{}'.format(postfix)
 
-        cp.plots.save_current_figure(name = name, **kwargs)
+        si.plots.save_current_figure(name = name, **kwargs)
 
         plt.close()
 
 
 class AdaptiveIntegroDifferentialEquationSpecification(IntegroDifferentialEquationSpecification):
-    error_on = cp.utils.RestrictedValues('erron_on', ('y', 'dydt'))
+    error_on = si.utils.RestrictedValues('erron_on', ('y', 'dydt'))
 
     def __init__(self, name,
                  minimum_time_step = None, maximum_time_step = 1 * asec,
@@ -576,7 +576,7 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
 
     def run_simulation(self):
         logger.info(f'Performing time evolution on {self.name} ({self.file_name}), starting from time index {self.time_index}')
-        self.status = cp.STATUS_RUN
+        self.status = si.STATUS_RUN
 
         while self.time < self.spec.time_final:
             getattr(self, 'evolve_' + self.spec.evolution_method)()
@@ -588,15 +588,15 @@ class AdaptiveIntegroDifferentialEquationSimulation(IntegroDifferentialEquationS
             if self.spec.checkpoints:
                 if (self.time_index + 1) % self.spec.checkpoint_every == 0:
                     self.save(target_dir = self.spec.checkpoint_dir)
-                    self.status = cp.STATUS_RUN
+                    self.status = si.STATUS_RUN
                     logger.info('Checkpointed {} {} ({}) at time step {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1))
 
-        self.status = cp.STATUS_FIN
+        self.status = si.STATUS_FIN
         logger.info(f'Finished performing time evolution on {self.name} ({self.file_name})')
 
 
-class VelocityGaugeIntegroDifferentialEquationSpecification(cp.Specification):
-    integration_method = cp.utils.RestrictedValues('integration_method', ('simpson', 'trapezoid'))
+class VelocityGaugeIntegroDifferentialEquationSpecification(si.Specification):
+    integration_method = si.utils.RestrictedValues('integration_method', ('simpson', 'trapezoid'))
 
     def __init__(self, name,
                  time_initial = 0 * asec, time_final = 200 * asec, time_step = 1 * asec,
@@ -696,7 +696,7 @@ def velocity_guassian_kernel(time_diff, quiver_diff, tau_alpha = 1, width = 1):
     return exp * diff * inv
 
 
-class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
+class VelocityGaugeIntegroDifferentialEquationSimulation(si.Simulation):
     def __init__(self, spec):
         super().__init__(spec)
 
@@ -838,7 +838,7 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
             if self.spec.checkpoints:
                 if (self.time_index + 1) % self.spec.checkpoint_every == 0:
                     self.save(target_dir = self.spec.checkpoint_dir)
-                    self.status = cp.STATUS_RUN
+                    self.status = si.STATUS_RUN
                     logger.info('Checkpointed {} {} ({}) at time step {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1))
 
         self.status = 'finished'
@@ -846,7 +846,7 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
 
     def plot_fields_vs_time(self, time_scale = 'asec', field_scale = 'AEF', vector_scale = 'atomic_momentum', quiver_scale = 'bohr_radius',
                             **kwargs):
-        with cp.plots.FigureManager(f'{self.name}__fields_vs_time', **kwargs) as figman:
+        with si.plots.FigureManager(f'{self.name}__fields_vs_time', **kwargs) as figman:
             fig = figman.fig
             ax = fig.add_subplot(111)
 
@@ -863,14 +863,14 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
 
             ax.set_xlabel(fr'Time $t$ (${t_scale_name}$)')
 
-            ax.grid(True, **cp.plots.GRID_KWARGS)
+            ax.grid(True, **si.plots.GRID_KWARGS)
             ax.legend(loc = 'best')
 
     def plot_a_vs_time(self, log = False, time_scale = 'asec', field_scale = 'AEF',
                        show_title = False,
                        plot_name = 'file_name',
                        **kwargs):
-        fig = cp.plots.get_figure('full')
+        fig = si.plots.get_figure('full')
 
         x_scale_unit, x_scale_name = get_unit_value_and_latex_from_unit(time_scale)
         f_scale_unit, f_scale_name = get_unit_value_and_latex_from_unit(field_scale)
@@ -879,7 +879,7 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
         ax_a = plt.subplot(grid_spec[0])
         ax_f = plt.subplot(grid_spec[1], sharex = ax_a)
 
-        ax_f.plot(self.times / x_scale_unit, self.spec.electric_potential.get_electric_field_amplitude(self.times) / f_scale_unit, color = cp.plots.RED, linewidth = 2)
+        ax_f.plot(self.times / x_scale_unit, self.spec.electric_potential.get_electric_field_amplitude(self.times) / f_scale_unit, color = si.plots.RED, linewidth = 2)
 
         overlap = np.abs(self.a) ** 2
         ax_a.plot(self.times / x_scale_unit, overlap, color = 'black', linewidth = 2)
@@ -888,17 +888,17 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
             ax_a.set_yscale('log')
             min_overlap = np.min(overlap)
             ax_a.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-            ax_a.grid(True, which = 'both', **cp.plots.GRID_KWARGS)
+            ax_a.grid(True, which = 'both', **si.plots.GRID_KWARGS)
         else:
             ax_a.set_ylim(0.0, 1.0)
             ax_a.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-            ax_a.grid(True, **cp.plots.GRID_KWARGS)
+            ax_a.grid(True, **si.plots.GRID_KWARGS)
 
         ax_a.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
         ax_f.set_xlabel(r'Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
         ax_a.set_ylabel(r'$\left| a_{\alpha}(t) \right|^2$', fontsize = 13)
-        ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = cp.plots.RED)
+        ax_f.set_ylabel(r'${}$ (${}$)'.format(str_efield, f_scale_name), fontsize = 13, color = si.plots.RED)
 
         plt.rcParams['xtick.major.pad'] = 5
         plt.rcParams['ytick.major.pad'] = 5
@@ -933,7 +933,7 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
                          left = True,
                          right = True)
 
-        ax_f.grid(True, **cp.plots.GRID_KWARGS)
+        ax_f.grid(True, **si.plots.GRID_KWARGS)
 
         if show_title:
             title = ax_a.set_title(self.name)
@@ -946,6 +946,6 @@ class VelocityGaugeIntegroDifferentialEquationSimulation(cp.Simulation):
 
         name = prefix + '__solution_vs_time{}'.format(postfix)
 
-        cp.plots.save_current_figure(name = name, **kwargs)
+        si.plots.save_current_figure(name = name, **kwargs)
 
         plt.close()

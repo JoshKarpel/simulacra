@@ -1,6 +1,6 @@
 import time
 
-from compy.utils import BlockTimer, memoize
+from simulacra.utils import BlockTimer, memoize
 
 
 def fib(n):

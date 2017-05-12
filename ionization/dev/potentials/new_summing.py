@@ -3,16 +3,16 @@ import os
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         times = np.linspace(0, 20, 1000) * s
 
         field_1 = ion.SineWave(1 * Hz, amplitude = 1 * V / m)
@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
         field_sum = field_1 + field_2
 
-        cp.plots.xy_plot(
+        si.plots.xy_plot(
             'sum_plot',
             times,
             field_1.get_electric_field_amplitude(times),

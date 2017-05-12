@@ -3,11 +3,11 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
 import ionization.dev as test
-import plots
-from units import *
+
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -77,11 +77,11 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 #     print(energy / eV)
 #
 #     plot_2d(1 - norm, z_powers, rho_powers)
-#     cp.utils.save_current_figure(name = 'norm', target_dir = None, img_format = 'pdf')
+#     si.utils.save_current_figure(name = 'norm', target_dir = None, img_format = 'pdf')
 #     plt.close()
 #
 #     plot_2d(energy / rydberg, z_powers, rho_powers)
-#     cp.utils.save_current_figure(name = 'energy', target_dir = None, img_format = 'pdf')
+#     si.utils.save_current_figure(name = 'energy', target_dir = None, img_format = 'pdf')
 
 
 # def cylindrical_slice_norm_energy(z_points, state):
@@ -124,7 +124,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 #     axis.set_ylim(np.min(scaled_norm), np.max(scaled_norm))
 #     line, = axis.plot(z_points, scaled_norm)
 #
-#     cp.utils.save_current_figure(name = 'norm', target_dir = None, img_format = 'pdf')
+#     si.utils.save_current_figure(name = 'norm', target_dir = None, img_format = 'pdf')
 #
 #     ###############
 #
@@ -137,7 +137,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 #     axis.set_ylim(np.min(scaled_energy), np.max(scaled_energy))
 #     line.set_ydata(scaled_energy)
 #
-#     cp.utils.save_current_figure(name = 'energy', target_dir = None, img_format = 'pdf')
+#     si.utils.save_current_figure(name = 'energy', target_dir = None, img_format = 'pdf')
 #
 #     #################
 #
@@ -200,7 +200,7 @@ def cylindrical_slice_norm_energy(z_points, states, bound = 30 * bohr_radius):
 
     axis.legend(loc = 'best', fontsize = 12)
 
-    plots.save_current_figure(name = 'cyl_norm_{}br'.format(uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    si.plots.save_current_figure(name = 'cyl_norm_{}br'.format(uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     ###############
 
@@ -214,7 +214,7 @@ def cylindrical_slice_norm_energy(z_points, states, bound = 30 * bohr_radius):
     for line, state in zip(lines, states):
         line.set_ydata(scaled_energy[state])
 
-    plots.save_current_figure(name = 'cyl_energy_{}br'.format(uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    si.plots.save_current_figure(name = 'cyl_energy_{}br'.format(uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     #################
 
@@ -276,7 +276,7 @@ def spherical_slice_norm_energy(r_points, states, theta_points = 128, bound = 30
 
     axis.legend(loc = 'best', fontsize = 12)
 
-    plots.save_current_figure(name = 'sph_norm_{}_{}br'.format(theta_points, uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    si.plots.save_current_figure(name = 'sph_norm_{}_{}br'.format(theta_points, uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     ###############
 
@@ -290,7 +290,7 @@ def spherical_slice_norm_energy(r_points, states, theta_points = 128, bound = 30
     for line, state in zip(lines, states):
         line.set_ydata(scaled_energy[state])
 
-    plots.save_current_figure(name = 'sph_energy_{}_{}br'.format(theta_points, uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    si.plots.save_current_figure(name = 'sph_energy_{}_{}br'.format(theta_points, uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     #################
 
@@ -352,7 +352,7 @@ def spherical_harmonic_norm_energy(r_points, states, spherical_harmonics = 128, 
 
     axis.legend(loc = 'best', fontsize = 12)
 
-    plots.save_current_figure(name = 'sphharm__norm_{}_{}br'.format(spherical_harmonics, uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    si.plots.save_current_figure(name = 'sphharm__norm_{}_{}br'.format(spherical_harmonics, uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     ###############
 
@@ -366,7 +366,7 @@ def spherical_harmonic_norm_energy(r_points, states, spherical_harmonics = 128, 
     for line, state in zip(lines, states):
         line.set_ydata(scaled_energy[state])
 
-    plots.save_current_figure(name = 'sphharm_energy_{}_{}br'.format(spherical_harmonics, uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    si.plots.save_current_figure(name = 'sphharm_energy_{}_{}br'.format(spherical_harmonics, uround(bound, bohr_radius, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     #################
 
@@ -432,7 +432,7 @@ def spherical_harmonic_norm_energy_evolved(r_points, states, spherical_harmonics
 
     axis.legend(loc = 'best', fontsize = 12)
 
-    plots.save_current_figure(name = 'sphharm__norm_{}_{}brevolvedFor{}asec'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    si.plots.save_current_figure(name = 'sphharm__norm_{}_{}brevolvedFor{}asec'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     ###############
 
@@ -446,7 +446,7 @@ def spherical_harmonic_norm_energy_evolved(r_points, states, spherical_harmonics
     for line, state in zip(lines, states):
         line.set_ydata(scaled_energy[state])
 
-    plots.save_current_figure(name = 'sphharm_energy_{}_{}br_evolvedFor{}asec'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    si.plots.save_current_figure(name = 'sphharm_energy_{}_{}br_evolvedFor{}asec'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     #################
 
@@ -462,7 +462,7 @@ def spherical_harmonic_norm_energy_evolved(r_points, states, spherical_harmonics
     for line, state in zip(lines, states):
         line.set_ydata(scaled_overlap[state])
 
-    plots.save_current_figure(name = 'sphharm_initOverlap_{}_{}br_evolvedFor{}asec'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    si.plots.save_current_figure(name = 'sphharm_initOverlap_{}_{}br_evolvedFor{}asec'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     #################
 
@@ -526,7 +526,7 @@ def spherical_harmonic_time_stability(r_point_count, states, spherical_harmonics
 
     axis.legend(loc = 'best', fontsize = 12)
 
-    plots.save_current_figure(name = 'sphharm__norm_{}_{}brevolvedFor{}asec_overtime'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    si.plots.save_current_figure(name = 'sphharm__norm_{}_{}brevolvedFor{}asec_overtime'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     ###############
 
@@ -540,7 +540,7 @@ def spherical_harmonic_time_stability(r_point_count, states, spherical_harmonics
     # for line, state in zip(lines, states):
     #     line.set_ydata(scaled_energy[state])
     #
-    # cp.utils.save_current_figure(name = 'sphharm_energy_{}_{}br_evolvedFor{}asec'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    # si.utils.save_current_figure(name = 'sphharm_energy_{}_{}br_evolvedFor{}asec'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     #################
 
@@ -556,7 +556,7 @@ def spherical_harmonic_time_stability(r_point_count, states, spherical_harmonics
     for line, state in zip(lines, states):
         line.set_ydata(scaled_overlap[state])
 
-    plots.save_current_figure(name = 'sphharm_initOverlap_{}_{}br_evolvedFor{}asec_overtime'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
+    si.plots.save_current_figure(name = 'sphharm_initOverlap_{}_{}br_evolvedFor{}asec_overtime'.format(spherical_harmonics, uround(bound, bohr_radius, 0), uround(evolve_for, asec, 0)), target_dir = OUT_DIR, img_format = 'pdf')
 
     #################
 
@@ -564,7 +564,7 @@ def spherical_harmonic_time_stability(r_point_count, states, spherical_harmonics
 
 
 def run_test(spec):
-    with cp.utils.LogManager() as logger:
+    with si.utils.LogManager() as logger:
         sim = test.StaticConvergenceTestingSimulation(spec)
         sim.run_simulation()
 
@@ -591,7 +591,7 @@ if __name__ == '__main__':
 
     linear_points = 2 ** np.array([6, 7, 8, 9, 10, 11, 12])
 
-    with cp.utils.LogManager() as logger:
+    with si.utils.LogManager() as logger:
         # cylindrical_slice_norm_energy(linear_points, states, bound = bound)
         # spherical_slice_norm_energy(radial_points, states, bound = bound, theta_points = angular_points)
         # spherical_harmonic_norm_energy(radial_points, states, bound = bound, spherical_harmonics = angular_points)
@@ -626,4 +626,4 @@ if __name__ == '__main__':
 
                     specs.append(spec_sphharm)
 
-        sims = cp.utils.multi_map(run_test, specs, processes = 4)
+        sims = si.utils.multi_map(run_test, specs, processes = 4)

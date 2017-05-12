@@ -2,8 +2,8 @@ import logging
 import os
 from copy import deepcopy
 
-import compy as cp
-from units import *
+import simulacra as si
+from simulacra.units import *
 
 import ionization as ion
 
@@ -11,11 +11,11 @@ import ionization as ion
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.INFO)
+log = si.utils.LogManager('compy', 'ionization', stdout_level = logging.INFO)
 
 
 def run(spec):
-    with cp.utils.LogManager('compy', 'ionization',
+    with si.utils.LogManager('compy', 'ionization',
                              stdout_logs = True, stdout_level = logging.INFO) as logger:
         try:
             sim = spec.to_simulation()
@@ -103,4 +103,4 @@ if __name__ == '__main__':
                                                                     electric_potential = e_field_sin,
                                                                     **deepcopy(base_kwargs)))
 
-        cp.utils.multi_map(run, specs, processes = 2)
+        si.utils.multi_map(run, specs, processes = 2)

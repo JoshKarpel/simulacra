@@ -507,14 +507,14 @@ class JobProcessor(core.Beet):
         sim_numbers = [result.file_name for result in self.data.values() if result is not None]
         running_time = [result.running_time for result in self.data.values() if result is not None]
 
-        plots.xy_plot(f'{self.name}__diagnostics',
-                      sim_numbers,
-                      running_time,
-                      line_kwargs = [dict(linestyle = '', marker = '.')],
-                      y_unit = 'hours',
-                      x_label = 'Simulation Number', y_label = 'Time',
-                      title = f'{self.name} Diagnostics',
-                      target_dir = self.summaries_dir)
+        si.plots.xy_plot(f'{self.name}__diagnostics',
+                         sim_numbers,
+                         running_time,
+                         line_kwargs = [dict(linestyle = '', marker = '.')],
+                         y_unit = 'hours',
+                         x_label = 'Simulation Number', y_label = 'Time',
+                         title = f'{self.name} Diagnostics',
+                         target_dir = self.summaries_dir)
 
         logger.debug(f'Generated diagnostics plot for job {self.name}')
 

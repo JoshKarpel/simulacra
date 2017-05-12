@@ -3,15 +3,15 @@ import logging
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-import plots
-from units import *
+
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG)
+log = si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG)
 
 
 def run(spec):
@@ -25,10 +25,10 @@ def run(spec):
         sim.plot_test_state_overlaps_vs_time(target_dir = OUT_DIR,
                                              grouped_free_states = {})
 
-        plots.xy_plot(f'{sim.name}__energy_vs_time',
-                      sim.times, sim.energy_expectation_value_vs_time_internal,
-                      x_label = '$t$', x_unit = 'asec', y_label = 'Energy', y_unit = 'eV',
-                      target_dir = OUT_DIR)
+        si.plots.xy_plot(f'{sim.name}__energy_vs_time',
+                         sim.times, sim.energy_expectation_value_vs_time_internal,
+                         x_label = '$t$', x_unit = 'asec', y_label = 'Energy', y_unit = 'eV',
+                         target_dir = OUT_DIR)
 
 if __name__ == '__main__':
     with log as logger:
@@ -73,4 +73,4 @@ if __name__ == '__main__':
                                                evolution_method = method,
                                                ))
 
-        cp.utils.multi_map(run, specs, processes = 3)
+        si.utils.multi_map(run, specs, processes = 3)

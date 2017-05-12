@@ -9,15 +9,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-import compy as cp
-from units import *
+import simulacra as si
+from simulacra.units import *
 from . import core
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class MetricsAndElectricField(cp.AxisManager):
+class MetricsAndElectricField(si.AxisManager):
     def __init__(self, axis, simulation,
                  log_metrics = False, time_unit = 'asec', electric_field_unit = 'AEF', metrics = ('norm',),
                  label_top = False, label_left = True, ticks_top = False, legend_kwargs = None):
@@ -154,7 +154,7 @@ class MetricsAndElectricField(cp.AxisManager):
         self.initial_state_overlap_line.set_ydata(self.sim.state_overlaps_vs_time[self.sim.spec.initial_state])
 
 
-class TestStateStackplot(cp.AxisManager):
+class TestStateStackplot(si.AxisManager):
     def __init__(self, axis, simulation,
                  log_metrics = False, time_unit = 'asec',
                  label_top = False, label_left = True, ticks_top = True, ticks_right = True, legend_kwargs = None):
@@ -253,7 +253,7 @@ class TestStateStackplot(cp.AxisManager):
         super().update()
 
 
-class QuantumMeshAxis(cp.AxisManager):
+class QuantumMeshAxis(si.AxisManager):
     def __init__(self, axis, simulation,
                  plot_limit = None,
                  renormalize = True,
@@ -269,7 +269,7 @@ class QuantumMeshAxis(cp.AxisManager):
         super(QuantumMeshAxis, self).__init__(axis, simulation)
 
 
-class WavefunctionSimulationAnimator(cp.Animator):
+class WavefunctionSimulationAnimator(si.Animator):
     def __init__(self, *args,
                  plot_limit = None,
                  renormalize = True,
@@ -290,7 +290,7 @@ class WavefunctionSimulationAnimator(cp.Animator):
         self.metrics = metrics
 
     def __str__(self):
-        return cp.utils.field_str(self, 'postfix', ('plot_limit', self.distance_unit), 'distance_unit', 'renormalize', 'log_g', 'log_metrics', 'overlay_probability_current')
+        return si.utils.field_str(self, 'postfix', ('plot_limit', self.distance_unit), 'distance_unit', 'renormalize', 'log_g', 'log_metrics', 'overlay_probability_current')
 
     def __repr__(self):
         return self.__str__()
@@ -303,7 +303,7 @@ class LineAxis(QuantumMeshAxis):
         self.mesh = self.sim.mesh.attach_g_to_axis(self.axis, normalize = self.renormalize, log = self.log_g, plot_limit = self.plot_limit, distance_unit = self.distance_unit, animated = True)
         self.redraw += [self.mesh]
 
-        self.axis.grid(True, color = cp.plots.COLOR_OPPOSITE_INFERNO, linestyle = ':')  # change grid color to make it show up against the colormesh
+        self.axis.grid(True, color = si.plots.COLOR_OPPOSITE_INFERNO, linestyle = ':')  # change grid color to make it show up against the colormesh
 
         self.axis.set_xlabel(r'$x$ (${}$)'.format(unit_name), fontsize = 24)
         self.axis.set_ylabel(r'$\left|\psi\right|^2$', fontsize = 30)
@@ -353,7 +353,7 @@ class CylindricalSliceAxis(QuantumMeshAxis):
             self.quiver = self.sim.mesh.attach_probability_current_quiver(self.axis, plot_limit = self.plot_limit, distance_unit = self.distance_unit, animated = True)
             self.redraw += [self.quiver]
 
-        self.axis.grid(True, color = cp.plots.COLOR_OPPOSITE_INFERNO, linestyle = ':', linewidth = 2)  # change grid color to make it show up against the colormesh
+        self.axis.grid(True, color = si.plots.COLOR_OPPOSITE_INFERNO, linestyle = ':', linewidth = 2)  # change grid color to make it show up against the colormesh
 
         self.axis.set_xlabel(r'$z$ ({})'.format(unit_name), fontsize = 24)
         self.axis.set_ylabel(r'$\rho$ ({})'.format(unit_name), fontsize = 24)
@@ -404,12 +404,12 @@ class PhiSliceAxis(QuantumMeshAxis):
         self.axis.set_theta_direction('clockwise')
         self.axis.set_rlabel_position(80)
 
-        self.axis.grid(True, color = cp.plots.COLOR_OPPOSITE_INFERNO, linestyle = ':', linewidth = 2, alpha = 0.8)  # change grid color to make it show up against the colormesh
+        self.axis.grid(True, color = si.plots.COLOR_OPPOSITE_INFERNO, linestyle = ':', linewidth = 2, alpha = 0.8)  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         self.axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         self.axis.tick_params(axis = 'both', which = 'major', labelsize = 20)  # increase size of tick labels
-        self.axis.tick_params(axis = 'y', which = 'major', colors = cp.plots.COLOR_OPPOSITE_INFERNO, pad = 3)  # make r ticks a color that shows up against the colormesh
+        self.axis.tick_params(axis = 'y', which = 'major', colors = si.plots.COLOR_OPPOSITE_INFERNO, pad = 3)  # make r ticks a color that shows up against the colormesh
 
         self.axis.set_rlabel_position(80)
 
@@ -470,7 +470,7 @@ class SphericalHarmonicPhiSliceAxis(PhiSliceAxis):
         super(SphericalHarmonicPhiSliceAxis, self).update()
 
 
-class AngularMomentumDecompositionAxis(cp.AxisManager):
+class AngularMomentumDecompositionAxis(si.AxisManager):
     def __init__(self, *args, renormalize_l_decomposition = True, **kwargs):
         self.renormalize_l_decomposition = renormalize_l_decomposition
 
@@ -515,7 +515,7 @@ class AngularMomentumDecompositionAxis(cp.AxisManager):
         super(AngularMomentumDecompositionAxis, self).update()
 
 
-class ColorBarAxis(cp.AxisManager):
+class ColorBarAxis(si.AxisManager):
     def __init__(self, *args, colorable, **kwargs):
         self.colorable = colorable
 

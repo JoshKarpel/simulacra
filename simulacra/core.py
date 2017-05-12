@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class CompyException(Exception):
-    """Base exception for all compy exceptions."""
+class SimulacraException(Exception):
+    """Base exception for all Simulacra exceptions."""
     pass
 
 

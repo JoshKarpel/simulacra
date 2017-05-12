@@ -1,10 +1,10 @@
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import numpy as np
-import plots
-from units import *
+
+from simulacra.units import *
 
 import ionization as ion
 
@@ -13,7 +13,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG):
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG):
         pw = 200
         flu = 1
         phase = pi / 2
@@ -56,24 +56,24 @@ if __name__ == '__main__':
             'y_unit': 'AEF',
             'target_dir': OUT_DIR}
 
-        plots.xy_plot(prefix + '__pulse_comparison',
-                      times,
-                      sinc.get_electric_field_amplitude(times),
-                      gaus.get_electric_field_amplitude(times),
-                      sech.get_electric_field_amplitude(times),
-                      line_labels = ('Sinc', 'Gaussian', 'Sech'),
-                      **plot_kwargs
-                      )
+        si.plots.xy_plot(prefix + '__pulse_comparison',
+                         times,
+                         sinc.get_electric_field_amplitude(times),
+                         gaus.get_electric_field_amplitude(times),
+                         sech.get_electric_field_amplitude(times),
+                         line_labels = ('Sinc', 'Gaussian', 'Sech'),
+                         **plot_kwargs
+                         )
 
 
-        # cp.utils.xy_plot('sinc_pulse_comparison',
+        # si.utils.xy_plot('sinc_pulse_comparison',
         #                  times,
         #                  sinc_plain.get_electric_field_amplitude(times),
         #                  sinc.get_electric_field_amplitude(times),
         #                  line_labels = ('No Carrier', 'w/ Carrier'),
         #                  **plot_kwargs)
         #
-        # cp.utils.xy_plot('sinc_pulse_envelope',
+        # si.utils.xy_plot('sinc_pulse_envelope',
         #                  times,
         #                  np.abs(sinc_plain.get_electric_field_amplitude(times)),
         #                  -np.abs(sinc_plain.get_electric_field_amplitude(times)),
@@ -82,7 +82,7 @@ if __name__ == '__main__':
         #                  line_kwargs = ({'color': 'red'}, {'color': 'red'}),
         #                  **plot_kwargs)
         #
-        # cp.utils.xy_plot('sech_pulse',
+        # si.utils.xy_plot('sech_pulse',
         #                  times,
         #                  sech_with_carrier.get_electric_field_amplitude(times),
         #                  **plot_kwargs)

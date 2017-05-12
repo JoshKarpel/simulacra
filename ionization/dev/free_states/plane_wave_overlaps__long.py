@@ -5,10 +5,10 @@ from tqdm import tqdm
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-import plots
-from units import *
+
+from simulacra.units import *
 
 import matplotlib.pyplot as plt
 
@@ -16,7 +16,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
         r_bound = 200
         points_per_bohr_radius = 8
 
@@ -77,16 +77,16 @@ if __name__ == '__main__':
         # sim.mesh.plot_g(target_dir = OUT_DIR, name_postfix = '_25', plot_limit = 25 * bohr_radius)
 
         for log in (True, False):
-            plots.xy_plot(f'norm_vs_time__log={log}',
-                          sim.data_times,
-                          sim.norm_vs_time,
-                          y_log_axis = log,
-                          y_upper_limit = 1,
-                          y_label = r'$\left\langle \Psi | \Psi \right\rangle$',
-                          x_unit = 'asec',
-                          x_label = r'Time $t$',
-                          target_dir = OUT_DIR,
-                          )
+            si.plots.xy_plot(f'norm_vs_time__log={log}',
+                             sim.data_times,
+                             sim.norm_vs_time,
+                             y_log_axis = log,
+                             y_upper_limit = 1,
+                             y_label = r'$\left\langle \Psi | \Psi \right\rangle$',
+                             x_unit = 'asec',
+                             x_label = r'Time $t$',
+                             target_dir = OUT_DIR,
+                             )
 
         plot_kwargs = dict(
             target_dir = OUT_DIR,
@@ -120,9 +120,9 @@ if __name__ == '__main__':
                                                                      name_postfix = f'_t={uround(snapshot.time, asec, 3)}',
                                                                      **snapshot_spectrum_kwargs)
 
-                plots.xy_plot(f'snapshot_t={uround(snapshot.time, asec, 3)}__free_only__theta=0__log={log}',
+                si.plots.xy_plot(f'snapshot_t={uround(snapshot.time, asec, 3)}__free_only__theta=0__log={log}',
                                  wavenumber[0, :], np.abs(ip[0, :]) ** 2,
-                              x_unit = 'per_nm', x_label = r'Wavenumber $k$',
-                              y_log_axis = log,
-                              **snapshot_spectrum_kwargs
-                              )
+                                 x_unit = 'per_nm', x_label = r'Wavenumber $k$',
+                                 y_log_axis = log,
+                                 **snapshot_spectrum_kwargs
+                                 )

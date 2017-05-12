@@ -9,20 +9,20 @@ import functools as ft
 
 import numpy as np
 
-import compy as cp
-import compy.cluster as clu
+import simulacra as si
+import simulacra.cluster as clu
 import ionization as ion
 import ionization.cluster as iclu
-from units import *
+from simulacra.units import *
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization') as logger:
-        jp_lide = cp.cluster.JobProcessor.load('compare_to_velocity.job')
-        jp_vide = cp.cluster.JobProcessor.load('vide_compare.job')
+    with si.utils.LogManager('compy', 'ionization') as logger:
+        jp_lide = si.cluster.JobProcessor.load('compare_to_velocity.job')
+        jp_vide = si.cluster.JobProcessor.load('vide_compare.job')
 
         results_lide = list(jp_lide.data.values())
         results_vide = list(jp_vide.data.values())
@@ -37,7 +37,7 @@ if __name__ == '__main__':
             if log:
                 postfix += '__log'
 
-            cp.plots.xy_plot(
+            si.plots.xy_plot(
                 f'ionization_vs_phase__length' + postfix,
                 [r.phase for r in results_lide],
                 [r.final_bound_state_overlap for r in results_lide],
@@ -45,7 +45,7 @@ if __name__ == '__main__':
                 **plt_kwargs,
             )
 
-            cp.plots.xy_plot(
+            si.plots.xy_plot(
                 f'ionization_vs_phase__velocity' + postfix,
                 [r.phase for r in results_vide],
                 [r.final_bound_state_overlap for r in results_vide],
@@ -53,7 +53,7 @@ if __name__ == '__main__':
                 **plt_kwargs,
             )
 
-            cp.plots.xy_plot(
+            si.plots.xy_plot(
                 f'ionization_vs_phase__compare' + postfix,
                 [r.phase for r in results_vide],
                 [r.final_bound_state_overlap for r in results_lide],
@@ -66,7 +66,7 @@ if __name__ == '__main__':
             rel_lide = results_lide[0].final_bound_state_overlap
             rel_vide = results_vide[0].final_bound_state_overlap
 
-            cp.plots.xy_plot(
+            si.plots.xy_plot(
                 f'ionization_vs_phase__compare_rel' + postfix,
                 [r.phase for r in results_vide],
                 [r.final_bound_state_overlap / rel_lide for r in results_lide],

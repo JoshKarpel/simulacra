@@ -1,11 +1,12 @@
 import os
-import sys
 import unittest
 import shutil
 
-from . import core, utils, math, cluster, plots
+import simulacra as si
 
-TEST_DIR = os.path.join(os.getcwd(), 'temp__unit_testing')
+
+THIS_DIR = os.path.abspath(os.path.dirname(__file__))
+TEST_DIR = os.path.join(THIS_DIR, 'temp-unit-testing')
 
 
 class TestEnsureDirExists(unittest.TestCase):
@@ -18,21 +19,21 @@ class TestEnsureDirExists(unittest.TestCase):
         shutil.rmtree(TEST_DIR)
 
     def test_ensure_dir_from_dirname(self):
-        utils.ensure_dir_exists(os.path.join(TEST_DIR, self.dirname))
+        si.utils.ensure_dir_exists(os.path.join(TEST_DIR, self.dirname))
         self.assertTrue(os.path.exists(self.target_name))
 
     def test_ensure_dir_from_filename(self):
-        utils.ensure_dir_exists(os.path.join(TEST_DIR, self.filename))
+        si.utils.ensure_dir_exists(os.path.join(TEST_DIR, self.filename))
         self.assertTrue(os.path.exists(self.target_name))
         self.assertFalse(os.path.exists(os.path.join(self.target_name, 'kappa')))  # didn't accidentally create a path with the name of the file
 
 
 class TestBeet(unittest.TestCase):
     def setUp(self):
-        self.obj = core.Beet('foo')
+        self.obj = si.Beet('foo')
         self.obj_name = 'foo'
         self.target_name = 'foo.beet'
-        utils.ensure_dir_exists(TEST_DIR)
+        si.utils.ensure_dir_exists(TEST_DIR)
 
     def tearDown(self):
         shutil.rmtree(TEST_DIR)
@@ -45,7 +46,7 @@ class TestBeet(unittest.TestCase):
         path = self.obj.save(target_dir = TEST_DIR)
         self.assertEqual(path, os.path.join(TEST_DIR, self.target_name))  # test if path was constructed correctly
         self.assertTrue(os.path.exists(path))  # path should actually exist on the system
-        loaded = core.Beet.load(path)
+        loaded = si.Beet.load(path)
         self.assertEqual(loaded, self.obj)  # beets should be equal, but NOT the same object
         self.assertEqual(loaded.uid, self.obj.uid)  # beets should have the same uid
         self.assertEqual(hash(loaded), hash(self.obj))  # beets should have the same hash
@@ -54,24 +55,24 @@ class TestBeet(unittest.TestCase):
 
 class TestSpecification(TestBeet):
     def setUp(self):
-        self.obj = core.Specification('bar')
+        self.obj = si.Specification('bar')
         self.obj_name = 'bar'
         self.target_name = 'bar.spec'
-        utils.ensure_dir_exists(TEST_DIR)
+        si.utils.ensure_dir_exists(TEST_DIR)
 
 
 class TestSimulation(TestBeet):
     def setUp(self):
-        self.obj = core.Simulation(core.Specification('baz'))
+        self.obj = si.Simulation(si.Specification('baz'))
         self.obj_name = 'baz'
         self.target_name = 'baz.sim'
-        utils.ensure_dir_exists(TEST_DIR)
+        si.utils.ensure_dir_exists(TEST_DIR)
 
 
 class TestSumming(unittest.TestCase):
     def setUp(self):
-        self.summand_one = core.Summand()
-        self.summand_two = core.Summand()
+        self.summand_one = si.Summand()
+        self.summand_two = si.Summand()
         self.sum = self.summand_one + self.summand_two
 
     def test_is(self):
@@ -81,13 +82,13 @@ class TestSumming(unittest.TestCase):
         self.assertFalse(self.summand_one == self.summand_two)
 
     def test_instance_of(self):
-        self.assertTrue(isinstance(self.summand_one, core.Summand))
-        self.assertTrue(isinstance(self.summand_two, core.Summand))
-        self.assertTrue(isinstance(self.sum, core.Summand))
-        self.assertTrue(isinstance(self.sum, core.Sum))
+        self.assertTrue(isinstance(self.summand_one, si.Summand))
+        self.assertTrue(isinstance(self.summand_two, si.Summand))
+        self.assertTrue(isinstance(self.sum, si.Summand))
+        self.assertTrue(isinstance(self.sum, si.Sum))
 
-        self.assertFalse(isinstance(self.summand_one, core.Sum))
-        self.assertFalse(isinstance(self.summand_two, core.Sum))
+        self.assertFalse(isinstance(self.summand_one, si.Sum))
+        self.assertFalse(isinstance(self.summand_two, si.Sum))
 
     def test_container(self):
         self.assertTrue(self.summand_one in self.sum.summands)
@@ -99,12 +100,12 @@ class TestSumming(unittest.TestCase):
 
 class TestSummingSubclassing(unittest.TestCase):
     def setUp(self):
-        class Fruit(core.Summand):
+        class Fruit(si.Summand):
             def __init__(self):
                 super().__init__()
                 self.summation_class = FruitBasket
 
-        class FruitBasket(core.Sum, Fruit):
+        class FruitBasket(si.Sum, Fruit):
             container_name = 'basket'
 
         class Apple(Fruit):
@@ -123,13 +124,13 @@ class TestSummingSubclassing(unittest.TestCase):
         self.fruit_basket = self.apple + self.banana
 
     def test_instance_of_bases(self):
-        self.assertTrue(isinstance(self.apple, core.Summand))
-        self.assertTrue(isinstance(self.banana, core.Summand))
-        self.assertTrue(isinstance(self.fruit_basket, core.Summand))
-        self.assertTrue(isinstance(self.fruit_basket, core.Sum))
+        self.assertTrue(isinstance(self.apple, si.Summand))
+        self.assertTrue(isinstance(self.banana, si.Summand))
+        self.assertTrue(isinstance(self.fruit_basket, si.Summand))
+        self.assertTrue(isinstance(self.fruit_basket, si.Sum))
 
-        self.assertFalse(isinstance(self.apple, core.Sum))
-        self.assertFalse(isinstance(self.banana, core.Sum))
+        self.assertFalse(isinstance(self.apple, si.Sum))
+        self.assertFalse(isinstance(self.banana, si.Sum))
 
     def test_instance_of_subclasses(self):
         self.assertTrue(isinstance(self.fruit_basket, self.Fruit))
@@ -148,28 +149,28 @@ class TestSummingSubclassing(unittest.TestCase):
 
 class TestFibonnaci(unittest.TestCase):
     def test_fibonnaci_value(self):
-        self.assertEqual(math.fibonacci(99), 218922995834555169026)
+        self.assertEqual(si.math.fibonacci(99), 218922995834555169026)
 
     def test_fibonnaci_exception(self):
         with self.assertRaises(TypeError):
-            math.fibonacci('foo')
+            si.math.fibonacci('foo')
 
 
 class TestPrimeFinders(unittest.TestCase):
     def test_is_prime(self):
         for prime in [2, 3, 5, 7, 11, 17]:
             with self.subTest(p = prime):
-                self.assertTrue(math.is_prime(prime))
+                self.assertTrue(si.math.is_prime(prime))
 
         for not_prime in [1, 4, 6, 15]:
             with self.subTest(np = not_prime):
-                self.assertFalse(math.is_prime(not_prime))
+                self.assertFalse(si.math.is_prime(not_prime))
 
 
 class TestRestrictedValues(unittest.TestCase):
     legal = ('a', 5, (4, 5, 6))
     illegal = ('foo', 3, (1, 2, 3))
-    attr = utils.RestrictedValues('attr', legal)
+    attr = si.utils.RestrictedValues('attr', legal)
 
     def test_legal_assignments(self):
         for x in self.legal:

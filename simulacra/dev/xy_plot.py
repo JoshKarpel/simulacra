@@ -3,13 +3,13 @@ import os
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
+    with si.utils.LogManager('compy', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
         pi = 3.1415
         twopi = 2 * pi
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         for extras in extra_kwargs:
             kwargs = {**plt_kwargs, **extras}
 
-            path = cp.plots.xy_plot('test', x, *y,
+            path = si.plots.xy_plot('test', x, *y,
                                     **kwargs)
 
             print(path)

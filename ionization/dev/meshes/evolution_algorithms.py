@@ -6,17 +6,15 @@ import os
 import logging
 import itertools as it
 
-import numpy as np
-
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-logman = cp.utils.LogManager('compy', 'ionization',
+logman = si.utils.LogManager('compy', 'ionization',
                              stdout_level = logging.INFO,
                              file_logs = True, file_level = logging.WARN, file_dir = OUT_DIR, file_name = FILE_NAME)
 
@@ -84,4 +82,4 @@ if __name__ == '__main__':
                                           )
             )
 
-        results = cp.utils.multi_map(run_spec, specs)
+        results = si.utils.multi_map(run_spec, specs)

@@ -1,16 +1,16 @@
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def run(spec):
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
         sim = spec.to_simulation()
 
         sim.run_simulation()
@@ -21,7 +21,7 @@ def run(spec):
 
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.INFO, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.INFO, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
         source = ion.SincPulse(pulse_width = 200 * asec, fluence = 1 * (J / (cm ** 2)))
         pulse_widths = [290, 310, 390, 410]
         # pulse_widths = [50, 100, 200, 400, 600, 800]
@@ -41,4 +41,4 @@ if __name__ == '__main__':
                                                                 time_initial = -15 * pw * asec, time_final = 15 * pw * asec, time_step = t_step,
                                                                 ))
 
-        cp.utils.multi_map(run, specs)
+        si.utils.multi_map(run, specs)

@@ -2,10 +2,10 @@ import itertools as it
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import numpy as np
-import plots
-from units import *
+
+from simulacra.units import *
 
 import ionization as ion
 
@@ -15,7 +15,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 LIB_DIR = os.path.join(OUT_DIR, 'sim_lib')
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG)
+log = si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG)
 
 
 def run_spec(spec):
@@ -49,13 +49,13 @@ def plot_final_norm_vs_r_points(name, sims, ref, **kwargs):
         if log:
             plot_name += '__log'
 
-        plots.xy_plot(plot_name,
-                      r_points,
-                      final_norms,
-                      x_label = 'Radial Points per Bohr Radius',
-                      y_label = 'Relative Final Wavefunction Norm',
-                      y_log_axis = log,
-                      **kwargs)
+        si.plots.xy_plot(plot_name,
+                         r_points,
+                         final_norms,
+                         x_label = 'Radial Points per Bohr Radius',
+                         y_label = 'Relative Final Wavefunction Norm',
+                         y_log_axis = log,
+                         **kwargs)
 
 
 def plot_final_initial_state_vs_r_points(name, sims, ref, **kwargs):
@@ -71,13 +71,13 @@ def plot_final_initial_state_vs_r_points(name, sims, ref, **kwargs):
         if log:
             plot_name += '__log'
 
-        plots.xy_plot(plot_name,
-                      r_points,
-                      final_initial_overlaps,
-                      x_label = 'Radial Points per Bohr Radius',
-                      y_label = 'Relative Final Initial State Overlap',
-                      y_log_axis = log,
-                      **kwargs)
+        si.plots.xy_plot(plot_name,
+                         r_points,
+                         final_initial_overlaps,
+                         x_label = 'Radial Points per Bohr Radius',
+                         y_label = 'Relative Final Initial State Overlap',
+                         y_log_axis = log,
+                         **kwargs)
 
 
 def plot_final_norm_vs_time_step(name, sims, ref, **kwargs):
@@ -96,13 +96,13 @@ def plot_final_norm_vs_time_step(name, sims, ref, **kwargs):
             if log_y:
                 plot_name += '__logY'
 
-            plots.xy_plot(plot_name,
-                          time_steps,
-                          final_norms,
-                          x_label = 'Time Step', x_unit = 'asec',
-                          y_label = 'Relative Final Wavefunction Norm',
-                          y_log_axis = log_y, x_log_axis = log_x,
-                          **kwargs)
+            si.plots.xy_plot(plot_name,
+                             time_steps,
+                             final_norms,
+                             x_label = 'Time Step', x_unit = 'asec',
+                             y_label = 'Relative Final Wavefunction Norm',
+                             y_log_axis = log_y, x_log_axis = log_x,
+                             **kwargs)
 
 
 def plot_final_initial_state_vs_time_step(name, sims, ref, **kwargs):
@@ -121,13 +121,13 @@ def plot_final_initial_state_vs_time_step(name, sims, ref, **kwargs):
             if log_y:
                 plot_name += '__logY'
 
-            plots.xy_plot(plot_name,
-                          time_steps,
-                          final_norms,
-                          x_label = 'Time Step', x_unit = 'asec',
-                          y_label = 'Relative Final Initial State Overlap',
-                          y_log_axis = log_y, x_log_axis = log_x,
-                          **kwargs)
+            si.plots.xy_plot(plot_name,
+                             time_steps,
+                             final_norms,
+                             x_label = 'Time Step', x_unit = 'asec',
+                             y_label = 'Relative Final Initial State Overlap',
+                             y_log_axis = log_y, x_log_axis = log_x,
+                             **kwargs)
 
 
 if __name__ == '__main__':
@@ -193,7 +193,7 @@ if __name__ == '__main__':
                                                             dt = time_step,
                                                             ))
 
-        sims = cp.utils.multi_map(run_spec, specs, processes = 6)
+        sims = si.utils.multi_map(run_spec, specs, processes = 6)
 
         # with open(os.path.join(OUT_DIR, 'ref_info.txt'), mode = 'w') as f:
         #     print(sims[0].info(), file = f)

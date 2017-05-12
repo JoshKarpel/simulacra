@@ -4,15 +4,15 @@ import os
 import numpy as np
 import scipy.sparse as sparse
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         bound = 50
         # points = 2 ** 8
         points = bound * 4

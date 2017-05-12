@@ -1,17 +1,17 @@
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import matplotlib.pyplot as plt
 import numpy as np
-from compy.units import *
+from simulacra.units import *
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
+    with si.utils.LogManager('compy', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
         x = np.linspace(-5, 5, 100)
         y = np.linspace(-5, 5, 100)
 
@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 
         for cmap_name in ('viridis', 'magma', 'inferno', 'plasma', 'seismic', 'PiYG', 'PRGn', 'Spectral'):
-            cp.plots.xyzt_plot(f'xyzt_{cmap_name}',
+            si.plots.xyzt_plot(f'xyzt_{cmap_name}',
                                x_mesh, y_mesh, t, z,
                                x_label = r'$x$', x_unit = 'cm',
                                y_label = r'$y$', y_unit = 'cm',

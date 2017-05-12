@@ -1,8 +1,8 @@
 import logging
 import os
 
-import compy as cp
-from units import *
+import simulacra as si
+from simulacra.units import *
 
 import ionization as ion
 
@@ -11,7 +11,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO) as logger:
         sim = ion.SphericalHarmonicSpecification('speed_test',
                                                  r_bound = 100 * bohr_radius,
                                                  r_points = 800, l_bound = 300,
@@ -22,7 +22,7 @@ if __name__ == '__main__':
                                                  ).to_simulation()
 
         logger.info(sim.info())
-        with cp.utils.BlockTimer() as timer:
+        with si.utils.BlockTimer() as timer:
             sim.run_simulation()
         logger.info(sim.info())
 

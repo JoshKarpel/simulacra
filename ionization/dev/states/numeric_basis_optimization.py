@@ -1,8 +1,8 @@
 import logging
 import os
 
-import compy as cp
-from units import *
+import simulacra as si
+from simulacra.units import *
 
 import ionization as ion
 
@@ -11,7 +11,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
         bound = 100
         points_per_bohr_radius = 16
         l_max = 10

@@ -5,9 +5,9 @@ from tqdm import tqdm
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 import matplotlib.pyplot as plt
 
@@ -15,7 +15,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
         bound = 200
         points_per_bohr_radius = 4
         l_bound = 200
@@ -65,7 +65,7 @@ if __name__ == '__main__':
         print(sim.info())
 
         # path = sim.save(target_dir = OUT_DIR, save_mesh = True)
-        # sim = cp.Simulation.load(path)
+        # sim = si.Simulation.load(path)
 
         sim.mesh.plot_g(target_dir = OUT_DIR)
         sim.mesh.plot_g(target_dir = OUT_DIR, name_postfix = '_25', plot_limit = 50 * bohr_radius)

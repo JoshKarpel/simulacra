@@ -10,7 +10,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from . import core, utils
+from . import utils
 from .units import *
 
 
@@ -377,7 +377,7 @@ def set_axis_limits(axis, *data, lower_limit = None, upper_limit = None, log = F
     """
     unit_value, _ = get_unit_value_and_latex_from_unit(unit)
 
-    lower_limit, upper_limit = get_axis_limits(*data, lower_limit = lower_limit, upper_limit = upper_limit, log = log, pad = pad, log_pad = log_pad, unit = unit)
+    lower_limit, upper_limit = get_axis_limits(*data, lower_limit = lower_limit, upper_limit = upper_limit, log = log, pad = pad, log_pad = log_pad)
 
     if log:
         getattr(axis, f'set_{direction}scale')('log')

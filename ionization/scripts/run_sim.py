@@ -1,14 +1,10 @@
-import matplotlib
-
-matplotlib.use('Agg')  # Force matplotlib to not use any Xwindows backend
-
 import os
 import argparse
 import logging
 import datetime as dt
 import socket
 
-import compy as cp
+import simulacra as si
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -22,7 +18,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    with cp.utils.LogManager('__main__', 'compy', 'ionization',
+    with si.utils.LogManager('__main__', 'compy', 'ionization',
                              stdout_logs = False,
                              file_logs = True, file_level = logging.INFO, file_name = '{}'.format(args.sim_name), file_mode = 'a') as log:
         try:
@@ -32,11 +28,11 @@ if __name__ == '__main__':
             # try to find existing checkpoint, and start from scratch if that fails
             try:
                 sim_path = os.path.join(os.getcwd(), '{}.sim'.format(args.sim_name))
-                sim = cp.Simulation.load(sim_path)
+                sim = si.Simulation.load(sim_path)
                 log.info('Checkpoint found at {}, recovered simulation {}'.format(sim_path, sim))
-                log.debug('Checkpoint size is {}'.format(cp.utils.get_file_size_as_string(sim_path)))
+                log.debug('Checkpoint size is {}'.format(si.utils.get_file_size_as_string(sim_path)))
             except (FileNotFoundError, EOFError):
-                sim = cp.Specification.load(os.path.join(os.getcwd(), '{}.spec'.format(args.sim_name))).to_simulation()
+                sim = si.Specification.load(os.path.join(os.getcwd(), '{}.spec'.format(args.sim_name))).to_simulation()
                 log.info('Checkpoint not found, started simulation {}'.format(sim))
 
             # run the simulation and save it

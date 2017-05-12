@@ -4,14 +4,14 @@ import os
 import numpy as np
 import scipy as sp
 
-import compy as cp
+import simulacra as si
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
+    with si.utils.LogManager('compy', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
         x = np.linspace(0, 10, 500)
         t = np.linspace(0, 10, 1000)
 
@@ -24,7 +24,7 @@ if __name__ == '__main__':
             return np.sin(x * t)
 
 
-        cp.plots.xyt_plot('xyt',
+        si.plots.xyt_plot('xyt',
                           x, t, f, ff,
                           line_labels = (r'$ \left| \sin(x) \right|^t $', r'$ \sin(x t) $'),
                           title = 'Kerflagonblargh',

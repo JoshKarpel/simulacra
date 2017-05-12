@@ -1,8 +1,8 @@
 import logging
 import os
 
-import compy as cp
-from units import *
+import simulacra as si
+from simulacra.units import *
 
 import ionization as ion
 
@@ -11,7 +11,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO) as logger:
         sim = ion.SphericalHarmonicSpecification('info_test',
                                                  r_bound = 250 * bohr_radius,
                                                  r_points = 1000, l_bound = 500,
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         path_with_mesh = sim.save(target_dir = OUT_DIR, save_mesh = True, compressed = False)
         loaded_with_mesh = ion.ElectricFieldSimulation.load(path_with_mesh)
         logger.info(loaded_with_mesh.info())
-        print(f'actual size on disk: {cp.utils.get_file_size_as_string(path_with_mesh)}')
+        print(f'actual size on disk: {si.utils.get_file_size_as_string(path_with_mesh)}')
 
         print()
 
@@ -50,7 +50,7 @@ if __name__ == '__main__':
         path_with_mesh = sim.save(target_dir = OUT_DIR, save_mesh = True, compressed = True)
         loaded_with_mesh = ion.ElectricFieldSimulation.load(path_with_mesh)
         logger.info(loaded_with_mesh.info())
-        print(f'actual size on disk: {cp.utils.get_file_size_as_string(path_with_mesh)}')
+        print(f'actual size on disk: {si.utils.get_file_size_as_string(path_with_mesh)}')
 
         print()
 
@@ -58,7 +58,7 @@ if __name__ == '__main__':
         path_without_mesh = sim.save(target_dir = OUT_DIR, save_mesh = False, compressed = False)
         loaded_without_mesh = ion.ElectricFieldSimulation.load(path_without_mesh)
         logger.info(loaded_without_mesh.info())
-        print(f'actual size on disk: {cp.utils.get_file_size_as_string(path_without_mesh)}')
+        print(f'actual size on disk: {si.utils.get_file_size_as_string(path_without_mesh)}')
 
         print()
 
@@ -66,4 +66,4 @@ if __name__ == '__main__':
         path_without_mesh = sim.save(target_dir = OUT_DIR, save_mesh = False, compressed = True)
         loaded_without_mesh = ion.ElectricFieldSimulation.load(path_without_mesh)
         logger.info(loaded_without_mesh.info())
-        print(f'actual size on disk: {cp.utils.get_file_size_as_string(path_without_mesh)}')
+        print(f'actual size on disk: {si.utils.get_file_size_as_string(path_without_mesh)}')

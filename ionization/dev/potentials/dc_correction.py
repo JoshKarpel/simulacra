@@ -5,9 +5,9 @@ import numpy as np
 import scipy.integrate as integrate
 import scipy.optimize as optimize
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -31,7 +31,7 @@ EA_LOG_PLT_KWARGS = dict(
 )
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         pw = 100 * asec
 
         window = ion.SymmetricExponentialTimeWindow(window_time = 28 * pw, window_width = .2 * pw) + ion.RectangularTimeWindow(on_time = -31 * pw, off_time = 31 * pw)
@@ -54,14 +54,14 @@ if __name__ == '__main__':
 
         print('uncorrected A final:', uncorrected_pulse_vpot[-1] / atomic_momentum)
 
-        cp.plots.xy_plot(f'uncorrected_pulse',
+        si.plots.xy_plot(f'uncorrected_pulse',
                          t,
                          uncorrected_pulse_amp / atomic_electric_field,
                          uncorrected_pulse_vpot / atomic_momentum,
                          **EA_FIELD_PLT_KWARGS,
                          **PLT_KWARGS)
 
-        cp.plots.xy_plot(f'uncorrected_pulse__log',
+        si.plots.xy_plot(f'uncorrected_pulse__log',
                          t,
                          np.abs(uncorrected_pulse_amp / atomic_electric_field),
                          np.abs(uncorrected_pulse_vpot / atomic_momentum),
@@ -82,14 +82,14 @@ if __name__ == '__main__':
 
         print('rect-corrected A final:', corrected_pulse_vpot[-1] / atomic_momentum)
 
-        cp.plots.xy_plot(f'rect-corrected_pulse',
+        si.plots.xy_plot(f'rect-corrected_pulse',
                          t,
                          corrected_pulse_amp / atomic_electric_field,
                          corrected_pulse_vpot / atomic_momentum,
                          **EA_FIELD_PLT_KWARGS,
                          **PLT_KWARGS)
 
-        cp.plots.xy_plot(f'rect-corrected_pulse__log',
+        si.plots.xy_plot(f'rect-corrected_pulse__log',
                          t,
                          np.abs(corrected_pulse_amp / atomic_electric_field),
                          np.abs(corrected_pulse_vpot / atomic_momentum),
@@ -122,14 +122,14 @@ if __name__ == '__main__':
 
         print('opt-rect-corrected A final:', corrected_pulse_vpot[-1] / atomic_momentum)
 
-        cp.plots.xy_plot(f'opt-rect-corrected_pulse',
+        si.plots.xy_plot(f'opt-rect-corrected_pulse',
                          t,
                          corrected_pulse_amp / atomic_electric_field,
                          corrected_pulse_vpot / atomic_momentum,
                          **EA_FIELD_PLT_KWARGS,
                          **PLT_KWARGS)
 
-        cp.plots.xy_plot(f'opt-rect-corrected_pulse__log',
+        si.plots.xy_plot(f'opt-rect-corrected_pulse__log',
                          t,
                          np.abs(corrected_pulse_amp / atomic_electric_field),
                          np.abs(corrected_pulse_vpot / atomic_momentum),

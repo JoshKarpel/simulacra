@@ -1,19 +1,20 @@
 import functools as ft
 import logging
 
-import compy as cp
 import numpy as np
 import numpy.fft as nfft
 import scipy.integrate as integ
 import scipy.optimize as opt
-from units import *
+
+import simulacra as si
+from simulacra.units import *
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class PotentialEnergy(cp.Summand):
+class PotentialEnergy(si.Summand):
     """A class representing some kind of potential energy. Can be summed to form a PotentialEnergySum."""
 
     def __init__(self, *args, **kwargs):
@@ -21,7 +22,7 @@ class PotentialEnergy(cp.Summand):
         self.summation_class = PotentialEnergySum
 
 
-class PotentialEnergySum(cp.Sum, PotentialEnergy):
+class PotentialEnergySum(si.Sum, PotentialEnergy):
     """A class representing a combination of potential energies."""
 
     container_name = 'potentials'
@@ -35,7 +36,7 @@ class NoPotentialEnergy(PotentialEnergy):
         return 0
 
 
-class TimeWindow(cp.Summand):
+class TimeWindow(si.Summand):
     """A class representing a time-window that can be attached to another potential."""
 
     def __init__(self):
@@ -43,7 +44,7 @@ class TimeWindow(cp.Summand):
         self.summation_class = TimeWindowSum
 
 
-class TimeWindowSum(cp.Sum, TimeWindow):
+class TimeWindowSum(si.Sum, TimeWindow):
     """A class representing a combination of time-windows."""
 
     container_name = 'windows'
@@ -59,7 +60,7 @@ class NoTimeWindow(TimeWindow):
         return 1
 
 
-class Mask(cp.Summand):
+class Mask(si.Summand):
     """A class representing a spatial 'mask' that can be applied to the wavefunction to reduce it in certain regions."""
 
     def __init__(self):
@@ -67,7 +68,7 @@ class Mask(cp.Summand):
         self.summation_class = MaskSum
 
 
-class MaskSum(cp.Sum, Mask):
+class MaskSum(si.Sum, Mask):
     """A class representing a combination of masks."""
 
     container_name = 'masks'
@@ -97,10 +98,10 @@ class Coulomb(PotentialEnergy):
         self.charge = charge
 
     def __str__(self):
-        return cp.utils.field_str(self, ('charge', 'proton_charge'))
+        return si.utils.field_str(self, ('charge', 'proton_charge'))
 
     def __repr__(self):
-        return cp.utils.field_str(self, 'charge')
+        return si.utils.field_str(self, 'charge')
 
     def __call__(self, *, r, test_charge, **kwargs):
         """
@@ -186,10 +187,10 @@ class FiniteSquareWell(PotentialEnergy):
         super(FiniteSquareWell, self).__init__()
 
     def __str__(self):
-        return cp.utils.field_str(self, ('potential_depth', 'eV'), ('width', 'nm'), ('center', 'nm'))
+        return si.utils.field_str(self, ('potential_depth', 'eV'), ('width', 'nm'), ('center', 'nm'))
 
     def __repr__(self):
-        return cp.utils.field_str(self, 'potential_depth', 'width', 'center')
+        return si.utils.field_str(self, 'potential_depth', 'width', 'center')
 
     @property
     def left_edge(self):
@@ -503,7 +504,7 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricPotential):
         return np.sqrt(twopi) * self.amplitude_omega
 
     def __str__(self):
-        out = cp.utils.field_str(self,
+        out = si.utils.field_str(self,
                                  ('pulse_width', 'asec'),
                                  ('pulse_center', 'asec'),
                                  ('fluence', 'J/cm^2'),
@@ -515,7 +516,7 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricPotential):
         return out + super().__str__()
 
     def __repr__(self):
-        return cp.utils.field_str(self,
+        return si.utils.field_str(self,
                                   'pulse_width',
                                   'pulse_center',
                                   'fluence',
@@ -608,7 +609,7 @@ class SincPulse(UniformLinearlyPolarizedElectricPotential):
         return np.sqrt(twopi) * self.amplitude_omega
 
     def __str__(self):
-        out = cp.utils.field_str(self,
+        out = si.utils.field_str(self,
                                  ('pulse_width', 'asec'),
                                  ('pulse_center', 'asec'),
                                  ('fluence', 'J/cm^2'),
@@ -621,7 +622,7 @@ class SincPulse(UniformLinearlyPolarizedElectricPotential):
         return out + super().__str__()
 
     def __repr__(self):
-        return cp.utils.field_str(self,
+        return si.utils.field_str(self,
                                   'pulse_width',
                                   'pulse_center',
                                   'fluence',
@@ -634,7 +635,7 @@ class SincPulse(UniformLinearlyPolarizedElectricPotential):
 
     def get_electric_field_envelope(self, t):
         tau = t - self.pulse_center
-        return cp.math.sinc(self.delta_omega * tau / 2)
+        return si.math.sinc(self.delta_omega * tau / 2)
 
     def get_electric_field_amplitude(self, t):
         """Return the electric field amplitude at time t."""
@@ -678,7 +679,7 @@ class GaussianPulse(UniformLinearlyPolarizedElectricPotential):
         return self.omega_carrier / twopi
 
     def __str__(self):
-        out = cp.utils.field_str(self,
+        out = si.utils.field_str(self,
                                  ('pulse_width', 'asec'),
                                  ('pulse_center', 'asec'),
                                  ('fluence', 'J/cm^2'),
@@ -690,7 +691,7 @@ class GaussianPulse(UniformLinearlyPolarizedElectricPotential):
         return out + super().__str__()
 
     def __repr__(self):
-        return cp.utils.field_str(self,
+        return si.utils.field_str(self,
                                   'pulse_width',
                                   'pulse_center',
                                   'fluence',
@@ -745,7 +746,7 @@ class SechPulse(UniformLinearlyPolarizedElectricPotential):
         return self.omega_carrier / twopi
 
     def __str__(self):
-        out = cp.utils.field_str(self,
+        out = si.utils.field_str(self,
                                  ('pulse_width', 'asec'),
                                  ('pulse_center', 'asec'),
                                  ('fluence', 'J/cm^2'),
@@ -757,7 +758,7 @@ class SechPulse(UniformLinearlyPolarizedElectricPotential):
         return out + super().__str__()
 
     def __repr__(self):
-        return cp.utils.field_str(self,
+        return si.utils.field_str(self,
                                   'pulse_width',
                                   'pulse_center',
                                   'fluence',
@@ -845,19 +846,19 @@ class GenericElectricPotential(UniformLinearlyPolarizedElectricPotential):
         return from_field
 
     def __str__(self):
-        return cp.utils.field_str(self, 'name', 'fluence', *self.extra_attributes)
+        return si.utils.field_str(self, 'name', 'fluence', *self.extra_attributes)
 
     def __repr__(self):
-        return cp.utils.field_str(self, 'name', 'fluence', *self.extra_attributes)
+        return si.utils.field_str(self, 'name', 'fluence', *self.extra_attributes)
 
     def get_electric_field_amplitude(self, t):
         try:
-            index, value, target = cp.utils.find_nearest_entry(self.times, t)
+            index, value, target = si.utils.find_nearest_entry(self.times, t)
             amp = self.complex_electric_field_vs_time[index]
         except ValueError:  # t is actually an ndarray
             amp = np.zeros(len(t), dtype = np.complex128) * np.NaN
             for ii, time in enumerate(t):
-                index, value, target = cp.utils.find_nearest_entry(self.times, time)
+                index, value, target = si.utils.find_nearest_entry(self.times, time)
                 # print(ii, index, value / asec, target / asec, time / asec, self.complex_electric_field_vs_time[index])
                 amp[ii] = self.complex_electric_field_vs_time[index]
 

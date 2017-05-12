@@ -3,10 +3,10 @@ import os
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-import plots
-from units import *
+
+from simulacra.units import *
 from ionization import integrodiff as ide
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -14,7 +14,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def run(spec):
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
         sim = spec.to_simulation()
 
         logger.debug(sim.info())
@@ -30,7 +30,7 @@ def run(spec):
 
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
         pw = 105
         amp = 5
         t_bound = pw + 10
@@ -67,14 +67,14 @@ if __name__ == '__main__':
                                                                     ).to_simulation()
         ark4.run_simulation()
 
-        plots.xy_plot('time_step',
-                      ark4.times,
-                      ark4.time_steps_list,
-                      x_axis_label = r'Time $t$', x_unit = 'asec',
-                      y_axis_label = r'Time Step $\Delta t$', y_unit = 'asec',
-                      y_log_axis = True,
-                      target_dir = OUT_DIR,
-                      )
+        si.plots.xy_plot('time_step',
+                         ark4.times,
+                         ark4.time_steps_list,
+                         x_axis_label = r'Time $t$', x_unit = 'asec',
+                         y_axis_label = r'Time Step $\Delta t$', y_unit = 'asec',
+                         y_log_axis = True,
+                         target_dir = OUT_DIR,
+                         )
 
         for dt in [5, 2, 1, .5, .1, .05]:
             specs = []
@@ -90,12 +90,12 @@ if __name__ == '__main__':
                                                                               integration_method = int_method,
                                                                               ))
 
-            results = cp.utils.multi_map(run, specs, processes = 5)
+            results = si.utils.multi_map(run, specs, processes = 5)
 
             t = results[0].times
             # y = [np.abs(r.y) ** 2 for r in results]
 
-            y = [cp.utils.downsample(ark4.times, t, np.abs(ark4.y) ** 2)]
+            y = [si.utils.downsample(ark4.times, t, np.abs(ark4.y) ** 2)]
             for r in results:
                 y.append(np.abs(r.y) ** 2)
 
@@ -106,19 +106,19 @@ if __name__ == '__main__':
                 target_dir = OUT_DIR,
             )
 
-            plots.xy_plot('dt={}as__compare'.format(dt),
-                          t,
-                          *y,
-                          x_label = r'Time $t$', x_unit = 'asec', y_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
-                          **plt_kwargs, y_upper_limit = 1, y_lower_limit = 0,
-                          )
+            si.plots.xy_plot('dt={}as__compare'.format(dt),
+                             t,
+                             *y,
+                             x_label = r'Time $t$', x_unit = 'asec', y_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
+                             **plt_kwargs, y_upper_limit = 1, y_lower_limit = 0,
+                             )
 
-            plots.xy_plot('dt={}as__compare_log'.format(dt),
-                          t,
-                          *y,
-                          x_label = r'Time $t$', x_unit = 'asec', y_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
-                          y_log_axis = True, y_upper_limit = 1, y_lower_limit = 1e-2,
-                          **plt_kwargs
-                          )
+            si.plots.xy_plot('dt={}as__compare_log'.format(dt),
+                             t,
+                             *y,
+                             x_label = r'Time $t$', x_unit = 'asec', y_label = r'$   \left| a_{\alpha}(t) \right|^2  $',
+                             y_log_axis = True, y_upper_limit = 1, y_lower_limit = 1e-2,
+                             **plt_kwargs
+                             )
 
         print('ark4 min step (as):', uround(ark4.minimum_time_step, 'asec', 5))

@@ -1,8 +1,8 @@
 import logging
 import os
 
-import compy as cp
-from units import *
+import simulacra as si
+from simulacra.units import *
 
 import ionization as ion
 
@@ -10,7 +10,7 @@ import ionization as ion
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-logman = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG)
+logman = si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG)
 
 
 def run_spec(spec):
@@ -53,7 +53,7 @@ if __name__ == '__main__':
                                                             time_step = dt,
                                                             **base_spec_kwargs))
 
-        results = cp.utils.multi_map(run_spec, specs)
+        results = si.utils.multi_map(run_spec, specs)
 
         for r in sorted(results, key = lambda r: r.running_time):
             print(r.running_time, r.name)

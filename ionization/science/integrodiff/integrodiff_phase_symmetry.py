@@ -3,10 +3,10 @@ import os
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-import plots
-from units import *
+
+from simulacra.units import *
 from ionization import integrodiff as ide
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -14,7 +14,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def run(spec):
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
         sim = spec.to_simulation()
 
         logger.debug(sim.info())
@@ -28,17 +28,17 @@ def run(spec):
                            field_axis_label = r'${}(t)$'.format(str_efield),
                            field_scale = 'AEF')
 
-        plots.xy_plot(sim.name + '_RI',
-                      sim.times,
-                      np.real(sim.y), np.imag(sim.y), np.abs(sim.y), np.angle(sim.y),
-                      line_labels = ('Real', 'Imag', 'Abs', 'Arg'),
-                      target_dir = OUT_DIR)
+        si.plots.xy_plot(sim.name + '_RI',
+                         sim.times,
+                         np.real(sim.y), np.imag(sim.y), np.abs(sim.y), np.angle(sim.y),
+                         line_labels = ('Real', 'Imag', 'Abs', 'Arg'),
+                         target_dir = OUT_DIR)
 
         return sim
 
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO) as logger:
         l = 1
 
         q = electron_charge
@@ -92,7 +92,7 @@ if __name__ == '__main__':
                                                                               out_dir = OUT_DIR,
                                                                               ))
 
-        results = cp.utils.multi_map(run, specs, processes = 2)
+        results = si.utils.multi_map(run, specs, processes = 2)
 
         with open(os.path.join(OUT_DIR, physics_str + '.txt'), mode = 'w') as f:
             for r in results:

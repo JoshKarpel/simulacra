@@ -4,10 +4,10 @@ import os
 import numpy as np
 import scipy.sparse.linalg as sparsealg
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-import plots
-from units import *
+
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -31,11 +31,11 @@ if __name__ == '__main__':
     OUT_DIR = os.path.join(OUT_DIR, 'bound={}_ppbr={}'.format(bound, points_per_bohr_radius))
     sim = ion.SphericalHarmonicSpecification('eig', **spec_kwargs).to_simulation()
 
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO, file_logs = True, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO, file_logs = True, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
         for l in range(l_bound):
             logger.info('working on l = {}'.format(l))
             h = sim.mesh._get_internal_hamiltonian_matrix_operator_single_l(l = l)
-            with cp.utils.BlockTimer() as t:
+            with si.utils.BlockTimer() as t:
                 eigenvalues, eigenvectors = sparsealg.eigsh(h, k = h.shape[0] - 2, which = 'SA')
             logger.info('Matrix diagonalization took: {}'.format(t))
 
@@ -64,8 +64,8 @@ if __name__ == '__main__':
                 y = [np.abs(eigenvector) ** 2, np.abs(g_analytic) ** 2]
                 labels = ['Numeric, $E = {}$ eV, $\ell = {}$'.format(energy, l), r'${}$, $E = {}$ eV'.format(state.tex_str, uround(state.energy, eV, 5))]
 
-                plots.xy_plot(name,
-                              sim.mesh.r, *y,
-                              line_labels = labels,
-                              x_unit = 'bohr_radius', x_label = r'$r$', y_label = r'$\left| g \right|^2$', title = 'Energy = {} eV, $\ell$ = {}'.format(energy, l),
-                              target_dir = OUT_DIR_tmp)
+                si.plots.xy_plot(name,
+                                 sim.mesh.r, *y,
+                                 line_labels = labels,
+                                 x_unit = 'bohr_radius', x_label = r'$r$', y_label = r'$\left| g \right|^2$', title = 'Energy = {} eV, $\ell$ = {}'.format(energy, l),
+                                 target_dir = OUT_DIR_tmp)

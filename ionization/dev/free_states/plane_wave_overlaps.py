@@ -5,9 +5,9 @@ from tqdm import tqdm
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 import matplotlib.pyplot as plt
 
@@ -15,7 +15,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
         bound = 50
         points_per_bohr_radius = 4
 
@@ -118,14 +118,14 @@ if __name__ == '__main__':
             # thetas, wavenumbers, along_z = sim.mesh.inner_product_with_plane_waves(thetas = [0], wavenumbers = np.linspace(.1, 50, 500) * per_nm,
             #                                                                        g_mesh = sim.mesh.get_g_with_states_removed(sim.bound_states))
             #
-            # cp.utils.xy_plot('along_theta=0__log={}__wavenumber'.format(log),
+            # si.utils.xy_plot('along_theta=0__log={}__wavenumber'.format(log),
             #                  wavenumbers[0],
             #                  np.abs(along_z[0]) ** 2,
             #                  x_unit = 'per_nm', x_label = 'Wavenumber $k$',
             #                  y_log_axis = log,
             #                  target_dir = OUT_DIR)
             #
-            # cp.utils.xy_plot('along_theta=0__log={}__momentum'.format(log),
+            # si.utils.xy_plot('along_theta=0__log={}__momentum'.format(log),
             #                  wavenumbers[0] * hbar,
             #                  np.abs(along_z[0]) ** 2,
             #                  x_unit = 'atomic_momentum', x_label = 'Momentum $p$',
@@ -135,21 +135,21 @@ if __name__ == '__main__':
             # thetas, wavenumbers, along_z = sim.mesh.inner_product_with_plane_waves_at_infinity(thetas = [0], wavenumbers = np.linspace(.1, 50, 500) * per_nm,
             #                                                                                    g_mesh = sim.mesh.get_g_with_states_removed(sim.bound_states))
             #
-            # cp.utils.xy_plot('along_theta=0__log={}__wavenumber__at_inf'.format(log),
+            # si.utils.xy_plot('along_theta=0__log={}__wavenumber__at_inf'.format(log),
             #                  wavenumbers[0],
             #                  np.abs(along_z[0]) ** 2,
             #                  x_unit = 'per_nm', x_label = 'Wavenumber $k$',
             #                  y_log_axis = log,
             #                  target_dir = OUT_DIR)
             #
-            # cp.utils.xy_plot('along_theta=0__log={}__momentum__at_inf'.format(log),
+            # si.utils.xy_plot('along_theta=0__log={}__momentum__at_inf'.format(log),
             #                  wavenumbers[0] * hbar,
             #                  np.abs(along_z[0]) ** 2,
             #                  x_unit = 'atomic_momentum', x_label = 'Momentum $p$',
             #                  y_log_axis = log,
             #                  target_dir = OUT_DIR)
 
-            with cp.utils.BlockTimer() as t:
+            with si.utils.BlockTimer() as t:
                 sim.mesh.plot_electron_momentum_spectrum(r_type = 'energy', r_scale = 'eV', r_lower_lim = .1 * eV, r_upper_lim = 50 * eV,
                                                          log = log,
                                                          **spectrum_kwargs)
@@ -162,7 +162,7 @@ if __name__ == '__main__':
                                                          **spectrum_kwargs)
             print('RAW PLOTS', t)
 
-            with cp.utils.BlockTimer() as t:
+            with si.utils.BlockTimer() as t:
                 sim.mesh.plot_electron_momentum_spectrum(r_type = 'energy', r_scale = 'eV', r_lower_lim = .1 * eV, r_upper_lim = 50 * eV,
                                                          log = log,
                                                          g_mesh = sim.mesh.get_g_with_states_removed(sim.bound_states),

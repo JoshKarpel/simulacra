@@ -1,16 +1,16 @@
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def run(spec):
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
         sim = spec.to_simulation()
 
         sim.run_simulation()
@@ -68,7 +68,7 @@ def run(spec):
 
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG, file_logs = False, file_mode = 'w', file_dir = OUT_DIR, file_name = 'log') as logger:
         bound = 70
         points_per_bohr_radius = 4
 
@@ -91,4 +91,4 @@ if __name__ == '__main__':
         every = [1, 5, 10, 100, 600]
         specs = [ion.SphericalHarmonicSpecification('eig_{}'.format(e), store_data_every = e, **spec_kwargs) for e in every]
 
-        cp.utils.multi_map(run, specs, processes = 2)
+        si.utils.multi_map(run, specs, processes = 2)

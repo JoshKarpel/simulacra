@@ -1,10 +1,10 @@
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import core
 import utils
-from compy.units import *
+from simulacra.units import *
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]

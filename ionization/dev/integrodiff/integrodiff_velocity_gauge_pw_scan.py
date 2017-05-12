@@ -6,16 +6,16 @@ from tqdm import tqdm
 import numpy as np
 import scipy.integrate as integrate
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-import plots
+
 from ionization import integrodiff as ide
-from units import *
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG)
+log = si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG)
 
 
 def run(spec):
@@ -65,12 +65,12 @@ if __name__ == '__main__':
             target_dir = OUT_DIR,
         )
 
-        results = cp.utils.multi_map(run, specs, processes = 4)
+        results = si.utils.multi_map(run, specs, processes = 4)
 
         for log in (True, False):
-            plots.xy_plot(f'ionization_vs_pulse_width__flu={uround(flu, Jcm2, 3)}Jcm2_phase={uround(phase)}__log={log}',
-                          [r.spec.pulse_width for r in results],
-                          [np.abs(r.a[-1]) ** 2 for r in results],
-                          x_label = r'Pulse Width $  \tau  $', x_unit = 'asec',
-                          y_label = r'$  \left| a_{\mathrm{final}} \right|^2  $', y_log_axis = log, y_upper_limit = 1,
-                          **plt_kwargs)
+            si.plots.xy_plot(f'ionization_vs_pulse_width__flu={uround(flu, Jcm2, 3)}Jcm2_phase={uround(phase)}__log={log}',
+                             [r.spec.pulse_width for r in results],
+                             [np.abs(r.a[-1]) ** 2 for r in results],
+                             x_label = r'Pulse Width $  \tau  $', x_unit = 'asec',
+                             y_label = r'$  \left| a_{\mathrm{final}} \right|^2  $', y_log_axis = log, y_upper_limit = 1,
+                             **plt_kwargs)

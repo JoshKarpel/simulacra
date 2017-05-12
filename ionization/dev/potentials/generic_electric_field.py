@@ -3,16 +3,16 @@ import os
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-import plots
-from units import *
+
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         pw = 200
         flu = 1
 
@@ -44,12 +44,12 @@ if __name__ == '__main__':
                                                    frequency_points = 2 ** 15
                                                    )
 
-            plots.xy_plot('generic_electric_field_vs_time__zoom__{}__phase={}'.format(ii, phase / pi),
-                          generic.times, np.real(generic.complex_electric_field_vs_time),
-                          x_unit = 'asec', x_label = r'Time $t$',
-                          x_lower_limit = times[0], x_upper_limit = times[-1],
-                          y_unit = 'atomic_electric_field', y_label = r'Electric Field $E(t)$',
-                          target_dir = OUT_DIR)
+            si.plots.xy_plot('generic_electric_field_vs_time__zoom__{}__phase={}'.format(ii, phase / pi),
+                             generic.times, np.real(generic.complex_electric_field_vs_time),
+                             x_unit = 'asec', x_label = r'Time $t$',
+                             x_lower_limit = times[0], x_upper_limit = times[-1],
+                             y_unit = 'atomic_electric_field', y_label = r'Electric Field $E(t)$',
+                             target_dir = OUT_DIR)
 
             print(ii, phase, phase / pi)
             print('fluence', epsilon_0 * c * np.sum(np.abs(generic.complex_electric_field_vs_time) ** 2) * generic.dt / Jcm2)
@@ -61,18 +61,18 @@ if __name__ == '__main__':
             # # print('center', generic.complex_amplitude_vs_frequency[len(generic.complex_amplitude_vs_frequency) // 2])
             # # print(epsilon_0 * c * np.sum(generic.power_vs_frequency) * generic.df / Jcm2)
             #
-            # cp.utils.xy_plot('power_spectrum',
+            # si.utils.xy_plot('power_spectrum',
             #                  generic.frequency, generic.power_vs_frequency,
             #                  x_unit = 'THz', x_label = r'Frequency $f$',
             #                  target_dir = OUT_DIR)
             #
-            # cp.utils.xy_plot('generic_electric_field_vs_time',
+            # si.utils.xy_plot('generic_electric_field_vs_time',
             #                  generic.times, np.real(generic.complex_electric_field_vs_time),
             #                  x_unit = 'asec', x_label = r'Time $t$',
             #                  y_unit = 'atomic_electric_field', y_label = r'Electric Field $E(t)$',
             #                  target_dir = OUT_DIR)
             #
-            # cp.utils.xy_plot('generic_electric_field_vs_time__zoom',
+            # si.utils.xy_plot('generic_electric_field_vs_time__zoom',
             #                  generic.times, np.real(generic.complex_electric_field_vs_time),
             #                  x_unit = 'asec', x_label = r'Time $t$',
             #                  x_lower_limit = times[0], x_upper_limit = times[-1],
@@ -89,7 +89,7 @@ if __name__ == '__main__':
             # print(epsilon_0 * c * np.sum(np.abs(generic_field) ** 2) * dt / Jcm2)
             # print(epsilon_0 * c * np.sum(np.abs(generic.complex_electric_field_vs_time) ** 2) * generic.dt / Jcm2)
             #
-            # cp.utils.xy_plot('electric_field_vs_time_comparison',
+            # si.utils.xy_plot('electric_field_vs_time_comparison',
             #                  times,
             #                  sinc_field, generic_field,
             #                  line_labels = ('Sinc Pulse', 'Generic Pulse'),

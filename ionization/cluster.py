@@ -2,11 +2,12 @@ import itertools as it
 import logging
 from copy import copy
 
-import compy as cp
-import compy.cluster as clu
 import numpy as np
 import numpy.ma as ma
-from units import *
+
+import simulacra as si
+import simulacra.cluster as clu
+from simulacra.units import *
 
 from ionization import core, integrodiff
 
@@ -63,7 +64,7 @@ def ask_mesh_type():
         else:
             raise ValueError('Mesh type {} not found!'.format(mesh_type))
 
-        logger.warning('Predicted memory usage per Simulation is >{}'.format(cp.utils.bytes_to_str(memory_estimate)))
+        logger.warning('Predicted memory usage per Simulation is >{}'.format(si.utils.bytes_to_str(memory_estimate)))
 
         return spec_type, mesh_kwargs
     except ValueError:
@@ -103,7 +104,7 @@ class PulseParameterScanMixin:
                     continue
 
                 for plot_parameter_value in plot_parameter_set:
-                    for line_group_number, line_parameter_group in enumerate(cp.utils.grouper(sorted(line_parameter_set), 8)):
+                    for line_group_number, line_parameter_group in enumerate(si.utils.grouper(sorted(line_parameter_set), 8)):
                         plot_name = f'{ionization_metric}__{plot_parameter}={uround(plot_parameter_value, plot_parameter_unit, 3)}{plot_parameter_unit}__grouped_by_{line_parameter}__group_{line_group_number}'
 
                         lines = []
@@ -145,7 +146,7 @@ class PulseParameterScanMixin:
                             else:
                                 log_str = ''
 
-                            cp.plots.xy_plot('1d__' + plot_name + log_str,
+                            si.plots.xy_plot('1d__' + plot_name + log_str,
                                              x,
                                              *lines,
                                              line_labels = line_labels,
@@ -209,7 +210,7 @@ class PulseParameterScanMixin:
                             plot_name = '2d__' + plot_name + log_str
 
                             try:
-                                cp.plots.xyz_plot(plot_name,
+                                si.plots.xyz_plot(plot_name,
                                                   x_mesh, y_mesh, z_mesh,
                                                   x_unit = x_parameter_unit, y_unit = y_parameter_unit,
                                                   x_label = x_parameter_name, y_label = y_parameter_name,
@@ -336,7 +337,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                             y_upper_limit = None
                             y_lower_limit = None
 
-                        cp.plots.xy_plot('1d__' + plot_name + log_str,
+                        si.plots.xy_plot('1d__' + plot_name + log_str,
                                          x,
                                          line,
                                          title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {UNIT_NAME_TO_LATEX[plot_parameter_unit]}$",
@@ -381,7 +382,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                         else:
                             log_str = ''
 
-                        cp.plots.xy_plot('1d__' + plot_name + log_str,
+                        si.plots.xy_plot('1d__' + plot_name + log_str,
                                          x,
                                          line,
                                          title = f"{plot_parameter_name}$\, = {uround(plot_parameter_value, plot_parameter_unit, 3)} \, {UNIT_NAME_TO_LATEX[plot_parameter_unit]}$ (Diff from Best)",
@@ -437,7 +438,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                         z_lower_limit = 0
                         z_upper_limit = 1
 
-                    cp.plots.xyz_plot('2d__' + plot_name + log_str,
+                    si.plots.xyz_plot('2d__' + plot_name + log_str,
                                       x_mesh, y_mesh, z_mesh,
                                       x_unit = x_parameter_unit, y_unit = y_parameter_unit,
                                       x_label = x_parameter_name, y_label = y_parameter_name,
@@ -491,7 +492,7 @@ class ConvergenceJobProcessor(ElectricFieldJobProcessor):
                     else:
                         log_str = ''
 
-                    cp.plots.xyz_plot('2d__' + plot_name + log_str,
+                    si.plots.xyz_plot('2d__' + plot_name + log_str,
                                       x_mesh, y_mesh, z_mesh,
                                       x_unit = x_parameter_unit, y_unit = y_parameter_unit,
                                       x_label = x_parameter_name, y_label = y_parameter_name,

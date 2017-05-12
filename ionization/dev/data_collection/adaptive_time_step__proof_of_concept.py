@@ -1,9 +1,9 @@
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import numpy as np
-from units import *
+from simulacra.units import *
 
 import ionization as ion
 
@@ -11,7 +11,7 @@ import ionization as ion
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
+log = si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
 
 if __name__ == '__main__':
     with log as logger:
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         t = t_init
         times = [t]
 
-        with cp.utils.BlockTimer() as timer:
+        with si.utils.BlockTimer() as timer:
             while t < t_final:
                 t += get_time_step(t, efield)
 
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         steps = np.diff(times)
         steps = np.append(steps, np.NaN)
 
-        cp.plots.xy_plot('test',
+        si.plots.xy_plot('test',
                          times,
                          steps / asec,
                          np.abs(efield.get_electric_field_amplitude(times)) / atomic_electric_field,

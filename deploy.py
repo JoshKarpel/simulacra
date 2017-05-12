@@ -8,7 +8,7 @@ def get_dirs(directory, contents):
 
 
 if __name__ == '__main__':
-    shutil.rmtree('deploy', ignore_errors = True)  # clear existing deply directory to prevent any clashes
+    shutil.rmtree('deploy', ignore_errors = True)  # clear existing deploy directory to prevent any clashes
 
     # copy directories out of cwd, ignoring hidden folders and ignoring any subdirectories
     for d in (d for d in os.listdir(os.getcwd()) if not d.startswith('.') and d not in ('deploy', 'docs', 'dispersion') and os.path.isdir(d)):

@@ -3,9 +3,9 @@ import os
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import dispersion as disp
-from units import *
+from simulacra.units import *
 
 
 dispersion = False
@@ -19,7 +19,7 @@ else:
     OUT_DIR = os.path.join(OUT_DIR, 'no dispersion')
 
 if __name__ == '__main__':
-    with cp.utils.LogManager(stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
+    with si.utils.LogManager(stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
         f_min = 50 * THz
         f_max = 5000 * THz
         wavelength_min = c / f_max

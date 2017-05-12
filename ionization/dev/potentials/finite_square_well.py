@@ -3,16 +3,16 @@ import os
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-import plots
-from units import *
+
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         mass = electron_mass
         pw = 200
 
@@ -82,9 +82,9 @@ if __name__ == '__main__':
 
         print(sim.info())
 
-        plots.xy_plot('fsw_potential', sim.mesh.x_mesh, pot(distance = sim.mesh.x_mesh),
-                      x_unit = 'bohr_radius', y_unit = 'eV', x_lower_limit = -3 * width, x_upper_limit = 3 * width,
-                      target_dir = OUT_DIR)
+        si.plots.xy_plot('fsw_potential', sim.mesh.x_mesh, pot(distance = sim.mesh.x_mesh),
+                         x_unit = 'bohr_radius', y_unit = 'eV', x_lower_limit = -3 * width, x_upper_limit = 3 * width,
+                         target_dir = OUT_DIR)
 
         sim.run_simulation()
 
@@ -92,20 +92,20 @@ if __name__ == '__main__':
 
         sim.plot_test_state_overlaps_vs_time(target_dir = OUT_DIR)
 
-        plots.xy_plot('energy_vs_time',
-                      sim.times, sim.energy_expectation_value_vs_time_internal,
-                      x_label = '$t$', x_unit = 'asec', y_label = 'Energy', y_unit = 'eV',
-                      target_dir = OUT_DIR)
+        si.plots.xy_plot('energy_vs_time',
+                         sim.times, sim.energy_expectation_value_vs_time_internal,
+                         x_label = '$t$', x_unit = 'asec', y_label = 'Energy', y_unit = 'eV',
+                         target_dir = OUT_DIR)
 
-        plots.xy_plot('energy_vs_time__ratio',
-                      sim.times, sim.energy_expectation_value_vs_time_internal / sim.energy_expectation_value_vs_time_internal[0],
-                      x_label = '$t$', x_unit = 'asec', y_label = '$E(t) / E(t=0)$',
-                      target_dir = OUT_DIR)
+        si.plots.xy_plot('energy_vs_time__ratio',
+                         sim.times, sim.energy_expectation_value_vs_time_internal / sim.energy_expectation_value_vs_time_internal[0],
+                         x_label = '$t$', x_unit = 'asec', y_label = '$E(t) / E(t=0)$',
+                         target_dir = OUT_DIR)
 
-        plots.xy_plot('energy_vs_time__ratio_log',
-                      sim.times, sim.energy_expectation_value_vs_time_internal / sim.energy_expectation_value_vs_time_internal[0],
-                      x_label = '$t$', x_unit = 'asec', y_label = '$E(t) / E(t=0)$', y_log_axis = True,
-                      target_dir = OUT_DIR)
+        si.plots.xy_plot('energy_vs_time__ratio_log',
+                         sim.times, sim.energy_expectation_value_vs_time_internal / sim.energy_expectation_value_vs_time_internal[0],
+                         x_label = '$t$', x_unit = 'asec', y_label = '$E(t) / E(t=0)$', y_log_axis = True,
+                         target_dir = OUT_DIR)
         # sim.plot_energy_expectation_value_vs_time(target_dir = OUT_DIR, x_unit = 'asec')
 
         # overlap_vs_k = np.zeros(len(plane_waves)) * np.NaN
@@ -121,7 +121,7 @@ if __name__ == '__main__':
         #
         # print(np.sum(overlap_vs_k))
         #
-        # cp.utils.xy_plot('overlap_vs_k',
+        # si.utils.xy_plot('overlap_vs_k',
         #                  wavenumbers, overlap_vs_k,
         #                  x_unit = twopi / nm, x_label = r'Wavenumber $k$ ($2\pi/\mathrm{nm}$)',
         #                  y_lower_limit = 0, y_upper_limit = 1,

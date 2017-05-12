@@ -1,8 +1,8 @@
 import os
 
-import compy as cp
+import simulacra as si
 import matplotlib as plt
-from units import *
+from simulacra.units import *
 
 import ionization as ion
 
@@ -23,7 +23,7 @@ def make_plots(spec):
 
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization') as logger:
+    with si.utils.LogManager('compy', 'ionization') as logger:
         n = 5
         bounds = [10, 20, 50]
         angular_points = 100
@@ -52,4 +52,4 @@ if __name__ == '__main__':
                                                                 initial_state = initial_state,
                                                                 r_bound = bound * bohr_radius, l_bound = angular_points))
 
-        cp.utils.multi_map(make_plots, specs, processes = 2)
+        si.utils.multi_map(make_plots, specs, processes = 2)

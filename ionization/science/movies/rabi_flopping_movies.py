@@ -4,18 +4,18 @@ from copy import deepcopy
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
+log = si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
 
 
 def run(spec):
-    with cp.utils.LogManager('compy', 'ionization',
+    with si.utils.LogManager('compy', 'ionization',
                              stdout_logs = True, stdout_level = logging.INFO,
                              file_logs = True, file_dir = spec.out_dir, file_name = spec.name, file_level = logging.INFO, file_mode = 'w') as logger:
         try:
@@ -85,4 +85,4 @@ if __name__ == '__main__':
                                                                 rabi_time = rabi_time,
                                                                 **spec_kwargs, ))
 
-        cp.utils.multi_map(run, specs, processes = 3)
+        si.utils.multi_map(run, specs, processes = 3)

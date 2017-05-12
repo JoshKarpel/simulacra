@@ -3,13 +3,15 @@ __all__ = ['core', 'math', 'utils', 'units', 'plots']
 import logging
 import os
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.NullHandler())
 
-import matplotlib as mpl
+import matplotlib
 
-mpl.use('Agg')
+
+matplotlib.use('Agg')
 
 mpl_rcParams_update = {
     'font.family': 'serif',
@@ -21,11 +23,12 @@ mpl_rcParams_update = {
     'ytick.left': True,
 }
 
-mpl.rcParams.update(mpl_rcParams_update)
+matplotlib.rcParams.update(mpl_rcParams_update)
 
 # set up platform-independent runtime cython compilation and imports
 import numpy as _np
 import pyximport
+
 
 pyx_dir = os.path.join(os.path.dirname(__file__), '.pyxbld')
 pyximport.install(setup_args = {"include_dirs": _np.get_include()},
@@ -34,5 +37,5 @@ pyximport.install(setup_args = {"include_dirs": _np.get_include()},
 
 _np.set_printoptions(linewidth = 200)  # screw character limits
 
-from compy.core import *
-from compy import math, utils, plots
+from simulacra.core import *
+from simulacra import math, utils, plots

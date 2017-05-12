@@ -1,9 +1,9 @@
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import numpy as np
-from units import *
+from simulacra.units import *
 
 import ionization as ion
 
@@ -14,7 +14,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME + '_masked')
 
 
 def run_sim(spec):
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG,
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG,
                              file_logs = True, file_name = spec.name, file_dir = OUT_DIR, file_mode = 'w') as logger:
         # sim = ion.ElectricFieldSimulation(spec)
         sim = spec.to_simulation()
@@ -63,7 +63,7 @@ def run_sim(spec):
 
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
         bound = 225
         # points = 2 ** 8
         points = bound * 4
@@ -135,4 +135,4 @@ if __name__ == '__main__':
                                                           do_imag_ev = True)
             specs.append(sph_spec)
 
-        cp.utils.multi_map(run_sim, specs, processes = 3)
+        si.utils.multi_map(run_sim, specs, processes = 3)

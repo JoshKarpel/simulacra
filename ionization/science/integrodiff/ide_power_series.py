@@ -1,11 +1,11 @@
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import numpy as np
-import plots
+
 import scipy.integrate as integrate
-from units import *
+from simulacra.units import *
 
 import ionization as ion
 from ionization import integrodiff as ide
@@ -16,7 +16,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 
 def run(spec):
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
         sim = spec.to_simulation()
 
         logger.debug(sim.info())
@@ -30,17 +30,17 @@ def run(spec):
                            field_axis_label = r'${}(t)$'.format(str_efield),
                            field_scale = 'AEF')
 
-        plots.xy_plot(sim.name + '_RI',
-                      sim.times,
-                      np.real(sim.y), np.imag(sim.y), np.abs(sim.y), np.angle(sim.y),
-                      line_labels = ('Real', 'Imag', 'Abs', 'Arg'),
-                      target_dir = OUT_DIR)
+        si.plots.xy_plot(sim.name + '_RI',
+                         sim.times,
+                         np.real(sim.y), np.imag(sim.y), np.abs(sim.y), np.angle(sim.y),
+                         line_labels = ('Real', 'Imag', 'Abs', 'Arg'),
+                         target_dir = OUT_DIR)
 
         return sim
 
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO) as logger:
         l = 1
 
         q = electron_charge

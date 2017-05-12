@@ -14,20 +14,20 @@ import scipy.special as special
 import scipy.optimize as optimize
 import mpmath
 
-import compy as cp
-from units import *
+import simulacra as si
+from simulacra.units import *
 from . import core
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class IllegalQuantumState(cp.CompyException):
+class IllegalQuantumState(si.SimulacraException):
     """An exception indicating that a state with an illegal quantum number has been generated."""
     pass
 
 
-class QuantumState(cp.Summand):
+class QuantumState(si.Summand):
     """A class that represents a quantum state, with an amplitude and some basic multiplication/addition rules. Can be summed to form a Superposition."""
 
     bound = None
@@ -105,7 +105,7 @@ class QuantumState(cp.Summand):
         return 0
 
 
-class Superposition(cp.Sum, QuantumState):
+class Superposition(si.Sum, QuantumState):
     """A class that represents a superposition of bound states."""
 
     container_name = 'states'
@@ -128,7 +128,7 @@ class Superposition(cp.Sum, QuantumState):
 class FreeSphericalWave(QuantumState):
     """A class that represents a free spherical wave."""
 
-    energy = cp.utils.Checked('energy', check = lambda x: x > 0)
+    energy = si.utils.Checked('energy', check = lambda x: x > 0)
 
     bound = False
     discrete_eigenvalues = False
@@ -186,7 +186,7 @@ class FreeSphericalWave(QuantumState):
     @property
     def spherical_harmonic(self):
         """Return the SphericalHarmonic for the state's angular momentum quantum numbers."""
-        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
+        return si.math.SphericalHarmonic(l = self.l, m = self.m)
 
     def __str__(self):
         return self.ket
@@ -290,7 +290,7 @@ class HydrogenBoundState(QuantumState):
     @property
     def spherical_harmonic(self):
         """Gets the SphericalHarmonic associated with the HydrogenBoundState's l and m."""
-        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
+        return si.math.SphericalHarmonic(l = self.l, m = self.m)
 
     def __str__(self):
         """Returns the external string representation of the HydrogenBoundState."""
@@ -298,7 +298,7 @@ class HydrogenBoundState(QuantumState):
 
     def __repr__(self):
         """Returns the internal string representation of the HydrogenBoundState."""
-        return cp.utils.field_str(self, 'n', 'l', 'm', 'amplitude')
+        return si.utils.field_str(self, 'n', 'l', 'm', 'amplitude')
 
     @property
     def ket(self):
@@ -411,7 +411,7 @@ class HydrogenCoulombState(QuantumState):
     @property
     def spherical_harmonic(self):
         """Return the SphericalHarmonic for the state's angular momentum quantum numbers."""
-        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
+        return si.math.SphericalHarmonic(l = self.l, m = self.m)
 
     @property
     def tuple(self):
@@ -529,7 +529,7 @@ class NumericSphericalHarmonicState(QuantumState):
     @property
     def spherical_harmonic(self):
         """Return the SphericalHarmonic for the state's angular momentum quantum numbers."""
-        return cp.math.SphericalHarmonic(l = self.l, m = self.m)
+        return si.math.SphericalHarmonic(l = self.l, m = self.m)
 
     def radial_function(self, r):
         return self.g_mesh
@@ -654,7 +654,7 @@ class OneDFreeParticle(QuantumState):
         return r'|k = 2pi * {} 1/nm, E = {} eV>'.format(uround(self.wavenumber / twopi, per_nm), uround(self.energy, eV))
 
     def __repr__(self):
-        return cp.utils.field_str(self, 'wavenumber', 'energy', 'mass', 'amplitude')
+        return si.utils.field_str(self, 'wavenumber', 'energy', 'mass', 'amplitude')
 
     @property
     def tex_str(self):

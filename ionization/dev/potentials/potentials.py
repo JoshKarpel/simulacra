@@ -1,8 +1,8 @@
 import os
 
-import compy as cp
+import simulacra as si
 import numpy as np
-from units import *
+from simulacra.units import *
 
 import ionization as ion
 
@@ -11,7 +11,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager() as logger:
+    with si.utils.LogManager() as logger:
         t = np.array([0, .25, .5, .75, 1])
         # t = .25
         r = 1 * bohr_radius

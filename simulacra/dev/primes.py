@@ -1,6 +1,6 @@
 import datetime as dt
 
-from compy.math import *
+from simulacra.math import *
 
 if __name__ == '__main__':
     low_limit = 100

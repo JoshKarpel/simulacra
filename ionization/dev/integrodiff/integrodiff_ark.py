@@ -3,17 +3,17 @@ import os
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-import plots
-from units import *
+
+from simulacra.units import *
 from ionization import integrodiff as ide
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
         pw = 50
         flu = 20
 
@@ -48,14 +48,14 @@ if __name__ == '__main__':
                            field_axis_label = r'${}(t)$'.format(str_efield),
                            field_scale = 'AEF')
 
-        plots.xy_plot('time_step',
-                      sim.times,
-                      sim.time_steps_by_times,
-                      x_axis_label = r'Time $t$', x_unit = 'asec',
-                      y_axis_label = r'Time Step $\Delta t$', y_unit = 'asec',
-                      y_log_axis = True,
-                      target_dir = OUT_DIR,
-                      )
+        si.plots.xy_plot('time_step',
+                         sim.times,
+                         sim.time_steps_by_times,
+                         x_axis_label = r'Time $t$', x_unit = 'asec',
+                         y_axis_label = r'Time Step $\Delta t$', y_unit = 'asec',
+                         y_log_axis = True,
+                         target_dir = OUT_DIR,
+                         )
 
         print(sim.time_index)
         print(sim.computed_time_steps)

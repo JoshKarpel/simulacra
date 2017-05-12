@@ -5,10 +5,10 @@ from tqdm import tqdm
 
 import numpy as np
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-import plots
-from units import *
+
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME, dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
@@ -25,7 +25,7 @@ def dict_to_arrays(d):
 
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = True, file_dir = OUT_DIR, file_name = 'log') as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = True, file_dir = OUT_DIR, file_name = 'log') as logger:
         pw = 50  # asec
         flu = 1  # Jcm2
         phase = 'cos'
@@ -132,11 +132,11 @@ if __name__ == '__main__':
         logger.info('norm - bound: {}'.format(sim.norm_vs_time[-1] - bound_norm))
         logger.info('norm: {}'.format(sim.norm_vs_time[-1]))
 
-        plots.xy_plot(identifier + '__overlap_by_energy',
-                      energy, overlap_by_energy,
-                      x_unit = 'eV',
-                      target_dir = OUT_DIR)
+        si.plots.xy_plot(identifier + '__overlap_by_energy',
+                         energy, overlap_by_energy,
+                         x_unit = 'eV',
+                         target_dir = OUT_DIR)
 
-        plots.xy_plot(identifier + '__overlap_by_l',
-                      l, overlap_by_l,
-                      target_dir = OUT_DIR)
+        si.plots.xy_plot(identifier + '__overlap_by_l',
+                         l, overlap_by_l,
+                         target_dir = OUT_DIR)

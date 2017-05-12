@@ -89,7 +89,7 @@ ENV/
 .ropeproject
 
 .idea/
-/compy/.pyxbld/
+/simulacra/.pyxbld/
 /deploy
 out/*
-magpy.py
+

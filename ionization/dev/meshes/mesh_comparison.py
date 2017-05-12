@@ -1,14 +1,14 @@
 import os
 import logging
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 BASE_OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-logger = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = BASE_OUT_DIR, file_level = logging.DEBUG)
+logger = si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = BASE_OUT_DIR, file_level = logging.DEBUG)
 
 
 def run(spec):
@@ -91,4 +91,4 @@ if __name__ == '__main__':
                                                                        out_dir = OUT_DIR)
                 specs.append(lag_sph_harm_spec)
 
-        cp.utils.multi_map(run, specs, processes = 2)
+        si.utils.multi_map(run, specs, processes = 2)

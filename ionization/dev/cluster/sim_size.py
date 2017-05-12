@@ -1,15 +1,15 @@
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import ionization as ion
-from units import *
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG) as logger:
         bound = 50
         points = 2 ** 11
         angular_points = 128
@@ -79,29 +79,29 @@ if __name__ == '__main__':
         cyl_sim.file_name = 'cyl_slice__init_no_mesh'
         cyl_sim.save(target_dir = OUT_DIR, save_mesh = False)
 
-        with cp.utils.BlockTimer() as t:
+        with si.utils.BlockTimer() as t:
             cyl_sim.mesh.get_kinetic_energy_matrix_operators()
 
         print(t)
 
-        with cp.utils.BlockTimer() as t:
+        with si.utils.BlockTimer() as t:
             cyl_sim.mesh.get_kinetic_energy_matrix_operators()
 
         print(t)
 
-        test_sim = cp.Simulation.load(os.path.join(OUT_DIR, 'cyl_slice__init.sim'))
+        test_sim = si.Simulation.load(os.path.join(OUT_DIR, 'cyl_slice__init.sim'))
         # print(cyl_sim)
         # print(test_sim)
         # print(test_sim.mesh.get_kinetic_energy_matrix_operators)
         # for k, v in sorted(vars(test_sim).items()):
         #     print(k, '  :  ', v)
 
-        with cp.utils.BlockTimer() as t:
+        with si.utils.BlockTimer() as t:
             test_sim.mesh.get_kinetic_energy_matrix_operators()
 
         print(t)
 
-        with cp.utils.BlockTimer() as t:
+        with si.utils.BlockTimer() as t:
             test_sim.mesh.get_kinetic_energy_matrix_operators()
 
         print(t)
@@ -109,7 +109,7 @@ if __name__ == '__main__':
         for k, v in sorted(vars(test_sim.mesh).items()):
             print(k, '  :  ', v)
 
-        # with cp.utils.Timer() as t:
+        # with si.utils.Timer() as t:
         #     cyl_sim.run_simulation()
         # print('sim run time', t)
 
@@ -172,29 +172,29 @@ if __name__ == '__main__':
         sph_sim.file_name = 'sph_slice__init_no_mesh'
         sph_sim.save(target_dir = OUT_DIR, save_mesh = False)
 
-        with cp.utils.BlockTimer() as t:
+        with si.utils.BlockTimer() as t:
             sph_sim.mesh.get_kinetic_energy_matrix_operators()
 
         print(t)
 
-        with cp.utils.BlockTimer() as t:
+        with si.utils.BlockTimer() as t:
             sph_sim.mesh.get_kinetic_energy_matrix_operators()
 
         print(t)
 
-        test_sim = cp.Simulation.load(os.path.join(OUT_DIR, 'sph_slice__init.sim'))
+        test_sim = si.Simulation.load(os.path.join(OUT_DIR, 'sph_slice__init.sim'))
         # print(sph_sim)
         # print(test_sim)
         # print(test_sim.mesh.get_kinetic_energy_matrix_operators)
         # for k, v in sorted(vars(test_sim).items()):
         #     print(k, '  :  ', v)
 
-        with cp.utils.BlockTimer() as t:
+        with si.utils.BlockTimer() as t:
             test_sim.mesh.get_kinetic_energy_matrix_operators()
 
         print(t)
 
-        with cp.utils.BlockTimer() as t:
+        with si.utils.BlockTimer() as t:
             test_sim.mesh.get_kinetic_energy_matrix_operators()
 
         print(t)
@@ -202,7 +202,7 @@ if __name__ == '__main__':
         for k, v in sorted(vars(test_sim.mesh).items()):
             print(k, '  :  ', v)
 
-        # with cp.utils.Timer() as t:
+        # with si.utils.Timer() as t:
         #     sph_sim.run_simulation()
         # print('sim run time', t)
 

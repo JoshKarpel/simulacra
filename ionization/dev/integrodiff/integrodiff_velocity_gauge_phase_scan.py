@@ -6,15 +6,15 @@ from tqdm import tqdm
 import numpy as np
 import scipy.integrate as integrate
 
-import compy as cp
+import simulacra as si
 import ionization as ion
 from ionization import integrodiff as ide
-from units import *
+from simulacra.units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO)
+log = si.utils.LogManager('compy', 'ionization', stdout_logs = True, stdout_level = logging.INFO)
 
 
 def run(spec):
@@ -67,7 +67,7 @@ if __name__ == '__main__':
             target_dir = OUT_DIR,
         )
 
-        results = cp.utils.multi_map(run, specs, processes = 2)
+        results = si.utils.multi_map(run, specs, processes = 2)
 
         for log in (True, False):
             if not log:
@@ -75,14 +75,14 @@ if __name__ == '__main__':
             else:
                 y_lower_limit = None
 
-            cp.plots.xy_plot(f'ionization_vs_phase__pw={uround(pw, asec, 3)}as_flu={uround(flu, Jcm2, 3)}Jcm2__log={log}',
+            si.plots.xy_plot(f'ionization_vs_phase__pw={uround(pw, asec, 3)}as_flu={uround(flu, Jcm2, 3)}Jcm2__log={log}',
                              [r.spec.phase for r in results],
                              [np.abs(r.a[-1]) ** 2 for r in results],
                              x_label = r'CEP $\varphi$ ($\pi$)', x_unit = 'rad',
                              y_label = r'$  \left| a_{\mathrm{final}} \right|^2  $', y_log_axis = log, y_upper_limit = 1, y_lower_limit = y_lower_limit,
                              **plt_kwargs)
 
-            cp.plots.xy_plot(f'ionization_vs_phase__pw={uround(pw, asec, 3)}as_flu={uround(flu, Jcm2, 3)}Jcm2__log={log}__rel',
+            si.plots.xy_plot(f'ionization_vs_phase__pw={uround(pw, asec, 3)}as_flu={uround(flu, Jcm2, 3)}Jcm2__log={log}__rel',
                              [r.spec.phase for r in results],
                              [(np.abs(r.a[-1]) ** 2) / (np.abs(results[0].a[-1]) ** 2) for r in results],
                              x_label = r'CEP $\varphi$ ($\pi$)', x_unit = 'rad',

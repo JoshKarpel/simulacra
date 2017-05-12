@@ -4,7 +4,6 @@ import itertools as it
 import logging
 from copy import copy, deepcopy
 
-import compy as cp
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,10 +12,11 @@ import scipy as sp
 import scipy.sparse as sparse
 import scipy.sparse.linalg as sparsealg
 import scipy.special as special
-from compy.units import *
+from simulacra.units import *
 from cycler import cycler
 from tqdm import tqdm
 
+import simulacra as si
 from . import potentials, states
 from .cy import make_split_operator_evolution_matrices_LEN, tdma
 
@@ -24,7 +24,7 @@ from .cy import make_split_operator_evolution_matrices_LEN, tdma
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-COLOR_ELECTRIC_FIELD = cp.plots.RED
+COLOR_ELECTRIC_FIELD = si.plots.RED
 
 
 def electron_energy_from_wavenumber(k):
@@ -35,18 +35,18 @@ def electron_wavenumber_from_energy(energy):
     return np.sqrt(2 * electron_mass * energy + 0j) / hbar
 
 
-@cp.utils.memoize
+@si.utils.memoize
 def three_j_coefficient(l):
     "3j coefficient"
     return (l + 1) / np.sqrt(((2 * l) + 1) * ((2 * l) + 3))
 
 
-class ElectricFieldSpecification(core.Specification):
+class ElectricFieldSpecification(si.Specification):
     """A base Specification for a Simulation with an electric field."""
 
-    evolution_equations = cp.utils.RestrictedValues('evolution_equations', {'LAG', 'HAM'})
-    evolution_method = cp.utils.RestrictedValues('evolution_method', {'CN', 'SO', 'S'})
-    evolution_gauge = cp.utils.RestrictedValues('evolution_gauge', {'LEN', 'VEL'})
+    evolution_equations = si.utils.RestrictedValues('evolution_equations', {'LAG', 'HAM'})
+    evolution_method = si.utils.RestrictedValues('evolution_method', {'CN', 'SO', 'S'})
+    evolution_gauge = si.utils.RestrictedValues('evolution_gauge', {'LEN', 'VEL'})
 
     def __init__(self, name,
                  mesh_type = None,
@@ -287,7 +287,7 @@ class QuantumMesh:
     def psi_mesh(self):
         return self.g_mesh / self.g_factor
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_kinetic_energy_matrix_operators(self):
         try:
             return getattr(self, f'_get_kinetic_energy_matrix_operators_{self.spec.evolution_equations}')()
@@ -297,7 +297,7 @@ class QuantumMesh:
     def get_internal_hamiltonian_matrix_operators(self):
         raise NotImplementedError
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_interaction_hamiltonian_matrix_operators(self):
         try:
             return getattr(self, f'_get_interaction_hamiltonian_matrix_operators_{self.spec.evolution_gauge}')()
@@ -440,7 +440,7 @@ class LineMesh(QuantumMesh):
 
         self.x_mesh = np.linspace(-self.spec.x_bound, self.spec.x_bound, self.spec.x_points)
         self.delta_x = np.abs(self.x_mesh[1] - self.x_mesh[0])
-        self.x_center_index = cp.utils.find_nearest_entry(self.x_mesh, 0).index
+        self.x_center_index = si.utils.find_nearest_entry(self.x_mesh, 0).index
 
         self.wavenumbers = twopi * nfft.fftfreq(len(self.x_mesh), d = self.delta_x)
         self.delta_k = np.abs(self.wavenumbers[1] - self.wavenumbers[0])
@@ -468,7 +468,7 @@ class LineMesh(QuantumMesh):
     def energies(self):
         return ((self.wavenumbers * hbar) ** 2) / (2 * self.spec.test_mass)
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_g_for_state(self, state):
         g = state(self.x_mesh)
         g /= np.sqrt(self.norm(g))
@@ -517,7 +517,7 @@ class LineMesh(QuantumMesh):
 
         return sparse.diags((off_diag, diag, off_diag), (-1, 0, 1))
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_internal_hamiltonian_matrix_operators(self):
         kinetic_x = self.get_kinetic_energy_matrix_operators().copy()
 
@@ -629,7 +629,7 @@ class LineMesh(QuantumMesh):
         return line
 
     def plot_mesh(self, mesh, distance_unit = 'nm', **kwargs):
-        cp.plots.xy_plot(self.sim.name + '_' + kwargs.pop('name'), self.x_mesh, mesh,
+        si.plots.xy_plot(self.sim.name + '_' + kwargs.pop('name'), self.x_mesh, mesh,
                          x_label = 'Distance $x$', x_unit_value = distance_unit, **kwargs)
 
     def plot_fft(self):
@@ -688,12 +688,12 @@ class CylindricalSliceMesh(QuantumMesh):
         self.mesh_shape = np.shape(self.r_mesh)
 
     @property
-    @cp.utils.memoize
+    @si.utils.memoize
     def z_mesh(self):
         return np.meshgrid(self.z, self.rho, indexing = 'ij')[0]
 
     @property
-    @cp.utils.memoize
+    @si.utils.memoize
     def rho_mesh(self):
         return np.meshgrid(self.z, self.rho, indexing = 'ij')[1]
 
@@ -739,7 +739,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         return np.reshape(vector, self.mesh_shape, wrap)
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_g_for_state(self, state):
         g = self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
         g /= np.sqrt(self.norm(g))
@@ -762,7 +762,7 @@ class CylindricalSliceMesh(QuantumMesh):
         z_diagonal = z_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         z_offdiagonal = z_prefactor * np.array([1 if (z_index + 1) % self.spec.z_points != 0 else 0 for z_index in range(self.mesh_points - 1)], dtype = np.complex128)
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def c(j):
             return j / np.sqrt((j ** 2) - 0.25)
 
@@ -779,7 +779,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         return z_kinetic, rho_kinetic
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_internal_hamiltonian_matrix_operators(self):
         """Get the mesh internal Hamiltonian matrix operators for z and rho."""
         z_kinetic, rho_kinetic = self.get_kinetic_energy_matrix_operators()
@@ -839,7 +839,7 @@ class CylindricalSliceMesh(QuantumMesh):
     def energy_expectation_value(self):
         return np.real(self.inner_product(b = self.hg_mesh()))
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def _get_probability_current_matrix_operators(self):
         """Get the mesh probability current operators for z and rho."""
         z_prefactor = hbar / (4 * pi * self.spec.test_mass * self.delta_rho * self.delta_z)
@@ -855,7 +855,7 @@ class CylindricalSliceMesh(QuantumMesh):
                 z_offdiagonal[z_index] = 1 / (j + 0.5)
         z_offdiagonal *= z_prefactor
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def d(j):
             return 1 / np.sqrt((j ** 2) - 0.25)
 
@@ -942,7 +942,7 @@ class CylindricalSliceMesh(QuantumMesh):
         g_vector = tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'rho')
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_mesh_slicer(self, plot_limit = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
         if plot_limit is None:
@@ -1018,7 +1018,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         axis.axis('tight')  # removes blank space between color mesh and axes
 
-        axis.grid(True, color = cp.plots.CMAP_TO_OPPOSITE[color_map], **cp.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = si.plots.CMAP_TO_OPPOSITE[color_map], **si.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
 
         axis.tick_params(labelright = True, labeltop = True)  # ticks on all sides
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
@@ -1031,7 +1031,7 @@ class CylindricalSliceMesh(QuantumMesh):
         y_ticks[-1].label1.set_visible(False)
         y_ticks[-1].label2.set_visible(False)
 
-        cp.plots.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, **kwargs)
+        si.plots.save_current_figure(name = '{}_{}'.format(self.spec.name, name), target_dir = target_dir, **kwargs)
 
         plt.close()
 
@@ -1087,12 +1087,12 @@ class SphericalSliceMesh(QuantumMesh):
         self.mesh_shape = np.shape(self.r_mesh)
 
     @property
-    @cp.utils.memoize
+    @si.utils.memoize
     def r_mesh(self):
         return np.meshgrid(self.r, self.theta, indexing = 'ij')[0]
 
     @property
-    @cp.utils.memoize
+    @si.utils.memoize
     def theta_mesh(self):
         return np.meshgrid(self.r, self.theta, indexing = 'ij')[1]
 
@@ -1138,7 +1138,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         return np.abs(self.inner_product(mesh_a, b)) ** 2
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_g_for_state(self, state):
         g = self.g_factor * state(self.r_mesh, self.theta_mesh, 0)
         g /= np.sqrt(self.norm(g))
@@ -1160,19 +1160,19 @@ class SphericalSliceMesh(QuantumMesh):
         r_diagonal = r_prefactor * (-2) * np.ones(self.mesh_points, dtype = np.complex128)
         r_offdiagonal = r_prefactor * np.array([1 if (z_index + 1) % self.spec.r_points != 0 else 0 for z_index in range(self.mesh_points - 1)], dtype = np.complex128)
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def theta_j_prefactor(x):
             return 1 / (x + 0.5) ** 2
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def sink(x):
             return np.sin(x * self.delta_theta)
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def sqrt_sink_ratio(x_num, x_den):
             return np.sqrt(sink(x_num) / sink(x_den))
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def cotank(x):
             return 1 / np.tan(x * self.delta_theta)
 
@@ -1199,7 +1199,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         return r_kinetic, theta_kinetic
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_internal_hamiltonian_matrix_operators(self):
         r_kinetic, theta_kinetic = self.get_kinetic_energy_matrix_operators()
         potential_mesh = self.spec.internal_potential(r = self.r_mesh, test_charge = self.spec.test_charge)
@@ -1258,7 +1258,7 @@ class SphericalSliceMesh(QuantumMesh):
     def energy_expectation_value(self):
         return np.real(self.inner_product(b = self.hg_mesh()))
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_probability_current_matrix_operators(self):
         raise NotImplementedError
 
@@ -1311,7 +1311,7 @@ class SphericalSliceMesh(QuantumMesh):
         g_vector = tdma(hamiltonian, g_vector)
         self.g_mesh = self.wrap_vector(g_vector, 'theta')
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
         if distance_from_center is None:
@@ -1353,7 +1353,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         unit_value, unit_name = get_unit_value_and_latex_from_unit(distance_unit)
 
-        fig = cp.plots.get_figure('full')
+        fig = si.plots.get_figure('full')
         fig.set_tight_layout(True)
         axis = plt.subplot(111, projection = 'polar')
         axis.set_theta_zero_location('N')
@@ -1373,12 +1373,12 @@ class SphericalSliceMesh(QuantumMesh):
         cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
         cbar.ax.tick_params(labelsize = 10)
 
-        axis.grid(True, color = cp.plots.CMAP_TO_OPPOSITE[color_map], **cp.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
+        axis.grid(True, color = si.plots.CMAP_TO_OPPOSITE[color_map], **si.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
         angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
         axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)  # increase size of tick labels
-        axis.tick_params(axis = 'y', which = 'major', colors = cp.plots.COLOR_OPPOSITE_INFERNO, pad = 3)  # make r ticks a color that shows up against the colormesh
+        axis.tick_params(axis = 'y', which = 'major', colors = si.plots.COLOR_OPPOSITE_INFERNO, pad = 3)  # make r ticks a color that shows up against the colormesh
         axis.tick_params(axis = 'both', which = 'both', length = 0)
 
         axis.set_rlabel_position(80)
@@ -1396,7 +1396,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         axis.set_rmax((self.r_max - (self.delta_r / 2)) / unit_value)
 
-        cp.plots.save_current_figure(name = '{}_{}'.format(self.spec.name, name), **kwargs)
+        si.plots.save_current_figure(name = '{}_{}'.format(self.spec.name, name), **kwargs)
 
         plt.close()
 
@@ -1436,7 +1436,7 @@ class SphericalHarmonicSpecification(ElectricFieldSpecification):
         self.r_bound = r_bound
         self.r_points = int(r_points)
         self.l_bound = l_bound
-        self.spherical_harmonics = tuple(cp.math.SphericalHarmonic(l, 0) for l in range(self.l_bound))
+        self.spherical_harmonics = tuple(si.math.SphericalHarmonic(l, 0) for l in range(self.l_bound))
 
         self.store_norm_by_l = store_norm_by_l
 
@@ -1484,12 +1484,12 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.g_mesh = self.get_g_for_state(self.spec.initial_state)
 
     @property
-    @cp.utils.memoize
+    @si.utils.memoize
     def r_mesh(self):
         return np.meshgrid(self.l, self.r, indexing = 'ij')[1]
 
     @property
-    @cp.utils.memoize
+    @si.utils.memoize
     def l_mesh(self):
         return np.meshgrid(self.l, self.r, indexing = 'ij')[0]
 
@@ -1562,7 +1562,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         else:
             raise NotImplementedError('States with non-definite angular momentum components are not currently supported by SphericalHarmonicMesh')
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_radial_g_for_state(self, state):
         """Return the radial g function evaluated on the radial mesh for a state that has a radial function."""
         # logger.debug('Calculating radial wavefunction for state {}'.format(state))
@@ -1612,11 +1612,11 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         inner_product_mesh = np.zeros(np.shape(wavenumber_mesh), dtype = np.complex128)
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def sph_harm(theta):
             return special.sph_harm(0, l_mesh, 0, theta)
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def bessel(wavenumber):
             return special.spherical_jn(l_mesh, np.real(wavenumber * self.r_mesh))
 
@@ -1648,19 +1648,19 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         inner_product_mesh = np.zeros(np.shape(wavenumber_mesh), dtype = np.complex128)
 
-        # @cp.utils.memoize
+        # @si.utils.memoize
         # def sph_harm(theta):
         #     return special.sph_harm(0, l_mesh, 0, theta)
         #
-        # @cp.utils.memoize
+        # @si.utils.memoize
         # def bessel(wavenumber):
         #     return special.spherical_jn(l_mesh, np.real(wavenumber * self.r_mesh))
 
-        # @cp.utils.memoize
+        # @si.utils.memoize
         # def poly(l, theta):
         #     return special.legendre(l)(np.cos(theta))
         #
-        # @cp.utils.memoize
+        # @si.utils.memoize
         # def phase(l, k):
         #     return np.exp(1j * states.coulomb_phase_shift(l, k))
         #
@@ -1681,11 +1681,11 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         sqrt_mesh = np.sqrt((2 * l_mesh) + 1)
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def poly(theta):
             return special.lpn(l_mesh, np.cos(theta))
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def phase(k):
             return np.exp(1j * states.coulomb_phase_shift(l_mesh, k))
 
@@ -1757,12 +1757,12 @@ class SphericalHarmonicMesh(QuantumMesh):
         """Get the radial kinetic energy matrix operator."""
         r_prefactor = -(hbar ** 2) / (2 * electron_mass_reduced * (self.delta_r ** 2))
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def alpha(j):
             x = (j ** 2) + (2 * j)
             return (x + 1) / (x + 0.75)
 
-        @cp.utils.memoize
+        @si.utils.memoize
         def beta(j):
             x = 2 * (j ** 2) + (2 * j)
             return (x + 1) / (x + 0.5)
@@ -1789,7 +1789,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return r_kinetic
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_internal_hamiltonian_matrix_operators(self):
         r_kinetic = self.get_kinetic_energy_matrix_operators().copy()
 
@@ -1906,7 +1906,7 @@ class SphericalHarmonicMesh(QuantumMesh):
     def energy_expectation_value(self):
         return np.real(self.inner_product(b = self.hg_mesh()))
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_probability_current_matrix_operators(self):
         raise NotImplementedError
 
@@ -1984,7 +1984,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         self.g_mesh = self.wrap_vector(even.dot(odd.dot(self.flatten_mesh(self.g_mesh, 'l'))), 'l')
         # self.g_mesh = self.wrap_vector(ft.reduce(np.dot, split_operators, self.flatten_mesh(self.g_mesh, 'l')), 'l')
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_mesh_slicer(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
         if distance_from_center is None:
@@ -1995,7 +1995,7 @@ class SphericalHarmonicMesh(QuantumMesh):
 
         return mesh_slicer
 
-    @cp.utils.memoize
+    @si.utils.memoize
     def get_mesh_slicer_spatial(self, distance_from_center = None):
         """Returns a slice object that slices a mesh to the given distance of the center."""
         if distance_from_center is None:
@@ -2007,27 +2007,27 @@ class SphericalHarmonicMesh(QuantumMesh):
         return mesh_slicer
 
     @property
-    @cp.utils.memoize
+    @si.utils.memoize
     def theta(self):
         return np.linspace(0, twopi, self.theta_points)
 
     @property
-    @cp.utils.memoize
+    @si.utils.memoize
     def theta_mesh(self):
         return np.meshgrid(self.r, self.theta, indexing = 'ij')[1]
 
     @property
-    @cp.utils.memoize
+    @si.utils.memoize
     def r_theta_mesh(self):
         return np.meshgrid(self.r, self.theta, indexing = 'ij')[0]
 
     @property
-    # @cp.utils.memoize
+    # @si.utils.memoize
     def theta_l_r_meshes(self):
         return np.meshgrid(self.theta, self.l, self.r, indexing = 'ij')
 
     @property
-    @cp.utils.memoize
+    @si.utils.memoize
     def _sph_harm_l_theta_mesh(self):
         theta_mesh, l_mesh, _ = self.theta_l_r_meshes
         return special.sph_harm(0, l_mesh, 0, theta_mesh)
@@ -2037,7 +2037,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         return np.sum(np.tile(mesh, (self.theta_points, 1, 1)) * self._sph_harm_l_theta_mesh, axis = 1).T
 
     @property
-    @cp.utils.watcher(lambda s: s.sim.time)
+    @si.utils.watcher(lambda s: s.sim.time)
     def space_g(self):
         return self._reconstruct_spatial_mesh(self.g_mesh)
 
@@ -2086,7 +2086,7 @@ class SphericalHarmonicMesh(QuantumMesh):
                   **kwargs):
         unit_value, unit_name = get_unit_value_and_latex_from_unit(distance_unit)
 
-        with cp.plots.FigureManager(self.sim.name + '__' + name, **kwargs) as figman:
+        with si.plots.FigureManager(self.sim.name + '__' + name, **kwargs) as figman:
             fig = figman.fig
 
             fig.set_tight_layout(True)
@@ -2110,12 +2110,12 @@ class SphericalHarmonicMesh(QuantumMesh):
             cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
             cbar.ax.tick_params(labelsize = 8)
 
-            axis.grid(True, color = cp.plots.CMAP_TO_OPPOSITE[color_map], **cp.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
+            axis.grid(True, color = si.plots.CMAP_TO_OPPOSITE[color_map], **si.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
             angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
             axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
             axis.tick_params(axis = 'both', which = 'major', labelsize = 8)  # increase size of tick labels
-            axis.tick_params(axis = 'y', which = 'major', colors = cp.plots.COLOR_OPPOSITE_INFERNO, pad = 3)  # make r ticks a color that shows up against the colormesh
+            axis.tick_params(axis = 'y', which = 'major', colors = si.plots.COLOR_OPPOSITE_INFERNO, pad = 3)  # make r ticks a color that shows up against the colormesh
             axis.tick_params(axis = 'both', which = 'both', length = 0)
 
             axis.set_rlabel_position(80)
@@ -2211,7 +2211,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         r_mesh = np.real(r_mesh)
         overlap_mesh = np.abs(inner_product_mesh) ** 2
 
-        with cp.plots.FigureManager(self.sim.name + '__electron_spectrum', **plot_kwargs) as figman:
+        with si.plots.FigureManager(self.sim.name + '__electron_spectrum', **plot_kwargs) as figman:
             fig = figman.fig
 
             fig.set_tight_layout(True)
@@ -2239,12 +2239,12 @@ class SphericalHarmonicMesh(QuantumMesh):
             cbar = plt.colorbar(mappable = color_mesh, cax = cbar_axis)
             cbar.ax.tick_params(labelsize = 10)
 
-            axis.grid(True, color = cp.plots.COLOR_OPPOSITE_VIRIDIS, **cp.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
+            axis.grid(True, color = si.plots.COLOR_OPPOSITE_VIRIDIS, **si.plots.COLORMESH_GRID_KWARGS)  # change grid color to make it show up against the colormesh
             angle_labels = ['{}\u00b0'.format(s) for s in (0, 30, 60, 90, 120, 150, 180, 150, 120, 90, 60, 30)]  # \u00b0 is unicode degree symbol
             axis.set_thetagrids(np.arange(0, 359, 30), frac = 1.075, labels = angle_labels)
 
             axis.tick_params(axis = 'both', which = 'major', labelsize = 8)  # increase size of tick labels
-            axis.tick_params(axis = 'y', which = 'major', colors = cp.plots.COLOR_OPPOSITE_VIRIDIS, pad = 3)  # make r ticks a color that shows up against the colormesh
+            axis.tick_params(axis = 'y', which = 'major', colors = si.plots.COLOR_OPPOSITE_VIRIDIS, pad = 3)  # make r ticks a color that shows up against the colormesh
             axis.tick_params(axis = 'both', which = 'both', length = 0)
 
             axis.set_rlabel_position(80)
@@ -2281,7 +2281,7 @@ class Snapshot:
         return 'Snapshot of {} at time {} as (time index = {})'.format(self.sim.name, uround(self.sim.times[self.time_index], asec, 3), self.time_index)
 
     def __repr__(self):
-        return cp.utils.field_str(self, 'sim', 'time_index')
+        return si.utils.field_str(self, 'sim', 'time_index')
 
     def take_snapshot(self):
         self.collect_norm()
@@ -2319,7 +2319,7 @@ class SphericalHarmonicSnapshot(Snapshot):
         self.data[key] = self.sim.mesh.inner_product_with_plane_waves(thetas, wavenumbers, g_mesh = g_mesh)
 
 
-class ElectricFieldSimulation(core.Simulation):
+class ElectricFieldSimulation(si.Simulation):
     def __init__(self, spec):
         super(ElectricFieldSimulation, self).__init__(spec)
 
@@ -2371,7 +2371,7 @@ class ElectricFieldSimulation(core.Simulation):
         self.snapshot_times = set()
 
         for time in self.spec.snapshot_times:
-            time_index, time_target, _ = cp.utils.find_nearest_entry(self.times, time)
+            time_index, time_target, _ = si.utils.find_nearest_entry(self.times, time)
             self.snapshot_times.add(time_target)
 
         for index in self.spec.snapshot_indices:
@@ -2413,13 +2413,13 @@ class ElectricFieldSimulation(core.Simulation):
 
         mem_total = mem_mesh + mem_matrix_operators + mem_numeric_eigenstates + mem_inner_products + mem_other_time_data + mem_misc
 
-        mem = [f'Memory Usage (approx): {cp.utils.bytes_to_str(mem_total)}']
-        mem += [f'   g Mesh: {cp.utils.bytes_to_str(mem_mesh)}']
-        mem += [f'   Matrix Operators: {cp.utils.bytes_to_str(mem_matrix_operators)}']
-        mem += [f'   Numeric Eigenstates: {cp.utils.bytes_to_str(mem_numeric_eigenstates)}']
-        mem += [f'   State Inner Products: {cp.utils.bytes_to_str(mem_inner_products)}']
-        mem += [f'   Other Time-Indexed Data: {cp.utils.bytes_to_str(mem_other_time_data)}']
-        mem += [f'   Miscellaneous: {cp.utils.bytes_to_str(mem_misc)}']
+        mem = [f'Memory Usage (approx): {si.utils.bytes_to_str(mem_total)}']
+        mem += [f'   g Mesh: {si.utils.bytes_to_str(mem_mesh)}']
+        mem += [f'   Matrix Operators: {si.utils.bytes_to_str(mem_matrix_operators)}']
+        mem += [f'   Numeric Eigenstates: {si.utils.bytes_to_str(mem_numeric_eigenstates)}']
+        mem += [f'   State Inner Products: {si.utils.bytes_to_str(mem_inner_products)}']
+        mem += [f'   Other Time-Indexed Data: {si.utils.bytes_to_str(mem_other_time_data)}']
+        mem += [f'   Miscellaneous: {si.utils.bytes_to_str(mem_misc)}']
 
         return '\n'.join((super().info(), *mem))
 
@@ -2523,7 +2523,7 @@ class ElectricFieldSimulation(core.Simulation):
         """
         logger.info(f'Performing time evolution on {self.name} ({self.file_name}), starting from time index {self.time_index}')
         try:
-            self.status = cp.STATUS_RUN
+            self.status = si.STATUS_RUN
 
             for animator in self.animators:
                 animator.initialize(self)
@@ -2560,7 +2560,7 @@ class ElectricFieldSimulation(core.Simulation):
                 if self.spec.checkpoints:
                     if (self.time_index + 1) % self.spec.checkpoint_every == 0:
                         self.save(target_dir = self.spec.checkpoint_dir, save_mesh = True)
-                        self.status = cp.STATUS_RUN
+                        self.status = si.STATUS_RUN
                         logger.info('Checkpointed {} {} ({}) at time step {} / {}'.format(self.__class__.__name__, self.name, self.file_name, self.time_index + 1, self.time_steps))
 
                 try:
@@ -2573,7 +2573,7 @@ class ElectricFieldSimulation(core.Simulation):
             except NameError:
                 pass
 
-            self.status = cp.STATUS_FIN
+            self.status = si.STATUS_FIN
 
             logger.info(f'Finished performing time evolution on {self.name} ({self.file_name})')
         except Exception as e:
@@ -2647,7 +2647,7 @@ class ElectricFieldSimulation(core.Simulation):
 
     def plot_test_state_overlaps_vs_time(self, log = False, x_unit = 'asec',
                                          **kwargs):
-        fig = cp.plots.get_figure('full')
+        fig = si.plots.get_figure('full')
 
         x_scale_unit, x_scale_name = get_unit_value_and_latex_from_unit(x_unit)
 
@@ -2675,11 +2675,11 @@ class ElectricFieldSimulation(core.Simulation):
             ax_overlaps.set_yscale('log')
             min_overlap = min([np.min(overlap) for overlap in state_overlaps.values()])
             ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-            ax_overlaps.grid(True, which = 'both', **cp.plots.GRID_KWARGS)
+            ax_overlaps.grid(True, which = 'both', **si.plots.GRID_KWARGS)
         else:
             ax_overlaps.set_ylim(0.0, 1.0)
             ax_overlaps.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-            ax_overlaps.grid(True, **cp.plots.GRID_KWARGS)
+            ax_overlaps.grid(True, **si.plots.GRID_KWARGS)
 
         ax_overlaps.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
@@ -2708,7 +2708,7 @@ class ElectricFieldSimulation(core.Simulation):
         ax_field.tick_params(axis = 'both', which = 'major', labelsize = 10)
         ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
-        ax_field.grid(True, **cp.plots.GRID_KWARGS)
+        ax_field.grid(True, **si.plots.GRID_KWARGS)
 
         postfix = ''
         if log:
@@ -2717,7 +2717,7 @@ class ElectricFieldSimulation(core.Simulation):
 
         name = prefix + '__wavefunction_vs_time{}'.format(postfix)
 
-        cp.plots.save_current_figure(name = name, **kwargs)
+        si.plots.save_current_figure(name = name, **kwargs)
 
         plt.close()
 
@@ -2729,7 +2729,7 @@ class ElectricFieldSimulation(core.Simulation):
                                   show_title = False,
                                   plot_name_from = 'file_name',
                                   **kwargs):
-        with cp.plots.FigureManager(getattr(self, plot_name_from) + '__wavefunction_vs_time') as figman:
+        with si.plots.FigureManager(getattr(self, plot_name_from) + '__wavefunction_vs_time') as figman:
             x_scale_unit, x_scale_name = get_unit_value_and_latex_from_unit(x_unit)
 
             grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
@@ -2795,11 +2795,11 @@ class ElectricFieldSimulation(core.Simulation):
                 ax_overlaps.set_yscale('log')
                 min_overlap = min([np.min(overlap) for overlap in state_overlaps.values()])
                 ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-                ax_overlaps.grid(True, which = 'both', **cp.plots.GRID_KWARGS)
+                ax_overlaps.grid(True, which = 'both', **si.plots.GRID_KWARGS)
             else:
                 ax_overlaps.set_ylim(0.0, 1.0)
                 ax_overlaps.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-                ax_overlaps.grid(True, **cp.plots.GRID_KWARGS)
+                ax_overlaps.grid(True, **si.plots.GRID_KWARGS)
 
             ax_overlaps.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
@@ -2842,7 +2842,7 @@ class ElectricFieldSimulation(core.Simulation):
             ax_field.tick_params(axis = 'both', which = 'major', labelsize = 10)
             ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
-            ax_field.grid(True, **cp.plots.GRID_KWARGS)
+            ax_field.grid(True, **si.plots.GRID_KWARGS)
 
             if show_title:
                 title = ax_overlaps.set_title(self.name)
@@ -2853,7 +2853,6 @@ class ElectricFieldSimulation(core.Simulation):
                 postfix += '__log'
 
             figman.name = '__wavefunction_vs_time{}'.format(postfix)
-
 
     def plot_energy_spectrum(self,
                              states = 'all',
@@ -2892,11 +2891,11 @@ class ElectricFieldSimulation(core.Simulation):
             cutoff_overlaps = np.array([])
             for l, overlap_by_energy in sorted(overlap_by_angular_momentum_by_energy.items()):
                 if l < angular_momentum_cutoff:
-                    e, o = cp.utils.dict_to_arrays(overlap_by_energy)
+                    e, o = si.utils.dict_to_arrays(overlap_by_energy)
                     energies.append(e / energy_unit)
                     overlaps.append(o)
                 else:
-                    e, o = cp.utils.dict_to_arrays(overlap_by_energy)
+                    e, o = si.utils.dict_to_arrays(overlap_by_energy)
                     cutoff_energies = np.append(cutoff_energies, e)
                     cutoff_overlaps = np.append(cutoff_overlaps, o)
 
@@ -2915,7 +2914,7 @@ class ElectricFieldSimulation(core.Simulation):
             for state, overlap_vs_time in state_overlaps.items():
                 overlap_by_energy[state.energy] += overlap_vs_time[time_index]
 
-            energies, overlaps = cp.utils.dict_to_arrays(overlap_by_energy)
+            energies, overlaps = si.utils.dict_to_arrays(overlap_by_energy)
             energies /= energy_unit
 
             if energy_lower_bound is None:
@@ -2925,7 +2924,7 @@ class ElectricFieldSimulation(core.Simulation):
 
             labels = None
 
-        with cp.plots.FigureManager(self.name + '__energy_spectrum', **kwargs) as figman:
+        with si.plots.FigureManager(self.name + '__energy_spectrum', **kwargs) as figman:
             fig = figman.fig
             ax = fig.add_subplot(111)
 
@@ -2937,7 +2936,7 @@ class ElectricFieldSimulation(core.Simulation):
                                                       label = labels,
                                                       )
 
-            ax.grid(True, **cp.plots.GRID_KWARGS)
+            ax.grid(True, **si.plots.GRID_KWARGS)
 
             x_range = energy_upper_bound - energy_lower_bound
             ax.set_xlim(energy_lower_bound - .05 * x_range, energy_upper_bound + .05 * x_range)
@@ -3025,7 +3024,7 @@ class ElectricFieldSimulation(core.Simulation):
         prefix = self.file_name
         if use_name:
             prefix = self.name
-        cp.plots.save_current_figure(name = prefix + '__angular_momentum_vs_time{}'.format(postfix), **kwargs)
+        si.plots.save_current_figure(name = prefix + '__angular_momentum_vs_time{}'.format(postfix), **kwargs)
 
         plt.close()
 
@@ -3034,7 +3033,7 @@ class ElectricFieldSimulation(core.Simulation):
             prefix = self.file_name
         else:
             prefix = self.name
-        cp.plots.xy_plot(prefix + '__dipole_moment_vs_time',
+        si.plots.xy_plot(prefix + '__dipole_moment_vs_time',
                          self.times, np.real(self.electric_dipole_moment_vs_time[gauge]),
                          x_unit_value = 'as', y_unit_value = 'atomic_electric_dipole',
                          x_label = 'Time $t$', y_label = 'Dipole Moment $d(t)$',
@@ -3046,11 +3045,11 @@ class ElectricFieldSimulation(core.Simulation):
         if first_time is None:
             first_time_index, first_time = 0, self.times[0]
         else:
-            first_time_index, first_time, _ = cp.utils.find_nearest_entry(self.times, first_time)
+            first_time_index, first_time, _ = si.utils.find_nearest_entry(self.times, first_time)
         if last_time is None:
             last_time_index, last_time = self.time_steps - 1, self.times[self.time_steps - 1]
         else:
-            last_time_index, last_time, _ = cp.utils.find_nearest_entry(self.times, last_time)
+            last_time_index, last_time, _ = si.utils.find_nearest_entry(self.times, last_time)
         points = last_time_index - first_time_index
         frequency = nfft.fftshift(nfft.fftfreq(points, self.spec.time_step))
         dipole_moment = nfft.fftshift(nfft.fft(self.electric_dipole_moment_vs_time[gauge][first_time_index: last_time_index], norm = 'ortho'))
@@ -3064,7 +3063,7 @@ class ElectricFieldSimulation(core.Simulation):
 
         frequency, dipole_moment = self.dipole_moment_vs_frequency(gauge = gauge, first_time = first_time, last_time = last_time)
 
-        cp.plots.xy_plot(prefix + '__dipole_moment_vs_frequency',
+        si.plots.xy_plot(prefix + '__dipole_moment_vs_frequency',
                          frequency, np.abs(dipole_moment) ** 2,
                          x_unit_value = 'THz', y_unit_value = atomic_electric_dipole ** 2,
                          y_log_axis = True,
@@ -3094,7 +3093,7 @@ class ElectricFieldSimulation(core.Simulation):
                 mesh = None
 
         if len(self.animators) > 0:
-            raise cp.CompyException('Cannot pickle Simulation with Animators')
+            raise si.SimulacraException('Cannot pickle Simulation with Animators')
 
         out = super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
@@ -3106,7 +3105,7 @@ class ElectricFieldSimulation(core.Simulation):
     @staticmethod
     def load(file_path, initialize_mesh = False, **kwargs):
         """Return a simulation loaded from the file_path. kwargs are for Beet.load."""
-        sim = cp.Simulation.load(file_path, **kwargs)
+        sim = si.Simulation.load(file_path, **kwargs)
 
         if initialize_mesh:
             sim.initialize_mesh()

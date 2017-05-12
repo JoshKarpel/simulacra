@@ -1,8 +1,8 @@
 import logging
 import os
 
-import compy as cp
-from units import *
+import simulacra as si
+from simulacra.units import *
 
 import ionization as ion
 
@@ -10,11 +10,11 @@ import ionization as ion
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
+log = si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG, file_logs = False, file_dir = OUT_DIR, file_level = logging.DEBUG)
 
 
 def run(spec):
-    with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG,
+    with si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG,
                              file_logs = True, file_dir = spec.out_dir_mod, file_name = spec.name, file_level = logging.DEBUG, file_mode = 'w') as logger:
         sim = spec.to_simulation()
 
@@ -94,4 +94,4 @@ if __name__ == '__main__':
                                                               out_dir_mod = out_dir_mod)
                     specs.append(spec)
 
-        cp.utils.multi_map(run, specs, processes = 6)
+        si.utils.multi_map(run, specs, processes = 6)

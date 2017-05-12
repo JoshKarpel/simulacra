@@ -1,10 +1,10 @@
 import logging
 import os
 
-import compy as cp
+import simulacra as si
 import numpy as np
-import plots
-from units import *
+
+from simulacra.units import *
 
 import ionization as ion
 
@@ -12,7 +12,7 @@ import ionization as ion
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-log = cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG)
+log = si.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG)
 
 if __name__ == '__main__':
     with log as logger:
@@ -63,9 +63,9 @@ if __name__ == '__main__':
 
             name = f'{uround(numeric_eigenstate.energy, "eV", 3)}eV'
 
-            plots.xy_plot(name,
-                          sim.mesh.x_mesh,
-                          np.abs(numeric_eigenstate(sim.mesh.x_mesh)) ** 2, np.abs(numeric_eigenstate.analytic_state(sim.mesh.x_mesh)) ** 2,
-                          line_labels = ('numeric ', 'analytic'),
-                          x_label = r'$x$', x_unit = 'nm', x_lower_limit = -10 * nm, x_upper_limit = 10 * nm,
-                          target_dir = OUT_DIR, img_format = 'png', img_scale = 3)
+            si.plots.xy_plot(name,
+                             sim.mesh.x_mesh,
+                             np.abs(numeric_eigenstate(sim.mesh.x_mesh)) ** 2, np.abs(numeric_eigenstate.analytic_state(sim.mesh.x_mesh)) ** 2,
+                             line_labels = ('numeric ', 'analytic'),
+                             x_label = r'$x$', x_unit = 'nm', x_lower_limit = -10 * nm, x_upper_limit = 10 * nm,
+                             target_dir = OUT_DIR, img_format = 'png', img_scale = 3)
