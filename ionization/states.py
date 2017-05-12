@@ -97,7 +97,7 @@ class QuantumState(si.Summand):
         return isinstance(other, self.__class__) and self.tuple >= other.tuple
 
     @property
-    def tex_str(self):
+    def latex(self):
         """Return a string in TeX notation that should be placed inside bras or kets in output."""
         return r'\psi'
 
@@ -203,7 +203,7 @@ class FreeSphericalWave(QuantumState):
         return '{}<{} eV, {} 1/nm, {}, {}|'.format(np.around(self.amplitude, 3), uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
 
     @property
-    def tex_str(self):
+    def latex(self):
         """Return a LaTeX-formatted string for the HydrogenCoulombState."""
         return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
 
@@ -311,7 +311,7 @@ class HydrogenBoundState(QuantumState):
         return '<{},{},{}|'.format(*self.tuple)
 
     @property
-    def tex_str(self):
+    def latex(self):
         """Gets a LaTeX-formatted string for the HydrogenBoundState."""
         return r'\psi_{{{},{},{}}}'.format(*self.tuple)
 
@@ -432,7 +432,7 @@ class HydrogenCoulombState(QuantumState):
         return '<{} eV, {} 1/nm, {}, {}|'.format(uround(self.energy, eV, 3), uround(self.k, 1 / nm, 3), self.l, self.m)
 
     @property
-    def tex_str(self):
+    def latex(self):
         """Return a LaTeX-formatted string for the HydrogenCoulombState."""
         return r'\phi_{{{},{},{}}}'.format(uround(self.energy, eV, 3), self.l, self.m)
 
@@ -522,7 +522,7 @@ class NumericSphericalHarmonicState(QuantumState):
         return self.analytic_state.bra
 
     @property
-    def tex_str(self):
+    def latex(self):
         """Return a LaTeX-formatted string for the NumericSphericalHarmonicState."""
         return self.analytic_state.latex
 
@@ -587,7 +587,7 @@ class NumericOneDState(QuantumState):
             return self.analytic_state.bra
 
     @property
-    def tex_str(self):
+    def latex(self):
         """Return a LaTeX-formatted string for the NumericOneDState."""
         if self.analytic_state is None:
             return fr'E = {uround(self.energy, "eV", 3)} \mathrm{eV}'
@@ -657,7 +657,7 @@ class OneDFreeParticle(QuantumState):
         return si.utils.field_str(self, 'wavenumber', 'energy', 'mass', 'amplitude')
 
     @property
-    def tex_str(self):
+    def latex(self):
         return r'k = {} 2\pi/{}, E = {} {}'.format(uround(self.wavenumber / twopi, per_nm), r'\mathrm{nm}', uround(self.energy, eV), r'\mathrm{eV}')
 
     def __call__(self, x):
@@ -760,7 +760,7 @@ class QHOState(QuantumState):
         return '<{}|'.format(self.n)
 
     @property
-    def tex_str(self):
+    def latex(self):
         """Return a LaTeX-formatted string for the QHOState."""
         return r'{}'.format(self.n)
 
@@ -877,7 +877,7 @@ class FiniteSquareWellState(QuantumState):
         return '<{}|'.format(self.n)
 
     @property
-    def tex_str(self):
+    def latex(self):
         """Return a LaTeX-formatted string for the QHOState."""
         return r'{}'.format(self.n)
 
