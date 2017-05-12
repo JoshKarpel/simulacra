@@ -7,7 +7,7 @@ import scipy.optimize as optimize
 
 import compy as cp
 import ionization as ion
-from compy.units import *
+from units import *
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]

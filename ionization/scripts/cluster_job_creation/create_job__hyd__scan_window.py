@@ -8,7 +8,7 @@ import compy as cp
 import compy.cluster as clu
 import ionization as ion
 import ionization.cluster as iclu
-from compy.units import *
+from units import *
 
 if __name__ == '__main__':
     # get command line arguments

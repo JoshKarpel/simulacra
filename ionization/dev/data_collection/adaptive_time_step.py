@@ -1,11 +1,10 @@
-import os
 import logging
-
-import numpy as np
+import os
 
 import compy as cp
+import numpy as np
+
 import ionization as ion
-from compy.units import *
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]

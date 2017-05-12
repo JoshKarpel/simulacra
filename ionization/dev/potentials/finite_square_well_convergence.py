@@ -7,7 +7,7 @@ import numpy as np
 import compy as cp
 import ionization as ion
 import plots
-from compy.units import *
+from units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -73,7 +73,7 @@ def run(spec):
 
 if __name__ == '__main__':
     with cp.utils.LogManager('compy', 'ionization', stdout_level = logging.DEBUG) as logger:
-        prefix = cp.utils.now_string()
+        prefix = cp.utils.get_now_str()
 
         mass = electron_mass
 

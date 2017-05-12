@@ -1,9 +1,11 @@
-import os
 import logging
+import os
 
 import compy as cp
+from units import *
+
 import ionization as ion
-from compy.units import *
+
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)

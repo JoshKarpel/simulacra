@@ -13,7 +13,7 @@ import compy as cp
 import compy.cluster as clu
 import ionization as ion
 import ionization.cluster as iclu
-from compy.units import *
+from units import *
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]

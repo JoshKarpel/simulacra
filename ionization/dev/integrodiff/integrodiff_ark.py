@@ -6,7 +6,7 @@ import numpy as np
 import compy as cp
 import ionization as ion
 import plots
-from compy.units import *
+from units import *
 from ionization import integrodiff as ide
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]

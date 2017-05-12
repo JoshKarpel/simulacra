@@ -12,7 +12,7 @@ import scipy.optimize as optim
 from cycler import cycler
 
 import compy as cp
-from compy.units import *
+from units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -268,12 +268,12 @@ class ContinuousAmplitudeSpectrumSpecification(cp.Specification):
                                 plot_fit = True, **kwargs):
         wavelengths, power = np.loadtxt(path_to_csv, delimiter = ',', unpack = True, skiprows = 1)
 
-        wavelengths *= UNIT_NAMES_TO_VALUES[x_units]
+        wavelengths *= UNIT_NAME_TO_VALUE[x_units]
 
         if y_units == 'dBm':
             power = 1 * mW * (10 ** (power / 10))
         else:
-            power *= UNIT_NAMES_TO_VALUES[y_units]
+            power *= UNIT_NAME_TO_VALUE[y_units]
 
         spectrum_power = integ.simps(power, wavelengths)
         power_ratio = total_power / spectrum_power
@@ -478,12 +478,12 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
         axis = plt.subplot(111)
 
         if x_scale is not None:
-            scaled_t = t / UNIT_NAMES_TO_VALUES[x_scale]
+            scaled_t = t / UNIT_NAME_TO_VALUE[x_scale]
         else:
             scaled_t = t
 
         if y_scale is not None:
-            e_scale = UNIT_NAMES_TO_VALUES[y_scale]
+            e_scale = UNIT_NAME_TO_VALUE[y_scale]
         else:
             e_scale = 1
 
@@ -491,28 +491,28 @@ class ContinuousAmplitudeSpectrumSimulation(cp.Simulation):
         axis.plot(scaled_t, np.abs(field) / e_scale, label = r'$\left| E(t) \right|$', color = 'green')
         axis.plot(scaled_t, -np.abs(field) / e_scale, color = 'green')
         axis.plot(scaled_t, fitted_envelope / e_scale,
-                  label = r'$\tau = {}$ {}'.format(uround(cp.math.gaussian_fwhm_from_sigma(fit_result.sigma), UNIT_NAMES_TO_VALUES[x_scale], 2), UNIT_NAMES_TO_TEX[x_scale]),
+                  label = r'$\tau = {}$ {}'.format(uround(cp.math.gaussian_fwhm_from_sigma(fit_result.sigma), UNIT_NAME_TO_VALUE[x_scale], 2), UNIT_NAME_TO_LATEX[x_scale]),
                   linestyle = '--', color = 'orange')
 
         title = axis.set_title(r'Electric Field vs. Time', fontsize = 15)
         title.set_y(1.05)
 
         x_label = r'Time $t$'
-        x_label += r' ({})'.format(UNIT_NAMES_TO_TEX[x_scale])
+        x_label += r' ({})'.format(UNIT_NAME_TO_LATEX[x_scale])
         axis.set_xlabel(r'{}'.format(x_label), fontsize = 15)
 
         y_label = r'Electric Field $E(t)$'
         if y_scale is not None:
-            y_label += r' ({})'.format(UNIT_NAMES_TO_TEX[y_scale])
+            y_label += r' ({})'.format(UNIT_NAME_TO_LATEX[y_scale])
         axis.set_ylabel(r'{}'.format(y_label), fontsize = 15)
 
         if find_center:
             x_range = 4 * sigma
             lower_limit_x = t_center - x_range
             upper_limit_x = t_center + x_range
-            axis.set_xlim(lower_limit_x / UNIT_NAMES_TO_VALUES[x_scale], upper_limit_x / UNIT_NAMES_TO_VALUES[x_scale])
+            axis.set_xlim(lower_limit_x / UNIT_NAME_TO_VALUE[x_scale], upper_limit_x / UNIT_NAME_TO_VALUE[x_scale])
         else:
-            axis.set_xlim(x_lower_lim / UNIT_NAMES_TO_VALUES[x_scale], x_upper_lim / UNIT_NAMES_TO_VALUES[x_scale])
+            axis.set_xlim(x_lower_lim / UNIT_NAME_TO_VALUE[x_scale], x_upper_lim / UNIT_NAME_TO_VALUE[x_scale])
 
         axis.grid(True, color = 'gray', linestyle = ':', alpha = 0.9)
         axis.tick_params(axis = 'both', which = 'major', labelsize = 10)

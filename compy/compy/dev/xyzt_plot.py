@@ -1,12 +1,10 @@
 import logging
 import os
 
-import numpy as np
-
 import compy as cp
-from compy.units import *
-
 import matplotlib.pyplot as plt
+import numpy as np
+from compy.units import *
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]

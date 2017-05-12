@@ -1,12 +1,13 @@
-import os
 import logging
-
-import numpy as np
+import os
 
 import compy as cp
+import numpy as np
 import plots
-from compy.units import *
+from units import *
+
 import ionization as ion
+
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)

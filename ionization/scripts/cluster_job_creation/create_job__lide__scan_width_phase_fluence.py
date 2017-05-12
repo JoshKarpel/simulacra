@@ -1,15 +1,16 @@
+import argparse
 import os
 import shutil
-import argparse
-
-import numpy as np
 
 import compy as cp
 import compy.cluster as clu
+import numpy as np
+from units import *
+
 import ionization as ion
 import ionization.cluster as iclu
 import ionization.integrodiff as ide
-from compy.units import *
+
 
 if __name__ == '__main__':
     # get command line arguments

@@ -34,9 +34,13 @@ class Beet:
         Construct a Beet with the given name and file_name.
 
         The file_name is automatically derived from the name if None is given.
-
-        :param name: the internal name of the Beet
-        :param file_name: the desired external name, used for pickling. Illegal characters are stripped before use.
+        
+        Parameters
+        ----------
+        name : :class:`str`
+            The internal name of the Beet.
+        file_name : :class:`str`
+            The desired external name of the Beet. Illegal characters are stripped before use.
         """
         self.name = str(name)
         if file_name is None:
@@ -70,11 +74,21 @@ class Beet:
 
     def save(self, target_dir = None, file_extension = '.beet', compressed = True):
         """
-        Atomically pickle the Beet to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
+        Atomically pickle the Beet to a file.
+        
+        Parameters
+        ----------
+        target_dir : :class:`str`
+            The directory to save the Beet to.
+        file_extension : :class:`str`
+            The file extension to name the Beet with (for keeping track of things, no actual effect).
+        compressed : :class:`bool`
+            Whether to compress the Beet using gzip.
 
-        :param target_dir: directory to save the Beet to
-        :param file_extension: file extension to name the Beet with
-        :return: the path to the saved Beet
+        Returns
+        -------
+        :class:`str`
+            The path to the saved Beet.
         """
         if target_dir is None:
             target_dir = os.getcwd()
@@ -101,10 +115,17 @@ class Beet:
     @classmethod
     def load(cls, file_path):
         """
-        Load a Beet from file_path.
+        Load a Beet from `file_path`.
+        
+        Parameters
+        ----------
+        file_path
+            The path to load a Beet from.
 
-        :param file_path: the path to load a Beet from
-        :return: the loaded Beet
+        Returns
+        -------
+        :class:`Beet`
+            The loaded Beet.
         """
         try:
             with gzip.open(file_path, mode = 'rb') as file:
@@ -128,42 +149,54 @@ class Specification(Beet):
     It should be subclassed for each type of simulation and all additional information necessary to run that kind of simulation should be added via keyword arguments.
     """
 
-    def __init__(self, name, file_name = None, simulation_type = None, **kwargs):
+    simulation_type = None
+
+    def __init__(self, name, file_name = None, **kwargs):
         """
         Construct a Specification.
-
-        Any number of additional keyword arguments can be passed. They will be stored in an attribute called extra_args.
-
-        :param name: the internal name of the Specification
-        :type name: str
-        :param file_name: the desired external name, used for pickling. Illegal characters are stripped before use.
-        :type file_name: str
-        :param kwargs: extra arguments, stored as attributes
+        
+        Any number of additional keyword arguments can be passed. They will be stored as attributes if they don't conflict with any attributes already set.
+        
+        Parameters
+        ----------
+        name : :class:`str`
+            The internal name of the Specification.
+        file_name : :class:`str`
+        kwargs
+            Any number of keyword arguments, which will be stored as attributes.
         """
         super().__init__(name, file_name = file_name)
 
-        self.simulation_type = simulation_type
-
-        for k, v in kwargs.items():
+        for k, v in ((k, v) for k, v in kwargs.items() if k not in self.__dict__):
             setattr(self, k, v)
             logger.debug('{} stored additional attribute {} = {}'.format(self.name, k, v))
 
-    def save(self, target_dir = None, file_extension = '.spec', **kwargs):
+    def save(self, target_dir = None, file_extension = '.spec', compressed = True):
         """
-        Atomically pickle the Specification to {target_dir}/{self.file_name}.{file_extension}, and gzip it for reduced disk usage.
+        Atomically pickle the Specification to a file.
+        
+        Parameters
+        ----------
+        target_dir : :class:`str`
+            The directory to save the Specification to.
+        file_extension : :class:`str`
+            The file extension to name the Specification with (for keeping track of things, no actual effect).
+        compressed : :class:`bool`
+            Whether to compress the Beet using gzip.
 
-        :param target_dir: directory to save the Specification to
-        :type target_dir: str
-        :param file_extension: file extension to name the Specification with
-        :type file_extension: str
-        :return: the path to the saved Simulation
-        :rtype: str
+        Returns
+        -------
+        :class:`str`
+            The path to the saved Specification.
         """
-        return super(Specification, self).save(target_dir, file_extension)
+        return super().save(target_dir = target_dir, file_extension = file_extension, compressed = compressed)
 
     def to_simulation(self):
         """Return a Simulation of the type associated with the Specification, generated from this instance."""
-        return self.simulation_type(self)
+        try:
+            return self.simulation_type(self)
+        except TypeError:
+            return Simulation(self)
 
     def info(self):
         """Return a string describing the parameters of the Specification."""
@@ -192,6 +225,11 @@ class Simulation(Beet):
     A class that represents a simulation.
 
     It should be subclassed and customized for each variety of simulation.
+    
+    Attributes
+    ----------
+    status : :class:`str`
+        The status of the Simulation. One of ``'initialized'``, ``'running'``, ``'finished'``, ``'paused'``, or ``'error'``.
     """
 
     _status = utils.RestrictedValues('status', {'', STATUS_INI, STATUS_RUN, STATUS_FIN, STATUS_PAU, STATUS_ERR})
@@ -201,9 +239,11 @@ class Simulation(Beet):
         Construct a Simulation from a Specification.
         
         Simulations should generally be instantiated using Specification.to_simulation() to avoid possible mismatches.
-
-        :param spec: the Specification for the Simulation
-        :type spec: Specification
+        
+        Parameters
+        ----------
+        spec : :class:`Specification`
+            The :class:`Specification` for the Simulation.
         """
         self.spec = spec
 
@@ -252,33 +292,28 @@ class Simulation(Beet):
 
         logger.debug("{} {} ({}) status set to {}".format(self.__class__.__name__, self.name, self.file_name, s))
 
-    def save(self, target_dir = None, file_extension = '.sim', **kwargs):
+    def save(self, target_dir = None, file_extension = '.sim', compressed = True):
         """
-        Atomically pickle the Simulation to {target_dir}/{self.file_name}.{file_extension}, and gzip it.
+        Atomically pickle the Simulation to a file.
+        
+        Parameters
+        ----------
+        target_dir : :class:`str`
+            The directory to save the Simulation to.
+        file_extension : :class:`str`
+            The file extension to name the Simulation with (for keeping track of things, no actual effect).
+        compressed : :class:`bool`
+            Whether to compress the Beet using gzip.
 
-        :param target_dir: directory to save the Simulation to
-        :type target_dir: str
-        :param file_extension: file extension to name the Simulation with
-        :type file_extension: str
-        :return: the path to the saved Simulation
+        Returns
+        -------
+        :class:`str`
+            The path to the saved Simulation.
         """
         if self.status != STATUS_FIN:
             self.status = STATUS_PAU
 
-        return super(Simulation, self).save(target_dir, file_extension, **kwargs)
-
-    @classmethod
-    def load(cls, file_path, **kwargs):
-        """
-        Load a Simulation from file_path.
-
-        :param file_path: the path to load a Simulation from
-        :return: the loaded Simulation
-        :rtype: Simulation
-        """
-        sim = super(Simulation, cls).load(file_path, **kwargs)
-
-        return sim
+        return super().save(target_dir = target_dir, file_extension = file_extension, compressed = compressed)
 
     def __str__(self):
         return '{}: {} ({}) [{}]  |  {}'.format(self.__class__.__name__, self.name, self.file_name, self.uid, self.spec)
@@ -309,11 +344,13 @@ class AxisManager:
 
     def __init__(self, axis, simulation):
         """
-        Initialize an AxisManager from a matplotlib axis and a Simulation.
         
-        :param axis: a matplotlib axis to manage
-        :param simulation: a Simulation for the AxisManager to collect data from
-        :type simulation: Simulation
+        Parameters
+        ----------
+        axis
+            A matplotlib axis to manage.
+        simulation
+            A :class:`Simulation` for the AxisManager to collect data from.
         """
         self.axis = axis
         self.sim = simulation
@@ -355,19 +392,19 @@ class Animator:
                  length = 60, fps = 30,
                  colormap = _plt.cm.get_cmap('inferno')):
         """
-        Construct an Animator instance.
-
-        A colormap should be specified here so that the Animator can prevent collisions with other Animators.
-
-        :param postfix: postfix for the file name of the resulting animation
-        :type postfix: str
-        :param target_dir: directory to place the output (and work in)
-        :type target_dir: str
-        :param length: the length of the animation
-        :type length: int
-        :param fps: the desired frames-per-seconds for the animation (may not be actual fps if not enough/too many available frames)
-        :type fps: float
-        :param colormap: a matplotlib colormap to use in the animation
+        
+        Parameters
+        ----------
+        postfix : :class:`str`
+            Postfix for the file name of the resulting animation.
+        target_dir : :class:`str`
+            Directory to place the animation (and work in).
+        length : :class:`float`
+            The length of the animation.
+        fps : :class:`float`
+            The FPS of the animation.
+        colormap
+            The colormap to use for the animation.
         """
         if target_dir is None:
             target_dir = os.getcwd()
@@ -534,7 +571,7 @@ class Sum(Summand):
 
     def __init__(self, *summands, **kwargs):
         setattr(self, self.container_name, summands)
-        super(Sum, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     @property
     def _container(self):

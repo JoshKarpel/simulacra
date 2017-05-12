@@ -22,25 +22,25 @@ LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', d
 key_value_arrays = collections.namedtuple('key_value_arrays', ('key_array', 'value_array'))
 
 
-def dict_to_arrays(d):
+def dict_to_arrays(dct):
     """
     Return the keys and values of a dictionary as two numpy arrays, in key-sorted order.
     
-    :param d: the dictionary to array-ify
-    :type d: dict
+    :param dct: the dictionary to array-ify
+    :type dct: dict
     :return: (key_array, value_array)
     """
     key_list = []
     val_list = []
 
-    for key, val in sorted(d.items()):
+    for key, val in sorted(dct.items()):
         key_list.append(key)
         val_list.append(val)
 
     return key_value_arrays(np.array(key_list), np.array(val_list))
 
 
-def now_string():
+def get_now_str():
     """Return a formatted string with the current year-month-day_hour-minute-second."""
     return dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S')
 
@@ -79,7 +79,7 @@ class LogManager:
         self.file_level = file_level
 
         if file_name is None:
-            file_name = f'log__{now_string()}'
+            file_name = f'log__{get_now_str()}'
         self.file_name = file_name
         if not self.file_name.endswith('.log'):
             self.file_name += '.log'
@@ -151,7 +151,7 @@ NearestEntry = collections.namedtuple('NearestEntry', ('index', 'value', 'target
 
 def find_nearest_entry(array, target):
     """
-    Returns the :code:`(index, value, target)` of the :code:`array` entry closest to the given :code:`target`.
+    Returns the ``(index, value, target)`` of the :code:`array` entry closest to the given :code:`target`.
     
     :param array: the array to look for :code:`target` in
     :param target: the target value
@@ -227,6 +227,27 @@ def multi_map(function, targets, processes = None, **kwargs):
     
     Function should take a single positional argument (an element of targets) and any number of keyword arguments, which must be the same for each target.
     
+    Parameters
+    ----------
+    function : a callable
+        The function to call on each of the `targets`.
+    targets : an iterable
+        An iterable of arguments to call the function on.
+    processes : :class:`int`
+        The number of processes to use. Defaults to the number of cores on the computer.
+    kwargs
+        Keyword arguments are passed to :func:`multiprocess.pool.map`.
+
+    Returns
+    -------
+    :class:`tuple`
+        The outputs of the function being applied to the targets.
+    """
+    """
+    Map a function over a list of inputs using multiprocessing.
+    
+    Function should take a single positional argument (an element of targets) and any number of keyword arguments, which must be the same for each target.
+    
     :param function: the function to call on each of the targets
     :param targets: an list of arguments to call function on
     :param processes: the number of simultaneous processes to use
@@ -239,7 +260,7 @@ def multi_map(function, targets, processes = None, **kwargs):
     with mp.Pool(processes = processes) as pool:
         output = pool.map(function, targets, **kwargs)
 
-    return output
+    return tuple(output)
 
 
 class cached_property:
@@ -263,7 +284,7 @@ class cached_property:
 
 
 def method_dispatch(func):
-    """Works the same as functools.singledispatch, but uses the second argument instead of the first so that it can be used for instance methods."""
+    """Works the same as :func:`functools.singledispatch`, but uses the second argument instead of the first so that it can be used for instance methods."""
     dispatcher = ft.singledispatch(func)
 
     def wrapper(*args, **kw):
@@ -357,7 +378,10 @@ def timed(func):
 class BlockTimer:
     """A context manager that times the code in the with block. Print the BlockTimer after exiting the block to see the results."""
 
-    __slots__ = ('wall_time_start', 'wall_time_end', 'wall_time_elapsed', 'proc_time_start', 'proc_time_end', 'proc_time_elapsed')
+    __slots__ = (
+        'wall_time_start', 'wall_time_end', 'wall_time_elapsed',
+        'proc_time_start', 'proc_time_end', 'proc_time_elapsed'
+    )
 
     def __init__(self):
         self.wall_time_start = None
@@ -629,7 +653,7 @@ class SuspendProcesses:
         resume_processes(self.processes)
 
 
-from .units import uround  # avoid circular import
+from .units import uround  # avoid circular import so we can use uround in field_str
 
 
 def field_str(obj, *fields, digits = 3):

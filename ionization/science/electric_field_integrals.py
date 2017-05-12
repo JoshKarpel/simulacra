@@ -1,13 +1,14 @@
-import os
 import logging
-from copy import deepcopy
-
-import numpy as np
-# import matplotlib.pyplot as plt
+import os
 
 import compy as cp
+import numpy as np
+from units import *
+
 import ionization as ion
-from compy.units import *
+
+
+# import matplotlib.pyplot as plt
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)

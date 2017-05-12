@@ -35,53 +35,59 @@ CMAP_TO_OPPOSITE = {
 }
 
 GRID_KWARGS = dict(
-    linestyle = '-',
-    color = 'black',
-    linewidth = .25,
-    alpha = 0.4
+        linestyle = '-',
+        color = 'black',
+        linewidth = .25,
+        alpha = 0.4
 )
 
 MINOR_GRID_KWARGS = GRID_KWARGS.copy()
 MINOR_GRID_KWARGS['alpha'] -= .1
 
 COLORMESH_GRID_KWARGS = dict(
-    linestyle = '-',
-    linewidth = .25,
-    alpha = 0.4,
+        linestyle = '-',
+        linewidth = .25,
+        alpha = 0.4,
 )
 
 HVLINE_KWARGS = dict(
-    linestyle = '-',
-    color = 'black',
+        linestyle = '-',
+        color = 'black',
 )
 
 T_TEXT_KWARGS = dict(
-    fontsize = 12,
+        fontsize = 12,
 )
 
 TITLE_OFFSET = 1.1
 
 FFMPEG_PROCESS_KWARGS = dict(
-    stdin = subprocess.PIPE,
-    stdout = subprocess.DEVNULL,
-    stderr = subprocess.DEVNULL,
-    bufsize = -1,
+        stdin = subprocess.PIPE,
+        stdout = subprocess.DEVNULL,
+        stderr = subprocess.DEVNULL,
+        bufsize = -1,
 )
 
 
-def _get_fig_dims(fig_scale, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0):
+def _get_fig_dims(fig_scale, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0, fig_width_pts = 498.66258):
     """
     Return the dimensions (width, height) for a figure based on the scale, width (in points), and aspect ratio.
 
-    Helper function for get_figure.
+    Primarily a helper function for get_figure.
+    
+    Parameters
+    ----------
+    fig_scale : :class:`float`
+        The scale of the figure relative to the figure width.
+    aspect_ratio : :class:`float`
+        The aspect ratio of the figure (width / height)
+    fig_width_pts : :class:`float`
+        The "base" width of a figure (e.g. a LaTeX page width).
 
-    :param fig_scale: the scale of the figure
-    :type fig_scale: float
-    :param fig_width_pts: get this from LaTeX using \the\textwidth
-    :type fig_width_pts: float
-    :param aspect_ratio: height = width * ratio, defaults to golden ratio
-    :type aspect_ratio: float
-    :return: (fig_width, fig_height)
+    Returns
+    -------
+    tuple of floats
+        Figure width and height.
     """
     inches_per_pt = 1.0 / 72.27  # Convert pt to inch
 
@@ -91,13 +97,32 @@ def _get_fig_dims(fig_scale, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(
     return fig_width, fig_height
 
 
-def get_figure(fig_scale = 0.95, fig_dpi_scale = 1, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0):
+def get_figure(fig_scale = 0.95, fig_dpi_scale = 1, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0, fig_width_pts = 498.66258):
     """
     Get a matplotlib figure object with the desired scale relative to a full-text-width LaTeX page.
 
     Special scales:
-    scale = 'full' -> scale = 0.95
-    scale = 'half' -> scale = 0.475
+    ``scale = 'full'`` -> ``scale = 0.95``
+    ``scale = 'half'`` -> ``scale = 0.475``
+    
+    Parameters
+    ----------
+    fig_scale : :class:`float`
+        The scale of the figure relative to the figure width.
+    fig_dpi_scale : :class:`float`
+        Multiplier for the figure DPI (only important if saving to png-like formats).
+    aspect_ratio : :class:`float`
+        The aspect ratio of the figure (width / height)
+    fig_width_pts : :class:`float`
+        The "base" width of a figure (e.g. a LaTeX page width).
+
+    Returns
+    -------
+    figure
+        A matplotlib figure.
+    """
+    """
+    
 
     :param fig_scale: the scale of the figure
     :type fig_scale: float
@@ -121,28 +146,33 @@ def save_current_figure(name,
                         name_postfix = '',
                         target_dir = None,
                         img_format = 'pdf',
-                        dpi_scale = 1,
                         transparent = True,
                         colormap = plt.cm.get_cmap('inferno'),
                         **kwargs):
     """
-    Save the current matplotlib figure to a file with the given name to the given folder.
+    Save the current matplotlib figure as an image to a file.
     
-    :param name: the name of the file
-    :type name: str
-    :param name_postfix: a postfix for the filename, added after :code:`name`
-    :type name: str
-    :param target_dir: the directory to save the file to
-    :type target_dir: str
-    :param img_format: the format the save the image in
-    :type img_format: str
-    :param dpi_scale: the scale to save the image at
-    :type dpi_scale: float
-    :param transparent: whether to make the background of the image transparent (if the format supports it)
-    :type transparent: bool
-    :param colormap: a colormap to switch to before saving the image
-    :param kwargs: absorbs kwargs silently
-    :return: the path the image was saved to
+    Parameters
+    ----------
+    name : :class:`str`
+        The name to save the image with.
+    name_postfix : :class:`str`
+        An additional postfix for the name.
+    target_dir
+        The directory to save the image to.
+    img_format
+        The image format to save to.
+    transparent
+        If available for the format, makes the background transparent (works for ``.png``, for example).
+    colormap
+        A matplotlib colormap to use.
+    kwargs
+        This function absorbs keyword arguments silently.
+
+    Returns
+    -------
+    :class:`str`
+        The path the figure was saved to.
     """
     plt.set_cmap(colormap)
 
@@ -152,7 +182,7 @@ def save_current_figure(name,
 
     utils.ensure_dir_exists(path)
 
-    plt.savefig(path, dpi = dpi_scale * plt.gcf().dpi, bbox_inches = 'tight', transparent = transparent)
+    plt.savefig(path, dpi = plt.gcf().dpi, bbox_inches = 'tight', transparent = transparent)
 
     logger.debug('Saved matplotlib figure {} to {}'.format(name, path))
 
@@ -277,16 +307,38 @@ def set_axis_ticks_and_labels(axis, ticks, labels, direction = 'x'):
     axis
         The axis to act on.
     ticks
+        The tick positions.
     labels
+        The tick labels.
     direction : {``'x'``, ``'y'``, ``'z'``}
+        Which axis to act on.
     """
     getattr(axis, f'set_{direction}ticks')(ticks)
     getattr(axis, f'set_{direction}ticklabels')(labels)
 
 
-def get_axis_limits(*data, lower_limit = None, upper_limit = None, log = False, pad = 0, log_pad = 1, unit = None):
-    unit_value, _ = get_unit_value_and_tex_from_unit(unit)
+def get_axis_limits(*data, lower_limit = None, upper_limit = None, log = False, pad = 0, log_pad = 1):
+    """
+    Calculate axis limits from datasets.
+    
+    Parameters
+    ----------
+    data : any number of numpy arrays
+        The data that axis limits need to be constructed for.
+    lower_limit, upper_limit : :class:`float`
+        Bypass automatic construction of this axis limit, and use the given value instead.
+    log : :class:`bool`
+        Set ``True`` if this axis direction is going to be log-scaled.
+    pad : :class:`float`
+        The fraction of the data range to pad both sides of the range by.
+    log_pad : :class:`float`
+        If `log` is ``True``, the limits will be padded by this value multiplicatively (down for lower limit, up for upper limit).
 
+    Returns
+    -------
+    lower_limit, upper_limit : tuple of floats
+        The lower and upper limits, in the specified units.
+    """
     if lower_limit is None:
         lower_limit = min(np.nanmin(d) for d in data)
     if upper_limit is None:
@@ -321,9 +373,9 @@ def set_axis_limits(axis, *data, lower_limit = None, upper_limit = None, log = F
     Returns
     -------
     lower_limit, upper_limit : tuple of floats
-        The upper and lower limits, in the specified units
+        The lower and upper limits, in the specified units.
     """
-    unit_value, _ = get_unit_value_and_tex_from_unit(unit)
+    unit_value, _ = get_unit_value_and_latex_from_unit(unit)
 
     lower_limit, upper_limit = get_axis_limits(*data, lower_limit = lower_limit, upper_limit = upper_limit, log = log, pad = pad, log_pad = log_pad, unit = unit)
 
@@ -346,7 +398,7 @@ def get_unit_label(unit):
     :class:`str`
         The unit label.
     """
-    _, unit_tex = get_unit_value_and_tex_from_unit(unit)
+    _, unit_tex = get_unit_value_and_latex_from_unit(unit)
 
     if unit_tex != '':
         unit_label = fr' (${unit_tex}$)'
@@ -369,7 +421,7 @@ def attach_hv_lines(axis, line_positions = (), line_kwargs = (), unit = None, di
     -------
 
     """
-    unit_value, _ = get_unit_value_and_tex_from_unit(unit)
+    unit_value, _ = get_unit_value_and_latex_from_unit(unit)
 
     for position, kw in it.zip_longest(line_positions, line_kwargs):
         if kw is None:
@@ -453,10 +505,10 @@ def xy_plot(name,
         line_labels = tuple(line_labels)
         line_kwargs = tuple(line_kwargs)
 
-        x_unit_value, x_unit_tex = get_unit_value_and_tex_from_unit(x_unit)
+        x_unit_value, x_unit_tex = get_unit_value_and_latex_from_unit(x_unit)
         x_unit_label = get_unit_label(x_unit)
 
-        y_unit_value, y_unit_tex = get_unit_value_and_tex_from_unit(y_unit)
+        y_unit_value, y_unit_tex = get_unit_value_and_latex_from_unit(y_unit)
         y_unit_label = get_unit_label(y_unit)
 
         lines = []
@@ -574,13 +626,13 @@ def xyz_plot(name,
 
         plt.set_cmap(colormap)
 
-        x_unit_value, x_unit_name = get_unit_value_and_tex_from_unit(x_unit)
+        x_unit_value, x_unit_name = get_unit_value_and_latex_from_unit(x_unit)
         x_unit_label = get_unit_label(x_unit)
 
-        y_unit_value, y_unit_name = get_unit_value_and_tex_from_unit(y_unit)
+        y_unit_value, y_unit_name = get_unit_value_and_latex_from_unit(y_unit)
         y_unit_label = get_unit_label(y_unit)
 
-        z_unit_value, z_unit_name = get_unit_value_and_tex_from_unit(z_unit)
+        z_unit_value, z_unit_name = get_unit_value_and_latex_from_unit(z_unit)
         z_unit_label = get_unit_label(z_unit)
 
         x_lower_limit, x_upper_limit = set_axis_limits(ax, x_mesh,
@@ -597,8 +649,7 @@ def xyz_plot(name,
         z_lower_limit, z_upper_limit = get_axis_limits(z_mesh,
                                                        lower_limit = z_lower_limit, upper_limit = z_upper_limit,
                                                        log = z_log_axis,
-                                                       pad = 0, log_pad = 10,
-                                                       unit = z_unit)
+                                                       pad = 0, log_pad = 10)
         if z_log_axis:
             norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
         else:
@@ -764,13 +815,13 @@ def xyt_plot(name,
 
         y_func_kwargs = _y_func_kwargs
 
-        x_unit_value, x_unit_tex = get_unit_value_and_tex_from_unit(x_unit)
+        x_unit_value, x_unit_tex = get_unit_value_and_latex_from_unit(x_unit)
         x_unit_label = get_unit_label(x_unit)
 
-        y_unit_value, y_unit_tex = get_unit_value_and_tex_from_unit(y_unit)
+        y_unit_value, y_unit_tex = get_unit_value_and_latex_from_unit(y_unit)
         y_unit_label = get_unit_label(y_unit)
 
-        t_unit_value, t_unit_tex = get_unit_value_and_tex_from_unit(t_unit)
+        t_unit_value, t_unit_tex = get_unit_value_and_latex_from_unit(t_unit)
         t_unit_label = t_unit_tex
 
         attach_hv_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
@@ -956,16 +1007,16 @@ def xyzt_plot(name,
 
         plt.set_cmap(colormap)
 
-        x_unit_value, x_unit_tex = get_unit_value_and_tex_from_unit(x_unit)
+        x_unit_value, x_unit_tex = get_unit_value_and_latex_from_unit(x_unit)
         x_unit_label = get_unit_label(x_unit)
 
-        y_unit_value, y_unit_tex = get_unit_value_and_tex_from_unit(y_unit)
+        y_unit_value, y_unit_tex = get_unit_value_and_latex_from_unit(y_unit)
         y_unit_label = get_unit_label(y_unit)
 
-        z_unit_value, z_unit_name = get_unit_value_and_tex_from_unit(z_unit)
+        z_unit_value, z_unit_name = get_unit_value_and_latex_from_unit(z_unit)
         z_unit_label = get_unit_label(z_unit)
 
-        t_unit_value, t_unit_tex = get_unit_value_and_tex_from_unit(t_unit)
+        t_unit_value, t_unit_tex = get_unit_value_and_latex_from_unit(t_unit)
         t_unit_label = t_unit_tex
 
         attach_hv_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')

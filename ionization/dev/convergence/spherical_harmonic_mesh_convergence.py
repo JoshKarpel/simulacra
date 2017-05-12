@@ -1,13 +1,14 @@
+import itertools as it
 import logging
 import os
-import itertools as it
-
-import numpy as np
 
 import compy as cp
-import ionization as ion
+import numpy as np
 import plots
-from compy.units import *
+from units import *
+
+import ionization as ion
+
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)

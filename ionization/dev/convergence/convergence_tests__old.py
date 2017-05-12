@@ -7,7 +7,7 @@ import compy as cp
 import ionization as ion
 import ionization.dev as test
 import plots
-from compy.units import *
+from units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -196,7 +196,7 @@ def cylindrical_slice_norm_energy(z_points, states, bound = 30 * bohr_radius):
     lines = []
 
     for state in states:
-        lines.append(axis.plot(z_points, scaled_norm[state], label = r'${}$'.format(state.tex_str))[0])
+        lines.append(axis.plot(z_points, scaled_norm[state], label = r'${}$'.format(state.latex))[0])
 
     axis.legend(loc = 'best', fontsize = 12)
 
@@ -272,7 +272,7 @@ def spherical_slice_norm_energy(r_points, states, theta_points = 128, bound = 30
     lines = []
 
     for state in states:
-        lines.append(axis.plot(r_points, scaled_norm[state], label = r'${}$'.format(state.tex_str))[0])
+        lines.append(axis.plot(r_points, scaled_norm[state], label = r'${}$'.format(state.latex))[0])
 
     axis.legend(loc = 'best', fontsize = 12)
 
@@ -348,7 +348,7 @@ def spherical_harmonic_norm_energy(r_points, states, spherical_harmonics = 128, 
     lines = []
 
     for state in states:
-        lines.append(axis.plot(r_points, scaled_norm[state], label = r'${}$'.format(state.tex_str))[0])
+        lines.append(axis.plot(r_points, scaled_norm[state], label = r'${}$'.format(state.latex))[0])
 
     axis.legend(loc = 'best', fontsize = 12)
 
@@ -428,7 +428,7 @@ def spherical_harmonic_norm_energy_evolved(r_points, states, spherical_harmonics
     lines = []
 
     for state in states:
-        lines.append(axis.plot(r_points, scaled_norm[state], label = r'${}$'.format(state.tex_str))[0])
+        lines.append(axis.plot(r_points, scaled_norm[state], label = r'${}$'.format(state.latex))[0])
 
     axis.legend(loc = 'best', fontsize = 12)
 
@@ -522,7 +522,7 @@ def spherical_harmonic_time_stability(r_point_count, states, spherical_harmonics
     lines = []
 
     for state in states:
-        lines.append(axis.plot(times / asec, scaled_norm[state], label = r'${}$'.format(state.tex_str))[0])
+        lines.append(axis.plot(times / asec, scaled_norm[state], label = r'${}$'.format(state.latex))[0])
 
     axis.legend(loc = 'best', fontsize = 12)
 

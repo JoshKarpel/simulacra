@@ -2,7 +2,7 @@ import os
 
 import compy as cp
 import compy.cluster as clu
-from compy.units import *
+from units import *
 import ionization as ion
 import ionization.cluster as iclu
 import time

@@ -1,10 +1,11 @@
-import core
 import logging
 import os
 
 import compy as cp
+import core
 import utils
 from compy.units import *
+
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)

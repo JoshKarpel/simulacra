@@ -5,7 +5,7 @@ import numpy as np
 
 import compy as cp
 import dispersion as disp
-from compy.units import *
+from units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 # OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME + '_unmodulated')

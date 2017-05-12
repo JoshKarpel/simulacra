@@ -1,17 +1,15 @@
+import itertools as it
 import logging
 import os
-import itertools as it
-
-from tqdm import tqdm
-
-import numpy as np
-import scipy.integrate as integrate
 
 import compy as cp
-import ionization as ion
+import numpy as np
 import plots
+from units import *
+
+import ionization as ion
 from ionization import integrodiff as ide
-from compy.units import *
+
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)

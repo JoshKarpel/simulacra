@@ -1,10 +1,11 @@
 import os
 
 import compy as cp
-from compy.units import *
+import matplotlib as plt
+from units import *
+
 import ionization as ion
 
-import matplotlib as plt
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)

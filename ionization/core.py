@@ -4,22 +4,21 @@ import itertools as it
 import logging
 from copy import copy, deepcopy
 
-from tqdm import tqdm
+import compy as cp
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.fft as nfft
 import scipy as sp
-import scipy.integrate as integrate
 import scipy.sparse as sparse
 import scipy.sparse.linalg as sparsealg
 import scipy.special as special
-from cycler import cycler
-
-import compy as cp
 from compy.units import *
-from .cy import tdma, make_split_operator_evolution_matrices_LEN
+from cycler import cycler
+from tqdm import tqdm
+
 from . import potentials, states
+from .cy import make_split_operator_evolution_matrices_LEN, tdma
 
 
 logger = logging.getLogger(__name__)
@@ -42,7 +41,7 @@ def three_j_coefficient(l):
     return (l + 1) / np.sqrt(((2 * l) + 1) * ((2 * l) + 3))
 
 
-class ElectricFieldSpecification(cp.core.Specification):
+class ElectricFieldSpecification(core.Specification):
     """A base Specification for a Simulation with an electric field."""
 
     evolution_equations = cp.utils.RestrictedValues('evolution_equations', {'LAG', 'HAM'})
@@ -623,7 +622,7 @@ class LineMesh(QuantumMesh):
         return mesh_slicer
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, distance_unit = 'nm', **kwargs):
-        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
+        unit_value, _ = get_unit_value_and_latex_from_unit(distance_unit)
 
         line, = axis.plot(self.x_mesh[self.get_mesh_slicer(plot_limit)] / unit_value, mesh[self.get_mesh_slicer(plot_limit)], **kwargs)
 
@@ -956,7 +955,7 @@ class CylindricalSliceMesh(QuantumMesh):
         return mesh_slicer
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, distance_unit = 'bohr_radius', **kwargs):
-        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
+        unit_value, _ = get_unit_value_and_latex_from_unit(distance_unit)
 
         color_mesh = axis.pcolormesh(self.z_mesh[self.get_mesh_slicer(plot_limit)] / unit_value,
                                      self.rho_mesh[self.get_mesh_slicer(plot_limit)] / unit_value,
@@ -967,7 +966,7 @@ class CylindricalSliceMesh(QuantumMesh):
         return color_mesh
 
     def attach_probability_current_to_axis(self, axis, plot_limit = None, distance_unit = 'bohr_radius'):
-        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
+        unit_value, _ = get_unit_value_and_latex_from_unit(distance_unit)
 
         current_mesh_z, current_mesh_rho = self.get_probability_current_vector_field()
 
@@ -997,7 +996,7 @@ class CylindricalSliceMesh(QuantumMesh):
 
         plt.set_cmap(color_map)
 
-        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
+        unit_value, unit_name = get_unit_value_and_latex_from_unit(distance_unit)
 
         fig = plt.figure(figsize = (7, 7 * 2 / 3), dpi = 600)
         fig.set_tight_layout(True)
@@ -1324,7 +1323,7 @@ class SphericalSliceMesh(QuantumMesh):
         return mesh_slicer
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, distance_unit = 'bohr_radius', **kwargs):
-        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
+        unit_value, _ = get_unit_value_and_latex_from_unit(distance_unit)
 
         color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer(plot_limit)],
                                      self.r_mesh[self.get_mesh_slicer(plot_limit)] / unit_value,
@@ -1352,7 +1351,7 @@ class SphericalSliceMesh(QuantumMesh):
 
         plt.set_cmap(color_map)
 
-        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
+        unit_value, unit_name = get_unit_value_and_latex_from_unit(distance_unit)
 
         fig = cp.plots.get_figure('full')
         fig.set_tight_layout(True)
@@ -2065,17 +2064,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         return out
 
     def attach_mesh_to_axis(self, axis, mesh, plot_limit = None, color_map_min = 0, distance_unit = 'bohr_radius', **kwargs):
-        """
-
-        :param axis:
-        :param mesh:
-        :param plot_limit:
-        :param color_map_min:
-        :param distance_unit:
-        :param kwargs:
-        :return:
-        """
-        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
+        unit_value, _ = get_unit_value_and_latex_from_unit(distance_unit)
 
         color_mesh = axis.pcolormesh(self.theta_mesh[self.get_mesh_slicer_spatial(plot_limit)],
                                      self.r_theta_mesh[self.get_mesh_slicer_spatial(plot_limit)] / unit_value,
@@ -2095,20 +2084,7 @@ class SphericalHarmonicMesh(QuantumMesh):
                   distance_unit = 'bohr_radius',
                   color_map = plt.get_cmap('inferno'),
                   **kwargs):
-        """
-
-        :param mesh:
-        :param name:
-        :param title:
-        :param overlay_probability_current:
-        :param probability_current_time_step:
-        :param plot_limit:
-        :param color_map_min:
-        :param distance_unit:
-        :param kwargs:
-        :return:
-        """
-        unit_value, unit_name = get_unit_value_and_tex_from_unit(distance_unit)
+        unit_value, unit_name = get_unit_value_and_latex_from_unit(distance_unit)
 
         with cp.plots.FigureManager(self.sim.name + '__' + name, **kwargs) as figman:
             fig = figman.fig
@@ -2228,7 +2204,7 @@ class SphericalHarmonicMesh(QuantumMesh):
         if r_type not in ('wavenumber', 'energy', 'momentum'):
             raise ValueError("Invalid argument to plot_electron_spectrum: r_type must be either 'wavenumber', 'energy', or 'momentum'")
 
-        r_unit_value, r_unit_name = get_unit_value_and_tex_from_unit(r_scale)
+        r_unit_value, r_unit_name = get_unit_value_and_latex_from_unit(r_scale)
 
         plot_kwargs = {**dict(aspect_ratio = 1), **kwargs}
 
@@ -2343,7 +2319,7 @@ class SphericalHarmonicSnapshot(Snapshot):
         self.data[key] = self.sim.mesh.inner_product_with_plane_waves(thetas, wavenumbers, g_mesh = g_mesh)
 
 
-class ElectricFieldSimulation(cp.core.Simulation):
+class ElectricFieldSimulation(core.Simulation):
     def __init__(self, spec):
         super(ElectricFieldSimulation, self).__init__(spec)
 
@@ -2628,7 +2604,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
             boundaries = np.linspace(attr_min, cutoff_value, num = divisions)
             boundaries = np.concatenate((boundaries, [attr_max]))
 
-        label_unit, label_unit_str = get_unit_value_and_tex_from_unit(label_unit)
+        label_unit, label_unit_str = get_unit_value_and_latex_from_unit(label_unit)
 
         free_states = list(self.free_states)
 
@@ -2673,7 +2649,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
                                          **kwargs):
         fig = cp.plots.get_figure('full')
 
-        x_scale_unit, x_scale_name = get_unit_value_and_tex_from_unit(x_unit)
+        x_scale_unit, x_scale_name = get_unit_value_and_latex_from_unit(x_unit)
 
         grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
         ax_overlaps = plt.subplot(grid_spec[0])
@@ -2687,7 +2663,7 @@ class ElectricFieldSimulation(cp.core.Simulation):
         state_overlaps = self.state_overlaps_vs_time
 
         overlaps = [overlap for state, overlap in sorted(state_overlaps.items())]
-        labels = [r'$\left| \left\langle \psi|{} \right\rangle \right|^2$'.format(state.tex_str) for state, overlap in sorted(state_overlaps.items())]
+        labels = [r'$\left| \left\langle \psi|{} \right\rangle \right|^2$'.format(state.latex) for state, overlap in sorted(state_overlaps.items())]
 
         ax_overlaps.stackplot(self.data_times / x_scale_unit,
                               *overlaps,
@@ -2751,150 +2727,133 @@ class ElectricFieldSimulation(cp.core.Simulation):
                                   grouped_free_states = None,
                                   group_labels = None,
                                   show_title = False,
-                                  plot_name = 'file_name',
+                                  plot_name_from = 'file_name',
                                   **kwargs):
-        """
-        
-        :param log: 
-        :param x_unit: 
-        :param bound_state_max_n: 
-        :param collapse_bound_state_angular_momentums: 
-        :param grouped_free_states: 
-        :param group_labels: 
-        :param plot_name: 'name' or 'file_name'
-        :param kwargs: 
-        :return: 
-        """
-        fig = cp.plots.get_figure('full')
+        with cp.plots.FigureManager(getattr(self, plot_name_from) + '__wavefunction_vs_time') as figman:
+            x_scale_unit, x_scale_name = get_unit_value_and_latex_from_unit(x_unit)
 
-        x_scale_unit, x_scale_name = get_unit_value_and_tex_from_unit(x_unit)
+            grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
+            ax_overlaps = plt.subplot(grid_spec[0])
+            ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
 
-        grid_spec = matplotlib.gridspec.GridSpec(2, 1, height_ratios = [5, 1], hspace = 0.07)  # TODO: switch to fixed axis construction
-        ax_overlaps = plt.subplot(grid_spec[0])
-        ax_field = plt.subplot(grid_spec[1], sharex = ax_overlaps)
+            if not isinstance(self.spec.electric_potential, potentials.NoPotentialEnergy):
+                ax_field.plot(self.data_times / x_scale_unit, self.electric_field_amplitude_vs_time / atomic_electric_field, color = COLOR_ELECTRIC_FIELD, linewidth = 2)
 
-        if not isinstance(self.spec.electric_potential, potentials.NoPotentialEnergy):
-            ax_field.plot(self.data_times / x_scale_unit, self.electric_field_amplitude_vs_time / atomic_electric_field, color = COLOR_ELECTRIC_FIELD, linewidth = 2)
+            ax_overlaps.plot(self.data_times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \Psi | \Psi \right\rangle$', color = 'black', linewidth = 2)
 
-        ax_overlaps.plot(self.data_times / x_scale_unit, self.norm_vs_time, label = r'$\left\langle \Psi | \Psi \right\rangle$', color = 'black', linewidth = 2)
+            if grouped_free_states is None:
+                try:
+                    grouped_free_states, group_labels = self.group_free_states_by_continuous_attr('energy')
+                except AttributeError:
+                    grouped_free_states, group_labels = {}, {}
+            overlaps = []
+            labels = []
+            colors = []
 
-        if grouped_free_states is None:
-            try:
-                grouped_free_states, group_labels = self.group_free_states_by_continuous_attr('energy')
-            except AttributeError:
-                grouped_free_states, group_labels = {}, {}
-        overlaps = []
-        labels = []
-        colors = []
+            state_overlaps = self.state_overlaps_vs_time  # it's a property that would otherwise get evaluated every time we asked for it
 
-        state_overlaps = self.state_overlaps_vs_time  # it's a property that would otherwise get evaluated every time we asked for it
+            extra_bound_overlap = np.zeros(self.data_time_steps)
+            if collapse_bound_state_angular_momentums:
+                overlaps_by_n = {n: np.zeros(self.data_time_steps) for n in range(1, bound_state_max_n + 1)}  # prepare arrays to sum over angular momenta in, one for each n
+                for state in sorted(self.bound_states):
+                    if state.n <= bound_state_max_n:
+                        overlaps_by_n[state.n] += state_overlaps[state]
+                    else:
+                        extra_bound_overlap += state_overlaps[state]
+                overlaps += [overlap for n, overlap in sorted(overlaps_by_n.items())]
+                labels += [r'$\left| \left\langle \Psi | \psi_{{ {}, \ell }} \right\rangle \right|^2$'.format(n) for n in sorted(overlaps_by_n)]
+                colors += [matplotlib.colors.to_rgba('C' + str(n - 1), alpha = 1) for n in sorted(overlaps_by_n)]
+            else:
+                for state in sorted(self.bound_states):
+                    if state.n <= bound_state_max_n:
+                        overlaps.append(state_overlaps[state])
+                        labels.append(r'$\left| \left\langle \Psi | {} \right\rangle \right|^2$'.format(state.latex))
+                        colors.append(matplotlib.colors.to_rgba('C' + str((state.n - 1) % 10), alpha = 1 - state.l / state.n))
+                    else:
+                        extra_bound_overlap += state_overlaps[state]
 
-        extra_bound_overlap = np.zeros(self.data_time_steps)
-        if collapse_bound_state_angular_momentums:
-            overlaps_by_n = {n: np.zeros(self.data_time_steps) for n in range(1, bound_state_max_n + 1)}  # prepare arrays to sum over angular momenta in, one for each n
-            for state in sorted(self.bound_states):
-                if state.n <= bound_state_max_n:
-                    overlaps_by_n[state.n] += state_overlaps[state]
-                else:
-                    extra_bound_overlap += state_overlaps[state]
-            overlaps += [overlap for n, overlap in sorted(overlaps_by_n.items())]
-            labels += [r'$\left| \left\langle \Psi | \psi_{{ {}, \ell }} \right\rangle \right|^2$'.format(n) for n in sorted(overlaps_by_n)]
-            colors += [matplotlib.colors.to_rgba('C' + str(n - 1), alpha = 1) for n in sorted(overlaps_by_n)]
-        else:
-            for state in sorted(self.bound_states):
-                if state.n <= bound_state_max_n:
-                    overlaps.append(state_overlaps[state])
-                    labels.append(r'$\left| \left\langle \Psi | {} \right\rangle \right|^2$'.format(state.tex_str))
-                    colors.append(matplotlib.colors.to_rgba('C' + str((state.n - 1) % 10), alpha = 1 - state.l / state.n))
-                else:
-                    extra_bound_overlap += state_overlaps[state]
+            overlaps.append(extra_bound_overlap)
+            labels.append(r'$\left| \left\langle \Psi | \psi_{{n \geq {} }}  \right\rangle \right|^2$'.format(bound_state_max_n + 1))
+            colors.append('.4')
 
-        overlaps.append(extra_bound_overlap)
-        labels.append(r'$\left| \left\langle \Psi | \psi_{{n \geq {} }}  \right\rangle \right|^2$'.format(bound_state_max_n + 1))
-        colors.append('.4')
+            free_state_color_cycle = it.cycle(['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f'])
+            for group, states in sorted(grouped_free_states.items()):
+                if len(states) != 0:
+                    overlaps.append(np.sum(state_overlaps[s] for s in states))
+                    labels.append(r'$\left| \left\langle \Psi | {}  \right\rangle \right|^2$'.format(group_labels[group]))
+                    colors.append(free_state_color_cycle.__next__())
 
-        free_state_color_cycle = it.cycle(['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f'])
-        for group, states in sorted(grouped_free_states.items()):
-            if len(states) != 0:
-                overlaps.append(np.sum(state_overlaps[s] for s in states))
-                labels.append(r'$\left| \left\langle \Psi | {}  \right\rangle \right|^2$'.format(group_labels[group]))
-                colors.append(free_state_color_cycle.__next__())
+            overlaps = [overlap for overlap in overlaps]
 
-        overlaps = [overlap for overlap in overlaps]
+            ax_overlaps.stackplot(self.data_times / x_scale_unit,
+                                  *overlaps,
+                                  labels = labels,
+                                  colors = colors,
+                                  )
 
-        ax_overlaps.stackplot(self.data_times / x_scale_unit,
-                              *overlaps,
-                              labels = labels,
-                              colors = colors,
-                              )
+            if log:
+                ax_overlaps.set_yscale('log')
+                min_overlap = min([np.min(overlap) for overlap in state_overlaps.values()])
+                ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
+                ax_overlaps.grid(True, which = 'both', **cp.plots.GRID_KWARGS)
+            else:
+                ax_overlaps.set_ylim(0.0, 1.0)
+                ax_overlaps.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+                ax_overlaps.grid(True, **cp.plots.GRID_KWARGS)
 
-        if log:
-            ax_overlaps.set_yscale('log')
-            min_overlap = min([np.min(overlap) for overlap in state_overlaps.values()])
-            ax_overlaps.set_ylim(bottom = max(1e-9, min_overlap * .1), top = 1.0)
-            ax_overlaps.grid(True, which = 'both', **cp.plots.GRID_KWARGS)
-        else:
-            ax_overlaps.set_ylim(0.0, 1.0)
-            ax_overlaps.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-            ax_overlaps.grid(True, **cp.plots.GRID_KWARGS)
+            ax_overlaps.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
 
-        ax_overlaps.set_xlim(self.spec.time_initial / x_scale_unit, self.spec.time_final / x_scale_unit)
+            ax_field.set_xlabel('Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
+            ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 13)
+            ax_field.set_ylabel('${}(t)$ (a.u.)'.format(str_efield), fontsize = 13, color = COLOR_ELECTRIC_FIELD)
 
-        ax_field.set_xlabel('Time $t$ (${}$)'.format(x_scale_name), fontsize = 13)
-        ax_overlaps.set_ylabel('Wavefunction Metric', fontsize = 13)
-        ax_field.set_ylabel('${}(t)$ (a.u.)'.format(str_efield), fontsize = 13, color = COLOR_ELECTRIC_FIELD)
+            ax_overlaps.legend(bbox_to_anchor = (1.1, 1.1), loc = 'upper left', borderaxespad = 0.05, fontsize = 9, ncol = 1 + (len(overlaps) // 17))
 
-        ax_overlaps.legend(bbox_to_anchor = (1.1, 1.1), loc = 'upper left', borderaxespad = 0.05, fontsize = 9, ncol = 1 + (len(overlaps) // 17))
+            ax_overlaps.tick_params(labelleft = True,
+                                    labelright = True,
+                                    labeltop = True,
+                                    labelbottom = False,
+                                    bottom = True,
+                                    top = True,
+                                    left = True,
+                                    right = True)
+            ax_field.tick_params(labelleft = True,
+                                 labelright = True,
+                                 labeltop = False,
+                                 labelbottom = True,
+                                 bottom = True,
+                                 top = True,
+                                 left = True,
+                                 right = True)
+            # ax_overlaps.xaxis.tick_top()
 
-        ax_overlaps.tick_params(labelleft = True,
-                                labelright = True,
-                                labeltop = True,
-                                labelbottom = False,
-                                bottom = True,
-                                top = True,
-                                left = True,
-                                right = True)
-        ax_field.tick_params(labelleft = True,
-                             labelright = True,
-                             labeltop = False,
-                             labelbottom = True,
-                             bottom = True,
-                             top = True,
-                             left = True,
-                             right = True)
-        # ax_overlaps.xaxis.tick_top()
+            plt.rcParams['xtick.major.pad'] = 5
+            plt.rcParams['ytick.major.pad'] = 5
 
-        plt.rcParams['xtick.major.pad'] = 5
-        plt.rcParams['ytick.major.pad'] = 5
+            # Find at most n+1 ticks on the y-axis at 'nice' locations
+            max_yticks = 4
+            yloc = plt.MaxNLocator(max_yticks, prune = 'upper')
+            ax_field.yaxis.set_major_locator(yloc)
 
-        # Find at most n+1 ticks on the y-axis at 'nice' locations
-        max_yticks = 4
-        yloc = plt.MaxNLocator(max_yticks, prune = 'upper')
-        ax_field.yaxis.set_major_locator(yloc)
+            max_xticks = 6
+            xloc = plt.MaxNLocator(max_xticks, prune = 'both')
+            ax_field.xaxis.set_major_locator(xloc)
 
-        max_xticks = 6
-        xloc = plt.MaxNLocator(max_xticks, prune = 'both')
-        ax_field.xaxis.set_major_locator(xloc)
+            ax_field.tick_params(axis = 'both', which = 'major', labelsize = 10)
+            ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
 
-        ax_field.tick_params(axis = 'both', which = 'major', labelsize = 10)
-        ax_overlaps.tick_params(axis = 'both', which = 'major', labelsize = 10)
+            ax_field.grid(True, **cp.plots.GRID_KWARGS)
 
-        ax_field.grid(True, **cp.plots.GRID_KWARGS)
+            if show_title:
+                title = ax_overlaps.set_title(self.name)
+                title.set_y(1.15)
 
-        if show_title:
-            title = ax_overlaps.set_title(self.name)
-            title.set_y(1.15)
+            postfix = ''
+            if log:
+                postfix += '__log'
 
-        postfix = ''
-        if log:
-            postfix += '__log'
-        prefix = getattr(self, plot_name)
+            figman.name = '__wavefunction_vs_time{}'.format(postfix)
 
-        name = prefix + '__wavefunction_vs_time{}'.format(postfix)
-
-        cp.plots.save_current_figure(name = name, **kwargs)
-
-        plt.close()
 
     def plot_energy_spectrum(self,
                              states = 'all',
@@ -2906,8 +2865,8 @@ class ElectricFieldSimulation(cp.core.Simulation):
                              energy_lower_bound = None, energy_upper_bound = None,
                              group_angular_momentum = True, angular_momentum_cutoff = None,
                              **kwargs):
-        energy_unit, energy_unit_str = get_unit_value_and_tex_from_unit(energy_scale)
-        time_unit, time_unit_str = get_unit_value_and_tex_from_unit(time_scale)
+        energy_unit, energy_unit_str = get_unit_value_and_latex_from_unit(energy_scale)
+        time_unit, time_unit_str = get_unit_value_and_latex_from_unit(time_scale)
 
         if states == 'all':
             state_list = self.spec.test_states
@@ -3011,10 +2970,10 @@ class ElectricFieldSimulation(cp.core.Simulation):
 
         if renormalize:
             overlaps = [self.norm_by_harmonic_vs_time[sph_harm] / self.norm_vs_time for sph_harm in self.spec.spherical_harmonics]
-            l_labels = [r'$\left| \left\langle \Psi| {} \right\rangle \right|^2 / \left\langle \psi| \psi \right\rangle$'.format(sph_harm.tex_str) for sph_harm in self.spec.spherical_harmonics]
+            l_labels = [r'$\left| \left\langle \Psi| {} \right\rangle \right|^2 / \left\langle \psi| \psi \right\rangle$'.format(sph_harm.latex) for sph_harm in self.spec.spherical_harmonics]
         else:
             overlaps = [self.norm_by_harmonic_vs_time[sph_harm] for sph_harm in self.spec.spherical_harmonics]
-            l_labels = [r'$\left| \left\langle \Psi| {} \right\rangle \right|^2$'.format(sph_harm.tex_str) for sph_harm in self.spec.spherical_harmonics]
+            l_labels = [r'$\left| \left\langle \Psi| {} \right\rangle \right|^2$'.format(sph_harm.latex) for sph_harm in self.spec.spherical_harmonics]
         num_colors = len(overlaps)
         ax_momentums.set_prop_cycle(cycler('color', [plt.get_cmap('gist_rainbow')(n / num_colors) for n in range(num_colors)]))
         ax_momentums.stackplot(self.times / asec, *overlaps, alpha = 1, labels = l_labels)

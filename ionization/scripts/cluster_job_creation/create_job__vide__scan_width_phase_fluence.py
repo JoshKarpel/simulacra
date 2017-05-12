@@ -9,7 +9,7 @@ import compy.cluster as clu
 import ionization as ion
 import ionization.cluster as iclu
 import ionization.integrodiff as ide
-from compy.units import *
+from units import *
 
 if __name__ == '__main__':
     # get command line arguments

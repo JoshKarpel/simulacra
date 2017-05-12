@@ -32,11 +32,18 @@ def gaussian_fwhm_from_sigma(sigma):
 
 
 def stirling_approximation_exp(n):
-    """
+    r"""
     Return the Stirling approximation of :math:`n!`, :math:`n! \approx \sqrt{2\pi} \left( \frac{n}{e} \right)^n`.
-    :param n: the number to approximate the factorial of
-    :type n: int
-    :return: the approximation of :math:`n!`
+    
+    Parameters
+    ----------
+    n : :class:`float`
+        The number to approximate the factorial of.
+
+    Returns
+    -------
+    :class:`float`
+        The Stirling approximation to :math:`n!`.
     """
     return np.sqrt(twopi * n) * ((n / e) ** n)
 
@@ -44,9 +51,16 @@ def stirling_approximation_exp(n):
 def stirling_approximation_ln(n):
     """
     Return the Stirling approximation of :math:`\log n!`, :math:`\log n! \approx n \, \log n - n`.
-    :param n: the number to approximate the logarithm of the factorial of
-    :type n: int
-    :return: the approximation of :math:`\log n!`
+    
+    Parameters
+    ----------
+    n : :class:`float`
+        The number to approximate the logarithm of the factorial of.
+
+    Returns
+    -------
+    :class:`float`
+        The Stirling approximation of :math:`\log n!`.
     """
     return n * np.log(n) - n
 
@@ -60,8 +74,12 @@ class SphericalHarmonic:
         """
         Initialize a SphericalHarmonic from its angular momentum numbers.
         
-        :param l: orbital angular momentum "quantum number"
-        :param m: azimuthal angular momentum "quantum number"
+        Parameters
+        ----------
+        l
+            Orbital angular momentum "quantum number".
+        m
+            Azimuthal angular momentum "quantum number".
         """
         self._l = l
         self._m = m
@@ -81,7 +99,7 @@ class SphericalHarmonic:
         return f'{self.__class__.__name__}(l={self.l}, m={self.m})'
 
     @property
-    def tex_str(self):
+    def latex(self):
         """Returns a LaTeX-formatted string for the SphericalHarmonic."""
         return fr'Y_{{self.m}}^{{self.l}}'
 

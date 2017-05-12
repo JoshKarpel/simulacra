@@ -6,7 +6,7 @@ import os
 import logging
 
 import compy as cp
-from compy.units import *
+from units import *
 import ionization as ion
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]

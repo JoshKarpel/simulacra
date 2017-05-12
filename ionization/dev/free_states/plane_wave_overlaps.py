@@ -7,7 +7,7 @@ import numpy as np
 
 import compy as cp
 import ionization as ion
-from compy.units import *
+from units import *
 
 import matplotlib.pyplot as plt
 

@@ -2,9 +2,9 @@ import logging
 import os
 import sys
 
+import compy as cp
 import compy.quantum.hydrogenic as hyd
 
-import compy as cp
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)

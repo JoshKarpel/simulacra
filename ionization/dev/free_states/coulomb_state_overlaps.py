@@ -8,7 +8,7 @@ import numpy as np
 import compy as cp
 import ionization as ion
 import plots
-from compy.units import *
+from units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME, dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))

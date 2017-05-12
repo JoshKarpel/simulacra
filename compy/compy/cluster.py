@@ -1,28 +1,21 @@
 import collections
 import datetime as dt
-import json
-import functools as ft
+import hashlib
+import itertools as it
 import logging
 import os
-import sys
+import pickle
 import posixpath
 import stat
 import subprocess
-import itertools as it
-import hashlib
-import pickle
+import sys
 import zlib
 from copy import copy, deepcopy
-from collections import OrderedDict, defaultdict
-from pprint import pprint
 
-from tqdm import tqdm
 import paramiko
+from tqdm import tqdm
 
-import numpy as np
-
-from compy.units import *
-from . import core, utils, plots
+from . import core, plots, utils
 
 
 logger = logging.getLogger(__name__)
@@ -318,7 +311,7 @@ class JobProcessor(core.Beet):
         self.sim_count = len(self.sim_names)
         self.unprocessed_sim_names = set(self.sim_names)
 
-        self.data = OrderedDict((sim_name, None) for sim_name in self.sim_names)
+        self.data = collections.OrderedDict((sim_name, None) for sim_name in self.sim_names)
 
         self.simulation_type = simulation_type
 
@@ -540,7 +533,7 @@ def combine_job_processors(*job_processors):
                           job_dir_path = None,
                           simulation_type = j_type)
 
-    combined_jp.data = collections.OrderedDict((ii, copy(sim_result)) for ii, (sim_name, sim_result) in enumerate(it.chain(jp.data for jp in job_processors)))
+    combined_jp.data = collections.collections.OrderedDict((ii, copy(sim_result)) for ii, (sim_name, sim_result) in enumerate(it.chain(jp.data for jp in job_processors)))
 
     # TODO: update parameter sets
 
@@ -579,7 +572,7 @@ def expand_parameters_to_dicts(parameters):
     :param parameters: a list of Parameters
     :return: a list of dictionaries of parameter.name: parameter.value pairs
     """
-    dicts = [OrderedDict()]
+    dicts = [collections.OrderedDict()]
 
     for par in parameters:
         if par.expandable and hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):  # make sure the value is an iterable that isn't a string and has a length

@@ -15,7 +15,7 @@ import scipy.optimize as optimize
 import mpmath
 
 import compy as cp
-from compy.units import *
+from units import *
 from . import core
 
 logger = logging.getLogger(__name__)
@@ -524,7 +524,7 @@ class NumericSphericalHarmonicState(QuantumState):
     @property
     def tex_str(self):
         """Return a LaTeX-formatted string for the NumericSphericalHarmonicState."""
-        return self.analytic_state.tex_str
+        return self.analytic_state.latex
 
     @property
     def spherical_harmonic(self):
@@ -592,7 +592,7 @@ class NumericOneDState(QuantumState):
         if self.analytic_state is None:
             return fr'E = {uround(self.energy, "eV", 3)} \mathrm{eV}'
         else:
-            return self.analytic_state.tex_str
+            return self.analytic_state.latex
 
     @property
     def n(self):

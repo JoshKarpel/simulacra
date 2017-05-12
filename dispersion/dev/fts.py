@@ -6,7 +6,7 @@ import scipy.signal as psignal
 
 import compy as cp
 import plots
-from compy.units import *
+from units import *
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 # OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME + '_unmodulated')

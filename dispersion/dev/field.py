@@ -5,7 +5,7 @@ import numpy as np
 
 import compy as cp
 import dispersion as disp
-from compy.units import *
+from units import *
 
 
 dispersion = False

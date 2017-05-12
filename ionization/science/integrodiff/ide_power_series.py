@@ -1,16 +1,15 @@
 import logging
 import os
 
-import numpy as np
-import scipy.integrate as integrate
-
 import compy as cp
-import ionization as ion
+import numpy as np
 import plots
-from ionization import integrodiff as ide
-from compy.units import *
+import scipy.integrate as integrate
+from units import *
 
-import matplotlib.pyplot as plt
+import ionization as ion
+from ionization import integrodiff as ide
+
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)

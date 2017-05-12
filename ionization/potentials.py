@@ -1,13 +1,12 @@
-import logging
 import functools as ft
+import logging
 
+import compy as cp
 import numpy as np
 import numpy.fft as nfft
 import scipy.integrate as integ
 import scipy.optimize as opt
-
-import compy as cp
-from compy.units import *
+from units import *
 
 
 logger = logging.getLogger(__name__)
@@ -649,13 +648,15 @@ class GaussianPulse(UniformLinearlyPolarizedElectricPotential):
     def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 3500 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
                  **kwargs):
         """
-
-        :param pulse_width:
-        :param omega_carrier:
-        :param fluence:
-        :param phase:
-        :param pulse_center:
-        :param kwargs:
+        
+        Parameters
+        ----------
+        pulse_width
+        omega_carrier
+        fluence
+        phase
+        pulse_center
+        kwargs
         """
         super().__init__(**kwargs)
 
@@ -714,13 +715,15 @@ class SechPulse(UniformLinearlyPolarizedElectricPotential):
     def __init__(self, pulse_width = 200 * asec, omega_carrier = twopi * 3500 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
                  **kwargs):
         """
-
-        :param pulse_width:
-        :param omega_carrier:
-        :param fluence:
-        :param phase:
-        :param pulse_center:
-        :param kwargs:
+        
+        Parameters
+        ----------
+        pulse_width
+        omega_carrier
+        fluence
+        phase
+        pulse_center
+        kwargs
         """
         super().__init__(**kwargs)
 
@@ -785,14 +788,17 @@ class GenericElectricPotential(UniformLinearlyPolarizedElectricPotential):
                  extra_information = None,
                  **kwargs):
         """
-
-        :param amplitude_function:
-        :param phase_function:  real numbers only!
-        :param frequency_upper_limit:
-        :param frequency_points:
-        :param name: a name for the GenericElectricField
-        :param extra_information: a dictionary of extra info
-        :param kwargs:
+        
+        Parameters
+        ----------
+        amplitude_function
+        phase_function
+        frequency_upper_limit
+        frequency_points
+        fluence
+        name
+        extra_information
+        kwargs
         """
         super().__init__(**kwargs)
 
