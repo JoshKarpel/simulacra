@@ -20,7 +20,7 @@ if __name__ == '__main__':
         frequency_cutoff = []
 
         for pw in pulse_widths:
-            largest_photon_energy.append(ion.SincPulse(pulse_width = pw).largest_photon_energy)
+            largest_photon_energy.append(ion.SincPulse(pulse_width = pw).photon_energy_max)
             frequency_cutoff.append(ion.SincPulse(pulse_width = pw).frequency_max)
 
         largest_photon_energy = np.array(largest_photon_energy)

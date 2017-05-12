@@ -752,10 +752,10 @@ transfer_output_remaps = "$(Process).sim = outputs/$(Process).sim ; $(Process).l
 +JobBatchName = "{batch_name}"
 #
 +is_resumable = {checkpoints}
-+WantGlidein = {flockglide}
++WantGlideIn = {flockglide}
 +WantFlocking = {flockglide}
 #
-skip_filechecks = True
+skip_filechecks = true
 max_materialize = 5000
 #
 on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)

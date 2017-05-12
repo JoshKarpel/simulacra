@@ -464,6 +464,9 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricPotential):
         self.omega_min = self.pulse_frequency_ratio * self.mode_spacing
 
         # self.phase = phase
+        if phase != 0:
+            logger.warning('Phase not implemented for SumOfSines pulse!')
+
         self.fluence = fluence
         self.pulse_center = pulse_center
 
@@ -477,11 +480,11 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricPotential):
         self.cycle_period = twopi / self.mode_spacing
 
     @property
-    def smallest_photon_energy(self):
+    def photon_energy_min(self):
         return hbar * self.omega_min
 
     @property
-    def largest_photon_energy(self):
+    def photon_energy_max(self):
         return hbar * self.omega_max
 
     @property
@@ -493,7 +496,7 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricPotential):
         return self.omega_max / twopi
 
     @property
-    def delta_frequency(self):
+    def frequency_delta(self):
         return self.delta_omega / twopi
 
     @property
@@ -506,8 +509,8 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricPotential):
                                  ('pulse_center', 'asec'),
                                  ('fluence', 'J/cm^2'),
                                  # 'phase',
-                                 ('smallest_photon_energy', 'eV'),
-                                 ('largest_photon_energy', 'eV'),
+                                 ('photon_energy_min', 'eV'),
+                                 ('photon_energy_max', 'eV'),
                                  )
 
         return out + super().__str__()
@@ -518,8 +521,8 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricPotential):
                                   'pulse_center',
                                   'fluence',
                                   # 'phase',
-                                  'smallest_photon_energy',
-                                  'largest_photon_energy',
+                                  'photon_energy_min',
+                                  'photon_energy_max',
                                   )
 
     def get_electric_field_amplitude(self, t):
@@ -537,17 +540,18 @@ class SumOfSinesPulse(UniformLinearlyPolarizedElectricPotential):
 
 
 class SincPulse(UniformLinearlyPolarizedElectricPotential):
-    # def __init__(self, pulse_width = 200 * asec, omega_min = twopi * 1000 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
     def __init__(self, pulse_width = 200 * asec, omega_min = twopi * 500 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
                  **kwargs):
         """
-
-        :param pulse_width:
-        :param omega_min:
-        :param fluence:
-        :param phase:
-        :param pulse_center:
-        :param kwargs:
+        
+        Parameters
+        ----------
+        pulse_width
+        omega_min
+        fluence
+        phase
+        pulse_center
+        kwargs
         """
         super().__init__(**kwargs)
 
@@ -565,29 +569,23 @@ class SincPulse(UniformLinearlyPolarizedElectricPotential):
         self.amplitude_time = np.sqrt(self.fluence * self.delta_omega / (pi * epsilon_0 * c))
 
     @classmethod
-    def from_omega_carrier(cls, pulse_width = 200 * asec, omega_carrier = twopi * 3000 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
+    def from_omega_carrier(cls, pulse_width = 200 * asec, omega_carrier = twopi * 3500 * THz, fluence = 1 * J / (cm ** 2), phase = 0, pulse_center = 0 * asec,
                            **kwargs):
         delta_omega = twopi / pulse_width
         omega_min = omega_carrier - delta_omega / 2
 
         return cls(pulse_width = pulse_width, omega_min = omega_min, fluence = fluence, phase = phase, pulse_center = pulse_center, **kwargs)
 
-    # @classmethod
-    # def from_amplitude_density(cls, pulse_width = 100 * asec, amplitude_density = 7.7432868731566454e-06, phase = 0, pulse_center = 0 * asec, **kwargs):
-    #     omega_cutoff = twopi / pulse_width
-    #     fluence = (amplitude_density ** 2) * (2 * epsilon_0 * c * omega_cutoff)
-    #     return cls(pulse_width = pulse_width, fluence = fluence, phase = phase, pulse_center = pulse_center, **kwargs)
-
     @property
-    def smallest_photon_energy(self):
+    def photon_energy_min(self):
         return hbar * self.omega_min
 
     @property
-    def carrier_photon_energy(self):
+    def photon_energy_carrier(self):
         return hbar * self.omega_carrier
 
     @property
-    def largest_photon_energy(self):
+    def photon_energy_max(self):
         return hbar * self.omega_max
 
     @property
@@ -595,11 +593,15 @@ class SincPulse(UniformLinearlyPolarizedElectricPotential):
         return self.omega_min / twopi
 
     @property
+    def frequency_carrier(self):
+        return self.omega_carrier / twopi
+
+    @property
     def frequency_max(self):
         return self.omega_max / twopi
 
     @property
-    def delta_frequency(self):
+    def frequency_delta(self):
         return self.delta_omega / twopi
 
     @property
@@ -612,10 +614,9 @@ class SincPulse(UniformLinearlyPolarizedElectricPotential):
                                  ('pulse_center', 'asec'),
                                  ('fluence', 'J/cm^2'),
                                  'phase',
-                                 ('smallest_photon_energy', 'eV'),
-                                 ('carrier_photon_energy', 'eV'),
-                                 ('largest_photon_energy', 'eV'),
-                                 'omega_carrier',
+                                 ('photon_energy_min', 'eV'),
+                                 ('photon_energy_carrier', 'eV'),
+                                 ('photon_energy_max', 'eV'),
                                  )
 
         return out + super().__str__()
@@ -626,9 +627,9 @@ class SincPulse(UniformLinearlyPolarizedElectricPotential):
                                   'pulse_center',
                                   'fluence',
                                   'phase',
-                                  'smallest_photon_energy',
-                                  'carrier_photon_energy',
-                                  'largest_photon_energy',
+                                  'photon_energy_min',
+                                  'photon_energy_carrier',
+                                  'photon_energy_max',
                                   'omega_carrier',
                                   )
 
@@ -667,15 +668,13 @@ class GaussianPulse(UniformLinearlyPolarizedElectricPotential):
         self.amplitude_time = np.sqrt(2 * self.fluence / (np.sqrt(pi) * epsilon_0 * c * self.pulse_width))
         self.amplitude_omega = self.amplitude_time * self.pulse_width / 2
 
-    # @classmethod
-    # def from_amplitude_density(cls, pulse_width = 100 * asec, amplitude_density = 7.7432868731566454e-06, phase = 0, pulse_center = 0 * asec, **kwargs):
-    #     omega_cutoff = twopi / pulse_width
-    #     fluence = (amplitude_density ** 2) * (2 * epsilon_0 * c * omega_cutoff)
-    #     return cls(pulse_width = pulse_width, fluence = fluence, phase = phase, pulse_center = pulse_center, **kwargs)
+    @property
+    def photon_energy_carrier(self):
+        return hbar * self.omega_carrier
 
     @property
-    def carrier_photon_energy(self):
-        return hbar * self.omega_carrier
+    def frequency_carrier(self):
+        return self.omega_carrier / twopi
 
     def __str__(self):
         out = cp.utils.field_str(self,
@@ -683,8 +682,8 @@ class GaussianPulse(UniformLinearlyPolarizedElectricPotential):
                                  ('pulse_center', 'asec'),
                                  ('fluence', 'J/cm^2'),
                                  'phase',
-                                 'omega_carrier',
-                                 ('carrier_photon_energy', 'eV'),
+                                 ('frequency_carrier', 'THz'),
+                                 ('photon_energy_carrier', 'eV'),
                                  )
 
         return out + super().__str__()
@@ -696,6 +695,7 @@ class GaussianPulse(UniformLinearlyPolarizedElectricPotential):
                                   'fluence',
                                   'phase',
                                   'omega_carrier',
+                                  'photon_energy_carrier',
                                   )
 
     def get_electric_field_envelope(self, t):
@@ -733,11 +733,13 @@ class SechPulse(UniformLinearlyPolarizedElectricPotential):
         self.amplitude_time = np.sqrt(self.fluence / (epsilon_0 * c * self.pulse_width))
         self.amplitude_omega = self.amplitude_time * self.pulse_width * np.sqrt(pi / 2)
 
-    # @classmethod
-    # def from_amplitude_density(cls, pulse_width = 100 * asec, amplitude_density = 7.7432868731566454e-06, phase = 0, pulse_center = 0 * asec, **kwargs):
-    #     omega_cutoff = twopi / pulse_width
-    #     fluence = (amplitude_density ** 2) * (2 * epsilon_0 * c * omega_cutoff)
-    #     return cls(pulse_width = pulse_width, fluence = fluence, phase = phase, pulse_center = pulse_center, **kwargs)
+    @property
+    def photon_energy_carrier(self):
+        return hbar * self.omega_carrier
+
+    @property
+    def frequency_carrier(self):
+        return self.omega_carrier / twopi
 
     def __str__(self):
         out = cp.utils.field_str(self,
@@ -745,7 +747,8 @@ class SechPulse(UniformLinearlyPolarizedElectricPotential):
                                  ('pulse_center', 'asec'),
                                  ('fluence', 'J/cm^2'),
                                  'phase',
-                                 'omega_carrier',
+                                 ('frequency_carrier', 'THz'),
+                                 ('photon_energy_carrier', 'eV'),
                                  )
 
         return out + super().__str__()
@@ -757,6 +760,7 @@ class SechPulse(UniformLinearlyPolarizedElectricPotential):
                                   'fluence',
                                   'phase',
                                   'omega_carrier',
+                                  'photon_energy_carrier'
                                   )
 
     def get_electric_field_envelope(self, t):
@@ -794,8 +798,6 @@ class GenericElectricPotential(UniformLinearlyPolarizedElectricPotential):
 
         self.name = name
 
-        # don't store the amplitude and phase functions, they aren't pickleable
-
         self.frequency = np.linspace(-frequency_upper_limit, frequency_upper_limit, frequency_points)
         self.df = np.abs(self.frequency[1] - self.frequency[0])
         amplitude_vs_frequency = amplitude_function(self.frequency)
@@ -805,11 +807,7 @@ class GenericElectricPotential(UniformLinearlyPolarizedElectricPotential):
         self.times = nfft.fftshift(nfft.fftfreq(len(self.frequency), self.df))
         self.dt = np.abs(self.times[1] - self.times[0])
 
-        # df * len(self.frequency) is for normalization
         self.complex_electric_field_vs_time = self.df * len(self.frequency) * nfft.fftshift(nfft.ifft(nfft.ifftshift(self.complex_amplitude_vs_frequency)))
-        self.complex_electric_field_vs_time -= np.mean(self.complex_electric_field_vs_time)  # DC correction
-        # TODO: better DC correction using specified end time
-        # TODO: use fluence, if fluence none don't change, if fluence set make fluence equal to that while preserving shape of amplitude spectrum
 
         self.extra_attributes = tuple(extra_information.keys())
         for k, v in extra_information.items():
@@ -832,10 +830,13 @@ class GenericElectricPotential(UniformLinearlyPolarizedElectricPotential):
 
     @property
     def fluence(self):
-        from_field = epsilon_0 * c * np.sum(np.abs(self.complex_electric_field_vs_time) ** 2) * self.dt
-        from_spectrum = epsilon_0 * c * np.sum(np.abs(self.complex_amplitude_vs_frequency) ** 2) * self.df
+        from_field = epsilon_0 * c * integ.simps(y = np.real(self.complex_electric_field_vs_time) ** 2,
+                                                 dx = self.dt)
+        # from_spectrum = epsilon_0 * c * integ.simps(y = self.complex_amplitude_vs_frequency ** 2,
+        #                                             dx = self.df)
 
-        return (from_field + from_spectrum) / 2
+        # return (from_field + from_spectrum) / 2
+        return from_field
 
     def __str__(self):
         return cp.utils.field_str(self, 'name', 'fluence', *self.extra_attributes)
