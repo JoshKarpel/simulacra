@@ -19,7 +19,7 @@ setup(
         classifiers = [
             'Development Status :: 2 - Pre-Alpha',
             'Intended Audience :: Science/Research',
-            'License :: OSI Approved :: Apache Software License'
+            'License :: OSI Approved :: Apache Software License',
             'Natural Language :: English',
             'Programming Language :: Python :: 3 :: Only',
             'Programming Language :: Python :: 3.6',
@@ -30,7 +30,8 @@ setup(
             'Topic :: Scientific/Engineering :: Visualization',
             'Topic :: System :: Distributed Computing',
         ],
-        packages = find_packages(),
+        packages = find_packages('src'),
+        package_dir = {'': 'src'},
         install_requires = [
             'numpy',
             'scipy',
