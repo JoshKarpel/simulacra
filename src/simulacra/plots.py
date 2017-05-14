@@ -1,5 +1,4 @@
-import itertools as it
-import functools as ft
+import itertools
 import os
 import logging
 import fractions
@@ -423,7 +422,7 @@ def attach_hv_lines(axis, line_positions = (), line_kwargs = (), unit = None, di
     """
     unit_value, _ = get_unit_value_and_latex_from_unit(unit)
 
-    for position, kw in it.zip_longest(line_positions, line_kwargs):
+    for position, kw in itertools.zip_longest(line_positions, line_kwargs):
         if kw is None:
             kw = {}
         kw = {**HVLINE_KWARGS, **kw}
@@ -512,7 +511,7 @@ def xy_plot(name,
         y_unit_label = get_unit_label(y_unit)
 
         lines = []
-        for y, lab, kw in it.zip_longest(y_data, line_labels, line_kwargs):
+        for y, lab, kw in itertools.zip_longest(y_data, line_labels, line_kwargs):
             if kw is None:
                 kw = {}
             lines.append(plt.plot(x_data / x_unit_value, y / y_unit_value, label = lab, **kw)[0])
@@ -807,7 +806,7 @@ def xyt_plot(name,
         line_kwargs = tuple(line_kwargs)
 
         _y_func_kwargs = []
-        for y_func, y_func_kwargs in it.zip_longest(y_funcs, y_func_kwargs):
+        for y_func, y_func_kwargs in itertools.zip_longest(y_funcs, y_func_kwargs):
             if y_func_kwargs is not None:
                 _y_func_kwargs.append(y_func_kwargs)
             else:
@@ -887,7 +886,7 @@ def xyt_plot(name,
 
         # zip together each set of y data with its plotting options
         lines = []
-        for y_func, y_kwargs, lab, kw in it.zip_longest(y_funcs, y_func_kwargs, line_labels, line_kwargs):
+        for y_func, y_kwargs, lab, kw in itertools.zip_longest(y_funcs, y_func_kwargs, line_labels, line_kwargs):
             if y_kwargs is None:
                 y_kwargs = {}
             if kw is None:  # means there are no kwargs for this y data

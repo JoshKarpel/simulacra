@@ -2,14 +2,11 @@
 
 import numpy as _np
 
-from .utils import memoize
-
 
 UNIT_NAME_TO_VALUE = {}
 UNIT_NAME_TO_LATEX = {}
 
 
-@memoize
 def get_unit_value_and_latex_from_unit(unit):
     """Return the numerical value of the unit and its LaTeX representation from a unit name."""
     if unit is None:

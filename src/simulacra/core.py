@@ -1,6 +1,6 @@
-import datetime as dt
+import datetime
 import gzip
-import itertools as it
+import itertools
 import pickle
 import uuid
 from copy import deepcopy
@@ -52,7 +52,7 @@ class Beet:
             logger.warning('Using file name {} instead of {} for {}'.format(file_name_stripped, file_name, self.name))
         self.file_name = file_name_stripped
 
-        self.initialized_at = dt.datetime.now()
+        self.initialized_at = datetime.datetime.utcnow()
         self.uid = uuid.uuid4()
 
         logger.info('Initialized {}'.format(repr(self)))
@@ -257,7 +257,7 @@ class Simulation(Beet):
         self.end_time = None
         self.elapsed_time = None
         self.latest_run_time = None
-        self.running_time = dt.timedelta()
+        self.running_time = datetime.timedelta()
 
         self._status = ''
         self.status = STATUS_INI
@@ -271,7 +271,7 @@ class Simulation(Beet):
         if s == self.status:
             raise ValueError('Tried to set status of {} to its current status'.format(self.name))
 
-        now = dt.datetime.now()
+        now = datetime.datetime.utcnow()
 
         if s == STATUS_INI:
             self.init_time = now
@@ -467,11 +467,11 @@ class Animator:
 
         self.fig.canvas.draw()
         self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
-        canvas_width, canvas_height = self.fig.canvas.get_width_height()
+        canvas_widatetimeh, canvas_height = self.fig.canvas.get_widatetimeh_height()
         self.cmdstring = ("ffmpeg",
                           '-y',
                           '-r', '{}'.format(self.fps),  # choose fps
-                          '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
+                          '-s', '%dx%d' % (canvas_widatetimeh, canvas_height),  # size of image string
                           '-pix_fmt', 'argb',  # pixel format
                           '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
                           '-vcodec', 'mpeg4',  # output encoding
@@ -517,11 +517,8 @@ class Animator:
         self._update_data()  # get data from the Simulation and update any plot elements that need to be redrawn
 
         # draw everything that needs to be redrawn (any plot elements that will be mutated during the animation should be added to self.redraw)
-        for rd in it.chain(self.redraw, *(ax.redraw for ax in self.axis_managers)):
-            try:
-                self.fig.draw_artist(rd)
-            except AttributeError:
-                pass
+        for rd in itertools.chain(self.redraw, *(ax.redraw for ax in self.axis_managers)):
+            self.fig.draw_artist(rd)
 
         self.fig.canvas.blit(self.fig.bbox)  # blit the canvas, finalizing all of the draw_artists
 

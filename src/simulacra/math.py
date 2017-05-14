@@ -1,11 +1,10 @@
 import logging
 
 import numpy as np
-import numpy.fft as nfft
 import scipy.sparse as sparse
 import scipy.special as spc
-
 import math
+
 from . import utils
 from .units import *
 

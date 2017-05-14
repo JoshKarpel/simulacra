@@ -1,17 +1,18 @@
 import collections
-import datetime as dt
-import functools as ft
-import itertools as it
-import multiprocessing as mp
+import datetime
+import functools
+import itertools
+import multiprocessing
 import subprocess
 import os
 import sys
 import time
+import logging
 
 import numpy as np
 import psutil
 
-import logging
+from .units import uround
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,30 @@ logger.setLevel(logging.DEBUG)
 LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
 
 key_value_arrays = collections.namedtuple('key_value_arrays', ('key_array', 'value_array'))
+
+
+def field_str(obj, *fields, digits = 3):
+    """
+    Generate a repr-like string from the object's attributes.
+
+    Each field should be a string containing the name of an attribute or a ('attribute_name', 'unit_name') pair. uround will be used to format in the second case.
+
+    :param obj: the object to get attributes from
+    :param fields: the attributes or (attribute, unit) pairs to get from obj
+    :param digits: the number of digits to round to for uround
+    :return: the formatted string
+    """
+    field_strings = []
+    for field in fields:
+        try:
+            field_name, unit = field
+            try:
+                field_strings.append('{} = {} {}'.format(field_name, uround(getattr(obj, field_name), unit, digits = digits), unit))
+            except TypeError:
+                field_strings.append('{} = {}'.format(field_name, getattr(obj, field_name)))
+        except (ValueError, TypeError):
+            field_strings.append('{} = {}'.format(field, getattr(obj, field)))
+    return '{}({})'.format(obj.__class__.__name__, ', '.join(field_strings))
 
 
 def dict_to_arrays(dct):
@@ -42,7 +67,7 @@ def dict_to_arrays(dct):
 
 def get_now_str():
     """Return a formatted string with the current year-month-day_hour-minute-second."""
-    return dt.datetime.now().strftime('%y-%m-%d_%H-%M-%S')
+    return datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S')
 
 
 class LogManager:
@@ -215,7 +240,7 @@ def run_in_process(func, args = (), kwargs = None, name = None):
     if kwargs is None:
         kwargs = {}
 
-    with mp.Pool(processes = 1) as pool:
+    with multiprocessing.Pool(processes = 1) as pool:
         output = pool.apply(func, args, kwargs)
 
     return output
@@ -255,9 +280,9 @@ def multi_map(function, targets, processes = None, **kwargs):
     :return: the list of outputs from the function being applied to the targets
     """
     if processes is None:
-        processes = mp.cpu_count()
+        processes = multiprocessing.cpu_count()
 
-    with mp.Pool(processes = processes) as pool:
+    with multiprocessing.Pool(processes = processes) as pool:
         output = pool.map(function, targets, **kwargs)
 
     return tuple(output)
@@ -285,13 +310,13 @@ class cached_property:
 
 def method_dispatch(func):
     """Works the same as :func:`functools.singledispatch`, but uses the second argument instead of the first so that it can be used for instance methods."""
-    dispatcher = ft.singledispatch(func)
+    dispatcher = functools.singledispatch(func)
 
     def wrapper(*args, **kw):
         return dispatcher.dispatch(args[1].__class__)(*args, **kw)
 
     wrapper.register = dispatcher.register
-    ft.update_wrapper(wrapper, func)
+    functools.update_wrapper(wrapper, func)
 
     return wrapper
 
@@ -305,7 +330,7 @@ def memoize(func):
     """Memoize a function by storing a dictionary of {inputs: outputs}."""
     memo = {}
 
-    @ft.wraps(func)
+    @functools.wraps(func)
     def memoizer(*args, **kwargs):
         key = hash_args_kwargs(*args, **kwargs)
         if key not in memo:
@@ -352,7 +377,7 @@ def watcher(watch):
 
         def __get__(self, instance, cls):
             # support instance methods
-            return ft.partial(self.__call__, instance)
+            return functools.partial(self.__call__, instance)
 
     return Watcher
 
@@ -360,11 +385,11 @@ def watcher(watch):
 def timed(func):
     """A decorator that times the execution of the decorated function. A log message is emitted at level DEBUG, and the function output is replaced with a tuple (output, time_elapsed)."""
 
-    @ft.wraps(func)
+    @functools.wraps(func)
     def timed_wrapper(*args, **kwargs):
-        time_start = dt.datetime.now()
+        time_start = datetime.datetime.now()
         val = func(*args, **kwargs)
-        time_end = dt.datetime.now()
+        time_end = datetime.datetime.now()
 
         time_elapsed = time_end - time_start
 
@@ -393,13 +418,13 @@ class BlockTimer:
         self.proc_time_elapsed = None
 
     def __enter__(self):
-        self.wall_time_start = dt.datetime.now()
+        self.wall_time_start = datetime.datetime.now()
         self.proc_time_start = time.process_time()
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.wall_time_end = dt.datetime.now()
+        self.wall_time_end = datetime.datetime.now()
         self.proc_time_end = time.process_time()
 
         self.wall_time_elapsed = self.wall_time_end - self.wall_time_start
@@ -409,7 +434,7 @@ class BlockTimer:
         if self.wall_time_end is None:
             return 'Timer started at {}, still running'.format(self.wall_time_start)
         else:
-            return 'Timer started at {}, ended at {}, elapsed time {}. Process time: {}.'.format(self.wall_time_start, self.wall_time_end, self.wall_time_elapsed, dt.timedelta(seconds = self.proc_time_elapsed))
+            return 'Timer started at {}, ended at {}, elapsed time {}. Process time: {}.'.format(self.wall_time_start, self.wall_time_end, self.wall_time_elapsed, datetime.timedelta(seconds = self.proc_time_elapsed))
 
 
 class Descriptor:
@@ -521,7 +546,7 @@ def get_file_size_as_string(file_path):
 
 
 def try_loop(*functions_to_run,
-             wait_after_success = dt.timedelta(hours = 1), wait_after_failure = dt.timedelta(minutes = 1),
+             wait_after_success = datetime.timedelta(hours = 1), wait_after_failure = datetime.timedelta(minutes = 1),
              begin_text = 'Beginning loop', complete_text = 'Completed loop'):
     """
     Run the given functions in a constant loop.
@@ -570,7 +595,7 @@ def grouper(iterable, n, fill_value = None):
     :return:
     """
     args = [iter(iterable)] * n
-    return it.zip_longest(*args, fillvalue = fill_value)
+    return itertools.zip_longest(*args, fillvalue = fill_value)
 
 
 class SubprocessManager:
@@ -651,30 +676,3 @@ class SuspendProcesses:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         resume_processes(self.processes)
-
-
-from .units import uround  # avoid circular import so we can use uround in field_str
-
-
-def field_str(obj, *fields, digits = 3):
-    """
-    Generate a repr-like string from the object's attributes.
-
-    Each field should be a string containing the name of an attribute or a ('attribute_name', 'unit_name') pair. uround will be used to format in the second case.
-
-    :param obj: the object to get attributes from
-    :param fields: the attributes or (attribute, unit) pairs to get from obj
-    :param digits: the number of digits to round to for uround
-    :return: the formatted string
-    """
-    field_strings = []
-    for field in fields:
-        try:
-            field_name, unit = field
-            try:
-                field_strings.append('{} = {} {}'.format(field_name, uround(getattr(obj, field_name), unit, digits = digits), unit))
-            except TypeError:
-                field_strings.append('{} = {}'.format(field_name, getattr(obj, field_name)))
-        except (ValueError, TypeError):
-            field_strings.append('{} = {}'.format(field, getattr(obj, field)))
-    return '{}({})'.format(obj.__class__.__name__, ', '.join(field_strings))

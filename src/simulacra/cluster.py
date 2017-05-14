@@ -1,7 +1,7 @@
 import collections
-import datetime as dt
+import datetime
 import hashlib
-import itertools as it
+import itertools
 import logging
 import os
 import pickle
@@ -12,10 +12,13 @@ import sys
 import zlib
 from copy import copy, deepcopy
 
+import numpy as np  # needs to be here so that ask_for_eval works
+
 import paramiko
 from tqdm import tqdm
 
 from . import core, plots, utils
+from .units import *  # also for ask_for_eval
 
 
 logger = logging.getLogger(__name__)
@@ -252,7 +255,7 @@ class ClusterInterface:
         :param blacklist_dir_names: do not mirror directories with these names
         :param whitelist_file_ext: only mirror files with these extensions
         """
-        start_time = dt.datetime.now()
+        start_time = datetime.datetime.utcnow()
         logger.info('Mirroring remote home directory')
 
         self.walk_remote_path(self.remote_home_dir,
@@ -261,7 +264,7 @@ class ClusterInterface:
                               blacklist_dir_names = blacklist_dir_names,
                               whitelist_file_ext = whitelist_file_ext)
 
-        end_time = dt.datetime.now()
+        end_time = datetime.datetime.utcnow()
         logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))
 
 
@@ -340,7 +343,7 @@ class JobProcessor(core.Beet):
 
     @property
     def running_time(self):
-        return dt.timedelta(seconds = sum(r.running_time for r in self.data.values() if r is not None))
+        return datetime.timedelta(seconds = sum(r.running_time for r in self.data.values() if r is not None))
 
     @property
     def elapsed_time(self):
@@ -349,7 +352,7 @@ class JobProcessor(core.Beet):
 
         # return latest - earliest
 
-        return dt.timedelta()
+        return datetime.timedelta()
 
     def get_sim_names_from_specs(self):
         """Get a list of Simulation file names based on their Specifications."""
@@ -507,14 +510,14 @@ class JobProcessor(core.Beet):
         sim_numbers = [result.file_name for result in self.data.values() if result is not None]
         running_time = [result.running_time for result in self.data.values() if result is not None]
 
-        si.plots.xy_plot(f'{self.name}__diagnostics',
-                         sim_numbers,
-                         running_time,
-                         line_kwargs = [dict(linestyle = '', marker = '.')],
-                         y_unit = 'hours',
-                         x_label = 'Simulation Number', y_label = 'Time',
-                         title = f'{self.name} Diagnostics',
-                         target_dir = self.summaries_dir)
+        plots.xy_plot(f'{self.name}__diagnostics',
+                      sim_numbers,
+                      running_time,
+                      line_kwargs = [dict(linestyle = '', marker = '.')],
+                      y_unit = 'hours',
+                      x_label = 'Simulation Number', y_label = 'Time',
+                      title = f'{self.name} Diagnostics',
+                      target_dir = self.summaries_dir)
 
         logger.debug(f'Generated diagnostics plot for job {self.name}')
 
@@ -533,7 +536,7 @@ def combine_job_processors(*job_processors):
                           job_dir_path = None,
                           simulation_type = j_type)
 
-    combined_jp.data = collections.collections.OrderedDict((ii, copy(sim_result)) for ii, (sim_name, sim_result) in enumerate(it.chain(jp.data for jp in job_processors)))
+    combined_jp.data = collections.collections.OrderedDict((ii, copy(sim_result)) for ii, (sim_name, sim_result) in enumerate(itertools.chain(jp.data for jp in job_processors)))
 
     # TODO: update parameter sets
 
@@ -577,7 +580,7 @@ def expand_parameters_to_dicts(parameters):
     for par in parameters:
         if par.expandable and hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):  # make sure the value is an iterable that isn't a string and has a length
             dicts = [deepcopy(d) for d in dicts for _ in range(len(par.value))]
-            for d, v in zip(dicts, it.cycle(par.value)):
+            for d, v in zip(dicts, itertools.cycle(par.value)):
                 d[par.name] = v
         else:
             for d in dicts:
@@ -588,7 +591,7 @@ def expand_parameters_to_dicts(parameters):
 
 def ask_for_input(question, default = None, cast_to = str):
     """
-    Ask for input from the user, with a default value, and call cast_to on it before returning it.
+    Ask for input from the user, with a default value, and call cast_to on it before returning itertools.
     
     :param question: a string to present to the user
     :type question: str
@@ -662,9 +665,12 @@ def ask_for_eval(question, default = 'None'):
 
     logger.debug('Got input from stdin for question "{}": {}'.format(question, input_str))
 
+    # print(input_str)
+
     try:
         return eval(input_str)
     except NameError as e:
+        # print(e)
         did_you_mean = ask_for_bool("Did you mean '{}'?".format(input_str), default = 'yes')
         if did_you_mean:
             return eval("'{}'".format(input_str))
