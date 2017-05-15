@@ -588,15 +588,5 @@ class Sum(Summand):
         """Return a new Sum, constructed from all of the contents of self and other."""
         return self.__class__(*self, *other)  # TODO: no protection against adding together non-similar types
 
-    def __getattr__(self, item):
-        """Dispatch unknown attributes to the items in the container."""
-        try:
-            return super().__getattribute__(item)
-        except AttributeError:
-            def sum_from_container(*args, **kwargs):
-                return sum(getattr(x, item)(*args, **kwargs) for x in self._container)
-
-            return sum_from_container
-
     def __call__(self, *args, **kwargs):
         return sum(x(*args, **kwargs) for x in self._container)
