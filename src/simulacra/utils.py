@@ -74,7 +74,7 @@ class LogManager:
     """A context manager to easily set up logging."""
 
     def __init__(self, *logger_names,
-                 manual_logger_name = 'compy',
+                 manual_logger_name = 'simulacra',
                  stdout_logs = True, stdout_level = logging.DEBUG,
                  file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'a',
                  disable_level = logging.NOTSET):

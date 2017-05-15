@@ -11,7 +11,7 @@ FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
-    with si.utils.LogManager('compy', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
+    with si.utils.LogManager('simulacra', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
         x = np.linspace(0, 10, 500)
         t = np.linspace(0, 10, 1000)
 
