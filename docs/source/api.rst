@@ -75,3 +75,21 @@ Utilities
 
 .. autofunction:: find_nearest_entry
 
+Cluster
+-------
+
+Interfacing with a Cluster
+++++++++++++++++++++++++++
+
+.. currentmodule:: simulacra.cluster
+
+.. autoclass:: ClusterInterface
+
+.. autoclass:: JobProcessor
+
+Creating Jobs
++++++++++++++
+
+.. autoclass:: Parameter
+
+.. autofunction:: expand_parameters_to_dicts

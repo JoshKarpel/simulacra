@@ -1,10 +1,11 @@
-Welcome to Simulacra's documentation!
-=====================================
+Welcome to Simulacra
+====================
 
 Overview
 --------
 
-Simulacra is a Python library.
+Simulacra is a Python library for defining, running, and visualizing simulations.
+It is focused on producing portable simulations that can be easily run on remote systems.
 
 
 :doc:`tutorial`

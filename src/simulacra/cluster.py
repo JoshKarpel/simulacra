@@ -33,11 +33,14 @@ class ClusterInterface:
 
     The remote home directory should be organized like:
 
-    home/
-    |-- backend/
-    |-- jobs/
-        |-- job1/
-        |-- job2/
+    .. code::
+    
+       home/
+       |-- backend/
+       |-- jobs/
+           |-- job1/
+           |-- job2/
+
     """
 
     def __init__(self, remote_host, username, key_path,
