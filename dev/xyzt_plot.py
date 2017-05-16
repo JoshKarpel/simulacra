@@ -25,13 +25,14 @@ if __name__ == '__main__':
 
 
         for cmap_name in ('viridis', 'magma', 'inferno', 'plasma', 'seismic', 'PiYG', 'PRGn', 'Spectral'):
-            si.plots.xyzt_plot(f'xyzt_{cmap_name}',
-                               x_mesh, y_mesh, t, z,
-                               x_label = r'$x$', x_unit = 'cm',
-                               y_label = r'$y$', y_unit = 'cm',
-                               z_unit = 'rad', z_lower_limit = -1, z_upper_limit = 1,
-                               t_unit = 's',
-                               title = 'wiggle wobble bobble',
-                               colormap = plt.get_cmap(cmap_name),
-                               target_dir = OUT_DIR,
-                               )
+            for shading in ('flat', 'gouraud'):
+                si.plots.xyzt_plot(f'xyzt_{cmap_name}_{shading}',
+                                   x_mesh, y_mesh, t, z,
+                                   x_label = r'$x$', x_unit = 'cm',
+                                   y_label = r'$y$', y_unit = 'cm',
+                                   z_unit = 'rad', z_lower_limit = -1, z_upper_limit = 1,
+                                   t_unit = 's',
+                                   title = 'wiggle wobble bobble',
+                                   colormap = plt.get_cmap(cmap_name), shading = shading,
+                                   target_dir = OUT_DIR,
+                                   )

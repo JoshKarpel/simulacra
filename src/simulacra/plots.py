@@ -34,37 +34,37 @@ CMAP_TO_OPPOSITE = {
 }
 
 GRID_KWARGS = dict(
-        linestyle = '-',
-        color = 'black',
-        linewidth = .25,
-        alpha = 0.4
+    linestyle = '-',
+    color = 'black',
+    linewidth = .25,
+    alpha = 0.4
 )
 
 MINOR_GRID_KWARGS = GRID_KWARGS.copy()
 MINOR_GRID_KWARGS['alpha'] -= .1
 
 COLORMESH_GRID_KWARGS = dict(
-        linestyle = '-',
-        linewidth = .25,
-        alpha = 0.4,
+    linestyle = '-',
+    linewidth = .25,
+    alpha = 0.4,
 )
 
 HVLINE_KWARGS = dict(
-        linestyle = '-',
-        color = 'black',
+    linestyle = '-',
+    color = 'black',
 )
 
 T_TEXT_KWARGS = dict(
-        fontsize = 12,
+    fontsize = 12,
 )
 
 TITLE_OFFSET = 1.1
 
 FFMPEG_PROCESS_KWARGS = dict(
-        stdin = subprocess.PIPE,
-        stdout = subprocess.DEVNULL,
-        stderr = subprocess.DEVNULL,
-        bufsize = -1,
+    stdin = subprocess.PIPE,
+    stdout = subprocess.DEVNULL,
+    stderr = subprocess.DEVNULL,
+    bufsize = -1,
 )
 
 
@@ -119,17 +119,6 @@ def get_figure(fig_scale = 0.95, fig_dpi_scale = 1, aspect_ratio = (np.sqrt(5.0)
     -------
     figure
         A matplotlib figure.
-    """
-    """
-    
-
-    :param fig_scale: the scale of the figure
-    :type fig_scale: float
-    :param fig_width_pts: get this from LaTeX using \the\textwidth
-    :type fig_width_pts: float
-    :param aspect_ratio: height = width * ratio, defaults to golden ratio
-    :type aspect_ratio: float
-    :return: a matplotlib figure with the desired dimensions
     """
     if fig_scale == 'full':
         fig_scale = 0.95
@@ -289,10 +278,15 @@ def get_pi_ticks_and_labels(lower_limit = 0, upper_limit = twopi, denom = 4):
             labels.append(r'$0$')
         elif tick.numerator == tick.denominator == 1:
             labels.append(r'$\pi$')
+        elif tick.numerator == -1 and tick.denominator == 1:
+            labels.append(r'$-\pi$')
         elif tick.denominator == 1:
             labels.append(fr'$ {tick.numerator} \pi $')
         else:
-            labels.append(fr'$ \frac{{ {tick.numerator} }}{{ {tick.denominator} }} \pi $')
+            if tick.numerator > 0:
+                labels.append(fr'$ \frac{{ {tick.numerator} }}{{ {tick.denominator} }} \pi $')
+            else:
+                labels.append(fr'$ -\frac{{ {abs(tick.numerator)} }}{{ {tick.denominator} }} \pi $')
 
     return list(float(tick) * pi for tick in ticks), list(labels)
 
@@ -603,7 +597,8 @@ def xyz_plot(name,
              ticks_on_top = True, ticks_on_right = True,
              grid_kwargs = None, minor_grid_kwargs = None,
              save_csv = False,
-             colormap = plt.get_cmap('viridis'),
+             colormap = plt.get_cmap('viridis'), shading = 'gouraud', show_colorbar = True,
+             richardson_equator_magnitude = 1,
              **kwargs):
     # set up figure and axis
     if figure_manager is None:
@@ -645,19 +640,29 @@ def xyz_plot(name,
                                                        pad = 0, log_pad = 1,
                                                        unit = y_unit, direction = 'y')
 
-        z_lower_limit, z_upper_limit = get_axis_limits(z_mesh,
-                                                       lower_limit = z_lower_limit, upper_limit = z_upper_limit,
-                                                       log = z_log_axis,
-                                                       pad = 0, log_pad = 10)
-        if z_log_axis:
-            norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
+        if not isinstance(colormap, RichardsonColormap):
+            z_lower_limit, z_upper_limit = get_axis_limits(z_mesh,
+                                                           lower_limit = z_lower_limit, upper_limit = z_upper_limit,
+                                                           log = z_log_axis,
+                                                           pad = 0, log_pad = 10)
+            if z_log_axis:
+                norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
+            else:
+                norm = matplotlib.colors.Normalize(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
         else:
-            norm = matplotlib.colors.Normalize(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
+            norm = RichardsonNormalization(equator_magnitude = richardson_equator_magnitude)
+
+        # if shading == 'flat':
+        #     dx = max(np.abs(x_mesh[0, 1] - x_mesh[0, 0]), np.abs(x_mesh[1, 0] - x_mesh[0, 0]))
+        #     dy = max(np.abs(y_mesh[0, 1] - y_mesh[0, 0]), np.abs(y_mesh[1, 0] - y_mesh[0, 0]))
+        #
+        #     x_mesh = x_mesh.copy() - dx / 2
+        #     y_mesh = y_mesh.copy() - dy / 2
 
         colormesh = ax.pcolormesh(x_mesh / x_unit_value,
                                   y_mesh / y_unit_value,
                                   z_mesh / z_unit_value,
-                                  shading = 'gouraud',
+                                  shading = shading,
                                   norm = norm)
 
         ax.grid(True, which = 'major', **grid_kwargs)
@@ -677,7 +682,8 @@ def xyz_plot(name,
         if y_label is not None:
             y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
 
-        plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
+        if show_colorbar:
+            plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
@@ -979,7 +985,8 @@ def xyzt_plot(name,
               grid_kwargs = None, minor_grid_kwargs = None,
               length = 30,
               fig_dpi_scale = 3,
-              colormap = plt.get_cmap('viridis'),
+              colormap = plt.get_cmap('viridis'), shading = 'gouarud', richardson_equator_magnitude = 1,
+              show_colorbar = True,
               save_csv = False,
               progress_bar = True,
               **kwargs):
@@ -1032,15 +1039,17 @@ def xyzt_plot(name,
                                                        pad = 0, log_pad = 1,
                                                        unit = y_unit, direction = 'y')
 
-        z_lower_limit, z_upper_limit = get_axis_limits(*(z_func(x_mesh, y_mesh, t, **z_func_kwargs) for t in t_data),
-                                                       lower_limit = z_lower_limit, upper_limit = z_upper_limit,
-                                                       log = z_log_axis,
-                                                       pad = 0, log_pad = 10,
-                                                       unit = z_unit)
-        if z_log_axis:
-            norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
+        if not isinstance(colormap, RichardsonColormap):
+            z_lower_limit, z_upper_limit = get_axis_limits(*(z_func(x_mesh, y_mesh, t, **z_func_kwargs) for t in t_data),
+                                                           lower_limit = z_lower_limit, upper_limit = z_upper_limit,
+                                                           log = z_log_axis,
+                                                           pad = 0, log_pad = 10)
+            if z_log_axis:
+                norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
+            else:
+                norm = matplotlib.colors.Normalize(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
         else:
-            norm = matplotlib.colors.Normalize(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
+            norm = RichardsonNormalization(equator_magnitude = richardson_equator_magnitude)
 
         ax.grid(True, which = 'major', **grid_kwargs)
         if x_log_axis:
@@ -1089,13 +1098,21 @@ def xyzt_plot(name,
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
         ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
 
+        # if shading == 'flat':
+        #     dx = max(np.abs(x_mesh[0, 1] - x_mesh[0, 0]), np.abs(x_mesh[1, 0] - x_mesh[0, 0]))
+        #     dy = max(np.abs(y_mesh[0, 1] - y_mesh[0, 0]), np.abs(y_mesh[1, 0] - y_mesh[0, 0]))
+        #
+        #     x_mesh = x_mesh.copy() - dx / 2
+        #     y_mesh = y_mesh.copy() - dy / 2
+
         colormesh = ax.pcolormesh(x_mesh / x_unit_value,
                                   y_mesh / y_unit_value,
                                   z_func(x_mesh, y_mesh, t_data[0], **z_func_kwargs) / z_unit_value,
-                                  shading = 'gouraud',
+                                  shading = shading,
                                   norm = norm)
 
-        plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
+        if show_colorbar:
+            plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
 
         if t_text_kwargs is None:
             t_text_kwargs = {}
@@ -1136,7 +1153,12 @@ def xyzt_plot(name,
             for t in t_iter:
                 fig.canvas.restore_region(background)
 
-                colormesh.set_array(z_func(x_mesh, y_mesh, t, **z_func_kwargs).ravel())
+                z = z_func(x_mesh, y_mesh, t, **z_func_kwargs)
+
+                if shading == 'flat':
+                    z = z[:-1, :-1]
+
+                colormesh.set_array(z.ravel())
                 fig.draw_artist(colormesh)
 
                 # update and redraw t strings
@@ -1158,3 +1180,46 @@ def xyzt_plot(name,
         # logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
     return path
+
+
+class RichardsonColormap(matplotlib.colors.Colormap):
+    def __init__(self):
+        self.name = 'richardson'
+        self.N = 256
+
+    def __call__(self, x, alpha = 1, bytes = True):
+        real, imag = np.real(x), np.imag(x)
+
+        mag = np.sqrt((real ** 2) + (imag ** 2))
+        z = (real ** 2) + (imag ** 2) - 1
+        zplus = z + 2
+        eta = np.where(np.greater_equal(z, 0), 1, -1)
+
+        common = .5 + (eta * (.5 - (mag / zplus)))
+
+        real_term = real / (np.sqrt(6) * zplus)
+        imag_term = imag / (np.sqrt(2) * zplus)
+
+        rgba = np.ones(np.shape(x) + (4,))
+        rgba[:, 0] = common + (2 * real_term)  # red
+        rgba[:, 1] = common - real_term + imag_term  # green
+        rgba[:, 2] = common - real_term - imag_term  # blue
+
+        return rgba
+
+
+class RichardsonNormalization(matplotlib.colors.Normalize):
+    def __init__(self, equator_magnitude = 1):
+        self.equator_magnitude = equator_magnitude
+
+    def __call__(self, x, **kwargs):
+        return x / self.equator_magnitude
+
+    def autoscale(self, *args):
+        pass
+
+    def autoscale_None(self, *args):
+        pass
+
+
+matplotlib.cm.register_cmap(name = 'richardson', cmap = RichardsonColormap())
