@@ -74,7 +74,7 @@ class LogManager:
     """A context manager to easily set up logging."""
 
     def __init__(self, *logger_names,
-                 manual_logger_name = 'compy',
+                 manual_logger_name = 'simulacra',
                  stdout_logs = True, stdout_level = logging.DEBUG,
                  file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'a',
                  disable_level = logging.NOTSET):
@@ -268,19 +268,8 @@ def multi_map(function, targets, processes = None, **kwargs):
     :class:`tuple`
         The outputs of the function being applied to the targets.
     """
-    """
-    Map a function over a list of inputs using multiprocessing.
-    
-    Function should take a single positional argument (an element of targets) and any number of keyword arguments, which must be the same for each target.
-    
-    :param function: the function to call on each of the targets
-    :param targets: an list of arguments to call function on
-    :param processes: the number of simultaneous processes to use
-    :param kwargs: keyword arguments for the function
-    :return: the list of outputs from the function being applied to the targets
-    """
     if processes is None:
-        processes = multiprocessing.cpu_count()
+        processes = max(multiprocessing.cpu_count() - 1, 1)
 
     with multiprocessing.Pool(processes = processes) as pool:
         output = pool.map(function, targets, **kwargs)

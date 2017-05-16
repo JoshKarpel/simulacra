@@ -494,10 +494,10 @@ class JobProcessor(core.Beet):
                 f'Elapsed Time: {self.elapsed_time}',
                 f'Combined Runtime: {self.running_time}',
                 '',
-                # f'Earliest Sim Init: {min(r.init_time for r in self.data.values() if r is not None)}',
-                # f'Latest Sim Init: {max(r.init_time for r in self.data.values() if r is not None)}',
-                # f'Earliest Sim Start: {min(r.start_time for r in self.data.values() if r is not None)}',  # TODO: uncomment, eventually
-                # f'Latest Sim Start: {max(r.start_time for r in self.data.values() if r is not None)}',
+                f'Earliest Sim Init: {min(r.init_time for r in self.data.values() if r is not None)}',
+                f'Latest Sim Init: {max(r.init_time for r in self.data.values() if r is not None)}',
+                f'Earliest Sim Start: {min(r.start_time for r in self.data.values() if r is not None)}',
+                f'Latest Sim Start: {max(r.start_time for r in self.data.values() if r is not None)}',
                 f'Earliest Sim Finish: {min(r.end_time for r in self.data.values() if r is not None)}',
                 f'Latest Sim Finish: {max(r.end_time for r in self.data.values() if r is not None)}',
             )))

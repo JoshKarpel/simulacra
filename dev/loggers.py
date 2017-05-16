@@ -3,7 +3,6 @@ import os
 import sys
 
 import simulacra as si
-import simulacra.quantum.hydrogenic as hyd
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
@@ -11,7 +10,7 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 si.utils.ensure_dir_exists(OUT_DIR)
 
-logger = logging.getLogger('compy')
+logger = logging.getLogger('simulacra')
 logger.setLevel(logging.DEBUG)
 
 stdout_handler = logging.StreamHandler(sys.stdout)
@@ -40,12 +39,6 @@ if __name__ == '__main__':
     sim = si.core.Simulation(par)
     logger.critical(sim)
     logger.critical(repr(sim))
-
-    h = hyd.ElectricFieldSimulation(par)
-    h.save(target_dir = OUT_DIR)
-    h2 = hyd.ElectricFieldSimulation.load(os.path.join(OUT_DIR, 'test_file_name.sim'))
-
-    logger.critical(h2)
 
     try:
         raise ValueError
