@@ -205,7 +205,7 @@ class Specification(Beet):
 
     def clone(self, **kwargs):
         """Return a clone of the Specification, with modifications defined by the kwargs."""
-        new_spec = deepcopy(self)
+        new_spec = self.copy()
 
         for k, v in kwargs.items():
             setattr(new_spec, k, v)

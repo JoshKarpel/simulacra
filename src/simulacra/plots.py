@@ -745,7 +745,7 @@ def xyt_plot(name,
     :param name: filename for the plot
     :param x_data: a single array to ploy the y values against
     :param t_data: a single array whose values will be animated over
-    :param y_funcs: functions of the form f(x, t, **kwargs), where kwargs are from y_func_kwargs
+    :param y_funcs: functions of the form ``f(x, t, **kwargs)``, where kwargs are from `y_func_kwargs`
     :param y_func_kwargs: keyword arguments for the y_funcs
     :param line_labels: the labels for the lines
     :param line_kwargs: other keyword arguments for each line's .plot() call (None for default)
