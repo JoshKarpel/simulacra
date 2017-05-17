@@ -70,7 +70,7 @@ if __name__ == '__main__':
                                    x_mesh, y_mesh, t, z2,
                                    x_label = r'$x$', y_label = r'$y$',
                                    x_unit = 'rad', y_unit = 'rad',
-                                   title = r'$(x + iy) e^{i t} sin(x^2 + y^2 + t)$',
+                                   title = r'$(x + iy) e^{i t} \sin(x^2 + y^2 + t)$',
                                    shading = shading,
                                    colormap = plt.get_cmap('richardson'),
                                    richardson_equator_magnitude = equator_mag,

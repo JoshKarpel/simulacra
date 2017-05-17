@@ -21,6 +21,8 @@ RED = '#d62728'
 BLUE = '#1f77b4'
 ORANGE = '#ff7f0e'
 GREEN = '#2ca02c'
+WHITE = '#ffffff'
+BLACK = '#000000'
 
 COLOR_OPPOSITE_PLASMA = GREEN
 COLOR_OPPOSITE_INFERNO = GREEN
@@ -1196,10 +1198,12 @@ class RichardsonColormap(matplotlib.colors.Colormap):
 
 matplotlib.cm.register_cmap(name = 'richardson', cmap = RichardsonColormap())  # register cmap so that plt.get_cmap('richardson') can find it
 
+CMAP_TO_OPPOSITE[plt.get_cmap('richardson')] = WHITE
+
 
 class RichardsonNormalization(matplotlib.colors.Normalize):
     def __init__(self, equator_magnitude = 1):
-        self.equator_magnitude = equator_magnitude
+        self.equator_magnitude = np.abs(equator_magnitude)
 
     def __call__(self, x, **kwargs):
         return ma.masked_invalid(x / self.equator_magnitude, copy = False)
