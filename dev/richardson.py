@@ -14,8 +14,8 @@ OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
     with si.utils.LogManager('simulacra', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
-        x = np.linspace(-5, 5, 100)
-        y = np.linspace(-5, 5, 100)
+        x = np.linspace(-5, 5, 200)
+        y = np.linspace(-5, 5, 200)
 
         x_mesh, y_mesh = np.meshgrid(x, y, indexing = 'ij')
 
@@ -34,6 +34,7 @@ if __name__ == '__main__':
                                   richardson_equator_magnitude = equator_mag,
                                   target_dir = OUT_DIR,
                                   show_colorbar = False,
+                                  aspect_ratio = 1,
                                   )
 
 
@@ -55,6 +56,7 @@ if __name__ == '__main__':
                                    richardson_equator_magnitude = equator_mag,
                                    target_dir = OUT_DIR,
                                    show_colorbar = False,
+                                   aspect_ratio = 1,
                                    )
 
 
@@ -74,4 +76,5 @@ if __name__ == '__main__':
                                    richardson_equator_magnitude = equator_mag,
                                    target_dir = OUT_DIR,
                                    show_colorbar = False,
+                                   aspect_ratio = 1,
                                    )

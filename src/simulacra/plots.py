@@ -652,13 +652,6 @@ def xyz_plot(name,
         else:
             norm = RichardsonNormalization(equator_magnitude = richardson_equator_magnitude)
 
-        # if shading == 'flat':
-        #     dx = max(np.abs(x_mesh[0, 1] - x_mesh[0, 0]), np.abs(x_mesh[1, 0] - x_mesh[0, 0]))
-        #     dy = max(np.abs(y_mesh[0, 1] - y_mesh[0, 0]), np.abs(y_mesh[1, 0] - y_mesh[0, 0]))
-        #
-        #     x_mesh = x_mesh.copy() - dx / 2
-        #     y_mesh = y_mesh.copy() - dy / 2
-
         colormesh = ax.pcolormesh(x_mesh / x_unit_value,
                                   y_mesh / y_unit_value,
                                   z_mesh / z_unit_value,
@@ -1098,13 +1091,6 @@ def xyzt_plot(name,
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
         ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
 
-        # if shading == 'flat':
-        #     dx = max(np.abs(x_mesh[0, 1] - x_mesh[0, 0]), np.abs(x_mesh[1, 0] - x_mesh[0, 0]))
-        #     dy = max(np.abs(y_mesh[0, 1] - y_mesh[0, 0]), np.abs(y_mesh[1, 0] - y_mesh[0, 0]))
-        #
-        #     x_mesh = x_mesh.copy() - dx / 2
-        #     y_mesh = y_mesh.copy() - dy / 2
-
         colormesh = ax.pcolormesh(x_mesh / x_unit_value,
                                   y_mesh / y_unit_value,
                                   z_func(x_mesh, y_mesh, t_data[0], **z_func_kwargs) / z_unit_value,
@@ -1187,23 +1173,23 @@ class RichardsonColormap(matplotlib.colors.Colormap):
         self.name = 'richardson'
         self.N = 256
 
-    def __call__(self, x, alpha = 1, bytes = True):
+    def __call__(self, x, alpha = 1, bytes = False):
         real, imag = np.real(x), np.imag(x)
 
         mag = np.sqrt((real ** 2) + (imag ** 2))
-        z = (real ** 2) + (imag ** 2) - 1
+        z = (mag ** 2) - 1
         zplus = z + 2
         eta = np.where(np.greater_equal(z, 0), 1, -1)
 
-        common = .5 + (eta * (.5 - (mag / zplus)))
-
+        common = .5 + (eta * (.5 - (mag / zplus)))  # common term to rgb
         real_term = real / (np.sqrt(6) * zplus)
         imag_term = imag / (np.sqrt(2) * zplus)
 
-        rgba = np.ones(np.shape(x) + (4,))
+        rgba = np.ones(np.shape(x) + (4,))  # create rgba array of shape shape as x, except in last dimension, where rgba values will be stored
         rgba[:, 0] = common + (2 * real_term)  # red
         rgba[:, 1] = common - real_term + imag_term  # green
         rgba[:, 2] = common - real_term - imag_term  # blue
+        rgba[:, 3] = alpha
 
         return rgba
 
@@ -1222,4 +1208,4 @@ class RichardsonNormalization(matplotlib.colors.Normalize):
         pass
 
 
-matplotlib.cm.register_cmap(name = 'richardson', cmap = RichardsonColormap())
+matplotlib.cm.register_cmap(name = 'richardson', cmap = RichardsonColormap())  # register cmap so that plt.get_cmap('richardson') can find it
