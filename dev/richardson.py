@@ -67,7 +67,7 @@ if __name__ == '__main__':
         for equator_mag in (.2, 1, 5):
             for shading in ('flat', 'gouraud'):
                 si.plots.xyzt_plot(f'richardson_xyzt2_eq={equator_mag}_{shading}',
-                                   x_mesh, y_mesh, t, z,
+                                   x_mesh, y_mesh, t, z2,
                                    x_label = r'$x$', y_label = r'$y$',
                                    x_unit = 'rad', y_unit = 'rad',
                                    title = r'$(x + iy) e^{i t} sin(x^2 + y^2 + t)$',

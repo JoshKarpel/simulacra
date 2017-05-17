@@ -5,6 +5,7 @@ import fractions
 import subprocess
 
 import numpy as np
+import numpy.ma as ma
 import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -34,37 +35,37 @@ CMAP_TO_OPPOSITE = {
 }
 
 GRID_KWARGS = dict(
-    linestyle = '-',
-    color = 'black',
-    linewidth = .25,
-    alpha = 0.4
+        linestyle = '-',
+        color = 'black',
+        linewidth = .25,
+        alpha = 0.4
 )
 
 MINOR_GRID_KWARGS = GRID_KWARGS.copy()
 MINOR_GRID_KWARGS['alpha'] -= .1
 
 COLORMESH_GRID_KWARGS = dict(
-    linestyle = '-',
-    linewidth = .25,
-    alpha = 0.4,
+        linestyle = '-',
+        linewidth = .25,
+        alpha = 0.4,
 )
 
 HVLINE_KWARGS = dict(
-    linestyle = '-',
-    color = 'black',
+        linestyle = '-',
+        color = 'black',
 )
 
 T_TEXT_KWARGS = dict(
-    fontsize = 12,
+        fontsize = 12,
 )
 
 TITLE_OFFSET = 1.1
 
 FFMPEG_PROCESS_KWARGS = dict(
-    stdin = subprocess.PIPE,
-    stdout = subprocess.DEVNULL,
-    stderr = subprocess.DEVNULL,
-    bufsize = -1,
+        stdin = subprocess.PIPE,
+        stdout = subprocess.DEVNULL,
+        stderr = subprocess.DEVNULL,
+        bufsize = -1,
 )
 
 
@@ -1189,9 +1190,11 @@ class RichardsonColormap(matplotlib.colors.Colormap):
         rgba[:, 0] = common + (2 * real_term)  # red
         rgba[:, 1] = common - real_term + imag_term  # green
         rgba[:, 2] = common - real_term - imag_term  # blue
-        rgba[:, 3] = alpha
 
         return rgba
+
+
+matplotlib.cm.register_cmap(name = 'richardson', cmap = RichardsonColormap())  # register cmap so that plt.get_cmap('richardson') can find it
 
 
 class RichardsonNormalization(matplotlib.colors.Normalize):
@@ -1199,7 +1202,7 @@ class RichardsonNormalization(matplotlib.colors.Normalize):
         self.equator_magnitude = equator_magnitude
 
     def __call__(self, x, **kwargs):
-        return x / self.equator_magnitude
+        return ma.masked_invalid(x / self.equator_magnitude, copy = False)
 
     def autoscale(self, *args):
         pass
@@ -1208,4 +1211,16 @@ class RichardsonNormalization(matplotlib.colors.Normalize):
         pass
 
 
-matplotlib.cm.register_cmap(name = 'richardson', cmap = RichardsonColormap())  # register cmap so that plt.get_cmap('richardson') can find it
+class AbsoluteRenormalize(matplotlib.colors.Normalize):
+    def __init__(self):
+        self.vmin = 0
+        self.vmax = 1
+
+    def __call__(self, x, **kwargs):
+        return ma.masked_invalid(np.abs(x) / np.nanmax(np.abs(x)), copy = False)
+
+    def autoscale(self, *args):
+        pass
+
+    def autoscale_None(self, *args):
+        pass
