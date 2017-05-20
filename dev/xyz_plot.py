@@ -25,6 +25,6 @@ if __name__ == '__main__':
             si.plots.xyz_plot(f'xyz_{cmap_name}',
                               x_mesh, y_mesh, z_mesh,
                               colormap = plt.get_cmap(cmap_name),
-                              aspect_ratio = 1,
+                              aspect_ratio = .8,
                               target_dir = OUT_DIR
                               )

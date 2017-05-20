@@ -536,12 +536,6 @@ def xy_plot(name,
                                                        pad = 0.05, log_pad = 10,
                                                        unit = y_unit, direction = 'y')
 
-        ax.grid(True, which = 'major', **grid_kwargs)
-        if x_log_axis:
-            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
-        if y_log_axis:
-            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
-
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
         # make title, axis labels, and legend
@@ -578,6 +572,12 @@ def xy_plot(name,
             y_tick_labels = list(ax.get_yticklabels())
             y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_yticklabels(y_tick_labels)
+
+        ax.grid(True, which = 'major', **grid_kwargs)
+        if x_log_axis:
+            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+        if y_log_axis:
+            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
 
         # set limits again to guarantee we don't see ticks oustide the limits
         ax.set_xlim(x_lower_limit, x_upper_limit)
@@ -670,12 +670,6 @@ def xyz_plot(name,
                                   shading = shading,
                                   norm = norm)
 
-        ax.grid(True, which = 'major', **grid_kwargs)
-        if x_log_axis:
-            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
-        if y_log_axis:
-            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
-
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
         # make title, axis labels, and legend
@@ -712,6 +706,12 @@ def xyz_plot(name,
             y_tick_labels = list(ax.get_yticklabels())
             y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_yticklabels(y_tick_labels)
+
+        ax.grid(True, which = 'major', **grid_kwargs)
+        if x_log_axis:
+            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+        if y_log_axis:
+            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
 
         # set limits again to guarantee we don't see ticks oustide the limits
         ax.set_xlim(x_lower_limit, x_upper_limit)
@@ -848,12 +848,6 @@ def xyt_plot(name,
                                                        pad = 0.05, log_pad = 10,
                                                        unit = y_unit, direction = 'y')
 
-        ax.grid(True, which = 'major', **grid_kwargs)
-        if x_log_axis:
-            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
-        if y_log_axis:
-            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
-
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
         # make title, axis labels, and legend
@@ -917,6 +911,12 @@ def xyt_plot(name,
 
         t_str = t_fmt_string.format(uround(t_data[0], t_unit, digits = 3), t_unit_label)
         t_text = plt.figtext(.7, .05, t_str, **t_text_kwargs, animated = True)
+
+        ax.grid(True, which = 'major', **grid_kwargs)
+        if x_log_axis:
+            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+        if y_log_axis:
+            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
 
         # do animation
 
@@ -1059,12 +1059,6 @@ def xyzt_plot(name,
         else:
             norm = RichardsonNormalization(equator_magnitude = richardson_equator_magnitude)
 
-        ax.grid(True, which = 'major', **grid_kwargs)
-        if x_log_axis:
-            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
-        if y_log_axis:
-            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
-
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
         # make title, axis labels, and legend
@@ -1105,6 +1099,12 @@ def xyzt_plot(name,
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
         ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
+
+        ax.grid(True, which = 'major', **grid_kwargs)
+        if x_log_axis:
+            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+        if y_log_axis:
+            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
 
         colormesh = ax.pcolormesh(x_mesh / x_unit_value,
                                   y_mesh / y_unit_value,
