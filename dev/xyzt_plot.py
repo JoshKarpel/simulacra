@@ -33,6 +33,7 @@ if __name__ == '__main__':
                                    z_unit = 'rad', z_lower_limit = -1, z_upper_limit = 1,
                                    t_unit = 's',
                                    title = 'wiggle wobble bobble',
+                                   aspect_ratio = .8,
                                    colormap = plt.get_cmap(cmap_name), shading = shading,
                                    target_dir = OUT_DIR,
                                    )

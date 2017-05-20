@@ -17,13 +17,22 @@ from .units import *
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-RED = '#d62728'
-BLUE = '#1f77b4'
-ORANGE = '#ff7f0e'
-GREEN = '#2ca02c'
+# named colors
 WHITE = '#ffffff'
 BLACK = '#000000'
 
+BLUE = '#1f77b4'  # matplotlib C0
+ORANGE = '#ff7f0e'  # matplotlib C1
+GREEN = '#2ca02c'  # matplotlib C2
+RED = '#d62728'  # matplotlib C3
+PURPLE = '#9467bd'  # matplotlib C4
+BROWN = '#8c564b'  # matplotlib C5
+PINK = '#e377c2'  # matplotlib C6
+GRAY = '#7f7f7f'  # matplotlib C7
+YELLOW = '#bcbd22'  # matplotlib C8
+TEAL = '#17becf'  # matplotlib C9
+
+# colors opposite common colormaps
 COLOR_OPPOSITE_PLASMA = GREEN
 COLOR_OPPOSITE_INFERNO = GREEN
 COLOR_OPPOSITE_MAGMA = GREEN
@@ -949,6 +958,9 @@ def xyt_plot(name,
                 t_text.set_text(t_fmt_string.format(uround(t, t_unit, digits = 3), t_unit_label))
                 fig.draw_artist(t_text)
 
+                for artist in itertools.chain(ax.xaxis.get_gridlines(), ax.yaxis.get_gridlines()):
+                    fig.draw_artist(artist)
+
                 fig.canvas.blit(fig.bbox)
 
                 ffmpeg.stdin.write(fig.canvas.tostring_argb())
@@ -1154,6 +1166,9 @@ def xyzt_plot(name,
                 t_text.set_text(t_fmt_string.format(uround(t, t_unit, digits = 3), t_unit_label))
                 fig.draw_artist(t_text)
 
+                for artist in itertools.chain(ax.xaxis.get_gridlines(), ax.yaxis.get_gridlines()):
+                    fig.draw_artist(artist)
+
                 fig.canvas.blit(fig.bbox)
 
                 ffmpeg.stdin.write(fig.canvas.tostring_argb())
@@ -1197,7 +1212,6 @@ class RichardsonColormap(matplotlib.colors.Colormap):
 
 
 matplotlib.cm.register_cmap(name = 'richardson', cmap = RichardsonColormap())  # register cmap so that plt.get_cmap('richardson') can find it
-
 CMAP_TO_OPPOSITE[plt.get_cmap('richardson')] = WHITE
 
 
