@@ -40,9 +40,13 @@ COLOR_OPPOSITE_VIRIDIS = RED
 
 CMAP_TO_OPPOSITE = {
     plt.get_cmap('viridis'): COLOR_OPPOSITE_VIRIDIS,
+    'viridis': COLOR_OPPOSITE_VIRIDIS,
     plt.get_cmap('plasma'): COLOR_OPPOSITE_PLASMA,
+    'plasma': COLOR_OPPOSITE_PLASMA,
     plt.get_cmap('inferno'): COLOR_OPPOSITE_INFERNO,
+    'inferno': COLOR_OPPOSITE_INFERNO,
     plt.get_cmap('magma'): COLOR_OPPOSITE_MAGMA,
+    'magma': COLOR_OPPOSITE_MAGMA,
 }
 
 GRID_KWARGS = dict(
@@ -1213,6 +1217,7 @@ class RichardsonColormap(matplotlib.colors.Colormap):
 
 matplotlib.cm.register_cmap(name = 'richardson', cmap = RichardsonColormap())  # register cmap so that plt.get_cmap('richardson') can find it
 CMAP_TO_OPPOSITE[plt.get_cmap('richardson')] = WHITE
+CMAP_TO_OPPOSITE['richardson'] = WHITE
 
 
 class RichardsonNormalization(matplotlib.colors.Normalize):

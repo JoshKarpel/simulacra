@@ -343,23 +343,8 @@ class AxisManager:
     A superclass that manages a matplotlib axis for an Animator.
     """
 
-    def __init__(self, axis, simulation):
-        """
-        
-        Parameters
-        ----------
-        axis
-            A matplotlib axis to manage.
-        simulation
-            A :class:`Simulation` for the AxisManager to collect data from.
-        """
-        self.axis = axis
-        self.sim = simulation
-        self.spec = simulation.spec
-
+    def __init__(self):
         self.redraw = []
-
-        self.initialized = False
 
     def __str__(self):
         return self.__class__.__name__
@@ -367,15 +352,26 @@ class AxisManager:
     def __repr__(self):
         return self.__class__.__name__
 
-    def initialize(self):
+    def initialize(self, simulation):
         """Hook method for initializing the AxisManager."""
-        self.initialized = True
+        self.sim = simulation
+        self.spec = simulation.spec
 
-        logger.debug('Initialized {}'.format(self))
+        self.initialize_axis()
 
-    def update(self):
+        logger.debug(f'Initialized {self}')
+
+    def assign_axis(self, axis):
+        self.axis = axis
+
+        logger.debug(f'Assigned {self} to {axis}')
+
+    def initialize_axis(self):
+        logger.debug(f'Initialized axis for {self}')
+
+    def update_axis(self):
         """Hook method for updating the AxisManager's internal state."""
-        logger.debug('Updated {}'.format(self))
+        logger.debug(f'Updated axis for {self}')
 
 
 class Animator:
@@ -462,16 +458,18 @@ class Animator:
 
         self._initialize_figure()  # call figure initialization hook
 
+        # AXES MUST BE ASSIGNED DURING FIGURE INITIALIZATION
+
         for ax in self.axis_managers:
-            ax.initialize()
+            ax.initialize(simulation)
 
         self.fig.canvas.draw()
         self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
-        canvas_widatetimeh, canvas_height = self.fig.canvas.get_widatetimeh_height()
+        canvas_width, canvas_height = self.fig.canvas.get_width_height()
         self.cmdstring = ("ffmpeg",
                           '-y',
                           '-r', '{}'.format(self.fps),  # choose fps
-                          '-s', '%dx%d' % (canvas_widatetimeh, canvas_height),  # size of image string
+                          '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
                           '-pix_fmt', 'argb',  # pixel format
                           '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
                           '-vcodec', 'mpeg4',  # output encoding
@@ -479,7 +477,7 @@ class Animator:
                           self.file_path)
 
         self.ffmpeg = subprocess.Popen(self.cmdstring,
-                                       stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE,
+                                       stdin = subprocess.PIPE, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL,
                                        bufsize = -1)
 
         logger.info('Initialized {}'.format(self))
@@ -504,7 +502,7 @@ class Animator:
     def _update_data(self):
         """Hook for a method to update the data for each animated figure element."""
         for ax in self.axis_managers:
-            ax.update()
+            ax.update_axis()
 
         logger.debug('{} updated data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 

@@ -186,7 +186,7 @@ class ClusterInterface:
                 md5_remote = output.stdout.readline().split(' ')[1].strip()
                 with open(local_path, mode = 'rb') as f:
                     md5_local = hashlib.md5()
-                    md5_local.update(f.read())
+                    md5_local.update_axis(f.read())
                     md5_local = md5_local.hexdigest().strip()
                 if md5_local != md5_remote:
                     logger.warning('MD5 hash on {} for file {} did not match local file at {}, retrying'.format(self.remote_host, remote_path, local_path))
@@ -704,7 +704,7 @@ def create_job_subdirs(job_dir):
 
 def save_specifications(specifications, job_dir):
     """Save a list of Specifications."""
-    print('Saving Parameters...')
+    print('Saving Specifications...')
 
     for spec in specifications:
         spec.save(target_dir = os.path.join(job_dir, 'inputs/'))
@@ -728,14 +728,14 @@ def write_specifications_info_to_file(specifications, job_dir):
 
 def write_parameters_info_to_file(parameters, job_dir):
     """Write information from the list of Parameters to a file."""
-    print('Writing Parameters info to file...')
+    print('Writing parameters to file...')
 
     with open(os.path.join(job_dir, 'parameters.txt'), 'w') as file:
         for param in parameters:
             file.write(repr(param))
             file.write('\n')  # blank line between specs
 
-    logger.debug('Saved Parameter information')
+    logger.debug('Saved parameter information')
 
 
 CHTC_SUBMIT_STRING = """
