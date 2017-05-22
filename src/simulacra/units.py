@@ -572,6 +572,3 @@ UNIT_NAME_TO_LATEX.update({'atomic_electric_field': r'\mathrm{a.u.}',
                            'atomic_electric_dipole': r'e \, a_0',
                            'atomic_velocity': r'\mathrm{a.u.}',
                            'atomic_momentum': r'\mathrm{a.u.}'})
-
-str_efield = r'\mathcal{E}'
-str_afield = r'\mathcal{A}'
