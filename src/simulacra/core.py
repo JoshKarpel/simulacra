@@ -488,8 +488,7 @@ class Animator:
 
         Should always be called via a try...finally clause (namely, in the finally) in Simulation.run_simulation.
         """
-        self.ffmpeg.kill()
-        self.ffmpeg.wait()
+        self.ffmpeg.communicate()
         logger.info('Cleaned up {}'.format(self))
 
     def _initialize_figure(self):
