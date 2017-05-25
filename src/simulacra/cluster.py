@@ -186,7 +186,7 @@ class ClusterInterface:
                 md5_remote = output.stdout.readline().split(' ')[1].strip()
                 with open(local_path, mode = 'rb') as f:
                     md5_local = hashlib.md5()
-                    md5_local.update_axis(f.read())
+                    md5_local.update(f.read())
                     md5_local = md5_local.hexdigest().strip()
                 if md5_local != md5_remote:
                     logger.warning('MD5 hash on {} for file {} did not match local file at {}, retrying'.format(self.remote_host, remote_path, local_path))

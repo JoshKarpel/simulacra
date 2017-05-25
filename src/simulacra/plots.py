@@ -50,37 +50,37 @@ CMAP_TO_OPPOSITE = {
 }
 
 GRID_KWARGS = dict(
-        linestyle = '-',
-        color = 'black',
-        linewidth = .25,
-        alpha = 0.4
+    linestyle = '-',
+    color = 'black',
+    linewidth = .25,
+    alpha = 0.4
 )
 
 MINOR_GRID_KWARGS = GRID_KWARGS.copy()
 MINOR_GRID_KWARGS['alpha'] -= .1
 
 COLORMESH_GRID_KWARGS = dict(
-        linestyle = '-',
-        linewidth = .25,
-        alpha = 0.4,
+    linestyle = '-',
+    linewidth = .25,
+    alpha = 0.4,
 )
 
 HVLINE_KWARGS = dict(
-        linestyle = '-',
-        color = 'black',
+    linestyle = '-',
+    color = 'black',
 )
 
 T_TEXT_KWARGS = dict(
-        fontsize = 12,
+    fontsize = 12,
 )
 
 TITLE_OFFSET = 1.1
 
 FFMPEG_PROCESS_KWARGS = dict(
-        stdin = subprocess.PIPE,
-        stdout = subprocess.DEVNULL,
-        stderr = subprocess.DEVNULL,
-        bufsize = -1,
+    stdin = subprocess.PIPE,
+    stdout = subprocess.DEVNULL,
+    stderr = subprocess.DEVNULL,
+    bufsize = -1,
 )
 
 
@@ -614,7 +614,7 @@ def xyz_plot(name,
              grid_kwargs = None, minor_grid_kwargs = None,
              save_csv = False,
              colormap = plt.get_cmap('viridis'), shading = 'gouraud', show_colorbar = True,
-             richardson_equator_magnitude = 1,
+             richardson_equator_magnitude = 1,  # TODO: remove! prefer composition!
              **kwargs):
     # set up figure and axis
     if figure_manager is None:
@@ -685,7 +685,7 @@ def xyz_plot(name,
         if y_label is not None:
             y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
 
-        if show_colorbar:
+        if show_colorbar and colormap.name != 'richardson':
             plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
@@ -1116,7 +1116,7 @@ def xyzt_plot(name,
                                   shading = shading,
                                   norm = norm)
 
-        if show_colorbar:
+        if show_colorbar and colormap.name != 'richardson':
             plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
 
         if t_text_kwargs is None:
