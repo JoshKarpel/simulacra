@@ -259,7 +259,7 @@ def multi_map(function, targets, processes = None, **kwargs):
     targets : an iterable
         An iterable of arguments to call the function on.
     processes : :class:`int`
-        The number of processes to use. Defaults to the number of cores on the computer.
+        The number of processes to use. Defaults to the half of the number of cores on the computer.
     kwargs
         Keyword arguments are passed to :func:`multiprocess.pool.map`.
 
@@ -269,7 +269,7 @@ def multi_map(function, targets, processes = None, **kwargs):
         The outputs of the function being applied to the targets.
     """
     if processes is None:
-        processes = max(multiprocessing.cpu_count() - 1, 1)
+        processes = max(int(multiprocessing.cpu_count() / 2) - 1, 1)
 
     with multiprocessing.Pool(processes = processes) as pool:
         output = pool.map(function, targets, **kwargs)
