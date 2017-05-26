@@ -1,4 +1,4 @@
-__all__ = ['core', 'math', 'utils', 'units', 'plots']
+__all__ = ['core', 'math', 'utils', 'units', 'vis']
 
 import logging
 import os
@@ -29,4 +29,4 @@ import numpy as _np
 _np.set_printoptions(linewidth = 200)  # screw character limits
 
 from simulacra.core import *
-from simulacra import math, utils, plots
+from simulacra import math, utils, vis

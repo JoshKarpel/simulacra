@@ -1190,6 +1190,199 @@ def xyzt_plot(name,
     return path
 
 
+class AxisManager:
+    """
+    A superclass that manages a matplotlib axis for an Animator.
+    """
+
+    def __init__(self):
+        self.redraw = []
+
+    def __str__(self):
+        return self.__class__.__name__
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+    def initialize(self, simulation):
+        """Hook method for initializing the AxisManager."""
+        self.sim = simulation
+        self.spec = simulation.spec
+
+        self.initialize_axis()
+
+        logger.debug(f'Initialized {self}')
+
+    def assign_axis(self, axis):
+        self.axis = axis
+
+        logger.debug(f'Assigned {self} to {axis}')
+
+    def initialize_axis(self):
+        logger.debug(f'Initialized axis for {self}')
+
+    def update_axis(self):
+        """Hook method for updating the AxisManager's internal state."""
+        logger.debug(f'Updated axis for {self}')
+
+
+class Animator:
+    """
+    A superclass that handles sending frames to ffmpeg to create animations.
+
+    To actually make an animation there are three hook methods that need to be overwritten: _initialize_figure, _update_data, and _redraw_frame.
+
+    An Animator will generally contain a single matplotlib figure with some animation code of its own in addition to a list of :class:`AxisManagers ~<AxisManager>` that handle axes on the figure.
+
+    For this class to function correctly :code:`ffmpeg` must be visible on the system path.
+    """
+
+    def __init__(self, postfix = '', target_dir = None,
+                 length = 60, fps = 30,
+                 colormap = plt.cm.get_cmap('inferno')):
+        """
+
+        Parameters
+        ----------
+        postfix : :class:`str`
+            Postfix for the file name of the resulting animation.
+        target_dir : :class:`str`
+            Directory to place the animation (and work in).
+        length : :class:`float`
+            The length of the animation.
+        fps : :class:`float`
+            The FPS of the animation.
+        colormap
+            The colormap to use for the animation.
+        """
+        if target_dir is None:
+            target_dir = os.getcwd()
+        self.target_dir = target_dir
+
+        postfix = utils.strip_illegal_characters(postfix)
+        if postfix != '' and not postfix.startswith('_'):
+            postfix = '_' + postfix
+        self.postfix = postfix
+
+        self.length = int(length)
+        self.fps = fps
+        self.colormap = colormap
+
+        self.axis_managers = []
+        self.redraw = []
+
+        self.sim = None
+        self.spec = None
+        self.fig = None
+
+    def __str__(self):
+        return '{}(postfix = "{}")'.format(self.__class__.__name__, self.postfix)
+
+    def __repr__(self):
+        return '{}(postfix = {})'.format(self.__class__.__name__, self.postfix)
+
+    def initialize(self, simulation):
+        """
+        Initialize the Animation by setting the Simulation and Specification, determining the target path for output, determining fps and decimation, and setting up the ffmpeg subprocess.
+
+        _initialize_figure() is called during the execution of this method. It should assign a matplotlib figure object to self.fig.
+
+        The simulation should have an attribute available_animation_frames that returns an int describing how many raw frames might be available for use by the animation.
+
+        :param simulation: a Simulation for the AxisManager to collect data from
+        """
+        self.sim = simulation
+        self.spec = simulation.spec
+
+        self.file_name = '{}{}.mp4'.format(self.sim.file_name, self.postfix)
+        self.file_path = os.path.join(self.target_dir, self.file_name)
+        utils.ensure_dir_exists(self.file_path)
+        try:
+            os.remove(self.file_path)  # ffmpeg complains if you try to overwrite an existing file, so remove it first
+        except FileNotFoundError:
+            pass
+
+        ideal_frame_count = self.length * self.fps
+        self.decimation = int(self.sim.available_animation_frames / ideal_frame_count)  # determine ideal decimation from number of available frames in the simulation
+        if self.decimation < 1:
+            self.decimation = 1  # if there aren't enough frames available
+        self.fps = (self.sim.available_animation_frames / self.decimation) / self.length
+
+        self._initialize_figure()  # call figure initialization hook
+
+        # AXES MUST BE ASSIGNED DURING FIGURE INITIALIZATION
+
+        for ax in self.axis_managers:
+            ax.initialize(simulation)
+
+        self.fig.canvas.draw()
+        self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
+        canvas_width, canvas_height = self.fig.canvas.get_width_height()
+        self.cmdstring = ("ffmpeg",
+                          '-y',
+                          '-r', '{}'.format(self.fps),  # choose fps
+                          '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
+                          '-pix_fmt', 'argb',  # pixel format
+                          '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
+                          '-vcodec', 'mpeg4',  # output encoding
+                          '-q:v', '1',  # maximum quality
+                          self.file_path)
+
+        self.ffmpeg = subprocess.Popen(self.cmdstring,
+                                       stdin = subprocess.PIPE, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL,
+                                       bufsize = -1)
+
+        logger.info('Initialized {}'.format(self))
+
+    def cleanup(self):
+        """
+        Cleanup method for the Animator's ffmpeg subprocess.
+
+        Should always be called via a try...finally clause (namely, in the finally) in Simulation.run_simulation.
+        """
+        self.ffmpeg.communicate()
+        logger.info('Cleaned up {}'.format(self))
+
+    def _initialize_figure(self):
+        """
+        Hook for a method to initialize the Animator's figure.
+
+        Make sure that any plot element that will be mutated during the animation is created using the animation = True keyword argument and has a reference in self.redraw.
+        """
+        logger.debug('Initialized figure for {}'.format(self))
+
+    def _update_data(self):
+        """Hook for a method to update the data for each animated figure element."""
+        for ax in self.axis_managers:
+            ax.update_axis()
+
+        logger.debug('{} updated data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
+
+    def _redraw_frame(self):
+        """Redraw the figure frame."""
+        plt.set_cmap(self.colormap)  # make sure the colormap is correct, in case other figures have been created somewhere
+
+        self.fig.canvas.restore_region(self.background)  # copy the static background back onto the figure
+
+        self._update_data()  # get data from the Simulation and update any plot elements that need to be redrawn
+
+        # draw everything that needs to be redrawn (any plot elements that will be mutated during the animation should be added to self.redraw)
+        for rd in itertools.chain(self.redraw, *(ax.redraw for ax in self.axis_managers)):
+            self.fig.draw_artist(rd)
+
+        self.fig.canvas.blit(self.fig.bbox)  # blit the canvas, finalizing all of the draw_artists
+
+        logger.debug('Redrew frame for {}'.format(self))
+
+    def send_frame_to_ffmpeg(self):
+        """Redraw anything that needs to be redrawn, then write the figure to an RGB string and send it to ffmpeg."""
+        self._redraw_frame()
+
+        self.ffmpeg.stdin.write(self.fig.canvas.tostring_argb())
+
+        logger.debug('{} sent frame to ffpmeg from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
+
+
 class RichardsonColormap(matplotlib.colors.Colormap):
     def __init__(self):
         self.name = 'richardson'
