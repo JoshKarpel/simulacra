@@ -2,6 +2,7 @@ import datetime
 import gzip
 import pickle
 import uuid
+import collections
 from copy import deepcopy
 
 import logging
@@ -19,6 +20,43 @@ class SimulacraException(Exception):
     pass
 
 
+class Info:
+    def __init__(self,
+                 fields = (),
+                 header: str = 'Info',
+                 indentation: int = 2):
+        self.header = header
+        self.indentation = indentation
+
+        self.fields = collections.OrderedDict(fields)
+
+    def _field_strs(self):
+        s = []
+        for field, value in self.fields.items():
+            try:
+                s.extend(value._field_strs())
+            except AttributeError:
+                s.append(f'{field}: {value}')
+        s = [self.header] + [' ' * self.indentation + f for f in s]
+
+        return s
+
+    def __str__(self):
+        return '\n'.join(self._field_strs())
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.header})'
+
+    def add_field(self, name, value):
+        self.fields[name] = value
+
+    def add_info(self, info):
+        self.fields[info.header] = info
+
+    def __add__(self, other):
+        return self.__class__(fields = {**self.fields, **other.fields}, header = self.header)
+
+
 class Beet:
     """
     A class that provides an easy interface for pickling and unpickling instances.
@@ -31,7 +69,7 @@ class Beet:
         Construct a Beet with the given name and file_name.
 
         The file_name is automatically derived from the name if None is given.
-        
+
         Parameters
         ----------
         name : :class:`str`
@@ -54,7 +92,10 @@ class Beet:
         logger.info('Initialized {}'.format(repr(self)))
 
     def __str__(self):
-        return '{}: {} ({}) [{}]'.format(self.__class__.__name__, self.name, self.file_name, self.uid)
+        if self.name != self.file_name:
+            return f'{self.__class__.__name__}({self.name}), {self.file_name}) [{self.uid}]'
+        else:
+            return f'{self.__class__.__name__}({self.name}) [{self.uid}]'
 
     def __repr__(self):
         return utils.field_str(self, 'name', 'file_name', 'uid')
@@ -65,14 +106,33 @@ class Beet:
     def __hash__(self):
         return hash(self.uid)
 
-    def copy(self):
-        """Return a deepcopy of the Beet."""
-        return deepcopy(self)
+    def clone(self, **kwargs):
+        """
+        Return a deepcopy of the Beet.
+
+        If any kwargs are passed, they will be interpreted as key-value pairs and ``clone`` will try to :func:`setattr` them on the new Beet.
+
+        Parameters
+        ----------
+        kwargs
+            Key-value pairs to modify attributes on the new Beet.
+
+        Returns
+        -------
+        :class:`Beet`
+            The new (possibly modified) :class:`Beet`.
+        """
+        new_beet = deepcopy(self)
+
+        for k, v in kwargs.items():
+            setattr(new_beet, k, v)
+
+        return new_beet
 
     def save(self, target_dir = None, file_extension = '.beet', compressed = True):
         """
         Atomically pickle the Beet to a file.
-        
+
         Parameters
         ----------
         target_dir : :class:`str`
@@ -113,7 +173,7 @@ class Beet:
     def load(cls, file_path):
         """
         Load a Beet from `file_path`.
-        
+
         Parameters
         ----------
         file_path
@@ -136,7 +196,7 @@ class Beet:
         return beet
 
     def info(self):
-        return str(self)
+        return Info(header = str(self))
 
 
 class Specification(Beet):
@@ -151,9 +211,9 @@ class Specification(Beet):
     def __init__(self, name, file_name = None, **kwargs):
         """
         Construct a Specification.
-        
+
         Any number of additional keyword arguments can be passed. They will be stored as attributes if they don't conflict with any attributes already set.
-        
+
         Parameters
         ----------
         name : :class:`str`
@@ -171,7 +231,7 @@ class Specification(Beet):
     def save(self, target_dir = None, file_extension = '.spec', compressed = True):
         """
         Atomically pickle the Specification to a file.
-        
+
         Parameters
         ----------
         target_dir : :class:`str`
@@ -195,19 +255,6 @@ class Specification(Beet):
         except TypeError:
             return Simulation(self)
 
-    def info(self):
-        """Return a string describing the parameters of the Specification."""
-        return ''
-
-    def clone(self, **kwargs):
-        """Return a clone of the Specification, with modifications defined by the kwargs."""
-        new_spec = self.copy()
-
-        for k, v in kwargs.items():
-            setattr(new_spec, k, v)
-
-        return new_spec
-
 
 # Simulation status names
 STATUS_INI = 'initialized'
@@ -222,7 +269,7 @@ class Simulation(Beet):
     A class that represents a simulation.
 
     It should be subclassed and customized for each variety of simulation.
-    
+
     Attributes
     ----------
     status : :class:`str`
@@ -234,9 +281,9 @@ class Simulation(Beet):
     def __init__(self, spec):
         """
         Construct a Simulation from a Specification.
-        
+
         Simulations should generally be instantiated using Specification.to_simulation() to avoid possible mismatches.
-        
+
         Parameters
         ----------
         spec : :class:`Specification`
@@ -292,7 +339,7 @@ class Simulation(Beet):
     def save(self, target_dir = None, file_extension = '.sim', compressed = True):
         """
         Atomically pickle the Simulation to a file.
-        
+
         Parameters
         ----------
         target_dir : :class:`str`
@@ -312,27 +359,25 @@ class Simulation(Beet):
 
         return super().save(target_dir = target_dir, file_extension = file_extension, compressed = compressed)
 
-    def __str__(self):
-        return '{}: {} ({}) [{}]  |  {}'.format(self.__class__.__name__, self.name, self.file_name, self.uid, self.spec)
-
-    def __repr__(self):
-        return '{}(spec = {}, uid = {})'.format(self.__class__.__name__, repr(self.spec), self.uid)
-
     def run_simulation(self):
         """Hook method for running the Simulation, whatever that may entail."""
         raise NotImplementedError
 
     def info(self):
         """Return a string describing the parameters of the Simulation and its associated Specification."""
-        diag = ['Status: {}'.format(self.status),
-                '   Start Time: {}'.format(self.init_time),
-                '   Latest Load Time: {}'.format(self.latest_run_time),
-                '   End Time: {}'.format(self.end_time),
-                '   Elapsed Time: {}'.format(self.elapsed_time),
-                '   Run Time: {}'.format(self.running_time)]
+        info = super().info()
+        info.add_info(self.spec.info())
 
-        return '\n'.join((str(self), *diag, self.spec.info()))
+        info_diag = Info(header = f'Status: {self.status}')
+        info_diag.add_field('Start Time', self.init_time)
+        info_diag.add_field('Latest Run Time', self.latest_run_time)
+        info_diag.add_field('End Time', self.end_time)
+        info_diag.add_field('Elapsed Time', self.elapsed_time)
+        info_diag.add_field('Run Time', self.running_time)
 
+        info.add_info(info_diag)
+
+        return info
 
 
 class Summand:
