@@ -17,7 +17,7 @@ import numpy as np  # needs to be here so that ask_for_eval works
 import paramiko
 from tqdm import tqdm
 
-from . import core, plots, utils
+from . import core, vis, utils
 from .units import *  # also for ask_for_eval
 
 
@@ -34,7 +34,7 @@ class ClusterInterface:
     The remote home directory should be organized like:
 
     .. code::
-    
+
        home/
        |-- backend/
        |-- jobs/
@@ -120,7 +120,7 @@ class ClusterInterface:
     def get_file(self, remote_path, local_path, remote_stat = None, preserve_timestamps = True):
         """
         Download a file from the remote machine to the local machine.
-        
+
         :param remote_path: the remote path to download
         :type remote_path: str
         :param local_path: the local path to place the downloaded file
@@ -143,7 +143,7 @@ class ClusterInterface:
     def put_file(self, local_path, remote_path, preserve_timestamps = True):
         """
         Push a file from the local machine to the remote machine.
-        
+
         :param local_path: the local path to push from
         :type local_path: str
         :param remote_path: the remove path to push to
@@ -156,7 +156,7 @@ class ClusterInterface:
     def is_file_synced(self, remote_stat, local_path):
         """
         Determine if a local file is the same as a remote file by checking the file size and modification times.
-        
+
         :return: True if the file is synced, False otherwise
         :rtype: bool
         """
@@ -170,9 +170,9 @@ class ClusterInterface:
     def mirror_file(self, remote_path, remote_stat, force_download = False, integrity_check = True):
         """
         Mirror a remote file, only downloading it if it does not match a local copy at a derived local path name.
-        
+
         File integrity is checked by comparing the MD5 hash of the remote and local files.
-        
+
         :param remote_path: the remote path to mirror
         :param remote_stat: the stat of the remote file
         :param force_download: if True, download the file even if it is synced
@@ -197,7 +197,7 @@ class ClusterInterface:
         Walk a remote directory starting at the given path.
 
         The functions func_on_dirs and func_on_files are passed the full path to the remote file and the ftp.stat of that file.
-        
+
         :param remote_path: the remote path to start walking on
         :param func_on_dirs: the function to call on directories (takes the directory file path as an argument)
         :param func_on_files: the function to call on files (takes the file path as an argument)
@@ -254,7 +254,7 @@ class ClusterInterface:
                                whitelist_file_ext = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl')):
         """
         Mirror the remote home directory.
-        
+
         :param blacklist_dir_names: do not mirror directories with these names
         :param whitelist_file_ext: only mirror files with these extensions
         """
@@ -277,9 +277,9 @@ class SimulationResult:
     def __init__(self, sim, job_processor):
         """
         Initialize a SimulationResult from a Simulation and JobProcessor, picking up information from both.
-        
+
         Do not store direct references to the Simulation to ensure that the garbage collector can clean it up.
-        
+
         :param sim: a Simulation
         :param job_processor: a JobProcessor
         """
@@ -302,7 +302,7 @@ class JobProcessor(core.Beet):
     def __init__(self, job_name, job_dir_path, simulation_type):
         """
         Initialize a JobProcessor from a job name and path to its directory.
-        
+
         :param job_name: the name of the job
         :param job_dir_path: the path to the job directory
         :param simulation_type: the type of Simulation used in the job (should be set by subclasses)
@@ -407,7 +407,7 @@ class JobProcessor(core.Beet):
     def load_sims(self, force_reprocess = False):
         """
         Process the job by loading newly-downloaded Simulations and generating SimulationResults from them.
-        
+
         :param force_reprocess: if True, process all Simulations in the output directory regardless of prior processing status
         """
         with utils.BlockTimer() as t:
@@ -455,7 +455,7 @@ class JobProcessor(core.Beet):
     def select_by_kwargs(self, **kwargs):
         """
         Return all of the SimulationResults that match the (key, value) pairs given by the keyword arguments to this function.
-        
+
         :param kwargs: (key, value) to match SimulationResults by
         :return: a list of SimulationResults
         """
@@ -470,7 +470,7 @@ class JobProcessor(core.Beet):
     def select_by_lambda(self, test_function):
         """
         Return all of the SimulationResults for which test_function(sim_result) is True.
-        
+
         :param test_function: a function which takes one argument, a SimulationResult, and returns a bool (True to accept, False to reject)
         :return: a list of SimulationResults
         """
@@ -527,11 +527,11 @@ class JobProcessor(core.Beet):
 
 def combine_job_processors(*job_processors):
     """
-    
+
     JobProcessor and Simulation types are inherited from the first JobProcessor in the arguments
-    
-    :param job_processors: 
-    :return: 
+
+    :param job_processors:
+    :return:
     """
     j_type = job_processors[0].simulation_type
     jp_type = job_processors[0].__class__
@@ -555,7 +555,7 @@ class Parameter:
     def __init__(self, name, value = None, expandable = False):
         """
         Initialize a Parameter.
-        
+
         :param name: the name of the Parameter, which should match a keyword argument of the target Specification
         :param value: the value of the Parameter, or a list of values
         :param expandable: whether this Parameter is expandable over the top-level iterable in value
@@ -574,7 +574,7 @@ class Parameter:
 def expand_parameters_to_dicts(parameters):
     """
     Expand a list of Parameters to a list of dictionaries containing all of the combinations of expandable Parameters.
-    
+
     :param parameters: a list of Parameters
     :return: a list of dictionaries of parameter.name: parameter.value pairs
     """
@@ -595,7 +595,7 @@ def expand_parameters_to_dicts(parameters):
 def ask_for_input(question, default = None, cast_to = str):
     """
     Ask for input from the user, with a default value, and call cast_to on it before returning itertools.
-    
+
     :param question: a string to present to the user
     :type question: str
     :param default: the default answer to the question
@@ -625,7 +625,7 @@ def ask_for_bool(question, default = False):
 
     Synonyms for True: 'true', 't', 'yes', 'y', '1', 'on'
     Synonyms for False: 'false', 'f', 'no', 'n', '0', 'off'
-    
+
     :param question: a string to present to the user
     :type question: str
     :param default: the default answer to the question
@@ -655,7 +655,7 @@ def ask_for_bool(question, default = False):
 def ask_for_eval(question, default = 'None'):
     """
     Ask for input from the user, with a default value, which will be evaluated as a python command.
-    
+
     :param question: a string to present to the user
     :param default: the default answer to the question
     :return: the input, evaluated as a python command
@@ -775,7 +775,7 @@ queue {num_jobs}
 def format_chtc_submit_string(job_name, specification_count, checkpoints = True):
     """
     Return a formatted submit string for an HTCondor job.
-    
+
     :param job_name: the name of the job
     :param specification_count: the number of Specifications in the job
     :param checkpoints: if the Simulations are going to use checkpoints, this should be True

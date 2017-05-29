@@ -31,7 +31,7 @@ class Beet:
         Construct a Beet with the given name and file_name.
 
         The file_name is automatically derived from the name if None is given.
-        
+
         Parameters
         ----------
         name : :class:`str`
@@ -72,7 +72,7 @@ class Beet:
     def save(self, target_dir = None, file_extension = '.beet', compressed = True):
         """
         Atomically pickle the Beet to a file.
-        
+
         Parameters
         ----------
         target_dir : :class:`str`
@@ -113,7 +113,7 @@ class Beet:
     def load(cls, file_path):
         """
         Load a Beet from `file_path`.
-        
+
         Parameters
         ----------
         file_path
@@ -151,9 +151,9 @@ class Specification(Beet):
     def __init__(self, name, file_name = None, **kwargs):
         """
         Construct a Specification.
-        
+
         Any number of additional keyword arguments can be passed. They will be stored as attributes if they don't conflict with any attributes already set.
-        
+
         Parameters
         ----------
         name : :class:`str`
@@ -171,7 +171,7 @@ class Specification(Beet):
     def save(self, target_dir = None, file_extension = '.spec', compressed = True):
         """
         Atomically pickle the Specification to a file.
-        
+
         Parameters
         ----------
         target_dir : :class:`str`
@@ -222,7 +222,7 @@ class Simulation(Beet):
     A class that represents a simulation.
 
     It should be subclassed and customized for each variety of simulation.
-    
+
     Attributes
     ----------
     status : :class:`str`
@@ -234,9 +234,9 @@ class Simulation(Beet):
     def __init__(self, spec):
         """
         Construct a Simulation from a Specification.
-        
-        Simulations should generally be instantiated using Specification.to_simulation() to avoid possible mismatches.
-        
+
+        Simulations should generally be instantiated using :meth:`Specification.to_simulation` to avoid possible mismatches.
+
         Parameters
         ----------
         spec : :class:`Specification`
@@ -292,7 +292,7 @@ class Simulation(Beet):
     def save(self, target_dir = None, file_extension = '.sim', compressed = True):
         """
         Atomically pickle the Simulation to a file.
-        
+
         Parameters
         ----------
         target_dir : :class:`str`

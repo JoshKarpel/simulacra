@@ -12,6 +12,7 @@ import logging
 import numpy as np
 import psutil
 
+from . import core
 from .units import uround
 
 
@@ -50,7 +51,7 @@ def field_str(obj, *fields, digits = 3):
 def dict_to_arrays(dct):
     """
     Return the keys and values of a dictionary as two numpy arrays, in key-sorted order.
-    
+
     :param dct: the dictionary to array-ify
     :type dct: dict
     :return: (key_array, value_array)
@@ -177,7 +178,7 @@ NearestEntry = collections.namedtuple('NearestEntry', ('index', 'value', 'target
 def find_nearest_entry(array, target):
     """
     Returns the ``(index, value, target)`` of the :code:`array` entry closest to the given :code:`target`.
-    
+
     :param array: the array to look for :code:`target` in
     :param target: the target value
     :returns: a tuple containing the index of the closest value, the value of the closest value, and the original target value
@@ -193,7 +194,7 @@ def find_nearest_entry(array, target):
 def ensure_dir_exists(path):
     """
     Ensure that the directory tree to the path exists.
-    
+
     :param path: the path to a file or directory
     :type path: str
     """
@@ -213,7 +214,7 @@ def downsample(dense_x_array, sparse_x_array, dense_y_array):
 
     The downsampling is performed by matching points from sparse_x_array to dense_x_array using find_nearest_entry. Use with caution!
 
-    :param dense_x_array: 
+    :param dense_x_array:
     :param sparse_x_array:
     :param dense_y_array:
     :return: a sparsified version of dense_y_array
@@ -231,7 +232,7 @@ def downsample(dense_x_array, sparse_x_array, dense_y_array):
 def run_in_process(func, args = (), kwargs = None, name = None):
     """
     Run a function in a separate thread.
-    
+
     :param func: the function to run
     :param args: positional arguments for function
     :param kwargs: keyword arguments for function
@@ -246,12 +247,38 @@ def run_in_process(func, args = (), kwargs = None, name = None):
     return output
 
 
+def find_or_init_sim(spec, search_dir = None, file_extension = '.sim'):
+    """
+    Try to load a :class:`simulacra.Simulation` by looking for a pickled :class:`simulacra.core.Simulation` named ``{search_dir}/{spec.file_name}.{file_extension}``.
+    If that fails, create a new Simulation from `spec`.
+
+    Parameters
+    ----------
+    spec : :class:`simulacra.core.Specification`
+    search_dir : str
+    file_extension : str
+
+    Returns
+    -------
+    :class:`simulacra.core.Simulation`
+    """
+    try:
+        if search_dir is None:
+            search_dir = os.getcwd()
+        path = os.path.join(search_dir, spec.file_name + file_extension)
+        sim = core.Simulation.load(file_path = path)
+    except FileNotFoundError:
+        sim = spec.to_simulation()
+
+    return sim
+
+
 def multi_map(function, targets, processes = None, **kwargs):
     """
     Map a function over a list of inputs using multiprocessing.
-    
+
     Function should take a single positional argument (an element of targets) and any number of keyword arguments, which must be the same for each target.
-    
+
     Parameters
     ----------
     function : a callable
@@ -650,7 +677,7 @@ def resume_processes_by_name(process_name):
 class SuspendProcesses:
     def __init__(self, *processes):
         """
-        
+
         :param processes: psutil.Process objects or strings to search for using get_process_by_name
         """
         self.processes = []

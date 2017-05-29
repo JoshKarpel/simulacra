@@ -34,7 +34,7 @@ Visualization
 High-Level Plotting Functions
 +++++++++++++++++++++++++++++
 
-.. currentmodule:: simulacra.plots
+.. currentmodule:: simulacra.vis
 
 .. autofunction:: xy_plot
 
@@ -74,6 +74,8 @@ Utilities
 .. autofunction:: ensure_dir_exists
 
 .. autofunction:: find_nearest_entry
+
+.. autofunction:: find_or_init_sim
 
 Cluster
 -------
