@@ -336,6 +336,9 @@ class Simulation(Beet):
 
         logger.debug("{} {} ({}) status set to {}".format(self.__class__.__name__, self.name, self.file_name, s))
 
+    def __str__(self):
+        return super().__str__() + f' ~ {self.status}'
+
     def save(self, target_dir = None, file_extension = '.sim', compressed = True):
         """
         Atomically pickle the Simulation to a file.
