@@ -21,14 +21,13 @@ class SimulacraException(Exception):
 
 
 class Info:
-    def __init__(self,
-                 fields = (),
-                 header: str = 'Info',
+    def __init__(self, *,
+                 header: str,
                  indentation: int = 2):
         self.header = header
         self.indentation = indentation
 
-        self.fields = collections.OrderedDict(fields)
+        self.fields = collections.OrderedDict()
 
     def _field_strs(self):
         s = []
@@ -42,7 +41,8 @@ class Info:
         return s
 
     def __str__(self):
-        return '\n'.join(self._field_strs())
+        field_strs = self._field_strs()
+        return f'\n{field_strs[0]}\n' + '\n'.join('|' + s[1:] for s in field_strs[1:])
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.header})'
@@ -52,9 +52,6 @@ class Info:
 
     def add_info(self, info):
         self.fields[info.header] = info
-
-    def __add__(self, other):
-        return self.__class__(fields = {**self.fields, **other.fields}, header = self.header)
 
 
 class Beet:
@@ -369,7 +366,6 @@ class Simulation(Beet):
     def info(self):
         """Return a string describing the parameters of the Simulation and its associated Specification."""
         info = super().info()
-        info.add_info(self.spec.info())
 
         info_diag = Info(header = f'Status: {self.status}')
         info_diag.add_field('Start Time', self.init_time)
@@ -377,8 +373,9 @@ class Simulation(Beet):
         info_diag.add_field('End Time', self.end_time)
         info_diag.add_field('Elapsed Time', self.elapsed_time)
         info_diag.add_field('Run Time', self.running_time)
-
         info.add_info(info_diag)
+
+        info.add_info(self.spec.info())
 
         return info
 
