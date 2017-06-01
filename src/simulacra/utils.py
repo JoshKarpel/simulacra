@@ -411,7 +411,7 @@ def timed(func):
 
         logger.debug(f'Execution of {func} took {time_elapsed}')
 
-        return val, time_elapsed
+        return val
 
     return timed_wrapper
 

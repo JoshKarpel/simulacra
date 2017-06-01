@@ -513,7 +513,7 @@ class JobProcessor(core.Beet):
         sim_numbers = [result.file_name for result in self.data.values() if result is not None]
         running_time = [result.running_time for result in self.data.values() if result is not None]
 
-        plots.xy_plot(f'{self.name}__diagnostics',
+        vis.xy_plot(f'{self.name}__diagnostics',
                       sim_numbers,
                       running_time,
                       line_kwargs = [dict(linestyle = '', marker = '.')],
