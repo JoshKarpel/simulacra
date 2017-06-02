@@ -89,7 +89,7 @@ def _get_fig_dims(fig_scale, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0, fig_widt
     Return the dimensions (width, height) for a figure based on the scale, width (in points), and aspect ratio.
 
     Primarily a helper function for get_figure.
-    
+
     Parameters
     ----------
     fig_scale : :class:`float`
@@ -119,7 +119,7 @@ def get_figure(fig_scale = 0.95, fig_dpi_scale = 1, aspect_ratio = (np.sqrt(5.0)
     Special scales:
     ``scale = 'full'`` -> ``scale = 0.95``
     ``scale = 'half'`` -> ``scale = 0.475``
-    
+
     Parameters
     ----------
     fig_scale : :class:`float`
@@ -155,7 +155,7 @@ def save_current_figure(name,
                         **kwargs):
     """
     Save the current matplotlib figure as an image to a file.
-    
+
     Parameters
     ----------
     name : :class:`str`
@@ -206,9 +206,9 @@ class FigureManager:
                  **kwargs):
         """
         Initialize a :code:`FigureManager`.
-        
+
         Saving occurs before showing.
-        
+
         :param name: the name of the file
         :type name: str
         :param name_postfix: a postfix for the filename, added after :code:`name`
@@ -310,7 +310,7 @@ def get_pi_ticks_and_labels(lower_limit = 0, upper_limit = twopi, denom = 4):
 def set_axis_ticks_and_labels(axis, ticks, labels, direction = 'x'):
     """
     Set the ticks and labels for `axis` along `direction`.
-    
+
     Parameters
     ----------
     axis
@@ -329,7 +329,7 @@ def set_axis_ticks_and_labels(axis, ticks, labels, direction = 'x'):
 def get_axis_limits(*data, lower_limit = None, upper_limit = None, log = False, pad = 0, log_pad = 1):
     """
     Calculate axis limits from datasets.
-    
+
     Parameters
     ----------
     data : any number of numpy arrays
@@ -366,7 +366,7 @@ def get_axis_limits(*data, lower_limit = None, upper_limit = None, log = False, 
 
 def set_axis_limits(axis, *data, lower_limit = None, upper_limit = None, log = False, pad = 0, log_pad = 1, unit = None, direction = 'x'):
     """
-    
+
     Parameters
     ----------
     axis
@@ -397,7 +397,7 @@ def set_axis_limits(axis, *data, lower_limit = None, upper_limit = None, log = F
 def get_unit_label(unit):
     """
     Get a LaTeX-formatted unit label for `unit`.
-    
+
     Parameters
     ----------
     unit
@@ -419,7 +419,7 @@ def get_unit_label(unit):
 
 def attach_hv_lines(axis, line_positions = (), line_kwargs = (), unit = None, direction = 'h'):
     """
-    
+
     Parameters
     ----------
     line_positions
@@ -685,7 +685,7 @@ def xyz_plot(name,
         if y_label is not None:
             y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
 
-        if show_colorbar:
+        if show_colorbar and colormap.name != 'richardson':
             plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
@@ -756,7 +756,7 @@ def xyt_plot(name,
              progress_bar = True,
              **kwargs):
     """
-    
+
     :param name: filename for the plot
     :param x_data: a single array to ploy the y values against
     :param t_data: a single array whose values will be animated over
@@ -764,41 +764,41 @@ def xyt_plot(name,
     :param y_func_kwargs: keyword arguments for the y_funcs
     :param line_labels: the labels for the lines
     :param line_kwargs: other keyword arguments for each line's .plot() call (None for default)
-    :param figure_manager: 
-    :param x_unit: 
-    :param y_unit: 
-    :param t_unit: 
-    :param t_fmt_string: 
-    :param t_text_kwargs: 
-    :param x_log_axis: 
-    :param y_log_axis: 
-    :param x_lower_limit: 
-    :param x_upper_limit: 
-    :param y_lower_limit: 
-    :param y_upper_limit: 
-    :param vlines: 
-    :param vline_kwargs: 
-    :param hlines: 
-    :param hline_kwargs: 
-    :param x_extra_ticks: 
-    :param y_extra_ticks: 
-    :param x_extra_tick_labels: 
-    :param y_extra_tick_labels: 
-    :param title: 
-    :param x_label: 
-    :param y_label: 
-    :param font_size_title: 
-    :param font_size_axis_labels: 
-    :param font_size_tick_labels: 
-    :param font_size_legend: 
-    :param ticks_on_top: 
-    :param ticks_on_right: 
-    :param legend_on_right: 
-    :param grid_kwargs: 
-    :param length: 
-    :param save_csv: 
-    :param kwargs: 
-    :return: 
+    :param figure_manager:
+    :param x_unit:
+    :param y_unit:
+    :param t_unit:
+    :param t_fmt_string:
+    :param t_text_kwargs:
+    :param x_log_axis:
+    :param y_log_axis:
+    :param x_lower_limit:
+    :param x_upper_limit:
+    :param y_lower_limit:
+    :param y_upper_limit:
+    :param vlines:
+    :param vline_kwargs:
+    :param hlines:
+    :param hline_kwargs:
+    :param x_extra_ticks:
+    :param y_extra_ticks:
+    :param x_extra_tick_labels:
+    :param y_extra_tick_labels:
+    :param title:
+    :param x_label:
+    :param y_label:
+    :param font_size_title:
+    :param font_size_axis_labels:
+    :param font_size_tick_labels:
+    :param font_size_legend:
+    :param ticks_on_top:
+    :param ticks_on_right:
+    :param legend_on_right:
+    :param grid_kwargs:
+    :param length:
+    :param save_csv:
+    :param kwargs:
+    :return:
     """
     # set up figure and axis
     if figure_manager is None:
@@ -1116,7 +1116,7 @@ def xyzt_plot(name,
                                   shading = shading,
                                   norm = norm)
 
-        if show_colorbar:
+        if show_colorbar and colormap.name != 'richardson':
             plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
 
         if t_text_kwargs is None:

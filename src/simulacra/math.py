@@ -2,7 +2,8 @@ import logging
 
 import numpy as np
 import scipy.sparse as sparse
-import scipy.special as spc
+import scipy.special as special
+import scipy.integrate as integ
 import math
 
 from . import utils
@@ -34,7 +35,7 @@ def gaussian_fwhm_from_sigma(sigma):
 def stirling_approximation_exp(n):
     r"""
     Return the Stirling approximation of :math:`n!`, :math:`n! \approx \sqrt{2\pi} \left( \frac{n}{e} \right)^n`.
-    
+
     Parameters
     ----------
     n : :class:`float`
@@ -51,7 +52,7 @@ def stirling_approximation_exp(n):
 def stirling_approximation_ln(n):
     """
     Return the Stirling approximation of :math:`\log n!`, :math:`\log n! \approx n \, \log n - n`.
-    
+
     Parameters
     ----------
     n : :class:`float`
@@ -73,7 +74,7 @@ class SphericalHarmonic:
     def __init__(self, l = 0, m = 0):
         """
         Initialize a SphericalHarmonic from its angular momentum numbers.
-        
+
         Parameters
         ----------
         l
@@ -117,14 +118,53 @@ class SphericalHarmonic:
         :param phi: azimuthal coordinate
         :return: the value(s) of the spherical harmonic at (theta, phi)
         """
-        return spc.sph_harm(self.m, self.l, phi, theta)
+        return special.sph_harm(self.m, self.l, phi, theta)
+
+
+def complex_quad(integrand, a, b, **kwargs):
+    def real_func(x):
+        return np.real(integrand(x))
+
+    def imag_func(x):
+        return np.imag(integrand(x))
+
+    real_integral = integ.quad(real_func, a, b, **kwargs)
+    imag_integral = integ.quad(imag_func, a, b, **kwargs)
+
+    return (real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:])
+
+
+def complex_dblquad(integrand, a, b, gfun, hfun, **kwargs):
+    def real_func(y, x):
+        return np.real(integrand(y, x))
+
+    def imag_func(y, x):
+        return np.imag(integrand(y, x))
+
+    real_integral = integ.dblquad(real_func, a, b, gfun, hfun, **kwargs)
+    imag_integral = integ.dblquad(imag_func, a, b, gfun, hfun, **kwargs)
+
+    return (real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:])
+
+
+def complex_nquad(integrand, ranges, **kwargs):
+    def real_func(y, x):
+        return np.real(integrand(y, x))
+
+    def imag_func(y, x):
+        return np.imag(integrand(y, x))
+
+    real_integral = integ.nquad(real_func, ranges, **kwargs)
+    imag_integral = integ.nquad(imag_func, ranges, **kwargs)
+
+    return (real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:])
 
 
 @utils.memoize
 def fibonacci(n):
     """
     Return the n-th Fibonacci number, with Fibonacci(0) = 0, Fibonacci(1) = 1.
-    
+
     The Fibonacci numbers are calculated via memoized recursion.
     """
     if 0 <= n == int(n):
