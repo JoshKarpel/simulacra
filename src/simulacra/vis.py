@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from . import utils
+from . import core
 from .units import *
 
 
@@ -1225,6 +1226,11 @@ class AxisManager:
         """Hook method for updating the AxisManager's internal state."""
         logger.debug(f'Updated axis for {self}')
 
+    def info(self):
+        info = core.Info(header = self.__class__.__name__)
+
+        return info
+
 
 class Animator:
     """
@@ -1260,8 +1266,6 @@ class Animator:
         self.target_dir = target_dir
 
         postfix = utils.strip_illegal_characters(postfix)
-        if postfix != '' and not postfix.startswith('_'):
-            postfix = '_' + postfix
         self.postfix = postfix
 
         self.length = int(length)
@@ -1294,7 +1298,7 @@ class Animator:
         self.sim = simulation
         self.spec = simulation.spec
 
-        self.file_name = '{}{}.mp4'.format(self.sim.file_name, self.postfix)
+        self.file_name = '{}_{}.mp4'.format(self.sim.file_name, self.postfix)
         self.file_path = os.path.join(self.target_dir, self.file_name)
         utils.ensure_dir_exists(self.file_path)
         try:
@@ -1381,6 +1385,17 @@ class Animator:
         self.ffmpeg.stdin.write(self.fig.canvas.tostring_argb())
 
         logger.debug('{} sent frame to ffpmeg from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
+
+    def info(self):
+        info = core.Info(header = f'{self.__class__.__name__}: {self.postfix}')
+
+        info.add_field('Length', f'{self.length} s')
+        info.add_field('FPS', f'{self.fps}')
+
+        for axis_manager in self.axis_managers:
+            info.add_info(axis_manager.info())
+
+        return info
 
 
 class RichardsonColormap(matplotlib.colors.Colormap):
