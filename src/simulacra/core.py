@@ -369,7 +369,7 @@ class Simulation(Beet):
 
         info.add_info(self.spec.info())
 
-        info_diag = Info(header = f'Status ~ {self.status}')
+        info_diag = Info(header = f'Status: {self.status}')
         info_diag.add_field('Start Time', self.init_time)
         info_diag.add_field('Latest Run Time', self.latest_run_time)
         info_diag.add_field('End Time', self.end_time)
