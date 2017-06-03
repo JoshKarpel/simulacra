@@ -51,7 +51,7 @@ class Info:
         self.fields[name] = value
 
     def add_info(self, info):
-        self.fields[info.header] = info
+        self.fields[id(info)] = info
 
 
 class Beet:
@@ -90,7 +90,7 @@ class Beet:
 
     def __str__(self):
         if self.name != self.file_name:
-            return f'{self.__class__.__name__}({self.name}), {self.file_name}) [{self.uid}]'
+            return f'{self.__class__.__name__}({self.name}, file_name = {self.file_name}) [{self.uid}]'
         else:
             return f'{self.__class__.__name__}({self.name}) [{self.uid}]'
 
@@ -367,15 +367,15 @@ class Simulation(Beet):
         """Return a string describing the parameters of the Simulation and its associated Specification."""
         info = super().info()
 
-        info_diag = Info(header = f'Status: {self.status}')
+        info.add_info(self.spec.info())
+
+        info_diag = Info(header = f'Status ~ {self.status}')
         info_diag.add_field('Start Time', self.init_time)
         info_diag.add_field('Latest Run Time', self.latest_run_time)
         info_diag.add_field('End Time', self.end_time)
         info_diag.add_field('Elapsed Time', self.elapsed_time)
         info_diag.add_field('Run Time', self.running_time)
         info.add_info(info_diag)
-
-        info.add_info(self.spec.info())
 
         return info
 
@@ -403,6 +403,9 @@ class Summand:
 
     def __call__(self, *args, **kwargs):
         raise NotImplementedError
+
+    def info(self):
+        return Info(header = self.__class__.__name__)
 
 
 class Sum(Summand):
@@ -437,3 +440,14 @@ class Sum(Summand):
 
     def __call__(self, *args, **kwargs):
         return sum(x(*args, **kwargs) for x in self._container)
+
+    def info(self):
+        info = super().info()
+
+        for x in self._container:
+            try:
+                info.add_info(x.info())
+            except AttributeError:
+                info.add_field(x.__class__.__name__, str(x))
+
+        return info
