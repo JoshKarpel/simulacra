@@ -234,8 +234,11 @@ class Specification(Beet):
         """
         super().__init__(name, file_name = file_name)
 
+        self._extra_attr_keys = list()
+
         for k, v in ((k, v) for k, v in kwargs.items() if k not in self.__dict__):
             setattr(self, k, v)
+            self._extra_attr_keys.append(k)
             logger.debug('{} stored additional attribute {} = {}'.format(self.name, k, v))
 
     def save(self, target_dir = None, file_extension = '.spec', compressed = True):
@@ -264,6 +267,20 @@ class Specification(Beet):
             return self.simulation_type(self)
         except TypeError:
             return Simulation(self)
+
+    def info(self):
+        """Return a string describing the parameters of the Simulation and its associated Specification."""
+        info = super().info()
+
+        if len(self._extra_attr_keys) > 0:
+            info_extra = Info(header = f'Extra Attributes')
+
+            for k in self._extra_attr_keys:
+                info_extra.add_field(' '.join(k.split('_').title()), getattr(self, k))
+
+            info.add_info(info_extra)
+
+        return info
 
 
 # Simulation status names
