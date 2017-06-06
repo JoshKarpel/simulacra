@@ -21,17 +21,24 @@ class SimulacraException(Exception):
 
 
 class Info:
+    """
+    A class that represents a hierarchical collection of information.
+
+    Each :class:`Info` contains a header and a dictionary of children.
+    The header is a string that will be written at the top-level of this Info.
+    Each child is either a field, which will be written out as "{key}: {value}", or another Info, which will display itself.
+    """
     def __init__(self, *,
                  header: str,
                  indentation: int = 2):
         self.header = header
         self.indentation = indentation
 
-        self.fields = collections.OrderedDict()
+        self.children = collections.OrderedDict()
 
     def _field_strs(self):
         s = []
-        for field, value in self.fields.items():
+        for field, value in self.children.items():
             try:
                 s.extend(value._field_strs())
             except AttributeError:
@@ -48,10 +55,16 @@ class Info:
         return f'{self.__class__.__name__}({self.header})'
 
     def add_field(self, name, value):
-        self.fields[name] = value
+        self.children[name] = value
+
+    def add_fields(self, name_value_pairs):
+        self.children.update({k: v for k, v in name_value_pairs})
 
     def add_info(self, info):
-        self.fields[id(info)] = info
+        self.children[id(info)] = info
+
+    def add_infos(self, infos):
+        self.children.update({id(info): info for info in infos})
 
 
 class Beet:
@@ -263,7 +276,7 @@ STATUS_ERR = 'error'
 
 class Simulation(Beet):
     """
-    A class that represents a simulation.
+    A class that represents a single simulation.
 
     It should be subclassed and customized for each variety of simulation.
 
@@ -307,31 +320,42 @@ class Simulation(Beet):
         return self._status
 
     @status.setter
-    def status(self, s):
-        if s == self.status:
+    def status(self, status):
+        """
+        Set the status of the :class:`Simulation`.
+
+        Specially defined statuses are ``STATUS_INI`` (initialized), ``STATUS_RUN`` (running), ``STATUS_FIN`` (finished), ``STATUS_PAU`` (paused), and ``STATUS_ERR`` (error).
+        These statuses have side effects on the simulation's time diagnostics.
+
+        Parameters
+        ----------
+        status : :class:`str`
+            The new status for the simulation
+        """
+        if status == self.status:
             raise ValueError('Tried to set status of {} to its current status'.format(self.name))
 
         now = datetime.datetime.utcnow()
 
-        if s == STATUS_INI:
+        if status == STATUS_INI:
             self.init_time = now
-        elif s == STATUS_RUN:
+        elif status == STATUS_RUN:
             if self.latest_run_time is None:
                 self.start_time = now
             self.latest_run_time = now
             self.runs += 1
-        elif s == STATUS_PAU:
+        elif status == STATUS_PAU:
             if self.latest_run_time is not None:
                 self.running_time += now - self.latest_run_time
-        elif s == STATUS_FIN:
+        elif status == STATUS_FIN:
             if self.latest_run_time is not None:
                 self.running_time += now - self.latest_run_time
             self.end_time = now
             self.elapsed_time = self.end_time - self.init_time
 
-        self._status = s
+        self._status = status
 
-        logger.debug("{} {} ({}) status set to {}".format(self.__class__.__name__, self.name, self.file_name, s))
+        logger.debug("{} {} ({}) status set to {}".format(self.__class__.__name__, self.name, self.file_name, status))
 
     def __str__(self):
         return super().__str__() + f' ~ {self.status}'

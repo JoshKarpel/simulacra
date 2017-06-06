@@ -53,6 +53,13 @@ Low-Level Plotting Utilities
 
 .. autofunction:: save_current_figure
 
+Math
+----
+
+.. currentmodule:: simulacra.math
+
+.. autoclass:: SphericalHarmonic
+
 Units
 -----
 

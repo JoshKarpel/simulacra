@@ -18,7 +18,7 @@ class Foo(si.Beet):
         info = super().info()
 
         foo_info = si.Info(header = 'foo info')
-        foo_info.fields['a'] = self.a
+        foo_info.children['a'] = self.a
         # sup_info.fields['FOO INFO'] = foo_info
 
         info.add_info(foo_info)
