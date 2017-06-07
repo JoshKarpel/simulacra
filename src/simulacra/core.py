@@ -263,10 +263,7 @@ class Specification(Beet):
 
     def to_simulation(self):
         """Return a Simulation of the type associated with the Specification, generated from this instance."""
-        try:
-            return self.simulation_type(self)
-        except TypeError:
-            return Simulation(self)
+        return self.simulation_type(self)
 
     def info(self):
         """Return a string describing the parameters of the Simulation and its associated Specification."""
@@ -477,7 +474,7 @@ class Sum(Summand):
 
     def __add__(self, other):
         """Return a new Sum, constructed from all of the contents of self and other."""
-        return self.__class__(*self, *other)  # TODO: no protection against adding together non-similar types
+        return self.__class__(*self, *other)
 
     def __call__(self, *args, **kwargs):
         return sum(x(*args, **kwargs) for x in self._container)
