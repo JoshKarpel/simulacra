@@ -623,7 +623,7 @@ UNIT_NAME_TO_LATEX.update({
 atomic_energy = hartree
 atomic_electric_field = coulomb_constant * proton_charge / (bohr_radius ** 2)
 atomic_electric_potential = coulomb_constant * proton_charge / bohr_radius
-atomic_electric_dipole_moment_moment = proton_charge * bohr_radius
+atomic_electric_dipole_moment = proton_charge * bohr_radius
 atomic_velocity = alpha * c
 atomic_momentum = electron_mass * atomic_velocity
 atomic_time = hbar / hartree
@@ -635,7 +635,7 @@ UNIT_NAME_TO_VALUE.update({
     'aef': atomic_electric_field,
     'AEF': atomic_electric_field,
     'atomic_electric_potential': atomic_electric_potential,
-    'atomic_electric_dipole_moment': atomic_electric_dipole_moment_moment,
+    'atomic_electric_dipole_moment': atomic_electric_dipole_moment,
     'atomic_velocity': atomic_velocity,
     'atomic_momentum': atomic_momentum,
     'atomic_force': atomic_force,

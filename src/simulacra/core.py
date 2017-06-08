@@ -273,7 +273,7 @@ class Specification(Beet):
             info_extra = Info(header = f'Extra Attributes')
 
             for k in self._extra_attr_keys:
-                info_extra.add_field(' '.join(k.split('_').title()), getattr(self, k))
+                info_extra.add_field(' '.join(s.title() for s in k.split('_')), getattr(self, k))
 
             info.add_info(info_extra)
 
