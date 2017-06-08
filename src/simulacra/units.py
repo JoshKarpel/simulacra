@@ -35,14 +35,18 @@ pi = _np.pi
 twopi = 2 * _np.pi
 e = _np.e
 
-UNIT_NAME_TO_VALUE.update({'alpha': alpha,
-                           'pi': pi,
-                           'twopi': twopi,
-                           'e': e})
-UNIT_NAME_TO_LATEX.update({'alpha': r'\alpha',
-                           'pi': '\pi',
-                           'twopi': r'2\pi',
-                           'e': 'e'})
+UNIT_NAME_TO_VALUE.update({
+    'alpha': alpha,
+    'pi': pi,
+    'twopi': twopi,
+    'e': e
+})
+UNIT_NAME_TO_LATEX.update({
+    'alpha': r'\alpha',
+    'pi': '\pi',
+    'twopi': r'2\pi',
+    'e': 'e'
+})
 
 # base units
 m = 1
@@ -53,26 +57,28 @@ K = 1
 rad = 1
 deg = rad * 180 / pi
 
-UNIT_NAME_TO_VALUE.update({'m': m,
-                           's': s,
-                           'kg': kg,
-                           'A': A,
-                           'K': K,
-                           'rad': rad,
-                           'radian': rad,
-                           'deg': deg,
-                           'degrees': deg,
-                           })
-UNIT_NAME_TO_LATEX.update({'m': r'\mathrm{m}',
-                           's': r'\mathrm{s}',
-                           'kg': r'\mathrm{kg}',
-                           'A': r'\mathrm{A}',
-                           'K': r'\mathrm{K}',
-                           'rad': r'\mathrm{rad}',
-                           'radian': r'\mathrm{rad}',
-                           'deg': r'\mathrm{deg}',
-                           'degrees': r'\mathrm{deg}',
-                           })
+UNIT_NAME_TO_VALUE.update({
+    'm': m,
+    's': s,
+    'kg': kg,
+    'A': A,
+    'K': K,
+    'rad': rad,
+    'radian': rad,
+    'deg': deg,
+    'degrees': deg,
+})
+UNIT_NAME_TO_LATEX.update({
+    'm': r'\mathrm{m}',
+    's': r'\mathrm{s}',
+    'kg': r'\mathrm{kg}',
+    'A': r'\mathrm{A}',
+    'K': r'\mathrm{K}',
+    'rad': r'\mathrm{rad}',
+    'radian': r'\mathrm{rad}',
+    'deg': r'\mathrm{deg}',
+    'degrees': r'\mathrm{deg}',
+})
 
 # distance
 cm = 1e-2 * m
@@ -91,52 +97,56 @@ angstrom = 1e-10 * m
 bohr_radius = 5.2917721067e-11 * m
 inch = 2.54 * cm
 
-UNIT_NAME_TO_VALUE.update({'cm': cm,
-                           'mm': mm,
-                           'um': um,
-                           'nm': nm,
-                           'pm': pm,
-                           'fm': fm,
-                           'km': km,
-                           'Mm': Mm,
-                           'Gm': Gm,
-                           'Tm': Tm,
-                           'Pm': Pm,
-                           'angstrom': angstrom,
-                           'bohr_radius': bohr_radius,
-                           'inch': inch,
-                           'per_nm': per_nm})
-UNIT_NAME_TO_LATEX.update({'cm': r'\mathrm{cm}',
-                           'cetimeter': r'\mathrm{cm}',
-                           'cetimeters': r'\mathrm{cm}',
-                           'mm': r'\mathrm{mm}',
-                           'millimeter': r'\mathrm{mm}',
-                           'millimeters': r'\mathrm{mm}',
-                           'um': r'\mathrm{um}',
-                           'micrometer': r'\mathrm{um}',
-                           'micrometers': r'\mathrm{um}',
-                           'micron': r'\mathrm{um}',
-                           'microns': r'\mathrm{um}',
-                           'nm': r'\mathrm{nm}',
-                           'nanometer': r'\mathrm{nm}',
-                           'nanometers': r'\mathrm{nm}',
-                           'pm': r'\mathrm{pm}',
-                           'picometer': r'\mathrm{pm}',
-                           'picometers': r'\mathrm{pm}',
-                           'fm': r'\mathrm{fm}',
-                           'femtometer': r'\mathrm{fm}',
-                           'femtometers': r'\mathrm{fm}',
-                           'km': r'\mathrm{km}',
-                           'kilometer': r'\mathrm{km}',
-                           'kilometers': r'\mathrm{km}',
-                           'Mm': r'\mathrm{Mm}',
-                           'Gm': r'\mathrm{Gm}',
-                           'Tm': r'\mathrm{Tm}',
-                           'Pm': r'\mathrm{Pm}',
-                           'angstrom': r'\mathrm{\AA}',
-                           'bohr_radius': r'a_0',
-                           'inch': r'\mathrm{in}',
-                           'per_nm': r'\mathrm{nm^{-1}}'})
+UNIT_NAME_TO_VALUE.update({
+    'cm': cm,
+    'mm': mm,
+    'um': um,
+    'nm': nm,
+    'pm': pm,
+    'fm': fm,
+    'km': km,
+    'Mm': Mm,
+    'Gm': Gm,
+    'Tm': Tm,
+    'Pm': Pm,
+    'angstrom': angstrom,
+    'bohr_radius': bohr_radius,
+    'inch': inch,
+    'per_nm': per_nm
+})
+UNIT_NAME_TO_LATEX.update({
+    'cm': r'\mathrm{cm}',
+    'cetimeter': r'\mathrm{cm}',
+    'cetimeters': r'\mathrm{cm}',
+    'mm': r'\mathrm{mm}',
+    'millimeter': r'\mathrm{mm}',
+    'millimeters': r'\mathrm{mm}',
+    'um': r'\mathrm{um}',
+    'micrometer': r'\mathrm{um}',
+    'micrometers': r'\mathrm{um}',
+    'micron': r'\mathrm{um}',
+    'microns': r'\mathrm{um}',
+    'nm': r'\mathrm{nm}',
+    'nanometer': r'\mathrm{nm}',
+    'nanometers': r'\mathrm{nm}',
+    'pm': r'\mathrm{pm}',
+    'picometer': r'\mathrm{pm}',
+    'picometers': r'\mathrm{pm}',
+    'fm': r'\mathrm{fm}',
+    'femtometer': r'\mathrm{fm}',
+    'femtometers': r'\mathrm{fm}',
+    'km': r'\mathrm{km}',
+    'kilometer': r'\mathrm{km}',
+    'kilometers': r'\mathrm{km}',
+    'Mm': r'\mathrm{Mm}',
+    'Gm': r'\mathrm{Gm}',
+    'Tm': r'\mathrm{Tm}',
+    'Pm': r'\mathrm{Pm}',
+    'angstrom': r'\mathrm{\AA}',
+    'bohr_radius': r'a_0',
+    'inch': r'\mathrm{in}',
+    'per_nm': r'\mathrm{nm^{-1}}'
+})
 
 # time
 msec = 1e-3 * s
@@ -151,50 +161,54 @@ days = day = 24 * hour
 weeks = week = 7 * day
 years = year = 365 * day
 
-UNIT_NAME_TO_VALUE.update({'ms': msec,
-                           'msec': msec,
-                           'us': usec,
-                           'usec': usec,
-                           'ns': nsec,
-                           'nsec': nsec,
-                           'ps': psec,
-                           'psec': psec,
-                           'fs': fsec,
-                           'fsec': fsec,
-                           'as': asec,
-                           'asec': asec,
-                           'minute': minute,
-                           'minutes': minute,
-                           'hour': hour,
-                           'hours': hour,
-                           'day': day,
-                           'days': day,
-                           'week': week,
-                           'weeks': week,
-                           'year': year,
-                           'years': year})
-UNIT_NAME_TO_LATEX.update({'ms': r'\mathrm{ms}',
-                           'msec': r'\mathrm{ms}',
-                           'us': r'\mathrm{us}',
-                           'usec': r'\mathrm{us}',
-                           'ns': r'\mathrm{ns}',
-                           'nsec': r'\mathrm{ns}',
-                           'ps': r'\mathrm{ps}',
-                           'psec': r'\mathrm{ps}',
-                           'fs': r'\mathrm{fs}',
-                           'fsec': r'\mathrm{fs}',
-                           'as': r'\mathrm{as}',
-                           'asec': r'\mathrm{as}',
-                           'minute': '\mathrm{minutes}',
-                           'minutes': '\mathrm{minutes}',
-                           'hour': '\mathrm{hours}',
-                           'hours': '\mathrm{hours}',
-                           'day': '\mathrm{days}',
-                           'days': '\mathrm{days}',
-                           'week': '\mathrm{weeks}',
-                           'weeks': '\mathrm{weeks}',
-                           'year': '\mathrm{years}',
-                           'years': '\mathrm{years}'})
+UNIT_NAME_TO_VALUE.update({
+    'ms': msec,
+    'msec': msec,
+    'us': usec,
+    'usec': usec,
+    'ns': nsec,
+    'nsec': nsec,
+    'ps': psec,
+    'psec': psec,
+    'fs': fsec,
+    'fsec': fsec,
+    'as': asec,
+    'asec': asec,
+    'minute': minute,
+    'minutes': minute,
+    'hour': hour,
+    'hours': hour,
+    'day': day,
+    'days': day,
+    'week': week,
+    'weeks': week,
+    'year': year,
+    'years': year
+})
+UNIT_NAME_TO_LATEX.update({
+    'ms': r'\mathrm{ms}',
+    'msec': r'\mathrm{ms}',
+    'us': r'\mathrm{us}',
+    'usec': r'\mathrm{us}',
+    'ns': r'\mathrm{ns}',
+    'nsec': r'\mathrm{ns}',
+    'ps': r'\mathrm{ps}',
+    'psec': r'\mathrm{ps}',
+    'fs': r'\mathrm{fs}',
+    'fsec': r'\mathrm{fs}',
+    'as': r'\mathrm{as}',
+    'asec': r'\mathrm{as}',
+    'minute': '\mathrm{minutes}',
+    'minutes': '\mathrm{minutes}',
+    'hour': '\mathrm{hours}',
+    'hours': '\mathrm{hours}',
+    'day': '\mathrm{days}',
+    'days': '\mathrm{days}',
+    'week': '\mathrm{weeks}',
+    'weeks': '\mathrm{weeks}',
+    'year': '\mathrm{years}',
+    'years': '\mathrm{years}'
+})
 
 # mass
 g = 1e-3 * kg
@@ -208,26 +222,30 @@ neutron_mass = 1.674927471e-27 * kg
 electron_mass = 9.10938356e-31 * kg
 electron_mass_reduced = proton_mass * electron_mass / (proton_mass + electron_mass)
 
-UNIT_NAME_TO_VALUE.update({'g': g,
-                           'mg': mg,
-                           'ug': ug,
-                           'ng': ng,
-                           'pg': pg,
-                           'fg': fg,
-                           'proton_mass': proton_mass,
-                           'neutron_mass': neutron_mass,
-                           'electron_mass': electron_mass,
-                           'electron_mass_reduced': electron_mass_reduced})
-UNIT_NAME_TO_LATEX.update({'g': r'\mathrm{g}',
-                           'mg': r'\mathrm{mg}',
-                           'ug': r'\mathrm{ug}',
-                           'ng': r'\mathrm{ng}',
-                           'pg': r'\mathrm{pg}',
-                           'fg': r'\mathrm{fg}',
-                           'proton_mass': r'm_p',
-                           'neutron_mass': r'm_n',
-                           'electron_mass': r'm_e',
-                           'electron_mass_reduced': r'\mu_e'})
+UNIT_NAME_TO_VALUE.update({
+    'g': g,
+    'mg': mg,
+    'ug': ug,
+    'ng': ng,
+    'pg': pg,
+    'fg': fg,
+    'proton_mass': proton_mass,
+    'neutron_mass': neutron_mass,
+    'electron_mass': electron_mass,
+    'electron_mass_reduced': electron_mass_reduced
+})
+UNIT_NAME_TO_LATEX.update({
+    'g': r'\mathrm{g}',
+    'mg': r'\mathrm{mg}',
+    'ug': r'\mathrm{ug}',
+    'ng': r'\mathrm{ng}',
+    'pg': r'\mathrm{pg}',
+    'fg': r'\mathrm{fg}',
+    'proton_mass': r'm_p',
+    'neutron_mass': r'm_n',
+    'electron_mass': r'm_e',
+    'electron_mass_reduced': r'\mu_e'
+})
 
 # frequency
 Hz = 1 / s
@@ -242,28 +260,32 @@ GHz = 1e9 * Hz
 THz = 1e12 * Hz
 PHz = 1e15 * Hz
 
-UNIT_NAME_TO_VALUE.update({'Hz': Hz,
-                           'mHz': mHz,
-                           'uHz': uHz,
-                           'nHz': nHz,
-                           'pHz': pHz,
-                           'fHz': fHz,
-                           'kHz': kHz,
-                           'MHz': MHz,
-                           'GHz': GHz,
-                           'THz': THz,
-                           'PHz': PHz})
-UNIT_NAME_TO_LATEX.update({'Hz': r'\mathrm{Hz}',
-                           'mHz': r'\mathrm{mHz}',
-                           'uHz': r'\mathrm{uHz}',
-                           'nHz': r'\mathrm{nHz}',
-                           'pHz': r'\mathrm{pHz}',
-                           'fHz': r'\mathrm{fHz}',
-                           'kHz': r'\mathrm{kHz}',
-                           'MHz': r'\mathrm{MHz}',
-                           'GHz': r'\mathrm{GHz}',
-                           'THz': r'\mathrm{THz}',
-                           'PHz': r'\mathrm{PHz}'})
+UNIT_NAME_TO_VALUE.update({
+    'Hz': Hz,
+    'mHz': mHz,
+    'uHz': uHz,
+    'nHz': nHz,
+    'pHz': pHz,
+    'fHz': fHz,
+    'kHz': kHz,
+    'MHz': MHz,
+    'GHz': GHz,
+    'THz': THz,
+    'PHz': PHz
+})
+UNIT_NAME_TO_LATEX.update({
+    'Hz': r'\mathrm{Hz}',
+    'mHz': r'\mathrm{mHz}',
+    'uHz': r'\mathrm{uHz}',
+    'nHz': r'\mathrm{nHz}',
+    'pHz': r'\mathrm{pHz}',
+    'fHz': r'\mathrm{fHz}',
+    'kHz': r'\mathrm{kHz}',
+    'MHz': r'\mathrm{MHz}',
+    'GHz': r'\mathrm{GHz}',
+    'THz': r'\mathrm{THz}',
+    'PHz': r'\mathrm{PHz}'
+})
 
 # electric charge
 C = 1 * A * s
@@ -280,32 +302,36 @@ PC = 1e15 * C
 proton_charge = 1.6021766208e-19 * C
 electron_charge = -proton_charge
 
-UNIT_NAME_TO_VALUE.update({'C': C,
-                           'mC': mC,
-                           'uC': uC,
-                           'nC': nC,
-                           'pC': pC,
-                           'fC': fC,
-                           'kC': kC,
-                           'MC': MC,
-                           'GC': GC,
-                           'TC': TC,
-                           'PC': PC,
-                           'proton_charge': proton_charge,
-                           'electron_charge': electron_charge})
-UNIT_NAME_TO_LATEX.update({'C': r'\mathrm{C}',
-                           'mC': r'\mathrm{mC}',
-                           'uC': r'\mathrm{uC}',
-                           'nC': r'\mathrm{nC}',
-                           'pC': r'\mathrm{pC}',
-                           'fC': r'\mathrm{fC}',
-                           'kC': r'\mathrm{kC}',
-                           'MC': r'\mathrm{MC}',
-                           'GC': r'\mathrm{GC}',
-                           'TC': r'\mathrm{TC}',
-                           'PC': r'\mathrm{PC}',
-                           'proton_charge': r'e',
-                           'electron_charge': r'-e'})
+UNIT_NAME_TO_VALUE.update({
+    'C': C,
+    'mC': mC,
+    'uC': uC,
+    'nC': nC,
+    'pC': pC,
+    'fC': fC,
+    'kC': kC,
+    'MC': MC,
+    'GC': GC,
+    'TC': TC,
+    'PC': PC,
+    'proton_charge': proton_charge,
+    'electron_charge': electron_charge
+})
+UNIT_NAME_TO_LATEX.update({
+    'C': r'\mathrm{C}',
+    'mC': r'\mathrm{mC}',
+    'uC': r'\mathrm{uC}',
+    'nC': r'\mathrm{nC}',
+    'pC': r'\mathrm{pC}',
+    'fC': r'\mathrm{fC}',
+    'kC': r'\mathrm{kC}',
+    'MC': r'\mathrm{MC}',
+    'GC': r'\mathrm{GC}',
+    'TC': r'\mathrm{TC}',
+    'PC': r'\mathrm{PC}',
+    'proton_charge': r'e',
+    'electron_charge': r'-e'
+})
 
 # energy
 J = 1 * kg * ((m / s) ** 2)
@@ -365,28 +391,32 @@ GV = 1e9 * V
 TV = 1e12 * V
 PV = 1e15 * V
 
-UNIT_NAME_TO_VALUE.update({'V': V,
-                           'mV': mV,
-                           'uV': uV,
-                           'nV': nV,
-                           'pV': pV,
-                           'fV': fV,
-                           'kV': kV,
-                           'MV': MV,
-                           'GV': GV,
-                           'TV': TV,
-                           'PV': PV})
-UNIT_NAME_TO_LATEX.update({'V': r'\mathrm{V}',
-                           'mV': r'\mathrm{mV}',
-                           'uV': r'\mathrm{uV}',
-                           'nV': r'\mathrm{nV}',
-                           'pV': r'\mathrm{pV}',
-                           'fV': r'\mathrm{fV}',
-                           'kV': r'\mathrm{kV}',
-                           'MV': r'\mathrm{MV}',
-                           'GV': r'\mathrm{GV}',
-                           'TV': r'\mathrm{TV}',
-                           'PV': r'\mathrm{PV}'})
+UNIT_NAME_TO_VALUE.update({
+    'V': V,
+    'mV': mV,
+    'uV': uV,
+    'nV': nV,
+    'pV': pV,
+    'fV': fV,
+    'kV': kV,
+    'MV': MV,
+    'GV': GV,
+    'TV': TV,
+    'PV': PV
+})
+UNIT_NAME_TO_LATEX.update({
+    'V': r'\mathrm{V}',
+    'mV': r'\mathrm{mV}',
+    'uV': r'\mathrm{uV}',
+    'nV': r'\mathrm{nV}',
+    'pV': r'\mathrm{pV}',
+    'fV': r'\mathrm{fV}',
+    'kV': r'\mathrm{kV}',
+    'MV': r'\mathrm{MV}',
+    'GV': r'\mathrm{GV}',
+    'TV': r'\mathrm{TV}',
+    'PV': r'\mathrm{PV}'
+})
 
 # energies in electron-volts
 eV = proton_charge * V
@@ -396,18 +426,22 @@ GeV = 1e9 * eV
 TeV = 1e12 * eV
 PeV = 1e15 * eV
 
-UNIT_NAME_TO_VALUE.update({'eV': eV,
-                           'keV': keV,
-                           'MeV': MeV,
-                           'GeV': GeV,
-                           'TeV': TeV,
-                           'PeV': PeV})
-UNIT_NAME_TO_LATEX.update({'eV': r'\mathrm{eV}',
-                           'keV': r'\mathrm{keV}',
-                           'MeV': r'\mathrm{MeV}',
-                           'GeV': r'\mathrm{GeV}',
-                           'TeV': r'\mathrm{TeV}',
-                           'PeV': r'\mathrm{PeV}'})
+UNIT_NAME_TO_VALUE.update({
+    'eV': eV,
+    'keV': keV,
+    'MeV': MeV,
+    'GeV': GeV,
+    'TeV': TeV,
+    'PeV': PeV
+})
+UNIT_NAME_TO_LATEX.update({
+    'eV': r'\mathrm{eV}',
+    'keV': r'\mathrm{keV}',
+    'MeV': r'\mathrm{MeV}',
+    'GeV': r'\mathrm{GeV}',
+    'TeV': r'\mathrm{TeV}',
+    'PeV': r'\mathrm{PeV}'
+})
 
 # force
 N = 1 * m * kg / (s ** 2)
@@ -422,28 +456,32 @@ GN = 1e9 * N
 TN = 1e12 * N
 PN = 1e15 * N
 
-UNIT_NAME_TO_VALUE.update({'N': N,
-                           'mN': mN,
-                           'uN': uN,
-                           'nN': nN,
-                           'pN': pN,
-                           'fN': fN,
-                           'kN': kN,
-                           'MN': MN,
-                           'GN': GN,
-                           'TN': TN,
-                           'PN': PN})
-UNIT_NAME_TO_LATEX.update({'N': r'\mathrm{N}',
-                           'mN': r'\mathrm{mN}',
-                           'uN': r'\mathrm{uN}',
-                           'nN': r'\mathrm{nN}',
-                           'pN': r'\mathrm{pN}',
-                           'fN': r'\mathrm{fN}',
-                           'kN': r'\mathrm{kN}',
-                           'MN': r'\mathrm{MN}',
-                           'GN': r'\mathrm{GN}',
-                           'TN': r'\mathrm{TN}',
-                           'PN': r'\mathrm{PN}'})
+UNIT_NAME_TO_VALUE.update({
+    'N': N,
+    'mN': mN,
+    'uN': uN,
+    'nN': nN,
+    'pN': pN,
+    'fN': fN,
+    'kN': kN,
+    'MN': MN,
+    'GN': GN,
+    'TN': TN,
+    'PN': PN
+})
+UNIT_NAME_TO_LATEX.update({
+    'N': r'\mathrm{N}',
+    'mN': r'\mathrm{mN}',
+    'uN': r'\mathrm{uN}',
+    'nN': r'\mathrm{nN}',
+    'pN': r'\mathrm{pN}',
+    'fN': r'\mathrm{fN}',
+    'kN': r'\mathrm{kN}',
+    'MN': r'\mathrm{MN}',
+    'GN': r'\mathrm{GN}',
+    'TN': r'\mathrm{TN}',
+    'PN': r'\mathrm{PN}'
+})
 
 # power
 W = 1 * J / s
@@ -458,28 +496,32 @@ GW = 1e9 * W
 TW = 1e12 * W
 PW = 1e15 * W
 
-UNIT_NAME_TO_VALUE.update({'W': W,
-                           'mW': mW,
-                           'uW': uW,
-                           'nW': nW,
-                           'pW': pW,
-                           'fW': fW,
-                           'kW': kW,
-                           'MW': MW,
-                           'GW': GW,
-                           'TW': TW,
-                           'PW': PW})
-UNIT_NAME_TO_LATEX.update({'W': r'\mathrm{W}',
-                           'mW': r'\mathrm{mW}',
-                           'uW': r'\mathrm{uW}',
-                           'nW': r'\mathrm{nW}',
-                           'pW': r'\mathrm{pW}',
-                           'fW': r'\mathrm{fW}',
-                           'kW': r'\mathrm{kW}',
-                           'MW': r'\mathrm{MW}',
-                           'GW': r'\mathrm{GW}',
-                           'TW': r'\mathrm{TW}',
-                           'PW': r'\mathrm{PW}'})
+UNIT_NAME_TO_VALUE.update({
+    'W': W,
+    'mW': mW,
+    'uW': uW,
+    'nW': nW,
+    'pW': pW,
+    'fW': fW,
+    'kW': kW,
+    'MW': MW,
+    'GW': GW,
+    'TW': TW,
+    'PW': PW
+})
+UNIT_NAME_TO_LATEX.update({
+    'W': r'\mathrm{W}',
+    'mW': r'\mathrm{mW}',
+    'uW': r'\mathrm{uW}',
+    'nW': r'\mathrm{nW}',
+    'pW': r'\mathrm{pW}',
+    'fW': r'\mathrm{fW}',
+    'kW': r'\mathrm{kW}',
+    'MW': r'\mathrm{MW}',
+    'GW': r'\mathrm{GW}',
+    'TW': r'\mathrm{TW}',
+    'PW': r'\mathrm{PW}'
+})
 
 # current
 A = 1 * C / s
@@ -494,28 +536,70 @@ GA = 1e9 * A
 TA = 1e12 * A
 PA = 1e15 * A
 
-UNIT_NAME_TO_VALUE.update({'A': A,
-                           'mA': mA,
-                           'uA': uA,
-                           'nA': nA,
-                           'pA': pA,
-                           'fA': fA,
-                           'kA': kA,
-                           'MA': MA,
-                           'GA': GA,
-                           'TA': TA,
-                           'PA': PA})
-UNIT_NAME_TO_LATEX.update({'A': r'\mathrm{A}',
-                           'mA': r'\mathrm{mA}',
-                           'uA': r'\mathrm{uA}',
-                           'nA': r'\mathrm{nA}',
-                           'pA': r'\mathrm{pA}',
-                           'fA': r'\mathrm{fA}',
-                           'kA': r'\mathrm{kA}',
-                           'MA': r'\mathrm{MA}',
-                           'GA': r'\mathrm{GA}',
-                           'TA': r'\mathrm{TA}',
-                           'PA': r'\mathrm{PA}'})
+UNIT_NAME_TO_VALUE.update({
+    'A': A,
+    'mA': mA,
+    'uA': uA,
+    'nA': nA,
+    'pA': pA,
+    'fA': fA,
+    'kA': kA,
+    'MA': MA,
+    'GA': GA,
+    'TA': TA,
+    'PA': PA
+})
+UNIT_NAME_TO_LATEX.update({
+    'A': r'\mathrm{A}',
+    'mA': r'\mathrm{mA}',
+    'uA': r'\mathrm{uA}',
+    'nA': r'\mathrm{nA}',
+    'pA': r'\mathrm{pA}',
+    'fA': r'\mathrm{fA}',
+    'kA': r'\mathrm{kA}',
+    'MA': r'\mathrm{MA}',
+    'GA': r'\mathrm{GA}',
+    'TA': r'\mathrm{TA}',
+    'PA': r'\mathrm{PA}'
+})
+
+# thermodynamics
+k_B = 1.38064852e-23 * J / K
+boltzmann_constant = k_B
+
+UNIT_NAME_TO_VALUE.update({
+    'k_B': k_B,
+    'boltzmann_constant': k_B,
+})
+UNIT_NAME_TO_LATEX.update({
+    'k_B': r'k_B',
+    'boltzmann_constant': r'k_B',
+})
+
+# speed of light and E&M
+c = 299792458 * m / s
+speed_of_light = c
+mu_0 = pi * 4e-7 * N / (A ** 2)
+epsilon_0 = 1 / (mu_0 * (c ** 2))
+coulomb_constant = 1 / (4 * pi * epsilon_0)
+n_vacuum = 1
+
+UNIT_NAME_TO_VALUE.update({
+    'c': c,
+    'speed_of_light': c,
+    'mu_0': mu_0,
+    'epsilon_0': epsilon_0,
+    'coulomb_force_constant': coulomb_constant,
+    'n_vacuum': n_vacuum
+})
+UNIT_NAME_TO_LATEX.update({
+    'c': r'c',
+    'speed_of_light': r'c',
+    'mu_0': r'\mu_0',
+    'epsilon_0': r'\epsilon_0',
+    'coulomb_force_constant': r'k_e',
+    'n_vacuum': r'n_{\mathrm{vac}}'
+})
 
 # quantum mechanics
 h = 6.626070040e-34 * J * s  # Planck's constant
@@ -523,52 +607,48 @@ hbar = h / twopi
 rydberg = 13.605693009 * eV
 hartree = 27.21138602 * eV
 
-UNIT_NAME_TO_VALUE.update({'h': h,
-                           'hbar': hbar,
-                           'rydberg': rydberg,
-                           'hartree': hartree})
-UNIT_NAME_TO_LATEX.update({'h': r'h',
-                           'hbar': r'\hbar',
-                           'rydberg': r'\mathrm{Ry}',
-                           'hartree': r'\mathrm{Ha}'})
-
-# speed of light and E&M
-c = 299792458 * m / s
-mu_0 = pi * 4e-7 * N / (A ** 2)
-epsilon_0 = 1 / (mu_0 * (c ** 2))
-coulomb_force_constant = 1 / (4 * pi * epsilon_0)
-n_vacuum = 1
-
-UNIT_NAME_TO_VALUE.update({'c': c,
-                           'mu_0': mu_0,
-                           'epsilon_0': epsilon_0,
-                           'coulomb_force_constant': coulomb_force_constant,
-                           'n_vacuum': n_vacuum})
-UNIT_NAME_TO_LATEX.update({'c': r'c',
-                           'mu_0': r'\mu_0',
-                           'epsilon_0': r'\epsilon_0',
-                           'coulomb_force_constant': r'k_e',
-                           'n_vacuum': r'n_{\mathrm{vac}}'})
+UNIT_NAME_TO_VALUE.update({
+    'h': h,
+    'hbar': hbar,
+    'rydberg': rydberg,
+    'hartree': hartree
+})
+UNIT_NAME_TO_LATEX.update({
+    'h': r'h',
+    'hbar': r'\hbar',
+    'rydberg': r'\mathrm{Ry}',
+    'hartree': r'\mathrm{Ha}'
+})
 
 atomic_energy = hartree
-atomic_electric_field = coulomb_force_constant * proton_charge / (bohr_radius ** 2)
-atomic_electric_potential = coulomb_force_constant * proton_charge / bohr_radius
-atomic_electric_dipole = proton_charge * bohr_radius
+atomic_electric_field = coulomb_constant * proton_charge / (bohr_radius ** 2)
+atomic_electric_potential = coulomb_constant * proton_charge / bohr_radius
+atomic_electric_dipole_moment_moment = proton_charge * bohr_radius
 atomic_velocity = alpha * c
 atomic_momentum = electron_mass * atomic_velocity
 atomic_time = hbar / hartree
+atomic_force = hartree / bohr_radius
+atomic_temperature = hartree / k_B
 
-UNIT_NAME_TO_VALUE.update({'atomic_electric_field': atomic_electric_field,
-                           'aef': atomic_electric_field,
-                           'AEF': atomic_electric_field,
-                           'atomic_electric_potential': atomic_electric_potential,
-                           'atomic_electric_dipole': atomic_electric_dipole,
-                           'atomic_velocity': atomic_velocity,
-                           'atomic_momentum': atomic_momentum})
-UNIT_NAME_TO_LATEX.update({'atomic_electric_field': r'\mathrm{a.u.}',
-                           'aef': r'\mathrm{a.u.}',
-                           'AEF': r'\mathrm{a.u.}',
-                           'atomic_electric_potential': r'\mathrm{a.u.}',
-                           'atomic_electric_dipole': r'e \, a_0',
-                           'atomic_velocity': r'\mathrm{a.u.}',
-                           'atomic_momentum': r'\mathrm{a.u.}'})
+UNIT_NAME_TO_VALUE.update({
+    'atomic_electric_field': atomic_electric_field,
+    'aef': atomic_electric_field,
+    'AEF': atomic_electric_field,
+    'atomic_electric_potential': atomic_electric_potential,
+    'atomic_electric_dipole_moment': atomic_electric_dipole_moment_moment,
+    'atomic_velocity': atomic_velocity,
+    'atomic_momentum': atomic_momentum,
+    'atomic_force': atomic_force,
+    'atomic_temperature': atomic_temperature,
+})
+UNIT_NAME_TO_LATEX.update({
+    'atomic_electric_field': r'\mathrm{a.u.}',
+    'aef': r'\mathrm{a.u.}',
+    'AEF': r'\mathrm{a.u.}',
+    'atomic_electric_potential': r'\mathrm{a.u.}',
+    'atomic_electric_dipole_moment': r'e \, a_0',
+    'atomic_velocity': r'\mathrm{a.u.}',
+    'atomic_momentum': r'\mathrm{a.u.}',
+    'atomic_force': r'\mathrm{a.u.}',
+    'atomic_temperature': r'\mathrm{a.u.}',
+})

@@ -68,6 +68,21 @@ class TestSimulation(TestBeet):
         self.target_name = 'baz.sim'
         si.utils.ensure_dir_exists(TEST_DIR)
 
+    def testStatus(self):
+        self.obj.status = ''  # set status to blank
+
+        passes = (si.STATUS_INI, si.STATUS_PAU, si.STATUS_FIN, si.STATUS_ERR, si.STATUS_RUN)
+        fails = ('foo', 'foobar', 5, 10, None)
+
+        for x in passes:
+            with self.subTest(x = x):
+                self.obj.status = x
+
+        for x in fails:
+            with self.subTest(x = x):
+                with self.assertRaises(ValueError):
+                    self.obj.status = x
+
 
 class TestSumming(unittest.TestCase):
     def setUp(self):

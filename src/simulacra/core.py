@@ -85,13 +85,13 @@ class Beet:
         name : :class:`str`
             The internal name of the Beet.
         file_name : :class:`str`
-            The desired external name of the Beet. Illegal characters are stripped before use.
+            The desired external name of the Beet. Illegal characters are stripped before use, and spaces are replaced with underscores.
         """
         self.name = str(name)
         if file_name is None:
             file_name = self.name
 
-        file_name_stripped = utils.strip_illegal_characters(str(file_name))
+        file_name_stripped = utils.strip_illegal_characters(str(file_name).replace(' ', '_'))
         if file_name_stripped != file_name:
             logger.warning('Using file name {} instead of {} for {}'.format(file_name_stripped, file_name, self.name))
         self.file_name = file_name_stripped

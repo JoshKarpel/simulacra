@@ -678,7 +678,10 @@ class SuspendProcesses:
     def __init__(self, *processes):
         """
 
-        :param processes: psutil.Process objects or strings to search for using get_process_by_name
+        Parameters
+        ----------
+        processes :
+            :class:`psutil.Process` objects or strings to search for using get_process_by_name
         """
         self.processes = []
         for process in processes:
