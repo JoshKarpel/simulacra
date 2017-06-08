@@ -75,6 +75,15 @@ T_TEXT_KWARGS = dict(
         fontsize = 12,
 )
 
+CONTOUR_KWARGS = dict(
+
+)
+
+CONTOUR_LABEL_KWARGS = dict(
+        inline = 1,
+        fontsize = 8,
+)
+
 TITLE_OFFSET = 1.1
 
 FFMPEG_PROCESS_KWARGS = dict(
@@ -770,11 +779,13 @@ def xyz_plot(name,
              x_unit = None, y_unit = None, z_unit = None,
              x_log_axis = False, y_log_axis = False, z_log_axis = False,
              x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, z_lower_limit = None, z_upper_limit = None,
+             z_pad = 0, z_log_pad = 1,
              x_extra_ticks = None, y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
              z_label = None, x_label = None, y_label = None,
              font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10,
              ticks_on_top = True, ticks_on_right = True,
              grid_kwargs = None, minor_grid_kwargs = None,
+             contours = (), contour_kwargs = None, show_contour_labels = True, contour_label_kwargs = None,
              save_csv = False,
              colormap = plt.get_cmap('viridis'), shading = 'gouraud', show_colorbar = True,
              richardson_equator_magnitude = 1,
@@ -791,11 +802,19 @@ def xyz_plot(name,
         if minor_grid_kwargs is None:
             minor_grid_kwargs = {}
 
+        if contour_kwargs is None:
+            contour_kwargs = {}
+        if contour_label_kwargs is None:
+            contour_label_kwargs = {}
+
         grid_color = CMAP_TO_OPPOSITE.get(colormap, 'black')
         grid_kwargs['color'] = grid_color
         minor_grid_kwargs['color'] = grid_color
         grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
         minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
+
+        contour_kwargs = {**CONTOUR_KWARGS, **contour_kwargs}
+        contour_label_kwargs = {**CONTOUR_LABEL_KWARGS, **contour_label_kwargs}
 
         plt.set_cmap(colormap)
 
@@ -823,7 +842,7 @@ def xyz_plot(name,
             z_lower_limit, z_upper_limit = get_axis_limits(z_mesh,
                                                            lower_limit = z_lower_limit, upper_limit = z_upper_limit,
                                                            log = z_log_axis,
-                                                           pad = 0, log_pad = 10)
+                                                           pad = z_pad, log_pad = z_log_pad)
             if z_log_axis:
                 norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
             else:
@@ -831,11 +850,25 @@ def xyz_plot(name,
         else:
             norm = RichardsonNormalization(equator_magnitude = richardson_equator_magnitude)
 
-        colormesh = ax.pcolormesh(x_mesh / x_unit_value,
-                                  y_mesh / y_unit_value,
-                                  z_mesh / z_unit_value,
-                                  shading = shading,
-                                  norm = norm)
+        colormesh = ax.pcolormesh(
+                x_mesh / x_unit_value,
+                y_mesh / y_unit_value,
+                z_mesh / z_unit_value,
+                shading = shading,
+                norm = norm
+        )
+
+        if len(contours) > 0:
+            contour = ax.contour(
+                    x_mesh / x_unit_value,
+                    y_mesh / y_unit_value,
+                    z_mesh / z_unit_value,
+                    levels = sorted(contours),
+                    **contour_kwargs,
+            )
+            if show_contour_labels:
+                ax.clabel(contour, **contour_kwargs)
+
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
