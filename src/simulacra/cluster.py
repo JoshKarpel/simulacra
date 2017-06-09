@@ -718,10 +718,7 @@ def write_specifications_info_to_file(specifications, job_dir):
 
     with open(os.path.join(job_dir, 'specifications.txt'), 'w') as file:
         for spec in specifications:
-            file.write(str(spec))
-            file.write('\n')
-            file.write(spec.info())
-            file.write('\n\n')  # blank line between specs
+            file.write(str(spec.info()))
 
     logger.debug('Saved Specification information')
 
