@@ -350,12 +350,10 @@ class JobProcessor(core.Beet):
 
     @property
     def elapsed_time(self):
-        # earliest = min(r.init_time for r in self.data.values() if r is not None)
-        # latest = max(r.end_time for r in self.data.values() if r is not None)
+        earliest = min(r.init_time for r in self.data.values() if r is not None)
+        latest = max(r.end_time for r in self.data.values() if r is not None)
 
-        # return latest - earliest
-
-        return datetime.timedelta()
+        return latest - earliest
 
     def get_sim_names_from_specs(self):
         """Get a list of Simulation file names based on their Specifications."""
