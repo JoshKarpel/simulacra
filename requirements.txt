@@ -3,9 +3,9 @@ cryptography==1.7.1
 cycler==0.10.0
 Cython==0.25.2
 idna==2.2
-matplotlib==2.0.1
+matplotlib==2.0.2
 mpmath==0.19
-numpy==1.12.1
+numpy==1.13.0
 paramiko==2.1.2
 psutil==5.2.2
 pyasn1==0.2.3

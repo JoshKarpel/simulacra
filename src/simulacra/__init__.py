@@ -1,7 +1,6 @@
 __all__ = ['core', 'math', 'utils', 'units', 'vis']
 
 import logging
-import os
 
 
 logger = logging.getLogger(__name__)

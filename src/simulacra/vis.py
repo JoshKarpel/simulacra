@@ -215,35 +215,23 @@ class FigureManager:
                  save_on_exit = True, show = False,
                  **kwargs):
         """
-        Initialize a :code:`FigureManager`.
 
-        Saving occurs before showing.
-
-        :param name: the name of the file
-        :type name: str
-        :param name_postfix: a postfix for the filename, added after :code:`name`
-        :type name: str
-        :param target_dir: the directory to save the file to
-        :type target_dir: str
-        :param fig_scale: the scale of the figure in LaTeX pagewidths
-        :type fig_scale: float
-        :param fig_width_pts: width of a LaTeX pagewidth in points
-        :type float
-        :param aspect_ratio: the aspect ratio of the image
-        :type aspect_ratio: float
-        :param img_format: the format the save the image in
-        :type img_format: str
-        :param img_scale: the scale to save the image at
-        :type img_scale: float
-        :param close_before_enter: close any existing images before creating the new figure
-        :type close_before_enter: bool
-        :param close_after_exit: close the figure after save/show
-        :type close_after_exit: bool
-        :param save_on_exit: if True, save the image using :func:`save_current_figure`
-        :type save_on_exit: bool
-        :param show: if True, show the image
-        :type save: bool
-        :param kwargs: kwargs are absorbed
+        Parameters
+        ----------
+        name
+        name_postfix
+        fig_scale
+        fig_dpi_scale
+        fig_width_pts
+        aspect_ratio
+        target_dir
+        img_format
+        img_scale
+        close_before_enter
+        close_after_exit
+        save_on_exit
+        show
+        kwargs
         """
         self.name = name
         self.name_postfix = name_postfix

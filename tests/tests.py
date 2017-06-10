@@ -48,7 +48,7 @@ class TestBeet(unittest.TestCase):
         self.assertTrue(os.path.exists(path))  # path should actually exist on the system
         loaded = si.Beet.load(path)
         self.assertEqual(loaded, self.obj)  # beets should be equal, but NOT the same object
-        self.assertEqual(loaded.uid, self.obj.uid)  # beets should have the same uid
+        self.assertEqual(loaded.uuid, self.obj.uuid)  # beets should have the same uid
         self.assertEqual(hash(loaded), hash(self.obj))  # beets should have the same hash
         self.assertIsNot(loaded, self.obj)  # beets should NOT be the same object
 

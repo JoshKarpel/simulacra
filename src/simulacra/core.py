@@ -16,7 +16,7 @@ logger.setLevel(logging.DEBUG)
 
 
 class SimulacraException(Exception):
-    """Base exception for all Simulacra exceptions."""
+    """Base :class:`Exception` for all Simulacra exceptions."""
     pass
 
 
@@ -26,11 +26,21 @@ class Info:
 
     Each :class:`Info` contains a header and a dictionary of children.
     The header is a string that will be written at the top-level of this Info.
-    Each child is either a field, which will be written out as "{key}: {value}", or another Info, which will display itself.
+    Each child is either a field, which will be written out as ``'{key}: {value}'``, or another Info, which will display itself.
+
+    Field names are unique.
     """
     def __init__(self, *,
                  header: str,
                  indentation: int = 2):
+        """
+        Parameters
+        ----------
+        header
+            The header for this :class:`Info`.
+        indentation
+            Sets the indentation level of the :class:`Info` (how many spaces will be added at each level of the hierarchy).
+        """
         self.header = header
         self.indentation = indentation
 
@@ -55,15 +65,49 @@ class Info:
         return f'{self.__class__.__name__}({self.header})'
 
     def add_field(self, name, value):
+        """
+        Add a field to the :class:`Info`, which will be displayed as ``'{name}: {value}'``.
+
+        Parameters
+        ----------
+        name : :class:`str`
+            The name of the field.
+        value : :class:`str`
+            The value of the field.
+        """
         self.children[name] = value
 
     def add_fields(self, name_value_pairs):
+        """
+        Add a list of fields to the :class:`Info`.
+
+        Parameters
+        ----------
+        name_value_pairs : iterable
+            An iterable of ``(name, value)`` pairs to add as fields.
+        """
         self.children.update({k: v for k, v in name_value_pairs})
 
     def add_info(self, info):
+        """
+        Add a sub-Info to the :class:`Info`, which will be displayed at a deeper indentation level.
+
+        Parameters
+        ----------
+        info : :class:`Info`
+            An :class:`Info` to be added as a sub-Info.
+        """
         self.children[id(info)] = info
 
     def add_infos(self, infos):
+        """
+        Add a list of Infos to this Info as sub-Infos.
+
+        Parameters
+        ----------
+        infos : iterable
+            An iterable of :class:`Info`
+        """
         self.children.update({id(info): info for info in infos})
 
 
@@ -72,20 +116,21 @@ class Beet:
     A class that provides an easy interface for pickling and unpickling instances.
 
     Two Beets compare and hash equal if they have the same uid attribute, a uuid4 generated during initialization.
+
+    Attributes
+    ----------
+    uuid
+        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>` for the :class:`Beet`.
     """
 
     def __init__(self, name, file_name = None):
         """
-        Construct a Beet with the given name and file_name.
-
-        The file_name is automatically derived from the name if None is given.
-
         Parameters
         ----------
         name : :class:`str`
             The internal name of the Beet.
         file_name : :class:`str`
-            The desired external name of the Beet. Illegal characters are stripped before use, and spaces are replaced with underscores.
+            The desired external name of the Beet. Automatically derived from `name` if ``None``. Illegal characters are stripped before use, and spaces are replaced with underscores.
         """
         self.name = str(name)
         if file_name is None:
@@ -97,24 +142,24 @@ class Beet:
         self.file_name = file_name_stripped
 
         self.initialized_at = datetime.datetime.utcnow()
-        self.uid = uuid.uuid4()
+        self.uuid = uuid.uuid4()
 
         logger.info('Initialized {}'.format(repr(self)))
 
     def __str__(self):
         if self.name != self.file_name:
-            return f'{self.__class__.__name__}({self.name}, file_name = {self.file_name}) [{self.uid}]'
+            return f'{self.__class__.__name__}({self.name}, file_name = {self.file_name}) [{self.uuid}]'
         else:
-            return f'{self.__class__.__name__}({self.name}) [{self.uid}]'
+            return f'{self.__class__.__name__}({self.name}) [{self.uuid}]'
 
     def __repr__(self):
         return utils.field_str(self, 'name', 'file_name', 'uid')
 
     def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.uid == other.uid
+        return isinstance(other, self.__class__) and self.uuid == other.uid
 
     def __hash__(self):
-        return hash(self.uid)
+        return hash(self.uuid)
 
     def clone(self, **kwargs):
         """
@@ -214,21 +259,28 @@ class Specification(Beet):
     A class that contains the information necessary to run a simulation.
 
     It should be subclassed for each type of simulation and all additional information necessary to run that kind of simulation should be added via keyword arguments.
+
+    Any number of additional keyword arguments can be passed to the constructor.
+    They will be stored as attributes if they don't conflict with any attributes already set.
+
+    Attributes
+    ----------
+    uuid
+        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>` for the :class:`Specification`.
     """
 
     simulation_type = None
 
     def __init__(self, name, file_name = None, **kwargs):
         """
-        Construct a Specification.
-
-        Any number of additional keyword arguments can be passed. They will be stored as attributes if they don't conflict with any attributes already set.
-
         Parameters
         ----------
         name : :class:`str`
             The internal name of the Specification.
         file_name : :class:`str`
+            The desired external name of the Specification.
+            Automatically derived from `name` if ``None`` is passed.
+            Illegal characters are stripped before use, and spaces are replaced with underscores.
         kwargs
             Any number of keyword arguments, which will be stored as attributes.
         """
@@ -266,7 +318,6 @@ class Specification(Beet):
         return self.simulation_type(self)
 
     def info(self):
-        """Return a string describing the parameters of the Simulation and its associated Specification."""
         info = super().info()
 
         if len(self._extra_attr_keys) > 0:
@@ -294,8 +345,12 @@ class Simulation(Beet):
 
     It should be subclassed and customized for each variety of simulation.
 
+    Simulations should generally be instantiated using Specification.to_simulation() to avoid possible mismatches.
+
     Attributes
     ----------
+    uuid
+        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>` for the :class:`Simulation`.
     status : :class:`str`
         The status of the Simulation. One of ``'initialized'``, ``'running'``, ``'finished'``, ``'paused'``, or ``'error'``.
     """
@@ -304,10 +359,6 @@ class Simulation(Beet):
 
     def __init__(self, spec):
         """
-        Construct a Simulation from a Specification.
-
-        Simulations should generally be instantiated using Specification.to_simulation() to avoid possible mismatches.
-
         Parameters
         ----------
         spec : :class:`Specification`

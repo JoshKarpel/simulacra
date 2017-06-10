@@ -307,7 +307,7 @@ class JobProcessor(core.Beet):
         :param job_dir_path: the path to the job directory
         :param simulation_type: the type of Simulation used in the job (should be set by subclasses)
         """
-        super(JobProcessor, self).__init__(job_name)
+        super().__init__(job_name)
         self.job_dir_path = job_dir_path
 
         for directory in (self.inputs_dir, self.outputs_dir, self.plots_dir, self.movies_dir, self.summaries_dir):
