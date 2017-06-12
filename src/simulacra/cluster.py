@@ -543,13 +543,14 @@ class JobProcessor(core.Beet):
         path = os.path.join(self.job_dir_path, f'{self.name}_diagnostics.txt')
         with open(path, mode = 'w') as f:
             f.write('\n'.join((
-                f'Diagnostic Data for Job {self.name}:',
+                f'Diagnostic Data for {self.name}:',
                 '',
                 f'{self.sim_count - len(self.unprocessed_sim_names)} {self.simulation_type.__name__}s',
                 f'Simulation Result Type: {self.simulation_result_type.__name__}',
                 '',
                 f'Elapsed Time: {self.elapsed_time}',
                 f'Combined Runtime: {self.running_time}',
+                f'Speedup Factor: {round(self.running_time / self.elapsed_time)}'
                 '',
                 f'Earliest Sim Init: {min(r.init_time for r in self.data.values() if r is not None)}',
                 f'Latest Sim Init: {max(r.init_time for r in self.data.values() if r is not None)}',

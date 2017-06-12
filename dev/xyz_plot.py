@@ -22,9 +22,11 @@ if __name__ == '__main__':
         z_mesh = np.abs((x_mesh ** 2) + (y_mesh ** 2)) * np.sin(x_mesh * pi)
 
         for cmap_name in ('viridis', 'magma', 'inferno', 'plasma', 'seismic', 'PiYG', 'PRGn', 'Spectral'):
-            si.plots.xyz_plot(f'xyz_{cmap_name}',
-                              x_mesh, y_mesh, z_mesh,
-                              colormap = plt.get_cmap(cmap_name),
-                              aspect_ratio = .8,
-                              target_dir = OUT_DIR
-                              )
+            si.vis.xyz_plot(
+                f'xyz_{cmap_name}',
+                x_mesh, y_mesh, z_mesh,
+                colormap = plt.get_cmap(cmap_name),
+                contours = [0],
+                aspect_ratio = .8,
+                target_dir = OUT_DIR
+            )

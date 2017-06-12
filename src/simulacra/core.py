@@ -122,6 +122,8 @@ class Beet:
     ----------
     uuid
         A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Beet`.
+    uid
+        Alias for ``Beet.uuid``.
     """
 
     def __init__(self, name, file_name = None):
@@ -146,6 +148,10 @@ class Beet:
         self.uuid = uuid.uuid4()
 
         logger.info('Initialized {}'.format(repr(self)))
+
+    @property
+    def uid(self):
+        return self.uuid
 
     def __str__(self):
         if self.name != self.file_name:
