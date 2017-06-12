@@ -1,5 +1,3 @@
-"""Import this to get access to SI units and fundamental constants, with values from CODATA 2014."""
-
 import numpy as _np
 
 
@@ -14,12 +12,12 @@ def get_unit_value_and_latex_from_unit(unit):
 
     if type(unit) == str:
         unit_value = UNIT_NAME_TO_VALUE[unit]
-        unit_tex = UNIT_NAME_TO_LATEX[unit]
+        unit_latex = UNIT_NAME_TO_LATEX[unit]
     else:
         unit_value = unit
-        unit_tex = ''
+        unit_latex = ''
 
-    return unit_value, unit_tex
+    return unit_value, unit_latex
 
 
 def uround(value, unit = None, digits = 3):

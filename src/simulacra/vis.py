@@ -282,6 +282,19 @@ class FigureManager:
 
 
 def get_pi_ticks_and_labels(lower_limit = 0, upper_limit = twopi, denom = 4):
+    """
+    NB: doesn't really work for large ranges.
+
+    Parameters
+    ----------
+    lower_limit
+    upper_limit
+    denom
+
+    Returns
+    -------
+
+    """
     low = int(np.floor(lower_limit / pi))
     high = int(np.ceil(upper_limit / pi))
 
@@ -615,7 +628,7 @@ def xxyy_plot(name,
               save_csv = False,
               **kwargs):
     """
-    Generate and save a generic x-y plot.
+    Generate and save a generic xx-yy plot.
 
     :param name: filename for the plot
     :param x_data: a single array to plot the y data against
@@ -856,7 +869,6 @@ def xyz_plot(name,
             )
             if show_contour_labels:
                 ax.clabel(contour, **contour_kwargs)
-
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 

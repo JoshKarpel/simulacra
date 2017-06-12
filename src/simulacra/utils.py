@@ -229,7 +229,7 @@ def downsample(dense_x_array, sparse_x_array, dense_y_array):
     return sparse_y_array
 
 
-def run_in_process(func, args = (), kwargs = None, name = None):
+def run_in_process(func, args = (), kwargs = None):
     """
     Run a function in a separate thread.
 
@@ -399,7 +399,7 @@ def watcher(watch):
 
 
 def timed(func):
-    """A decorator that times the execution of the decorated function. A log message is emitted at level DEBUG, and the function output is replaced with a tuple (output, time_elapsed)."""
+    """A decorator that times the execution of the decorated function. A log message is emitted at level ``DEBUG`` with the timing information."""
 
     @functools.wraps(func)
     def timed_wrapper(*args, **kwargs):
@@ -417,7 +417,7 @@ def timed(func):
 
 
 class BlockTimer:
-    """A context manager that times the code in the with block. Print the BlockTimer after exiting the block to see the results."""
+    """A context manager that times the code in the ``with`` block. Print the :class:`BlockTimer` after exiting the block to see the results."""
 
     __slots__ = (
         'wall_time_start', 'wall_time_end', 'wall_time_elapsed',
@@ -460,7 +460,7 @@ class Descriptor:
     The data is stored in the instance dictionary.
     """
 
-    __slots__ = ['name']
+    __slots__ = ('name',)
 
     def __init__(self, name):
         self.name = name
@@ -485,18 +485,18 @@ class RestrictedValues(Descriptor):
     If the value is not in the set of legal values a ValueError is raised.
     """
 
-    __slots__ = ['name', 'legal_values']
+    __slots__ = ('name', 'legal_values')
 
     def __init__(self, name, legal_values = set()):
         self.legal_values = set(legal_values)
 
-        super(RestrictedValues, self).__init__(name)
+        super().__init__(name)
 
     def __set__(self, instance, value):
         if value not in self.legal_values:
             raise ValueError('Expected {} to be from {}'.format(value, self.legal_values))
         else:
-            super(RestrictedValues, self).__set__(instance, value)
+            super().__set__(instance, value)
 
 
 class Typed(Descriptor):
@@ -506,18 +506,18 @@ class Typed(Descriptor):
     If the value does not match the provided type a TypeError is raised.
     """
 
-    __slots__ = ['name', 'legal_type']
+    __slots__ = ('name', 'legal_type')
 
     def __init__(self, name, legal_type = str):
         self.legal_type = legal_type
 
-        super(Typed, self).__init__(name)
+        super().__init__(name)
 
     def __set__(self, instance, value):
         if not isinstance(value, self.legal_type):
             raise TypeError('Expected {} to be a {}'.format(value, self.legal_type))
         else:
-            super(Typed, self).__set__(instance, value)
+            super().__set__(instance, value)
 
 
 class Checked(Descriptor):
@@ -527,18 +527,20 @@ class Checked(Descriptor):
     If the value does not pass the check a ValueError is raised.
     """
 
-    __slots__ = ['name', 'check']
+    __slots__ = ('name', 'check')
 
-    def __init__(self, name, check = lambda: True):
+    def __init__(self, name, check = None):
+        if check is None:
+            check = lambda value: True
         self.check = check
 
-        super(Checked, self).__init__(name)
+        super().__init__(name)
 
     def __set__(self, instance, value):
         if not self.check(value):
-            raise ValueError('Value {} did not pass the check'.format(value))
+            raise ValueError(f'Value {value} did not pass the check function {self.check} for attribute {self.name} on {instance}')
         else:
-            super(Checked, self).__set__(instance, value)
+            super().__set__(instance, value)
 
 
 def bytes_to_str(num):
@@ -651,12 +653,26 @@ def get_processes_by_name(process_name):
 
 
 def suspend_processes(processes):
+    """
+    Suspend a list of processes.
+
+    Parameters
+    ----------
+    processes : iterable of psutil.Process
+    """
     for p in processes:
         p.suspend()
         logger.info('Suspended {}'.format(p))
 
 
 def resume_processes(processes):
+    """
+    Resume a list of processes.
+
+    Parameters
+    ----------
+    processes : iterable of psutil.Process
+    """
     for p in processes:
         p.resume()
         logger.info('Resumed {}'.format(p))
@@ -680,8 +696,8 @@ class SuspendProcesses:
 
         Parameters
         ----------
-        processes :
-            :class:`psutil.Process` objects or strings to search for using get_process_by_name
+        processes
+            :class:`psutil.Process` objects or strings to search for using :func:`get_process_by_name`
         """
         self.processes = []
         for process in processes:

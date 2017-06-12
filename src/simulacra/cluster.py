@@ -253,22 +253,25 @@ class ClusterInterface:
                                blacklist_dir_names = ('python', 'build_python'),
                                whitelist_file_ext = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl')):
         """
-        Mirror the remote home directory.
+        Mirror the entire remote home directory.
 
-        :param blacklist_dir_names: do not mirror directories with these names
-        :param whitelist_file_ext: only mirror files with these extensions
+        Parameters
+        ----------
+        blacklist_dir_names
+            Directories with these names will not be walked.
+        whitelist_file_ext
+            Only files with these file extensions will be transferred.
         """
-        start_time = datetime.datetime.utcnow()
         logger.info('Mirroring remote home directory')
 
-        self.walk_remote_path(self.remote_home_dir,
-                              func_on_files = self.mirror_file,
-                              func_on_dirs = lambda d, _: utils.ensure_dir_exists(d),
-                              blacklist_dir_names = blacklist_dir_names,
-                              whitelist_file_ext = whitelist_file_ext)
+        with utils.BlockTimer() as timer:
+            self.walk_remote_path(self.remote_home_dir,
+                                  func_on_files = self.mirror_file,
+                                  func_on_dirs = lambda d, _: utils.ensure_dir_exists(d),
+                                  blacklist_dir_names = blacklist_dir_names,
+                                  whitelist_file_ext = whitelist_file_ext)
 
-        end_time = datetime.datetime.utcnow()
-        logger.info('Mirroring complete. Elapsed time: {}'.format(end_time - start_time))
+        logger.info(f'Mirroring complete. {timer}')
 
 
 class SimulationResult:
@@ -295,19 +298,32 @@ class SimulationResult:
 
 
 class JobProcessor(core.Beet):
-    """A class that processes a collection of pickled Simulations. Should be subclassed for specialization."""
+    """
+    A class that processes a collection of pickled Simulations. Should be subclassed for specialization.
+
+    Attributes
+    ----------
+    running_time
+        The total running time of all the simulations in the job.
+    elapsed_time
+        The elapsed time of the job (first simulation started to last simulation ended).
+    """
 
     simulation_result_type = SimulationResult
 
     def __init__(self, job_name, job_dir_path, simulation_type):
         """
-        Initialize a JobProcessor from a job name and path to its directory.
-
-        :param job_name: the name of the job
-        :param job_dir_path: the path to the job directory
-        :param simulation_type: the type of Simulation used in the job (should be set by subclasses)
+        Parameters
+        ----------
+        job_name : :class:`str`
+            The name of the job.
+        job_dir_path : :class:`str`
+            The path to the job directory.
+        simulation_type
+            The type of the Simulation used in the job.
         """
         super().__init__(job_name)
+
         self.job_dir_path = job_dir_path
 
         for directory in (self.inputs_dir, self.outputs_dir, self.plots_dir, self.movies_dir, self.summaries_dir):
@@ -365,24 +381,36 @@ class JobProcessor(core.Beet):
 
     def save(self, target_dir = None, file_extension = '.job', **kwargs):
         """
-        Atomically pickle the JobProcessor to {job_dir}/{job_name}.job, and gzip it for reduced disk usage.
 
-        :param target_dir: directory to save the JobProcessor to
-        :param file_extension: file extension to name the JobProcessor with
-        :return: the path to the saved JobProcessor
+        Parameters
+        ----------
+        target_dir
+        file_extension
+        kwargs
+
+        Returns
+        -------
         """
         return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
-    def _load_sim(self, sim_name, **load_kwargs):
+    def _load_sim(self, sim_file_name, **load_kwargs):
         """
-        Load a Simulation from the job by its file_name. load_kwargs are passed to the Simulation's load method.
+        Load a :class:`Simulation` by its ``file_name``.
 
-        :param sim_name: load the Simulation with this file name from the output directory
-        :param load_kwargs: kwargs passed to the Simulation's load method
-        :return: the loaded Simulation, or None if it wasn't found
+        Parameters
+        ----------
+        sim_file_name : :class:`str`
+            The ``file_name`` of the :class:`Simulation` to load.
+        load_kwargs
+            Keyword arguments are passed to the ``load`` method of the :class:`Simulation``.
+
+        Returns
+        -------
+        :class:`Simulation`
+            The loaded :class:`Simulation`.
         """
         sim = None
-        sim_path = os.path.join(self.outputs_dir, '{}.sim'.format(sim_name))
+        sim_path = os.path.join(self.outputs_dir, '{}.sim'.format(sim_file_name))
 
         try:
             sim = self.simulation_type.load(os.path.join(sim_path), **load_kwargs)
@@ -390,14 +418,14 @@ class JobProcessor(core.Beet):
             if sim.status != 'finished':
                 raise FileNotFoundError
 
-            logger.debug('Loaded {}.sim from job {}'.format(sim_name, self.name))
+            logger.debug('Loaded {}.sim from job {}'.format(sim_file_name, self.name))
         except (FileNotFoundError, EOFError) as e:
-            logger.debug('Failed to find completed {}.sim from job {} due to {}'.format(sim_name, self.name, e))
+            logger.debug('Failed to find completed {}.sim from job {} due to {}'.format(sim_file_name, self.name, e))
         except zlib.error as e:
-            logger.warning('Encountered zlib error while trying to read {}.sim from job {}: {}'.format(sim_name, self.name, e))
+            logger.warning('Encountered zlib error while trying to read {}.sim from job {}: {}'.format(sim_file_name, self.name, e))
             os.remove(sim_path)
         except Exception as e:
-            logger.exception('Exception encountered while trying to find completed {}.sim from job {} due to {}'.format(sim_name, self.name, e))
+            logger.exception('Exception encountered while trying to find completed {}.sim from job {} due to {}'.format(sim_file_name, self.name, e))
             raise e
 
         return sim
@@ -452,6 +480,18 @@ class JobProcessor(core.Beet):
 
     def select_by_kwargs(self, **kwargs):
         """
+        Return all of the :class:`SimulationResult` that match the key-value pairs passed as keyword arguments.
+
+        Parameters
+        ----------
+        kwargs
+            Key-value pairs to match against.
+
+        Returns
+        -------
+
+        """
+        """
         Return all of the SimulationResults that match the (key, value) pairs given by the keyword arguments to this function.
 
         :param kwargs: (key, value) to match SimulationResults by
@@ -467,16 +507,22 @@ class JobProcessor(core.Beet):
 
     def select_by_lambda(self, test_function):
         """
-        Return all of the SimulationResults for which test_function(sim_result) is True.
+        Return all of the :class:`SimulationResult` for which ``test_function(sim_result)`` is True.
 
-        :param test_function: a function which takes one argument, a SimulationResult, and returns a bool (True to accept, False to reject)
-        :return: a list of SimulationResults
+        Parameters
+        ----------
+        test_function : callable
+            A test function that will be called on simulation results to determine whether they should be in the result set.
+
+        Returns
+        -------
+
         """
         return list([sim_result for sim_result in self.data.values() if test_function(sim_result) and sim_result is not None])
 
     @utils.memoize
     def parameter_set(self, parameter):
-        """Get the set of values of the parameter from the collected data."""
+        """Get the set of values of a parameter from the collected data."""
         return set(getattr(result, parameter) for result in self.data.values())
 
     def make_summary_plots(self):
@@ -484,6 +530,7 @@ class JobProcessor(core.Beet):
         pass
 
     def write_time_diagnostics_to_file(self):
+        """Write time diagnostic information for the job to a text file in the job directory."""
         path = os.path.join(self.job_dir_path, f'{self.name}_diagnostics.txt')
         with open(path, mode = 'w') as f:
             f.write('\n'.join((
@@ -506,19 +553,19 @@ class JobProcessor(core.Beet):
         logger.debug(f'Wrote diagnostic information for job {self.name} to {path}')
 
     def make_time_diagnostics_plot(self):
-        """Generate a diagnostics plot based on Simulation runtimes."""
+        """Save a diagnostics plot to the job directory.."""
 
         sim_numbers = [result.file_name for result in self.data.values() if result is not None]
         running_time = [result.running_time for result in self.data.values() if result is not None]
 
         vis.xy_plot(f'{self.name}__diagnostics',
-                      sim_numbers,
-                      running_time,
-                      line_kwargs = [dict(linestyle = '', marker = '.')],
-                      y_unit = 'hours',
-                      x_label = 'Simulation Number', y_label = 'Time',
-                      title = f'{self.name} Diagnostics',
-                      target_dir = self.summaries_dir)
+                    sim_numbers,
+                    running_time,
+                    line_kwargs = [dict(linestyle = '', marker = '.')],
+                    y_unit = 'hours',
+                    x_label = 'Simulation Number', y_label = 'Time',
+                    title = f'{self.name} Diagnostics',
+                    target_dir = self.summaries_dir)
 
         logger.debug(f'Generated diagnostics plot for job {self.name}')
 
@@ -539,24 +586,25 @@ def combine_job_processors(*job_processors):
 
     combined_jp.data = collections.collections.OrderedDict((ii, copy(sim_result)) for ii, (sim_name, sim_result) in enumerate(itertools.chain(jp.data for jp in job_processors)))
 
-    # TODO: update parameter sets
-
     return combined_jp
 
 
 class Parameter:
-    """A class that represents a parameter of a Specification."""
+    """A class that represents a parameter of a :class:`Specification`."""
 
     name = utils.Typed('name', legal_type = str)
     expandable = utils.Typed('expandable', legal_type = bool)
 
     def __init__(self, name, value = None, expandable = False):
         """
-        Initialize a Parameter.
-
-        :param name: the name of the Parameter, which should match a keyword argument of the target Specification
-        :param value: the value of the Parameter, or a list of values
-        :param expandable: whether this Parameter is expandable over the top-level iterable in value
+        Parameters
+        ----------
+        name : :class:`str`
+            The name of the Parameter, which should match a keyword argument of the target :class:`Specification`.
+        value : :class:`str`
+            The value of the Parameter, or an iterable of values.
+        expandable : :class:`Bool`
+            If True, :func:`expand_parameters_to_dicts` will expand along an iterable `value`.
         """
         self.name = name
         self.value = value
@@ -571,10 +619,20 @@ class Parameter:
 
 def expand_parameters_to_dicts(parameters):
     """
-    Expand a list of Parameters to a list of dictionaries containing all of the combinations of expandable Parameters.
+    Expand an iterable of :class:`Parameter` to a list of dictionaries containing all of the combinations of parameter values.
+    Each of these dictionaries can then be unpacked into a :class:`Specification`.
 
-    :param parameters: a list of Parameters
-    :return: a list of dictionaries of parameter.name: parameter.value pairs
+    If a :class:`Parameter` has ``expandable = True``, it will be expanded across the values in the outermost iterable in that :class:`Parameter`'s ``value``.
+
+    Parameters
+    ----------
+    parameters : iterable of :class:`Parameter`
+        The parameters to expand over.
+
+    Returns
+    -------
+    iterable of :class:`dict`
+        An iterable of dictionaries containing all of the combinations of parameters.
     """
     dicts = [collections.OrderedDict()]
 
@@ -592,13 +650,20 @@ def expand_parameters_to_dicts(parameters):
 
 def ask_for_input(question, default = None, cast_to = str):
     """
-    Ask for input from the user, with a default value, and call cast_to on it before returning itertools.
+    Ask for input from the user, with a default value, which will be cast to a specified type.
 
-    :param question: a string to present to the user
-    :type question: str
-    :param default: the default answer to the question
-    :param cast_to: a type to cast the user's input to
-    :return: the casted input
+    Parameters
+    ----------
+    question : :class:`str`
+        A string to display on the command prompt for the user.
+    default : :class:`str`
+        The default answer to the question.
+    cast_to
+        A type to cast the user's input to.
+
+    Returns
+    -------
+
     """
     try:
         input_str = input(question + ' [Default: {}] > '.format(default))
@@ -624,10 +689,17 @@ def ask_for_bool(question, default = False):
     Synonyms for True: 'true', 't', 'yes', 'y', '1', 'on'
     Synonyms for False: 'false', 'f', 'no', 'n', '0', 'off'
 
-    :param question: a string to present to the user
-    :type question: str
-    :param default: the default answer to the question
-    :return: the input interpreted as a boolean
+    Parameters
+    ----------
+    question : :class:`str`
+        A string to display on the command prompt for the user.
+    default : :class:`str`
+        The default answer to the question.
+
+    Returns
+    -------
+    :class:`Bool`
+        The input, interpreted as a boolean.
     """
     try:
         input_str = input(question + ' [Default: {}] > '.format(default))
@@ -652,11 +724,22 @@ def ask_for_bool(question, default = False):
 
 def ask_for_eval(question, default = 'None'):
     """
-    Ask for input from the user, with a default value, which will be evaluated as a python command.
+    Ask for input from the user, with a default value, which will be evaluated as a Python command.
 
-    :param question: a string to present to the user
-    :param default: the default answer to the question
-    :return: the input, evaluated as a python command
+    Numpy's top-level interface (imported as np) and Simulacra's unit module (* imported) are both available. For example, ``'np.linspace(0, twopi, 100)'`` will produce the expected result.
+
+    NB: this function is not safe! The user can execute arbitrary Python code.
+
+    Parameters
+    ----------
+    question : :class:`str`
+        A string to display on the command prompt for the user.
+    default : :class:`str`
+        The default answer to the question.
+
+    Returns
+    -------
+
     """
     input_str = input(question + ' [Default: {}] (eval) > '.format(default))
 

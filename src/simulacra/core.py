@@ -30,6 +30,7 @@ class Info:
 
     Field names are unique.
     """
+
     def __init__(self, *,
                  header: str,
                  indentation: int = 2):
@@ -120,7 +121,7 @@ class Beet:
     Attributes
     ----------
     uuid
-        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>` for the :class:`Beet`.
+        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Beet`.
     """
 
     def __init__(self, name, file_name = None):
@@ -153,12 +154,14 @@ class Beet:
             return f'{self.__class__.__name__}({self.name}) [{self.uuid}]'
 
     def __repr__(self):
-        return utils.field_str(self, 'name', 'file_name', 'uid')
+        return utils.field_str(self, 'name', 'file_name', 'uuid')
 
     def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.uuid == other.uid
+        """Two Beets are equal if they have the same UUID."""
+        return isinstance(other, self.__class__) and self.uuid == other.uuid
 
     def __hash__(self):
+        """The hash of the Beet is the hash of its UUID."""
         return hash(self.uuid)
 
     def clone(self, **kwargs):
@@ -265,8 +268,10 @@ class Specification(Beet):
 
     Attributes
     ----------
+    simulation_type
+        A class attribute which determines what kind of :class:`Simulation` will be generated via :func:`Specification.to_simulation`.
     uuid
-        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>` for the :class:`Specification`.
+        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Specification`.
     """
 
     simulation_type = None
@@ -350,7 +355,7 @@ class Simulation(Beet):
     Attributes
     ----------
     uuid
-        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>` for the :class:`Simulation`.
+        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Simulation`.
     status : :class:`str`
         The status of the Simulation. One of ``'initialized'``, ``'running'``, ``'finished'``, ``'paused'``, or ``'error'``.
     """
@@ -364,9 +369,9 @@ class Simulation(Beet):
         spec : :class:`Specification`
             The :class:`Specification` for the Simulation.
         """
-        self.spec = spec
-
         super().__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from spec
+
+        self.spec = spec
 
         # diagnostic data
         self.runs = 0
@@ -423,7 +428,7 @@ class Simulation(Beet):
         logger.debug("{} {} ({}) status set to {}".format(self.__class__.__name__, self.name, self.file_name, status))
 
     def __str__(self):
-        return super().__str__() + f' ~ {self.status}'
+        return super().__str__() + f' {{{self.status}}}'
 
     def save(self, target_dir = None, file_extension = '.sim', compressed = True):
         """

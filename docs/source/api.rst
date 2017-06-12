@@ -1,10 +1,19 @@
 API Reference
 =============
 
+.. currentmodule:: simulacra
+
 Specifications and Simulations
 ------------------------------
 
-.. currentmodule:: simulacra
+The core of the Simulacra framework are the :class:`Specification` and :class:`Simulation` classes.
+A :class:`Specification` collects the data required to run a simulation, but doesn't do any actual computation.
+The specification can then be used to to generate a :class:`Simulation` via :func:`Specification.to_simulation`, which will perform actual computations via the hook method :func:`Simulation.run_simulation`.
+
+The :class:`Beet` is the superclass of both :class:`Specification` and :class:`Simulation`.
+It provides a common interface for saving, loading, and cloning operations, as well as storing a unique identifier.
+
+.. autoclass:: Beet
 
 .. autoclass:: Specification
 
@@ -32,6 +41,10 @@ Specifications and Simulations
 Info
 ----
 
+Simulacra provides a system for hierarchically displaying information from nested objects.
+To participate, an object should define an ``info()`` method that takes no arguments and returns an :class:`Info` instance which it gets from calling ``super().info()``.
+Inside this method more fields and :class:`Info` objects can be added to the top-level :class:`Info`, which could represent information from attributes and nested objects, respectively.
+
 .. autoclass:: Info
 
    .. automethod:: add_field
@@ -50,6 +63,7 @@ Visualization
 High-Level Plotting Functions
 +++++++++++++++++++++++++++++
 
+Simulacra's high-level plotting functions are intended for quickly generating plots with a wide variety of basic graphical options.
 
 .. autofunction:: xy_plot
 
@@ -64,14 +78,28 @@ High-Level Plotting Functions
 Low-Level Plotting Utilities
 ++++++++++++++++++++++++++++
 
+The low-level plotting interface is designed to individually wrap common visualization tasks such as creating and saving ``matplotlib`` figures and setting axis options.
+
 .. autoclass:: simulacra.vis.FigureManager
 
 .. autofunction:: simulacra.vis.get_figure
 
 .. autofunction:: simulacra.vis.save_current_figure
 
+Simulation Animators
+++++++++++++++++++++
+
+:class:`Animator` and :class:`AxisManager` provide a method for a :class:`Simulation` to produce an animation while it's running.
+
+.. autoclass:: AxisManager
+
+.. autoclass:: Animator
+
+
 Math
 ----
+
+Simulacra's math library provides a few miscellaneous objects and functions with no particular focus.
 
 .. currentmodule:: simulacra.math
 
@@ -85,6 +113,9 @@ Math
 
 Summables
 ---------
+
+:class:`Summand` and :class:`Sum` implement a composite pattern, where summands are summed to form sums, which delegate calls to the summands inside them.
+For example, a :class:`Summand` could be the electric field of a single particle, and the electric field of a group of particles could be a sum of those electric fields.
 
 .. currentmodule:: simulacra
 
@@ -104,6 +135,8 @@ Units
 Utilities
 ---------
 
+Simulacra's utility module provides a wide range of common functionality that doesn't quite fit anywhere else.
+
 .. currentmodule:: simulacra.utils
 
 .. autofunction:: memoize
@@ -121,6 +154,8 @@ Cluster
 
 Interfacing with a Cluster
 ++++++++++++++++++++++++++
+
+Simulacra provides an object-oriented data processing interface that can talk to a cluster, load simulations, and perform analysis on them.
 
 .. currentmodule:: simulacra.cluster
 
