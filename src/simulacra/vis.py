@@ -14,7 +14,6 @@ from . import utils
 from . import core
 from .units import *
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -51,28 +50,28 @@ CMAP_TO_OPPOSITE = {
 }
 
 GRID_KWARGS = dict(
-        linestyle = '-',
-        color = 'black',
-        linewidth = .25,
-        alpha = 0.4
+    linestyle = '-',
+    color = 'black',
+    linewidth = .25,
+    alpha = 0.4
 )
 
 MINOR_GRID_KWARGS = GRID_KWARGS.copy()
 MINOR_GRID_KWARGS['alpha'] -= .1
 
 COLORMESH_GRID_KWARGS = dict(
-        linestyle = '-',
-        linewidth = .25,
-        alpha = 0.4,
+    linestyle = '-',
+    linewidth = .25,
+    alpha = 0.4,
 )
 
 HVLINE_KWARGS = dict(
-        linestyle = '-',
-        color = 'black',
+    linestyle = '-',
+    color = 'black',
 )
 
 T_TEXT_KWARGS = dict(
-        fontsize = 12,
+    fontsize = 12,
 )
 
 CONTOUR_KWARGS = dict(
@@ -80,21 +79,23 @@ CONTOUR_KWARGS = dict(
 )
 
 CONTOUR_LABEL_KWARGS = dict(
-        inline = 1,
-        fontsize = 8,
+    inline = 1,
+    fontsize = 8,
 )
 
 TITLE_OFFSET = 1.1
 
 FFMPEG_PROCESS_KWARGS = dict(
-        stdin = subprocess.PIPE,
-        stdout = subprocess.DEVNULL,
-        stderr = subprocess.DEVNULL,
-        bufsize = -1,
+    stdin = subprocess.PIPE,
+    stdout = subprocess.DEVNULL,
+    stderr = subprocess.DEVNULL,
+    bufsize = -1,
 )
 
+GOLDEN_RATIO = (np.sqrt(5.0) - 1.0) / 2.0
 
-def _get_fig_dims(fig_scale, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0, fig_width_pts = 498.66258):
+
+def _get_fig_dims(fig_scale, aspect_ratio = GOLDEN_RATIO, fig_width_pts = 498.66258):
     """
     Return the dimensions (width, height) for a figure based on the scale, width (in points), and aspect ratio.
 
@@ -122,7 +123,7 @@ def _get_fig_dims(fig_scale, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0, fig_widt
     return fig_width, fig_height
 
 
-def get_figure(fig_scale = 0.95, fig_dpi_scale = 1, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0, fig_width_pts = 498.66258):
+def get_figure(fig_scale = 0.95, fig_dpi_scale = 1, aspect_ratio = GOLDEN_RATIO, fig_width_pts = 498.66258):
     """
     Get a matplotlib figure object with the desired scale relative to a full-text-width LaTeX page.
 
@@ -215,7 +216,6 @@ class FigureManager:
                  save_on_exit = True, show = False,
                  **kwargs):
         """
-
         Parameters
         ----------
         name
@@ -852,23 +852,23 @@ def xyz_plot(name,
             norm = RichardsonNormalization(equator_magnitude = richardson_equator_magnitude)
 
         colormesh = ax.pcolormesh(
-                x_mesh / x_unit_value,
-                y_mesh / y_unit_value,
-                z_mesh / z_unit_value,
-                shading = shading,
-                norm = norm
+            x_mesh / x_unit_value,
+            y_mesh / y_unit_value,
+            z_mesh / z_unit_value,
+            shading = shading,
+            norm = norm
         )
 
         if len(contours) > 0:
             contour = ax.contour(
-                    x_mesh / x_unit_value,
-                    y_mesh / y_unit_value,
-                    z_mesh / z_unit_value,
-                    levels = sorted(contours),
-                    **contour_kwargs,
+                x_mesh / x_unit_value,
+                y_mesh / y_unit_value,
+                z_mesh / z_unit_value,
+                levels = sorted(contours),
+                **contour_kwargs,
             )
             if show_contour_labels:
-                ax.clabel(contour, **contour_kwargs)
+                ax.clabel(contour, **contour_label_kwargs)
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
@@ -1306,11 +1306,14 @@ def xyzt_plot(name,
         if y_log_axis:
             ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
 
-        colormesh = ax.pcolormesh(x_mesh / x_unit_value,
-                                  y_mesh / y_unit_value,
-                                  z_func(x_mesh, y_mesh, t_data[0], **z_func_kwargs) / z_unit_value,
-                                  shading = shading,
-                                  norm = norm)
+        colormesh = ax.pcolormesh(
+            x_mesh / x_unit_value,
+            y_mesh / y_unit_value,
+            z_func(x_mesh, y_mesh, t_data[0], **z_func_kwargs) / z_unit_value,
+            shading = shading,
+            norm = norm,
+            animated = True,
+        )
 
         if show_colorbar and colormap.name != 'richardson':
             plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
