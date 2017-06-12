@@ -155,10 +155,19 @@ class ClusterInterface:
 
     def is_file_synced(self, remote_stat, local_path):
         """
-        Determine if a local file is the same as a remote file by checking the file size and modification times.
+        Determine whether a local file is the same as a remote file by checking the file size and modification times.
 
-        :return: True if the file is synced, False otherwise
-        :rtype: bool
+        Parameters
+        ----------
+        remote_stat
+            The stat of the remote file.
+        local_path
+            The path to the local file.
+
+        Returns
+        -------
+        :class:`bool`
+            ``True`` if the file is synced, ``False`` otherwise.
         """
         if os.path.exists(local_path):
             local_stat = os.stat(local_path)
@@ -189,7 +198,7 @@ class ClusterInterface:
                     md5_local.update(f.read())
                     md5_local = md5_local.hexdigest().strip()
                 if md5_local != md5_remote:
-                    logger.warning('MD5 hash on {} for file {} did not match local file at {}, retrying'.format(self.remote_host, remote_path, local_path))
+                    logger.debug(f'MD5 hash on {self.remote_host} for file {remote_path} did not match local file at {local_path}, retrying')
                     self.mirror_file(remote_path, remote_stat, force_download = True)
 
     def walk_remote_path(self, remote_path, func_on_dirs = None, func_on_files = None, exclude_hidden = True, blacklist_dir_names = None, whitelist_file_ext = None):
