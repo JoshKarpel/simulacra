@@ -408,9 +408,6 @@ class Simulation(Beet):
         status : :class:`str`
             The new status for the simulation
         """
-        if status == self.status:
-            raise ValueError('Tried to set status of {} to its current status'.format(self.name))
-
         now = datetime.datetime.utcnow()
 
         if status == STATUS_INI:
