@@ -500,12 +500,6 @@ class JobProcessor(core.Beet):
         -------
 
         """
-        """
-        Return all of the SimulationResults that match the (key, value) pairs given by the keyword arguments to this function.
-
-        :param kwargs: (key, value) to match SimulationResults by
-        :return: a list of SimulationResults
-        """
         out = []
 
         for sim_result in (r for r in self.data.values() if r is not None):
@@ -550,7 +544,7 @@ class JobProcessor(core.Beet):
                 '',
                 f'Elapsed Time: {self.elapsed_time}',
                 f'Combined Runtime: {self.running_time}',
-                f'Speedup Factor: {round(self.running_time / self.elapsed_time)}'
+                f'Speedup Factor: {uround(self.running_time / self.elapsed_time)}',
                 '',
                 f'Earliest Sim Init: {min(r.init_time for r in self.data.values() if r is not None)}',
                 f'Latest Sim Init: {max(r.init_time for r in self.data.values() if r is not None)}',
