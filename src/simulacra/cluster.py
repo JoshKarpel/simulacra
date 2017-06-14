@@ -854,7 +854,7 @@ request_cpus = 1
 request_memory = {memory}GB
 request_disk = {disk}GB
 #
-#requirements = (OpSysMajorVer == 6) || (OpSysMajorVer == 7)
+# requirements = (OpSysMajorVer == 6) || (OpSysMajorVer == 7)
 requirements = (OpSysMajorVer == 6)
 #
 queue {num_jobs}
