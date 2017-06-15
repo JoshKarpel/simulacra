@@ -869,7 +869,7 @@ def format_chtc_submit_string(job_name, specification_count, checkpoints = True)
             checkpoints = str(checkpoints).lower(),
             flockglide = str(ask_for_bool('Flock and Glide?', default = 'y')).lower(),
             memory = ask_for_input('Memory (in GB)?', default = 4, cast_to = float),
-            disk = ask_for_input('Disk (in GB)?', default = 1, cast_to = float),
+            disk = ask_for_input('Disk (in GB)?', default = 4, cast_to = float),
             num_jobs = specification_count,
             max_materialize = ask_for_input('Max Materialize?', default = 5000, cast_to = int),
     )
