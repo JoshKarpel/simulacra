@@ -660,7 +660,7 @@ def ask_for_input(question, default = None, cast_to = str):
     ----------
     question : :class:`str`
         A string to display on the command prompt for the user.
-    default : :class:`str`
+    default
         The default answer to the question.
     cast_to
         A type to cast the user's input to.
@@ -803,7 +803,7 @@ def write_specifications_info_to_file(specifications, job_dir):
 
     with open(os.path.join(job_dir, 'specifications.txt'), 'w') as file:
         for spec in specifications:
-            file.write(str(spec.info()))
+            file.write(str(spec.info()) + '\n')
 
     logger.debug('Saved Specification information')
 
@@ -814,8 +814,7 @@ def write_parameters_info_to_file(parameters, job_dir):
 
     with open(os.path.join(job_dir, 'parameters.txt'), 'w') as file:
         for param in parameters:
-            file.write(repr(param))
-            file.write('\n')  # blank line between specs
+            file.write(repr(param) + '\n')
 
     logger.debug('Saved parameter information')
 
@@ -868,7 +867,7 @@ def format_chtc_submit_string(job_name, specification_count, checkpoints = True)
             checkpoints = str(checkpoints).lower(),
             flockglide = str(ask_for_bool('Flock and Glide?', default = 'y')).lower(),
             memory = ask_for_input('Memory (in GB)?', default = 4, cast_to = float),
-            disk = ask_for_input('Disk (in GB)?', default = 4, cast_to = float),
+            disk = ask_for_input('Disk (in GB)?', default = 10, cast_to = float),
             num_jobs = specification_count,
             max_materialize = ask_for_input('Max Materialize?', default = 5000, cast_to = int),
     )

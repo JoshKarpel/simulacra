@@ -163,6 +163,7 @@ def save_current_figure(name,
                         img_format = 'pdf',
                         transparent = True,
                         colormap = plt.cm.get_cmap('inferno'),
+                        tight_layout = True,
                         **kwargs):
     """
     Save the current matplotlib figure as an image to a file.
@@ -197,7 +198,11 @@ def save_current_figure(name,
 
     utils.ensure_dir_exists(path)
 
-    plt.savefig(path, dpi = plt.gcf().dpi, bbox_inches = 'tight', transparent = transparent)
+    if tight_layout:
+        plt.savefig(path, dpi = plt.gcf().dpi, bbox_inches = 'tight', transparent = transparent)
+    else:
+        plt.savefig(path, dpi = plt.gcf().dpi, transparent = transparent)
+
 
     logger.debug('Saved matplotlib figure {} to {}'.format(name, path))
 
@@ -211,7 +216,7 @@ class FigureManager:
 
     def __init__(self, name, name_postfix = '',
                  fig_scale = 0.95, fig_dpi_scale = 1, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0,
-                 target_dir = None, img_format = 'pdf', img_scale = 1,
+                 target_dir = None, img_format = 'pdf', img_scale = 1, tight_layout = True,
                  close_before_enter = True, close_after_exit = True,
                  save_on_exit = True, show = False,
                  **kwargs):
@@ -240,6 +245,7 @@ class FigureManager:
         self.fig_dpi_scale = fig_dpi_scale
         self.fig_width_pts = fig_width_pts
         self.aspect_ratio = aspect_ratio
+        self.tight_layout = tight_layout
 
         self.target_dir = target_dir
         self.img_format = img_format
@@ -257,7 +263,7 @@ class FigureManager:
         self.path = None
 
     def save(self):
-        path = save_current_figure(name = self.name, name_postfix = self.name_postfix, target_dir = self.target_dir, img_format = self.img_format, dpi_scale = self.img_scale)
+        path = save_current_figure(name = self.name, name_postfix = self.name_postfix, target_dir = self.target_dir, img_format = self.img_format, dpi_scale = self.img_scale, tight_layout = self.tight_layout)
 
         self.path = path
 
@@ -364,9 +370,10 @@ def get_axis_limits(*data, lower_limit = None, upper_limit = None, log = False, 
     if upper_limit is None:
         upper_limit = max(np.nanmax(d) for d in data)
 
-    limit_range = np.abs(upper_limit - lower_limit)
-    lower_limit -= pad * limit_range
-    upper_limit += pad * limit_range
+    if not log:
+        limit_range = np.abs(upper_limit - lower_limit)
+        lower_limit -= pad * limit_range
+        upper_limit += pad * limit_range
 
     if log:
         lower_limit /= log_pad

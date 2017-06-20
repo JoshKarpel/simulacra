@@ -493,6 +493,7 @@ MW = 1e6 * W
 GW = 1e9 * W
 TW = 1e12 * W
 PW = 1e15 * W
+Wcm2 = W / (cm ** 2)
 TWcm2 = TW / (cm ** 2)
 
 UNIT_NAME_TO_VALUE.update({
@@ -507,6 +508,7 @@ UNIT_NAME_TO_VALUE.update({
     'GW': GW,
     'TW': TW,
     'PW': PW,
+    'Wcm2': Wcm2,
     'TWcm2': TWcm2,
 })
 UNIT_NAME_TO_LATEX.update({
@@ -521,7 +523,8 @@ UNIT_NAME_TO_LATEX.update({
     'GW': r'\mathrm{GW}',
     'TW': r'\mathrm{TW}',
     'PW': r'\mathrm{PW}',
-    'TWcm2': r'\mathrm{TW / cm^2}'
+    'Wcm2': r'\mathrm{W / cm^2}',
+    'TWcm2': r'\mathrm{TW / cm^2}',
 })
 
 # current
