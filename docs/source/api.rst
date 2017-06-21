@@ -135,7 +135,7 @@ Units
 Utilities
 ---------
 
-Simulacra's utility module provides a wide range of common functionality that doesn't quite fit anywhere else.
+Simulacra's utility module provides a wide range of functions for working with arrays, simulations, log messages, attributes, and processes that doesn't quite fit anywhere else.
 
 .. currentmodule:: simulacra.utils
 
@@ -143,11 +143,32 @@ Simulacra's utility module provides a wide range of common functionality that do
 
 .. autofunction:: multi_map
 
+.. autofunction:: get_now_str
+
 .. autofunction:: ensure_dir_exists
 
 .. autofunction:: find_nearest_entry
 
 .. autofunction:: find_or_init_sim
+
+.. autofunction:: downsample
+
+.. autoclass:: LogManager
+
+.. autofunction:: timed
+
+.. autoclass:: BlockTimer
+
+.. autoclass:: RestrictedValues
+
+.. autofunction:: get_file_size
+
+.. autofunction:: get_file_size_as_str
+
+.. autofunction:: try_loop
+
+.. autoclass:: SubprocessManager
+
 
 Cluster
 -------

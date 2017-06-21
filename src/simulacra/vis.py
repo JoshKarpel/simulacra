@@ -473,43 +473,89 @@ def xy_plot(name,
             save_csv = False,
             **kwargs):
     """
-    Generate and save a generic x-y plot.
+    Generate and save a generic x vs. y plot.
 
-    :param name: filename for the plot
-    :param x_data: a single array to plot the y data against
-    :param y_data: any number of arrays of the same length as x_data to plot
-    :param line_labels: the labels for the lines
-    :param line_kwargs: other keyword arguments for each line's .plot() call (None for default)
-    :param x_unit: a number to scale the x_data by. Can be a string corresponding to a key in the unit name/value dict.
-    :param y_unit: a number to scale the y_data by. Can be a string corresponding to a key in the unit name/value dict.
-    :param x_log_axis: if True, log the x axis
-    :param y_log_axis: if True, log the y axis
-    :param x_lower_limit: lower limit for the x axis, defaults to np.nanmin(x_data)
-    :param x_upper_limit: upper limit for the x axis, defaults to np.nanmax(x_data)
-    :param y_lower_limit: lower limit for the y axis, defaults to min(np.nanmin(y_data))
-    :param y_upper_limit: upper limit for the y axis, defaults to min(np.nanmin(y_data))
-    :param vlines: a list of x positions to place vertical lines
-    :param vline_kwargs: a list of kwargs for each vline (None for default)
-    :param hlines: a list of y positions to place horizontal lines
-    :param hline_kwargs: a list of kwargs for each hline (None for default)
-    :param x_extra_ticks:
-    :param x_extra_tick_labels:
-    :param y_extra_ticks:
-    :param y_extra_tick_labels:
-    :param title: a title for the plot
-    :param x_label: a label for the x axis
-    :param y_label: a label for the y axis
-    :param font_size_title: font size for the title
-    :param font_size_axis_labels: font size for the axis labels
-    :param font_size_tick_labels: font size for the tick labels
-    :param font_size_legend: font size for the legend
-    :param ticks_on_top:
-    :param ticks_on_right:
-    :param legend_on_right:
-    :param grid_kwargs:
-    :param save_csv: if True, save x_data and y_data to a CSV file
-    :param kwargs: kwargs are passed to a FigureManager context manager
-    :return: the path the plot was saved to
+    Parameters
+    ----------
+    name : :class:`str`
+        The filename for the plot (not including path, which should be passed via keyword argument `target_dir`.
+    x_data
+        A single array that will be used as x-values for all the `y_data`.
+    y_data
+        Any number of arrays of the same length as `x_data`, each of which will appear as a line on the plot.
+    line_labels
+        Labels for each of the `y_data` lines.
+    line_kwargs
+        Keyword arguments for each of the `y_data` lines (a list of dictionaries).
+    figure_manager
+        An existing :class:`FigureManager` instance to use instead of creating a new one.
+    x_unit
+        The unit for the x-axis. Can be a number or the name of a unit as string.
+    y_unit
+        The unit for the y-axis. Can be a number or the name of a unit as string.
+    x_log_axis
+        If ``True``, the x-axis will be log-scaled.
+    y_log_axis
+        If ``True``, the y-axis will be log-scaled.
+    x_lower_limit
+        The lower limit for the x-axis. If ``None``, set automatically from the `x_data`.
+    x_upper_limit
+        The upper limit for the x-axis. If ``None``, set automatically from the `x_data`.
+    y_lower_limit
+        The lower limit for the y-axis. If ``None``, set automatically from the `y_data`.
+    y_upper_limit
+        The upper limit for the y-axis. If ``None``, set automatically from the `y_data`.
+    y_pad
+        The linear padding factor for the y-axis. See :func:`get_axis_limits`.
+    y_log_pad
+        The logarithmic padding factor for the y-axis. See :func:`get_axis_limits`.
+    vlines
+        A list of positions to draw vertical lines.
+    vline_kwargs
+        Keyword arguments for each of the `vlines` (a list of dictionaries).
+    hlines
+        A list of positions to draw horizontal lines.
+    hline_kwargs
+        Keyword arguments for each of the `hlines` (a list of dictionaries).
+    x_extra_ticks
+        Additional tick marks to display on the x-axis.
+    y_extra_ticks
+        Additional tick marks to display on the y-axis.
+    x_extra_tick_labels
+        Labels for the extra x ticks.
+    y_extra_tick_labels
+        Labels for the extra y ticks.
+    title : :class:`str`
+        The text to display above the plot.
+    x_label : :class:`str`
+        The label to display below the x-axis.
+    y_label : :class:`str`
+        The label to display to the left of the y-axis.
+    font_size_title : :class:`float`
+        The font size for the title.
+    font_size_axis_labels : :class:`float`
+        The font size for the axis labels.
+    font_size_tick_labels : :class:`float`
+        The font size for the tick labels.
+    font_size_legend : :class:`float`
+        The font size for the legend.
+    ticks_on_top : :class:`bool`
+        If ``True``, axis ticks will be shown along the top side of the plot (in addition to the bottom).
+    ticks_on_right : :class:`bool`
+        If ``True``, axis ticks will be shown along the right side of the plot (in addition to the left).
+    legend_on_right : :class:`bool`
+        If ``True``, the legend will be displayed hanging on the right side of the plot.
+    grid_kwargs : :class:`dict`
+        Keyword arguments for the major gridlines.
+    minor_grid_kwargs : :class:`dict`
+        Keyword arguments for the minor gridlines.
+    save_csv : :class:`bool`
+        If ``True``, the x and y data for the plot will be saved to a CSV file with the same name in the target directory.
+    kwargs
+        Keyword arguments are passed to :class:`FigureManager`.
+    Returns
+    -------
+
     """
     # set up figure and axis
     if figure_manager is None:
