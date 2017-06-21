@@ -254,8 +254,8 @@ class FigureManager:
         if len(kwargs) > 0:
             logger.debug('FigureManager for figure {} absorbed extraneous kwargs: {}'.format(self.name, kwargs))
 
-        self.close_before = close_before_enter
-        self.close_after = close_after_exit
+        self.close_before_enter = close_before_enter
+        self.close_after_exit = close_after_exit
 
         self.save_on_exit = save_on_exit
         self.show = show
@@ -268,23 +268,26 @@ class FigureManager:
         self.path = path
 
     def __enter__(self):
-        if self.close_before:
+        if self.close_before_enter:
             plt.close()
 
         self.fig = get_figure(fig_scale = self.fig_scale, fig_dpi_scale = self.fig_dpi_scale, fig_width_pts = self.fig_width_pts, aspect_ratio = self.aspect_ratio)
 
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def cleanup(self):
         if self.save_on_exit:
             self.save()
 
         if self.show:
             plt.show()
 
-        if self.close_after:
+        if self.close_after_exit:
             self.fig.clear()
             plt.close(self.fig)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cleanup()
 
 
 def get_pi_ticks_and_labels(lower_limit = 0, upper_limit = twopi, denom = 4):
@@ -662,7 +665,7 @@ def xy_plot(name,
 
         logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
-    return path
+    return fm
 
 
 def xxyy_plot(name,
@@ -824,7 +827,7 @@ def xxyy_plot(name,
 
         logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
-    return path
+    return fm
 
 
 def xyz_plot(name,
@@ -982,7 +985,7 @@ def xyz_plot(name,
         #
         # logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
-    return path
+    return fm
 
 
 def xyt_plot(name,
@@ -1228,7 +1231,7 @@ def xyt_plot(name,
         #
         # logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
-    return path
+    return fm
 
 
 def xyzt_plot(name,
@@ -1439,7 +1442,7 @@ def xyzt_plot(name,
         #
         # logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
-    return path
+    return fm
 
 
 class AxisManager:

@@ -163,7 +163,7 @@ Simulacra's utility module provides a wide range of functions for working with a
 
 .. autofunction:: get_file_size
 
-.. autofunction:: get_file_size_as_str
+.. autofunction:: get_file_size_as_string
 
 .. autofunction:: try_loop
 

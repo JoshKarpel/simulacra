@@ -394,8 +394,8 @@ class Simulation(Beet):
         """
         Set the status of the :class:`Simulation`.
 
-        Specially defined statuses are ``STATUS_INI`` (initialized), ``STATUS_RUN`` (running), ``STATUS_FIN`` (finished), ``STATUS_PAU`` (paused), and ``STATUS_ERR`` (error).
-        These statuses have side effects on the simulation's time diagnostics.
+        Defined statuses are ``STATUS_INI`` (initialized), ``STATUS_RUN`` (running), ``STATUS_FIN`` (finished), ``STATUS_PAU`` (paused), and ``STATUS_ERR`` (error).
+        These statuses can have side effects on the simulation's time diagnostics.
 
         Parameters
         ----------
