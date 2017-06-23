@@ -22,6 +22,7 @@ import os
 import logging
 import fractions
 import subprocess
+import sys
 
 import numpy as np
 import numpy.ma as ma
@@ -106,8 +107,8 @@ TITLE_OFFSET = 1.1
 
 FFMPEG_PROCESS_KWARGS = dict(
     stdin = subprocess.PIPE,
-    stdout = subprocess.DEVNULL,
-    stderr = subprocess.DEVNULL,
+    stdout = sys.stdout,
+    stderr = sys.stdout,
     bufsize = -1,
 )
 
@@ -139,7 +140,7 @@ def _get_fig_dims(fig_scale, aspect_ratio = GOLDEN_RATIO, fig_width_pts = 498.66
     fig_width = fig_width_pts * inches_per_pt * fig_scale  # width in inches
     fig_height = fig_width * aspect_ratio  # height in inches
 
-    return fig_width, fig_height
+    return int(fig_width), int(fig_height)
 
 
 def get_figure(fig_scale = 0.95, fig_dpi_scale = 1, aspect_ratio = GOLDEN_RATIO, fig_width_pts = 498.66258):
@@ -171,7 +172,7 @@ def get_figure(fig_scale = 0.95, fig_dpi_scale = 1, aspect_ratio = GOLDEN_RATIO,
     elif fig_scale == 'half':
         fig_scale = .475
 
-    fig = plt.figure(figsize = _get_fig_dims(fig_scale, fig_width_pts = fig_width_pts, aspect_ratio = aspect_ratio), dpi = fig_dpi_scale * 600)
+    fig = plt.figure(figsize = _get_fig_dims(fig_scale, fig_width_pts = fig_width_pts, aspect_ratio = aspect_ratio), dpi = fig_dpi_scale * 100)
 
     return fig
 
@@ -221,7 +222,6 @@ def save_current_figure(name,
         plt.savefig(path, dpi = plt.gcf().dpi, bbox_inches = 'tight', transparent = transparent)
     else:
         plt.savefig(path, dpi = plt.gcf().dpi, transparent = transparent)
-
 
     logger.debug('Saved matplotlib figure {} to {}'.format(name, path))
 
@@ -1010,6 +1010,8 @@ def xyt_plot(name,
         figure_manager = FigureManager(name, save_on_exit = False, fig_dpi_scale = fig_dpi_scale, **kwargs)
     with figure_manager as fm:
         fig = fm.fig
+        # plt.close()
+        # fig = plt.figure(figsize = (10, 10))
         ax = fig.add_axes([.15, .15, .75, .7])
 
         if grid_kwargs is None:
@@ -1139,22 +1141,22 @@ def xyt_plot(name,
         background = fig.canvas.copy_from_bbox(fig.bbox)
         canvas_width, canvas_height = fig.canvas.get_width_height()
 
-        cmds = ("ffmpeg",
-                '-y',
-                '-r', '{}'.format(fps),  # choose fps
-                '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
-                '-pix_fmt', 'argb',  # pixel format
-                '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
-                '-vcodec', 'mpeg4',  # output encoding
-                '-q:v', '1',  # maximum quality
-                path)
+        cmd = ("ffmpeg",
+               '-y',
+               '-r', f'{fps}',  # choose fps
+               '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
+               '-pix_fmt', 'argb',  # pixel format
+               '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
+               '-vcodec', 'mpeg4',  # output encoding
+               '-q:v', '1',  # maximum quality
+               path)
 
         if progress_bar:
             t_iter = tqdm(t_data)
         else:
             t_iter = t_data
 
-        with utils.SubprocessManager(cmds, **FFMPEG_PROCESS_KWARGS) as ffmpeg:
+        with utils.SubprocessManager(cmd, **FFMPEG_PROCESS_KWARGS) as ffmpeg:
             for t in t_iter:
                 fig.canvas.restore_region(background)
 
@@ -1201,7 +1203,6 @@ def xyzt_plot(name,
               ticks_on_top = True, ticks_on_right = True,
               grid_kwargs = None, minor_grid_kwargs = None,
               length = 30,
-              fig_dpi_scale = 3,
               colormap = plt.get_cmap('viridis'), shading = 'gouarud', richardson_equator_magnitude = 1,
               show_colorbar = True,
               save_csv = False,
@@ -1209,7 +1210,7 @@ def xyzt_plot(name,
               **kwargs):
     # set up figure and axis
     if figure_manager is None:
-        figure_manager = FigureManager(name, save_on_exit = False, fig_dpi_scale = fig_dpi_scale, **kwargs)
+        figure_manager = FigureManager(name, save_on_exit = False, **kwargs)
     with figure_manager as fm:
         fig = fm.fig
         ax = fig.add_axes([.15, .15, .75, .7])
@@ -1347,22 +1348,22 @@ def xyzt_plot(name,
         background = fig.canvas.copy_from_bbox(fig.bbox)
         canvas_width, canvas_height = fig.canvas.get_width_height()
 
-        cmds = ("ffmpeg",
-                '-y',
-                '-r', '{}'.format(fps),  # choose fps
-                '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
-                '-pix_fmt', 'argb',  # pixel format
-                '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
-                '-vcodec', 'mpeg4',  # output encoding
-                '-q:v', '1',  # maximum quality
-                path)
+        cmd = ("ffmpeg",
+               '-y',
+               '-r', f'{fps}',  # choose fps
+               '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
+               '-pix_fmt', 'argb',  # pixel format
+               '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
+               '-vcodec', 'mpeg4',  # output encoding
+               '-q:v', '1',  # maximum quality
+               path)
 
         if progress_bar:
             t_iter = tqdm(t_data)
         else:
             t_iter = t_data
 
-        with utils.SubprocessManager(cmds, **FFMPEG_PROCESS_KWARGS) as ffmpeg:
+        with utils.SubprocessManager(cmd, **FFMPEG_PROCESS_KWARGS) as ffmpeg:
             for t in t_iter:
                 fig.canvas.restore_region(background)
 
@@ -1528,19 +1529,17 @@ class Animator:
         self.fig.canvas.draw()
         self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
         canvas_width, canvas_height = self.fig.canvas.get_width_height()
-        self.cmdstring = ("ffmpeg",
-                          '-y',
-                          '-r', '{}'.format(self.fps),  # choose fps
-                          '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
-                          '-pix_fmt', 'argb',  # pixel format
-                          '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
-                          '-vcodec', 'mpeg4',  # output encoding
-                          '-q:v', '1',  # maximum quality
-                          self.file_path)
+        self.cmd = ("ffmpeg",
+                    '-y',
+                    '-r', '{}'.format(self.fps),  # choose fps
+                    '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
+                    '-pix_fmt', 'argb',  # pixel format
+                    '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
+                    '-vcodec', 'mpeg4',  # output encoding
+                    '-q:v', '1',  # maximum quality
+                    self.file_path)
 
-        self.ffmpeg = subprocess.Popen(self.cmdstring,
-                                       stdin = subprocess.PIPE, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL,
-                                       bufsize = -1)
+        self.ffmpeg = subprocess.Popen(self.cmd, **FFMPEG_PROCESS_KWARGS)
 
         logger.info('Initialized {}'.format(self))
 
@@ -1627,10 +1626,10 @@ class RichardsonColormap(matplotlib.colors.Colormap):
         real_term = real / (np.sqrt(6) * zplus)
         imag_term = imag / (np.sqrt(2) * zplus)
 
-        rgba = np.ones(np.shape(x) + (4,))              # create rgba array of shape shape as x, except in last dimension, where rgba values will be stored
-        rgba[:, 0] = common + (2 * real_term)           # red
-        rgba[:, 1] = common - real_term + imag_term     # green
-        rgba[:, 2] = common - real_term - imag_term     # blue
+        rgba = np.ones(np.shape(x) + (4,))  # create rgba array of shape shape as x, except in last dimension, where rgba values will be stored
+        rgba[:, 0] = common + (2 * real_term)  # red
+        rgba[:, 1] = common - real_term + imag_term  # green
+        rgba[:, 2] = common - real_term - imag_term  # blue
 
         return rgba
 
@@ -1642,6 +1641,7 @@ CMAP_TO_OPPOSITE['richardson'] = WHITE
 
 class RichardsonNormalization(matplotlib.colors.Normalize):
     """A matplotlib Normalize subclass which implements an appropriate normalization for :class:`RichardsonColormap`."""
+
     def __init__(self, equator_magnitude = 1):
         self.equator_magnitude = np.abs(equator_magnitude)
 

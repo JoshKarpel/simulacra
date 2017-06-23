@@ -6,7 +6,6 @@ import scipy as sp
 
 import simulacra as si
 
-
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
@@ -24,13 +23,12 @@ if __name__ == '__main__':
             return np.sin(x * t)
 
 
-        si.plots.xyt_plot('xyt',
-                          x, t, f, ff,
-                          line_labels = (r'$ \left| \sin(x) \right|^t $', r'$ \sin(x t) $'),
-                          title = 'Kerflagonblargh',
-                          x_label = '$x$', y_label = '$\mathcal{H}$',
-                          x_unit = 'cm', t_unit = 's',
-                          fig_dpi_scale = 3,
-                          progress_bar = True,
-                          save_csv = False,
-                          target_dir = OUT_DIR)
+        si.vis.xyt_plot('xyt',
+                        x, t, f, ff,
+                        line_labels = (r'$ \left| \sin(x) \right|^t $', r'$ \sin(x t) $'),
+                        title = 'Kerflagonblargh',
+                        x_label = '$x$', y_label = '$\mathcal{H}$',
+                        x_unit = 'cm', t_unit = 's',
+                        progress_bar = True,
+                        save_csv = False,
+                        target_dir = OUT_DIR)
