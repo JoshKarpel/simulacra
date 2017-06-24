@@ -23,6 +23,7 @@ import logging
 import fractions
 import subprocess
 import sys
+from typing import Union, Optional, Iterable
 
 import numpy as np
 import numpy.ma as ma
@@ -115,7 +116,7 @@ FFMPEG_PROCESS_KWARGS = dict(
 GOLDEN_RATIO = (np.sqrt(5.0) - 1.0) / 2.0
 
 
-def _get_fig_dims(fig_scale, aspect_ratio = GOLDEN_RATIO, fig_width_pts = 498.66258):
+def _get_fig_dims(fig_scale: Union[float, int], aspect_ratio: Union[float, int] = GOLDEN_RATIO, fig_width_pts: Union[float, int] = 498.66258):
     """
     Return the dimensions (width, height) for a figure based on the scale, width (in points), and aspect ratio.
 
@@ -143,7 +144,7 @@ def _get_fig_dims(fig_scale, aspect_ratio = GOLDEN_RATIO, fig_width_pts = 498.66
     return int(fig_width), int(fig_height)
 
 
-def get_figure(fig_scale = 0.95, fig_dpi_scale = 1, aspect_ratio = GOLDEN_RATIO, fig_width_pts = 498.66258):
+def get_figure(fig_scale: Union[float, int, str] = 0.95, fig_dpi_scale: Union[float, int] = 1, aspect_ratio: Union[float, int] = GOLDEN_RATIO, fig_width_pts: Union[float, int] = 498.66258):
     """
     Get a matplotlib figure object with the desired scale relative to a full-text-width LaTeX page.
 
@@ -177,13 +178,13 @@ def get_figure(fig_scale = 0.95, fig_dpi_scale = 1, aspect_ratio = GOLDEN_RATIO,
     return fig
 
 
-def save_current_figure(name,
-                        name_postfix = '',
-                        target_dir = None,
-                        img_format = 'pdf',
-                        transparent = True,
+def save_current_figure(name: str,
+                        name_postfix: str = '',
+                        target_dir: Optional[str] = None,
+                        img_format: str = 'pdf',
+                        transparent: bool = True,
                         colormap = plt.cm.get_cmap('inferno'),
-                        tight_layout = True,
+                        tight_layout: bool = True,
                         **kwargs):
     """
     Save the current matplotlib figure as an image to a file.
@@ -202,6 +203,8 @@ def save_current_figure(name,
         If available for the format, makes the background transparent (works for ``.png``, for example).
     colormap
         A matplotlib colormap to use.
+    tight_layout : :class:`bool`
+        If ``True``, saves the figure with ``bbox_inches = 'tight'``.
     kwargs
         This function absorbs keyword arguments silently.
 
@@ -233,11 +236,11 @@ class FigureManager:
     A class that manages a matplotlib figure: creating it, showing it, saving it, and cleaning it up.
     """
 
-    def __init__(self, name, name_postfix = '',
-                 fig_scale = 0.95, fig_dpi_scale = 1, fig_width_pts = 498.66258, aspect_ratio = (np.sqrt(5.0) - 1.0) / 2.0,
-                 target_dir = None, img_format = 'pdf', img_scale = 1, tight_layout = True,
-                 close_before_enter = True, close_after_exit = True,
-                 save_on_exit = True, show = False,
+    def __init__(self, name: str, name_postfix: str = '',
+                 fig_scale = 0.95, fig_dpi_scale = 1, fig_width_pts = 498.66258, aspect_ratio = GOLDEN_RATIO,
+                 target_dir: Optional[str] = None, img_format: str = 'pdf', img_scale = 1, tight_layout: bool = True,
+                 close_before_enter: bool = True, close_after_exit: bool = True,
+                 save_on_exit: bool = True, show: bool = False,
                  **kwargs):
         """
         Parameters
@@ -325,7 +328,7 @@ class FigureManager:
         self.cleanup()
 
 
-def get_pi_ticks_and_labels(lower_limit = 0, upper_limit = twopi, denom = 4):
+def get_pi_ticks_and_labels(lower_limit: Union[float, int] = 0, upper_limit: Union[float, int] = twopi, denom: int = 4):
     """
     NB: doesn't really work for large ranges.
 
@@ -362,7 +365,7 @@ def get_pi_ticks_and_labels(lower_limit = 0, upper_limit = twopi, denom = 4):
     return list(float(tick) * pi for tick in ticks), list(labels)
 
 
-def set_axis_ticks_and_labels(axis, ticks, labels, direction = 'x'):
+def set_axis_ticks_and_labels(axis, ticks: Iterable[Union[float, int]], labels: Iterable[str], direction: str = 'x'):
     """
     Set the ticks and labels for `axis` along `direction`.
 
@@ -381,7 +384,12 @@ def set_axis_ticks_and_labels(axis, ticks, labels, direction = 'x'):
     getattr(axis, f'set_{direction}ticklabels')(labels)
 
 
-def get_axis_limits(*data, lower_limit = None, upper_limit = None, log = False, pad = 0, log_pad = 1):
+def get_axis_limits(*data,
+                    lower_limit: Optional[Union[float, int]] = None,
+                    upper_limit: Optional[Union[float, int]] = None,
+                    log: bool = False,
+                    pad: Union[float, int] = 0,
+                    log_pad: Union[float, int] = 1):
     """
     Calculate axis limits from datasets.
 
