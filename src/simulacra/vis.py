@@ -918,7 +918,7 @@ def xyz_plot(name,
                 x_mesh / x_unit_value,
                 y_mesh / y_unit_value,
                 z_mesh / z_unit_value,
-                levels = sorted(contours),
+                levels = np.array(sorted(contours)) / z_unit_value,
                 **contour_kwargs,
             )
             if show_contour_labels:
