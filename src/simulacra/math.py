@@ -23,7 +23,7 @@ import numpy as np
 import scipy.sparse as sparse
 import scipy.special as special
 import scipy.integrate as integ
-import math
+from typing import Callable, Generator, Iterable
 
 from . import utils
 from .units import *
@@ -90,26 +90,26 @@ class SphericalHarmonic:
 
     __slots__ = ('_l', '_m')
 
-    def __init__(self, l = 0, m = 0):
+    def __init__(self, l: int = 0, m: int = 0):
         """
         Initialize a SphericalHarmonic from its angular momentum numbers.
 
         Parameters
         ----------
         l
-            Orbital angular momentum "quantum number".
+            Orbital angular momentum "quantum number". Must be >= 0.
         m
-            Azimuthal angular momentum "quantum number".
+            Azimuthal angular momentum "quantum number". Must have ``abs(m) < l``.
         """
         self._l = l
         self._m = m
 
     @property
-    def l(self):
+    def l(self) -> int:
         return self._l
 
     @property
-    def m(self):
+    def m(self) -> int:
         return self._m
 
     def __str__(self):
@@ -119,7 +119,7 @@ class SphericalHarmonic:
         return f'{self.__class__.__name__}(l={self.l}, m={self.m})'
 
     @property
-    def latex(self):
+    def latex(self) -> str:
         """Returns a LaTeX-formatted string for the SphericalHarmonic."""
         return fr'Y_{{self.m}}^{{self.l}}'
 
@@ -140,7 +140,7 @@ class SphericalHarmonic:
         return special.sph_harm(self.m, self.l, phi, theta)
 
 
-def complex_quad(integrand, a, b, **kwargs):
+def complex_quad(integrand: Callable, a, b, **kwargs):
     def real_func(x):
         return np.real(integrand(x))
 
@@ -180,7 +180,7 @@ def complex_nquad(integrand, ranges, **kwargs):
 
 
 @utils.memoize
-def fibonacci(n):
+def fibonacci(n: int) -> int:
     """
     Return the n-th Fibonacci number, with Fibonacci(0) = 0, Fibonacci(1) = 1.
 
@@ -195,7 +195,7 @@ def fibonacci(n):
         raise ValueError('{} is not a valid index for the Fibonacci sequence'.format(n))
 
 
-def is_prime(n):
+def is_prime(n: int) -> bool:
     """Check whether n is prime by trial division."""
     if n != int(n) or n < 2:
         return False
@@ -203,13 +203,13 @@ def is_prime(n):
         return True
     elif n % 2 == 0:
         return False
-    for divisor in range(3, math.ceil(math.sqrt(n)) + 1, 2):
+    for divisor in range(3, np.ceil(np.sqrt(n)) + 1, 2):
         if n % divisor == 0:
             return False
     return True
 
 
-def prime_generator():
+def prime_generator() -> Generator:
     """Yield primes forever by trial division."""
     yield 2
 
@@ -228,7 +228,7 @@ def prime_generator():
                 break
 
 
-def prime_sieve(limit):
+def prime_sieve(limit: int) -> Generator:
     """A generator that yields all of the primes below the limit, via trial division."""
     yield 2
 
@@ -244,14 +244,14 @@ def prime_sieve(limit):
                 yield n
 
 
-def prime_factorization(n):
+def prime_factorization(n: int) -> Iterable[int]:
     """Return the prime factorization of the input."""
     if n != int(n) and n > 0:
         raise ValueError('n ({}) must be a positive integer'.format(n))
 
     factors = []
     divisor = 2
-    sqrt_n = math.sqrt(n)
+    sqrt_n = np.sqrt(n)
 
     while True:
         if n % divisor == 0:
@@ -268,7 +268,7 @@ def prime_factorization(n):
     return factors
 
 
-def centered_first_derivative(y, dx = 1):
+def centered_first_derivative(y: np.ndarray, dx = 1) -> np.ndarray:
     """
     Return the centered first derivative of the array y, using spacing dx.
 
@@ -290,7 +290,7 @@ def centered_first_derivative(y, dx = 1):
     return operator.dot(y)
 
 
-def centered_second_derivative(y, dx = 1):
+def centered_second_derivative(y: np.ndarray, dx = 1) -> np.ndarray:
     """
     Return the centered second derivative of the array y, using spacing dx.
 

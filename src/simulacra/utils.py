@@ -27,13 +27,13 @@ import os
 import sys
 import time
 import logging
+from typing import Optional, Union, NamedTuple, Callable, Iterable
 
 import numpy as np
 import psutil
 
 from . import core
 from .units import uround
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -43,7 +43,7 @@ LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', d
 key_value_arrays = collections.namedtuple('key_value_arrays', ('key_array', 'value_array'))
 
 
-def field_str(obj, *fields, digits = 3):
+def field_str(obj, *fields, digits: int = 3):
     """
     Generate a repr-like string from the object's attributes.
 
@@ -67,7 +67,7 @@ def field_str(obj, *fields, digits = 3):
     return '{}({})'.format(obj.__class__.__name__, ', '.join(field_strings))
 
 
-def dict_to_arrays(dct):
+def dict_to_arrays(dct: dict):
     """
     Return the keys and values of a dictionary as two numpy arrays, in key-sorted order.
 
@@ -85,19 +85,48 @@ def dict_to_arrays(dct):
     return key_value_arrays(np.array(key_list), np.array(val_list))
 
 
-def get_now_str():
+def get_now_str() -> str:
     """Return a formatted string with the current year-month-day_hour-minute-second."""
     return datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S')
 
 
 class LogManager:
-    """A context manager to easily set up logging."""
+    """
+    A context manager to easily set up logging.
 
-    def __init__(self, *logger_names,
-                 manual_logger_name = 'simulacra',
-                 stdout_logs = True, stdout_level = logging.DEBUG,
-                 file_logs = False, file_level = logging.DEBUG, file_name = None, file_dir = None, file_mode = 'a',
+    Within a managed block, logging messages are intercepted if their highest-level logger is named in `logger_names`.
+    The object returned by the LogManager ``with`` statement can be used as a logger, with name given by `manual_logger_name`.
+    """
+
+    def __init__(self,
+                 *logger_names,
+                 manual_logger_name: str = 'simulacra',
+                 stdout_logs: bool = True,
+                 stdout_level = logging.DEBUG,
+                 file_logs: bool = False,
+                 file_level = logging.DEBUG,
+                 file_name: Optional[str] = None,
+                 file_dir: Optional[str] = None,
+                 file_mode: str = 'a',
                  disable_level = logging.NOTSET):
+        """
+        Parameters
+        ----------
+        logger_names
+            The names of loggers to intercept.
+        manual_logger_name
+            The name used by the logger returned by the LogManager ``with`` statement.
+        stdout_logs : :class:`bool`
+            If ``True``, log messages will be displayed on stdout.
+        stdout_level : :class:`bool`
+        file_logs
+        file_level
+        file_name
+        file_dir
+        file_mode : :class:`str`
+            the file mode to open the log file with, defaults to 'a' (append)
+        disable_level
+        """
         """
         Initialize a Logger context manager.
 
@@ -186,21 +215,29 @@ class LogManager:
 ILLEGAL_FILENAME_CHARACTERS = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']  # these characters should be stripped from file names before use
 
 
-def strip_illegal_characters(string):
-    """Strip characters that cannot be included in filenames from a string."""
+def strip_illegal_characters(string: str) -> str:
+    """Strip characters that cannot be included in file names from a string."""
     return ''.join([char for char in string if char not in ILLEGAL_FILENAME_CHARACTERS])
 
 
 NearestEntry = collections.namedtuple('NearestEntry', ('index', 'value', 'target'))
 
 
-def find_nearest_entry(array, target):
+def find_nearest_entry(array: np.ndarray, target: Union[float, int]) -> NamedTuple:
     """
-    Returns the ``(index, value, target)`` of the :code:`array` entry closest to the given :code:`target`.
+    Returns the ``(index, value, target)`` of the `array` entry closest to the given `target`.
 
-    :param array: the array to look for :code:`target` in
-    :param target: the target value
-    :returns: a tuple containing the index of the closest value, the value of the closest value, and the original target value
+    Parameters
+    ----------
+    array : :class:`numpy.ndarray`
+        The array to for `target` in.
+    target
+        The value to search for in `array`.
+
+    Returns
+    -------
+    :class:`tuple`
+        A tuple containing the index of the nearest value to the target, that value, and the original target value.
     """
     array = np.array(array)  # turn the array into a numpy array
 
@@ -214,31 +251,56 @@ def ensure_dir_exists(path):
     """
     Ensure that the directory tree to the path exists.
 
+    Parameters
+    ----------
+    path
+        A path to a file or directory.
+
+    Returns
+    -------
+    :class:`str`
+        The path that was created.
+    """
+    """
+    
+
     :param path: the path to a file or directory
     :type path: str
     """
     split_path = os.path.splitext(path)
     if split_path[0] != path:  # path is file
-        make_path = os.path.dirname(split_path[0])
+        path_to_make = os.path.dirname(split_path[0])
     else:  # path is dir
-        make_path = split_path[0]
-    os.makedirs(make_path, exist_ok = True)
+        path_to_make = split_path[0]
+    os.makedirs(path_to_make, exist_ok = True)
 
-    logger.debug('Ensured dir {} exists'.format(make_path))
+    logger.debug('Ensured dir {} exists'.format(path_to_make))
+
+    return path_to_make
 
 
-def downsample(dense_x_array, sparse_x_array, dense_y_array):
+def downsample(dense_x_array: np.ndarray,
+               sparse_x_array: np.ndarray,
+               dense_y_array: np.ndarray):
     """
     Downsample (dense_x_array, dense_y_array) to (sparse_x_array, sparse_y_array).
 
     The downsampling is performed by matching points from sparse_x_array to dense_x_array using find_nearest_entry. Use with caution!
 
-    :param dense_x_array:
-    :param sparse_x_array:
-    :param dense_y_array:
-    :return: a sparsified version of dense_y_array
-    """
+    Parameters
+    ----------
+    dense_x_array : :class:`numpy.ndarray`
+        A dense array of x values.
+    sparse_x_array : :class:`numpy.ndarray`
+        A sparse array of x values.
+    dense_y_array : :class:`numpy.ndarray`
+        A dense array of y values corresponding to `dense_x_array`.
 
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        The sparsified y array.
+    """
     sparse_y_array = np.zeros(len(sparse_x_array), dtype = dense_y_array.dtype) * np.NaN
 
     for sparse_index, x in enumerate(sparse_x_array):
@@ -248,25 +310,21 @@ def downsample(dense_x_array, sparse_x_array, dense_y_array):
     return sparse_y_array
 
 
-def run_in_process(func, args = (), kwargs = None):
+def run_in_process(func: Callable, *args, **kwargs):
     """
     Run a function in a separate thread.
 
     :param func: the function to run
     :param args: positional arguments for function
     :param kwargs: keyword arguments for function
-    :param name: a name for the process
     """
-    if kwargs is None:
-        kwargs = {}
-
     with multiprocessing.Pool(processes = 1) as pool:
         output = pool.apply(func, args, kwargs)
 
     return output
 
 
-def find_or_init_sim(spec, search_dir = None, file_extension = '.sim'):
+def find_or_init_sim(spec: core.Specification, search_dir: Optional[str] = None, file_extension = '.sim'):
     """
     Try to load a :class:`simulacra.Simulation` by looking for a pickled :class:`simulacra.core.Simulation` named ``{search_dir}/{spec.file_name}.{file_extension}``.
     If that fails, create a new Simulation from `spec`.
@@ -361,7 +419,7 @@ def hash_args_kwargs(*args, **kwargs):
     return hash(args + tuple(kwargs.items()))
 
 
-def memoize(func):
+def memoize(func: Callable):
     """Memoize a function by storing a dictionary of {inputs: outputs}."""
     memo = {}
 
@@ -417,7 +475,7 @@ def watcher(watch):
     return Watcher
 
 
-def timed(func):
+def timed(func: Callable):
     """A decorator that times the execution of the decorated function. A log message is emitted at level ``DEBUG`` with the timing information."""
 
     @functools.wraps(func)
@@ -562,7 +620,7 @@ class Checked(Descriptor):
             super().__set__(instance, value)
 
 
-def bytes_to_str(num):
+def bytes_to_str(num: Union[float, int]) -> str:
     """Return a number of bytes as a human-readable string."""
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
         if num < 1024.0:
@@ -570,12 +628,12 @@ def bytes_to_str(num):
         num /= 1024.0
 
 
-def get_file_size(file_path):
+def get_file_size(file_path: str):
     """Return the size of the file at file_path."""
     return os.stat(file_path).st_size
 
 
-def get_file_size_as_string(file_path):
+def get_file_size_as_string(file_path: str) -> str:
     """Return the size of the file at file_path as a human-readable string."""
     if os.path.isfile(file_path):
         file_info = os.stat(file_path)
@@ -583,8 +641,10 @@ def get_file_size_as_string(file_path):
 
 
 def try_loop(*functions_to_run,
-             wait_after_success = datetime.timedelta(hours = 1), wait_after_failure = datetime.timedelta(minutes = 1),
-             begin_text = 'Beginning loop', complete_text = 'Completed loop'):
+             wait_after_success: datetime.timedelta = datetime.timedelta(hours = 1),
+             wait_after_failure: datetime.timedelta = datetime.timedelta(minutes = 1),
+             begin_text: str = 'Beginning loop',
+             complete_text: str = 'Completed loop'):
     """
     Run the given functions in a constant loop.
 
@@ -620,7 +680,7 @@ def try_loop(*functions_to_run,
         time.sleep(wait.total_seconds())
 
 
-def grouper(iterable, n, fill_value = None):
+def grouper(iterable: Iterable, n: int, fill_value = None) -> Iterable:
     """
     Collect data from iterable into fixed-length chunks or blocks of length n
 
@@ -660,7 +720,7 @@ class SubprocessManager:
             logger.warning(f'Exception while trying to close subprocess {self.name}, possibly not closed')
 
 
-def get_processes_by_name(process_name):
+def get_processes_by_name(process_name: str) -> Iterable[psutil.Process]:
     """
     Return an iterable of processes that match the given name.
 
@@ -671,7 +731,7 @@ def get_processes_by_name(process_name):
     return [p for p in psutil.process_iter() if p.name() == process_name]
 
 
-def suspend_processes(processes):
+def suspend_processes(processes: Iterable[psutil.Process]):
     """
     Suspend a list of processes.
 
@@ -684,7 +744,7 @@ def suspend_processes(processes):
         logger.info('Suspended {}'.format(p))
 
 
-def resume_processes(processes):
+def resume_processes(processes: Iterable[psutil.Process]):
     """
     Resume a list of processes.
 
@@ -697,13 +757,13 @@ def resume_processes(processes):
         logger.info('Resumed {}'.format(p))
 
 
-def suspend_processes_by_name(process_name):
+def suspend_processes_by_name(process_name: str):
     processes = get_processes_by_name(process_name)
 
     suspend_processes(processes)
 
 
-def resume_processes_by_name(process_name):
+def resume_processes_by_name(process_name: str):
     processes = get_processes_by_name(process_name)
 
     resume_processes(processes)

@@ -23,6 +23,7 @@ import pickle
 import uuid
 import collections
 from copy import deepcopy
+from typing import Optional, Union, List, Tuple, Iterable
 
 import logging
 import os
@@ -66,7 +67,7 @@ class Info:
 
         self.children = collections.OrderedDict()
 
-    def _field_strs(self):
+    def _field_strs(self) -> List[str]:
         s = []
         for field, value in self.children.items():
             try:
@@ -84,7 +85,7 @@ class Info:
     def __repr__(self):
         return f'{self.__class__.__name__}({self.header})'
 
-    def add_field(self, name, value):
+    def add_field(self, name: str, value: Union[str, 'Info']):
         """
         Add a field to the :class:`Info`, which will be displayed as ``'{name}: {value}'``.
 
@@ -97,7 +98,7 @@ class Info:
         """
         self.children[name] = value
 
-    def add_fields(self, name_value_pairs):
+    def add_fields(self, name_value_pairs: Iterable[Tuple[str, str]]):
         """
         Add a list of fields to the :class:`Info`.
 
@@ -108,7 +109,7 @@ class Info:
         """
         self.children.update({k: v for k, v in name_value_pairs})
 
-    def add_info(self, info):
+    def add_info(self, info: 'Info'):
         """
         Add a sub-Info to the :class:`Info`, which will be displayed at a deeper indentation level.
 
@@ -119,7 +120,7 @@ class Info:
         """
         self.children[id(info)] = info
 
-    def add_infos(self, infos):
+    def add_infos(self, infos: Iterable['Info']):
         """
         Add a list of Infos to this Info as sub-Infos.
 
@@ -143,7 +144,7 @@ class Beet:
         A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Beet`.
     """
 
-    def __init__(self, name, file_name = None):
+    def __init__(self, name: str, file_name: Optional[str] = None):
         """
         Parameters
         ----------
@@ -175,7 +176,7 @@ class Beet:
     def __repr__(self):
         return utils.field_str(self, 'name', 'file_name', 'uuid')
 
-    def __eq__(self, other):
+    def __eq__(self, other: 'Beet'):
         """Two Beets are equal if they have the same UUID."""
         return isinstance(other, self.__class__) and self.uuid == other.uuid
 
@@ -183,7 +184,7 @@ class Beet:
         """The hash of the Beet is the hash of its UUID."""
         return hash(self.uuid)
 
-    def clone(self, **kwargs):
+    def clone(self, **kwargs) -> 'Beet':
         """
         Return a deepcopy of the Beet.
 
@@ -206,7 +207,7 @@ class Beet:
 
         return new_beet
 
-    def save(self, target_dir = None, file_extension = '.beet', compressed = True):
+    def save(self, target_dir: Optional[str] = None, file_extension: str = '.beet', compressed: bool = True) -> str:
         """
         Atomically pickle the Beet to a file.
 
@@ -247,7 +248,7 @@ class Beet:
         return file_path
 
     @classmethod
-    def load(cls, file_path):
+    def load(cls, file_path: str) -> 'Beet':
         """
         Load a Beet from `file_path`.
 
@@ -272,7 +273,7 @@ class Beet:
 
         return beet
 
-    def info(self):
+    def info(self) -> Info:
         return Info(header = str(self))
 
 
@@ -295,7 +296,7 @@ class Specification(Beet):
 
     simulation_type = None
 
-    def __init__(self, name, file_name = None, **kwargs):
+    def __init__(self, name: str, file_name: Optional[str] = None, **kwargs):
         """
         Parameters
         ----------
@@ -317,7 +318,7 @@ class Specification(Beet):
             self._extra_attr_keys.append(k)
             logger.debug('{} stored additional attribute {} = {}'.format(self.name, k, v))
 
-    def save(self, target_dir = None, file_extension = '.spec', compressed = True):
+    def save(self, target_dir: Optional[str] = None, file_extension: str = '.spec', compressed: bool = True) -> str:
         """
         Atomically pickle the Specification to a file.
 
@@ -337,11 +338,11 @@ class Specification(Beet):
         """
         return super().save(target_dir = target_dir, file_extension = file_extension, compressed = compressed)
 
-    def to_simulation(self):
+    def to_simulation(self) -> 'Simulation':
         """Return a Simulation of the type associated with the Specification, generated from this instance."""
         return self.simulation_type(self)
 
-    def info(self):
+    def info(self) -> Info:
         info = super().info()
 
         if len(self._extra_attr_keys) > 0:
@@ -381,7 +382,7 @@ class Simulation(Beet):
 
     _status = utils.RestrictedValues('status', {'', STATUS_INI, STATUS_RUN, STATUS_FIN, STATUS_PAU, STATUS_ERR})
 
-    def __init__(self, spec):
+    def __init__(self, spec: Specification):
         """
         Parameters
         ----------
@@ -446,7 +447,7 @@ class Simulation(Beet):
     def __str__(self):
         return super().__str__() + f' {{{self.status}}}'
 
-    def save(self, target_dir = None, file_extension = '.sim', compressed = True):
+    def save(self, target_dir: Optional[str] = None, file_extension: str = '.sim', compressed: bool = True) -> str:
         """
         Atomically pickle the Simulation to a file.
 
@@ -473,7 +474,7 @@ class Simulation(Beet):
         """Hook method for running the Simulation, whatever that may entail."""
         raise NotImplementedError
 
-    def info(self):
+    def info(self) -> Info:
         """Return a string describing the parameters of the Simulation and its associated Specification."""
         info = super().info()
 
@@ -508,13 +509,13 @@ class Summand:
         """When unpacked, yield self, to ensure compatability with Sum's __add__ method."""
         yield self
 
-    def __add__(self, other):
+    def __add__(self, other: Union['Summand', 'Sum']):
         return self.summation_class(*self, *other)
 
     def __call__(self, *args, **kwargs):
         raise NotImplementedError
 
-    def info(self):
+    def info(self) -> Info:
         return Info(header = self.__class__.__name__)
 
 
@@ -544,14 +545,14 @@ class Sum(Summand):
     def __iter__(self):
         yield from self._container
 
-    def __add__(self, other):
+    def __add__(self, other: Union[Summand, 'Sum']):
         """Return a new Sum, constructed from all of the contents of self and other."""
         return self.__class__(*self, *other)
 
     def __call__(self, *args, **kwargs):
         return sum(x(*args, **kwargs) for x in self._container)
 
-    def info(self):
+    def info(self) -> Info:
         info = super().info()
 
         for x in self._container:
