@@ -609,6 +609,8 @@ def xy_plot(name,
     if figure_manager is None:
         figure_manager = FigureManager(name, **kwargs)
     with figure_manager as fm:
+        fm.elements = {}
+
         fig = fm.fig
         ax = plt.subplot(111)
 
@@ -637,6 +639,7 @@ def xy_plot(name,
             if kw is None:
                 kw = {}
             lines.append(plt.plot(x_data / x_unit_value, y / y_unit_value, label = lab, **kw)[0])
+        fm.elements['lines'] = lines
 
         attach_hv_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
         attach_hv_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
@@ -1446,6 +1449,50 @@ class AxisManager:
         info = core.Info(header = self.__class__.__name__)
 
         return info
+
+
+def animate(figure_manager, update_function, update_function_arguments,
+            artists = (),
+            length = 30,
+            progress_bar = True):
+    fig = figure_manager.fig
+
+    path = os.path.join(figure_manager.target_dir, figure_manager.name + figure_manager.name_postfix + '.mp4')
+
+    fig.canvas.draw()
+    background = fig.canvas.copy_from_bbox(fig.bbox)
+    canvas_width, canvas_height = fig.canvas.get_width_height()
+
+    fps = int(len(update_function_arguments) / length)
+
+    cmd = ("ffmpeg",
+           '-y',
+           '-r', f'{fps}',  # choose fps
+           '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
+           '-pix_fmt', 'argb',  # pixel format
+           '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
+           '-vcodec', 'mpeg4',  # output encoding
+           '-q:v', '1',  # maximum quality
+           path)
+
+    if progress_bar:
+        update_function_arguments = tqdm(update_function_arguments)
+
+    with utils.SubprocessManager(cmd, **FFMPEG_PROCESS_KWARGS) as ffmpeg:
+        for arg in update_function_arguments:
+            fig.canvas.restore_region(background)
+
+            update_function(arg)
+
+            for artist in artists:
+                fig.draw_artist(artist)
+
+            fig.canvas.blit(fig.bbox)
+
+            ffmpeg.stdin.write(fig.canvas.tostring_argb())
+
+            if not progress_bar:
+                logger.debug(f'Wrote frame for t = {uround(t, t_unit, 3)} {t_unit} to ffmpeg')
 
 
 class Animator:

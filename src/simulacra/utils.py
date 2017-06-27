@@ -324,7 +324,7 @@ def run_in_process(func: Callable, *args, **kwargs):
     return output
 
 
-def find_or_init_sim(spec: core.Specification, search_dir: Optional[str] = None, file_extension = '.sim'):
+def find_or_init_sim(spec, search_dir: Optional[str] = None, file_extension = '.sim'):
     """
     Try to load a :class:`simulacra.Simulation` by looking for a pickled :class:`simulacra.core.Simulation` named ``{search_dir}/{spec.file_name}.{file_extension}``.
     If that fails, create a new Simulation from `spec`.
