@@ -848,7 +848,7 @@ arguments = $(Process)
 #
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT_OR_EVICT
-transfer_input_files = /home/karpel/backend/simulacra.tar.gz, /home/karpel/backend/ionization.tar.gz, /home/karpel/backend/run_sim.py, inputs/$(Process).spec, http://proxy.chtc.wisc.edu/SQUID/karpel/python.tar.gz
+transfer_input_files = http://proxy.chtc.wisc.edu/SQUID/karpel/python.tar.gz, /home/karpel/backend/simulacra.tar.gz, /home/karpel/backend/ionization.tar.gz, /home/karpel/backend/run_sim.py, inputs/$(Process).spec
 transfer_output_remaps = "$(Process).sim = outputs/$(Process).sim ; $(Process).log = logs/$(Process).log ; $(Process).mp4 = outputs/$(Process).mp4"
 #
 +JobBatchName = "{batch_name}"
@@ -888,7 +888,7 @@ def format_chtc_submit_string(job_name, specification_count, checkpoints = True)
             memory = ask_for_input('Memory (in GB)?', default = 4, cast_to = float),
             disk = ask_for_input('Disk (in GB)?', default = 10, cast_to = float),
             num_jobs = specification_count,
-            max_materialize = ask_for_input('Max Materialize?', default = 5000, cast_to = int),
+            max_materialize = ask_for_input('Max Materialize?', default = 1000, cast_to = int),
     )
 
     return CHTC_SUBMIT_STRING.format(**fmt).strip()
