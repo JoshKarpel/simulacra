@@ -310,14 +310,18 @@ def downsample(dense_x_array: np.ndarray,
     return sparse_y_array
 
 
-def run_in_process(func: Callable, *args, **kwargs):
+def run_in_process(func, args = (), kwargs = None):
     """
     Run a function in a separate thread.
 
     :param func: the function to run
     :param args: positional arguments for function
     :param kwargs: keyword arguments for function
+    :param name: a name for the process
     """
+    if kwargs is None:
+        kwargs = {}
+
     with multiprocessing.Pool(processes = 1) as pool:
         output = pool.apply(func, args, kwargs)
 
