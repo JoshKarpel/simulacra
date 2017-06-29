@@ -30,3 +30,15 @@ if __name__ == '__main__':
                 aspect_ratio = .8,
                 target_dir = OUT_DIR
             )
+
+        for cmap_name in ('viridis', 'magma', 'inferno', 'plasma', 'seismic', 'PiYG', 'PRGn', 'Spectral'):
+            si.vis.xyz_plot(
+                f'xyz_{cmap_name}__log',
+                x_mesh, y_mesh, z_mesh,
+                colormap = plt.get_cmap(cmap_name),
+                contours = [0],
+                z_log_axis = True,
+                aspect_ratio = .8,
+                target_dir = OUT_DIR,
+                sym_log_norm_epsilon = 1e-2,
+            )

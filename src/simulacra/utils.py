@@ -317,7 +317,6 @@ def run_in_process(func, args = (), kwargs = None):
     :param func: the function to run
     :param args: positional arguments for function
     :param kwargs: keyword arguments for function
-    :param name: a name for the process
     """
     if kwargs is None:
         kwargs = {}

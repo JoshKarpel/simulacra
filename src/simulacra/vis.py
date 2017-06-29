@@ -853,8 +853,10 @@ def xyz_plot(name,
              grid_kwargs = None, minor_grid_kwargs = None,
              contours = (), contour_kwargs = None, show_contour_labels = True, contour_label_kwargs = None,
              save_csv = False,
-             colormap = plt.get_cmap('viridis'), shading = 'gouraud', show_colorbar = True,
+             colormap = plt.get_cmap('viridis'),
+             shading = 'gouraud', show_colorbar = True,
              richardson_equator_magnitude = 1,
+             sym_log_norm_epsilon = 1e-3,
              **kwargs):
     # set up figure and axis
     if figure_manager is None:
@@ -910,7 +912,10 @@ def xyz_plot(name,
                                                            log = z_log_axis,
                                                            pad = z_pad, log_pad = z_log_pad)
             if z_log_axis:
-                norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
+                if z_lower_limit > 0:
+                    norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
+                else:
+                    norm = matplotlib.colors.SymLogNorm(((np.abs(z_lower_limit) + np.abs(z_upper_limit)) / 2) * sym_log_norm_epsilon)
             else:
                 norm = matplotlib.colors.Normalize(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
         else:
@@ -1214,7 +1219,10 @@ def xyzt_plot(name,
               ticks_on_top = True, ticks_on_right = True,
               grid_kwargs = None, minor_grid_kwargs = None,
               length = 30,
-              colormap = plt.get_cmap('viridis'), shading = 'gouarud', richardson_equator_magnitude = 1,
+              colormap = plt.get_cmap('viridis'),
+              shading = 'gouarud',
+              richardson_equator_magnitude = 1,
+              sym_log_norm_epsilon = 1e-3,
               show_colorbar = True,
               save_csv = False,
               progress_bar = True,
@@ -1274,7 +1282,10 @@ def xyzt_plot(name,
                                                            log = z_log_axis,
                                                            pad = 0, log_pad = 10)
             if z_log_axis:
-                norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
+                if z_lower_limit > 0:
+                    norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
+                else:
+                    norm = matplotlib.colors.SymLogNorm(((np.abs(z_lower_limit) + np.abs(z_upper_limit)) / 2) * sym_log_norm_epsilon)
             else:
                 norm = matplotlib.colors.Normalize(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
         else:
