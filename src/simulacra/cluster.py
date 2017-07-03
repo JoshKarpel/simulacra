@@ -593,7 +593,7 @@ class JobProcessor(core.Beet):
         logger.debug(f'Generated diagnostics plot for job {self.name}')
 
 
-def combine_job_processors(*job_processors):
+def combine_job_processors(*job_processors, job_dir_path = None):
     """
 
     JobProcessor and Simulation types are inherited from the first JobProcessor in the arguments
@@ -601,13 +601,13 @@ def combine_job_processors(*job_processors):
     :param job_processors:
     :return:
     """
-    j_type = job_processors[0].simulation_type
+    sim_type = job_processors[0].simulation_type
     jp_type = job_processors[0].__class__
     combined_jp = jp_type(name = '-'.join(jp.name for jp in job_processors),
-                          job_dir_path = None,
-                          simulation_type = j_type)
+                          job_dir_path = job_dir_path,
+                          simulation_type = sim_type)
 
-    combined_jp.data = collections.collections.OrderedDict((ii, copy(sim_result)) for ii, (sim_name, sim_result) in enumerate(itertools.chain(jp.data for jp in job_processors)))
+    combined_jp.data = collections.OrderedDict((ii, copy(sim_result)) for ii, (sim_name, sim_result) in enumerate(itertools.chain(jp.data for jp in job_processors)))
 
     return combined_jp
 
