@@ -239,6 +239,9 @@ def find_nearest_entry(array: np.ndarray, target: Union[float, int]) -> NamedTup
     :class:`tuple`
         A tuple containing the index of the nearest value to the target, that value, and the original target value.
     """
+    if hasattr(target, '__iter__'):
+        raise ValueError('target must not be iterable')
+
     array = np.array(array)  # turn the array into a numpy array
 
     index = np.argmin(np.abs(array - target))
