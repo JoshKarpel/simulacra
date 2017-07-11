@@ -35,7 +35,7 @@ logger.setLevel(logging.DEBUG)
 
 
 def rand_phase(shape_tuple):
-    return rand.rand_sample(shape_tuple) * twopi
+    return rand.random_sample(shape_tuple) * twopi
 
 
 def sinc(x):

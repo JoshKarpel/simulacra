@@ -745,6 +745,24 @@ def ask_for_bool(question, default = False):
         ask_for_bool(question, default = default)
 
 
+def ask_for_choice(question, choices, default = None):
+    """
+    Ask the user to make a choice from `choices`.
+
+    Parameters
+    ----------
+    question
+    choices
+    default
+        If ``None``, the `default` will be the first entry in `choices`.
+
+    Returns
+    -------
+
+    """
+    raise NotImplementedError
+
+
 def ask_for_eval(question, default = 'None'):
     """
     Ask for input from the user, with a default value, which will be evaluated as a Python command.
@@ -810,7 +828,7 @@ def save_specifications(specifications, job_dir):
     """Save a list of Specifications."""
     print('Saving Specifications...')
 
-    for spec in specifications:
+    for spec in tqdm(specifications):
         spec.save(target_dir = os.path.join(job_dir, 'inputs/'))
 
     logger.debug('Saved Specifications')
@@ -872,7 +890,7 @@ queue {num_jobs}
 """
 
 
-def format_chtc_submit_string(job_name, specification_count, checkpoints = True):
+def generate_chtc_submit_string(job_name, specification_count, checkpoints = True):
     """
     Return a formatted submit string for an HTCondor job.
 
@@ -896,13 +914,13 @@ def format_chtc_submit_string(job_name, specification_count, checkpoints = True)
 
 def specification_check(specifications, check = 3):
     """Ask the user whether some number of specifications look correct."""
-    print('Generated {} Specifications'.format(len(specifications)))
-
     for s in specifications[0:check]:
         print('-' * 20)
         print(s)
         print(s.info())
         print('-' * 20)
+
+    print('Generated {} Specifications'.format(len(specifications)))
 
     check = ask_for_bool('Do the first {} Specifications look correct?'.format(check), default = 'No')
     if not check:
@@ -948,5 +966,5 @@ def submit_job(job_dir):
 
     os.chdir(job_dir)
 
-    subprocess.run(['condor_submit', 'submit_job.sub'])
-    # subprocess.run(['condor_submit', 'submit_job.sub', '-factory'])
+    # subprocess.run(['condor_submit', 'submit_job.sub'])
+    subprocess.run(['condor_submit', 'submit_job.sub', '-factory'])
