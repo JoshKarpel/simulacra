@@ -20,6 +20,7 @@ limitations under the License.
 import logging
 
 import numpy as np
+import numpy.random as rand
 import scipy.sparse as sparse
 import scipy.special as special
 import scipy.integrate as integ
@@ -31,6 +32,10 @@ from .units import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+def rand_phase(shape_tuple):
+    return rand.rand_sample(shape_tuple) * twopi
 
 
 def sinc(x):

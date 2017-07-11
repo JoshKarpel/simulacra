@@ -108,8 +108,8 @@ TITLE_OFFSET = 1.1
 
 FFMPEG_PROCESS_KWARGS = dict(
     stdin = subprocess.PIPE,
-    stdout = sys.stdout,
-    stderr = sys.stdout,
+    stdout = subprocess.DEVNULL,
+    stderr = subprocess.DEVNULL,
     bufsize = -1,
 )
 
