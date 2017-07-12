@@ -637,7 +637,10 @@ class Parameter:
         return '{} {} = {}'.format(self.__class__.__name__, self.name, self.value)
 
     def __repr__(self):
-        return '{}(name = {}, value = {})'.format(self.__class__.__name__, self.name, self.value)
+        if self.expandable:
+            return '{}(name = {}, value = {})'.format(self.__class__.__name__, self.name, self.value)
+        else:
+            return '{}(name = {}) expandable: \n{}'.format(self.__class__.__name__, self.name, self.value, '\n  '.join(str(v) for v in self.value))
 
 
 def expand_parameters_to_dicts(parameters):
@@ -839,7 +842,7 @@ def write_specifications_info_to_file(specifications, job_dir):
     print('Writing Specification info to file...')
 
     with open(os.path.join(job_dir, 'specifications.txt'), 'w') as file:
-        for spec in specifications:
+        for spec in tqdm(specifications):
             file.write(str(spec.info()) + '\n')
 
     logger.debug('Saved Specification information')
