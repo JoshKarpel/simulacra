@@ -637,7 +637,7 @@ class Parameter:
         return '{} {} = {}'.format(self.__class__.__name__, self.name, self.value)
 
     def __repr__(self):
-        if self.expandable:
+        if not self.expandable:
             return '{}(name = {}, value = {})'.format(self.__class__.__name__, self.name, self.value)
         else:
             return '{}(name = {}) expandable: \n{}'.format(self.__class__.__name__, self.name, self.value, '\n  '.join(str(v) for v in self.value))
