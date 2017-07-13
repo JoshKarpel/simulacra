@@ -969,5 +969,5 @@ def submit_job(job_dir):
 
     os.chdir(job_dir)
 
-    # subprocess.run(['condor_submit', 'submit_job.sub'])
-    subprocess.run(['condor_submit', 'submit_job.sub', '-factory'])
+    subprocess.run(['condor_submit', 'submit_job.sub'])
+    # subprocess.run(['condor_submit', 'submit_job.sub', '-factory'])
