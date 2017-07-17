@@ -27,13 +27,20 @@ if __name__ == '__main__':
             title = 'foo', x_label = 'bar', y_label = '$baz$',
             font_size_title = 22,
             save_csv = True,
+            fig_width = 10,
+            # fig_width = si.vis.PPT_WIDESCREEN_WIDTH,
+            # aspect_ratio = 1,
             target_dir = OUT_DIR,
         )
 
         extra_kwargs = [
             dict(),
-            dict(name_postfix = 'scale=1', img_format = 'png', img_scale = 1),
-            dict(name_postfix = 'scale=2', img_format = 'png', img_scale = 2),
+            dict(name_postfix = 'scale=1', img_format = 'png', fig_scale = 1, tight_layout = False),
+            dict(name_postfix = 'scale=1_tight', img_format = 'png', fig_scale = 1, tight_layout = True),
+            dict(name_postfix = 'scale=1_dpi=2', img_format = 'png', fig_scale = 1, fig_dpi_scale = 2, tight_layout = False),
+            dict(name_postfix = 'scale=2', img_format = 'png', fig_scale = 2, tight_layout = False),
+            dict(name_postfix = 'scale=2_dpi=2', img_format = 'png', fig_scale = 2, fig_dpi_scale = 2, tight_layout = False),
+            dict(name_postfix = 'scale=1_dpi=6', img_format = 'png', fig_scale = 1, fig_dpi_scale = 6, tight_layout = False),
             dict(name_postfix = 'logX', x_log_axis = True),
             dict(name_postfix = 'logY', y_log_axis = True),
             dict(name_postfix = 'logXY', x_log_axis = True, y_log_axis = True),

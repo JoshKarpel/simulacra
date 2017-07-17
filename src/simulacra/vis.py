@@ -113,10 +113,28 @@ FFMPEG_PROCESS_KWARGS = dict(
     bufsize = -1,
 )
 
-GOLDEN_RATIO = (np.sqrt(5.0) - 1.0) / 2.0
+
+def points_to_inches(points: Union[float, int]) -> Union[float, int]:
+    """Convert the input from points to inches (72 points per inch)."""
+    return points / 72.27
 
 
-def _get_fig_dims(fig_scale: Union[float, int], aspect_ratio: Union[float, int] = GOLDEN_RATIO, fig_width_pts: Union[float, int] = 498.66258):
+def inches_to_points(inches: Union[float, int]) -> Union[float, int]:
+    """Convert the input from inches to points (72 points per inch)."""
+    return inches * 72.27
+
+
+DEFAULT_LATEX_PAGE_WIDTH = points_to_inches(350.0)
+GOLDEN_RATIO = (1 + np.sqrt(5)) / 2
+PPT_WIDESCREEN_WIDTH = 13.333
+PPT_WIDESCREEN_HEIGHT = 7.5
+PPT_WIDESCREEN_ASPECT_RATIO = 16 / 9
+
+
+def _get_fig_dims(fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
+                  aspect_ratio: Union[float, int] = GOLDEN_RATIO,
+                  fig_height = None,
+                  fig_scale: Union[float, int] = 1):
     """
     Return the dimensions (width, height) for a figure based on the scale, width (in points), and aspect ratio.
 
@@ -128,23 +146,28 @@ def _get_fig_dims(fig_scale: Union[float, int], aspect_ratio: Union[float, int] 
         The scale of the figure relative to the figure width.
     aspect_ratio : :class:`float`
         The aspect ratio of the figure (width / height)
-    fig_width_pts : :class:`float`
-        The "base" width of a figure (e.g. a LaTeX page width).
+    fig_height : :class:`float`
+        If not `None`, overrides the aspect ratio. In inches.
+    fig_width : :class:`float`
+        The "base" width of a figure (e.g. a LaTeX page width). In inches.
 
     Returns
     -------
     tuple of floats
-        Figure width and height.
+        Figure width and height in inches.
     """
-    inches_per_pt = 1.0 / 72.27  # Convert pt to inch
+    fig_width = fig_width * fig_scale  # width in inches
+    if fig_height is None:
+        fig_height = fig_width / aspect_ratio  # height in inches
 
-    fig_width = fig_width_pts * inches_per_pt * fig_scale  # width in inches
-    fig_height = fig_width * aspect_ratio  # height in inches
-
-    return int(fig_width), int(fig_height)
+    return fig_width, fig_height
 
 
-def get_figure(fig_scale: Union[float, int, str] = 0.95, fig_dpi_scale: Union[float, int] = 1, aspect_ratio: Union[float, int] = GOLDEN_RATIO, fig_width_pts: Union[float, int] = 498.66258):
+def get_figure(fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
+               aspect_ratio: Union[float, int] = GOLDEN_RATIO,
+               fig_height = None,
+               fig_scale: Union[float, int, str] = 1,
+               fig_dpi_scale: Union[float, int] = 1):
     """
     Get a matplotlib figure object with the desired scale relative to a full-text-width LaTeX page.
 
@@ -160,20 +183,17 @@ def get_figure(fig_scale: Union[float, int, str] = 0.95, fig_dpi_scale: Union[fl
         Multiplier for the figure DPI (only important if saving to png-like formats).
     aspect_ratio : :class:`float`
         The aspect ratio of the figure (width / height)
-    fig_width_pts : :class:`float`
-        The "base" width of a figure (e.g. a LaTeX page width).
+    fig_height : :class:`float`
+        If not `None`, overrides the aspect ratio. In inches.
+    fig_width : :class:`float`
+        The "base" width of a figure (e.g. a LaTeX page width). In inches.
 
     Returns
     -------
     figure
         A matplotlib figure.
     """
-    if fig_scale == 'full':
-        fig_scale = 0.95
-    elif fig_scale == 'half':
-        fig_scale = .475
-
-    fig = plt.figure(figsize = _get_fig_dims(fig_scale, fig_width_pts = fig_width_pts, aspect_ratio = aspect_ratio), dpi = fig_dpi_scale * 100)
+    fig = plt.figure(figsize = _get_fig_dims(fig_width = fig_width, fig_height = fig_height, aspect_ratio = aspect_ratio, fig_scale = fig_scale), dpi = fig_dpi_scale * 100)
 
     return fig
 
@@ -183,7 +203,6 @@ def save_current_figure(name: str,
                         target_dir: Optional[str] = None,
                         img_format: str = 'pdf',
                         transparent: bool = True,
-                        colormap = plt.cm.get_cmap('inferno'),
                         tight_layout: bool = True,
                         **kwargs):
     """
@@ -213,8 +232,6 @@ def save_current_figure(name: str,
     :class:`str`
         The path the figure was saved to.
     """
-    plt.set_cmap(colormap)
-
     if target_dir is None:
         target_dir = os.getcwd()
     path = os.path.join(target_dir, utils.strip_illegal_characters('{}{}.{}'.format(name, name_postfix, img_format)))
@@ -222,9 +239,9 @@ def save_current_figure(name: str,
     utils.ensure_dir_exists(path)
 
     if tight_layout:
-        plt.savefig(path, dpi = plt.gcf().dpi, bbox_inches = 'tight', transparent = transparent)
+        plt.savefig(path, bbox_inches = 'tight', transparent = transparent)
     else:
-        plt.savefig(path, dpi = plt.gcf().dpi, transparent = transparent)
+        plt.savefig(path, transparent = transparent)
 
     logger.debug('Saved matplotlib figure {} to {}'.format(name, path))
 
@@ -236,11 +253,20 @@ class FigureManager:
     A class that manages a matplotlib figure: creating it, showing it, saving it, and cleaning it up.
     """
 
-    def __init__(self, name: str, name_postfix: str = '',
-                 fig_scale = 0.95, fig_dpi_scale = 1, fig_width_pts = 498.66258, aspect_ratio = GOLDEN_RATIO,
-                 target_dir: Optional[str] = None, img_format: str = 'pdf', img_scale = 1, tight_layout: bool = True,
-                 close_before_enter: bool = True, close_after_exit: bool = True,
-                 save_on_exit: bool = True, show: bool = False,
+    def __init__(self, name: str,
+                 name_postfix: str = '',
+                 fig_width = DEFAULT_LATEX_PAGE_WIDTH,
+                 aspect_ratio = GOLDEN_RATIO,
+                 fig_height = None,
+                 fig_scale = 1,
+                 fig_dpi_scale = 1,
+                 target_dir: Optional[str] = None,
+                 img_format: str = 'pdf',
+                 tight_layout: bool = True,
+                 close_before_enter: bool = True,
+                 close_after_exit: bool = True,
+                 save_on_exit: bool = True,
+                 show: bool = False,
                  **kwargs):
         """
         Parameters
@@ -281,13 +307,13 @@ class FigureManager:
 
         self.fig_scale = fig_scale
         self.fig_dpi_scale = fig_dpi_scale
-        self.fig_width_pts = fig_width_pts
+        self.fig_width = fig_width
+        self.fig_height = fig_height
         self.aspect_ratio = aspect_ratio
         self.tight_layout = tight_layout
 
         self.target_dir = target_dir
         self.img_format = img_format
-        self.img_scale = img_scale
 
         if len(kwargs) > 0:
             logger.debug('FigureManager for figure {} absorbed extraneous kwargs: {}'.format(self.name, kwargs))
@@ -301,7 +327,13 @@ class FigureManager:
         self.path = None
 
     def save(self):
-        path = save_current_figure(name = self.name, name_postfix = self.name_postfix, target_dir = self.target_dir, img_format = self.img_format, dpi_scale = self.img_scale, tight_layout = self.tight_layout)
+        path = save_current_figure(
+            name = self.name,
+            name_postfix = self.name_postfix,
+            target_dir = self.target_dir,
+            img_format = self.img_format,
+            tight_layout = self.tight_layout
+        )
 
         self.path = path
 
@@ -309,7 +341,13 @@ class FigureManager:
         if self.close_before_enter:
             plt.close()
 
-        self.fig = get_figure(fig_scale = self.fig_scale, fig_dpi_scale = self.fig_dpi_scale, fig_width_pts = self.fig_width_pts, aspect_ratio = self.aspect_ratio)
+        self.fig = get_figure(
+            fig_width = self.fig_width,
+            aspect_ratio = self.aspect_ratio,
+            fig_height = self.fig_height,
+            fig_scale = self.fig_scale,
+            fig_dpi_scale = self.fig_dpi_scale,
+        )
 
         return self
 
