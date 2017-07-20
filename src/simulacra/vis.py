@@ -104,7 +104,7 @@ CONTOUR_LABEL_KWARGS = dict(
     fontsize = 8,
 )
 
-TITLE_OFFSET = 1.1
+TITLE_OFFSET = 1.15
 
 FFMPEG_PROCESS_KWARGS = dict(
     stdin = subprocess.PIPE,
@@ -1459,47 +1459,6 @@ def xyzt_plot(name,
     return fm
 
 
-class AxisManager:
-    """
-    A superclass that manages a matplotlib axis for an Animator.
-    """
-
-    def __init__(self):
-        self.redraw = []
-
-    def __str__(self):
-        return self.__class__.__name__
-
-    def __repr__(self):
-        return self.__class__.__name__
-
-    def initialize(self, simulation):
-        """Hook method for initializing the AxisManager."""
-        self.sim = simulation
-        self.spec = simulation.spec
-
-        self.initialize_axis()
-
-        logger.debug(f'Initialized {self}')
-
-    def assign_axis(self, axis):
-        self.axis = axis
-
-        logger.debug(f'Assigned {self} to {axis}')
-
-    def initialize_axis(self):
-        logger.debug(f'Initialized axis for {self}')
-
-    def update_axis(self):
-        """Hook method for updating the AxisManager's internal state."""
-        logger.debug(f'Updated axis for {self}')
-
-    def info(self):
-        info = core.Info(header = self.__class__.__name__)
-
-        return info
-
-
 def animate(figure_manager, update_function, update_function_arguments,
             artists = (),
             length = 30,
@@ -1542,6 +1501,47 @@ def animate(figure_manager, update_function, update_function_arguments,
 
             if not progress_bar:
                 logger.debug(f'Wrote frame for t = {uround(t, t_unit, 3)} {t_unit} to ffmpeg')
+
+
+class AxisManager:
+    """
+    A superclass that manages a matplotlib axis for an Animator.
+    """
+
+    def __init__(self):
+        self.redraw = []
+
+    def __str__(self):
+        return self.__class__.__name__
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+    def initialize(self, simulation):
+        """Hook method for initializing the AxisManager."""
+        self.sim = simulation
+        self.spec = simulation.spec
+
+        self.initialize_axis()
+
+        logger.debug(f'Initialized {self}')
+
+    def assign_axis(self, axis):
+        self.axis = axis
+
+        logger.debug(f'Assigned {self} to {axis}')
+
+    def initialize_axis(self):
+        logger.debug(f'Initialized {self}')
+
+    def update_axis(self):
+        """Hook method for updating the AxisManager's internal state."""
+        logger.debug(f'Updated axis for {self}')
+
+    def info(self):
+        info = core.Info(header = self.__class__.__name__)
+
+        return info
 
 
 class Animator:
@@ -1626,8 +1626,8 @@ class Animator:
         self._initialize_figure()  # call figure initialization hook
 
         # AXES MUST BE ASSIGNED DURING FIGURE INITIALIZATION
-
         for ax in self.axis_managers:
+            logger.debug(f'Initializing axis {ax} for {self}')
             ax.initialize(simulation)
 
         self.fig.canvas.draw()
@@ -1666,6 +1666,8 @@ class Animator:
 
     def _update_data(self):
         """Hook for a method to update the data for each animated figure element."""
+        logger.debug('{} updating data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
+
         for ax in self.axis_managers:
             ax.update_axis()
 
@@ -1673,6 +1675,8 @@ class Animator:
 
     def _redraw_frame(self):
         """Redraw the figure frame."""
+        logger.debug('Redrawing frame for {}'.format(self))
+
         plt.set_cmap(self.colormap)  # make sure the colormap is correct, in case other figures have been created somewhere
 
         self.fig.canvas.restore_region(self.background)  # copy the static background back onto the figure
@@ -1689,6 +1693,8 @@ class Animator:
 
     def send_frame_to_ffmpeg(self):
         """Redraw anything that needs to be redrawn, then write the figure to an RGB string and send it to ffmpeg."""
+        logger.debug('{} sending frame to ffpmeg from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
+
         self._redraw_frame()
 
         self.ffmpeg.stdin.write(self.fig.canvas.tostring_argb())
