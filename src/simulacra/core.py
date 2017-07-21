@@ -545,6 +545,9 @@ class Sum(Summand):
     def __iter__(self):
         yield from self._container
 
+    def __getitem__(self, item):
+        return self._container[item]
+
     def __add__(self, other: Union[Summand, 'Sum']):
         """Return a new Sum, constructed from all of the contents of self and other."""
         return self.__class__(*self, *other)

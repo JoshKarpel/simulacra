@@ -86,6 +86,10 @@ COLORMESH_GRID_KWARGS = dict(
     alpha = 0.4,
 )
 
+LEGEND_KWARGS = dict(
+    loc = 'best',
+)
+
 HVLINE_KWARGS = dict(
     linestyle = '-',
     color = 'black',
@@ -552,7 +556,7 @@ def xy_plot(name,
             x_extra_ticks = None, y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
             title = None, x_label = None, y_label = None,
             font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10, font_size_legend = 12,
-            ticks_on_top = True, ticks_on_right = True, legend_on_right = False,
+            ticks_on_top = True, ticks_on_right = True, legend_on_right = False, legend_kwargs = None,
             grid_kwargs = None, minor_grid_kwargs = None,
             save_csv = False,
             **kwargs):
@@ -656,9 +660,12 @@ def xy_plot(name,
             grid_kwargs = {}
         if minor_grid_kwargs is None:
             minor_grid_kwargs = {}
+        if legend_kwargs is None:
+            legend_kwargs = {}
 
         grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
         minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
+        legend_kwargs = {**LEGEND_KWARGS, **legend_kwargs}
 
         # ensure data is in numpy arrays
         x_data = np.array(x_data)
@@ -705,9 +712,10 @@ def xy_plot(name,
             y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
         if len(line_labels) > 0:
             if not legend_on_right:
-                legend = ax.legend(loc = 'best', fontsize = font_size_legend)
+                legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
             if legend_on_right:
-                legend = ax.legend(bbox_to_anchor = (1.05, 1), loc = 'upper left', borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17))
+                legend_kwargs['loc'] = 'upper left'
+                legend = ax.legend(bbox_to_anchor = (1.05, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
@@ -766,7 +774,7 @@ def xxyy_plot(name,
               title = None, x_label = None, y_label = None,
               font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10, font_size_legend = 12,
               ticks_on_top = True, ticks_on_right = True, legend_on_right = False,
-              grid_kwargs = None, minor_grid_kwargs = None,
+              grid_kwargs = None, minor_grid_kwargs = None, legend_kwargs = None,
               save_csv = False,
               **kwargs):
     # set up figure and axis
@@ -780,9 +788,12 @@ def xxyy_plot(name,
             grid_kwargs = {}
         if minor_grid_kwargs is None:
             minor_grid_kwargs = {}
+        if legend_kwargs is None:
+            legend_kwargs = {}
 
         grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
         minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
+        legend_kwargs = {**LEGEND_KWARGS, **legend_kwargs}
 
         # ensure data is in numpy arrays
         x_data = [np.array(x) for x in x_data]
@@ -828,9 +839,10 @@ def xxyy_plot(name,
             y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
         if len(line_labels) > 0:
             if not legend_on_right:
-                legend = ax.legend(loc = 'best', fontsize = font_size_legend)
+                legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
             if legend_on_right:
-                legend = ax.legend(bbox_to_anchor = (1.05, 1), loc = 'upper left', borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17))
+                legend_kwargs['loc'] = 'upper left'
+                legend = ax.legend(bbox_to_anchor = (1.05, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
@@ -1123,6 +1135,9 @@ def xyt_plot(name,
             x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
         if y_label is not None:
             y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
+
+        locator = plt.MaxNLocator(prune = 'both', nbins = 5)
+        ax.yaxis.set_major_locator(locator)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
