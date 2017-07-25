@@ -771,7 +771,7 @@ def xxyy_plot(name,
               x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, y_pad = .05, y_log_pad = 10,
               vlines = (), vline_kwargs = (), hlines = (), hline_kwargs = (),
               x_extra_ticks = None, y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
-              title = None, x_label = None, y_label = None,
+              title = None, title_offset = TITLE_OFFSET, x_label = None, y_label = None,
               font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10, font_size_legend = 12,
               ticks_on_top = True, ticks_on_right = True, legend_on_right = False,
               grid_kwargs = None, minor_grid_kwargs = None, legend_kwargs = None,
@@ -832,12 +832,12 @@ def xxyy_plot(name,
         # make title, axis labels, and legend
         if title is not None:
             title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
-            title.set_y(TITLE_OFFSET)  # move title up a little
+            title.set_y(title_offset)  # move title up a little
         if x_label is not None:
             x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
         if y_label is not None:
             y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
-        if len(line_labels) > 0:
+        if len(line_labels) > 0 or 'handles' in legend_kwargs:
             if not legend_on_right:
                 legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
             if legend_on_right:
