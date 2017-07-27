@@ -24,11 +24,11 @@ import numpy.random as rand
 import scipy.sparse as sparse
 import scipy.special as special
 import scipy.integrate as integ
+import scipy.interpolate as interp
 from typing import Callable, Generator, Iterable
 
 from . import utils
 from .units import *
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -145,6 +145,43 @@ class SphericalHarmonic:
         return special.sph_harm(self.m, self.l, phi, theta)
 
 
+def quad_from_array(y, x, interpolation_type = 'linear', **kwargs):
+    """
+    A thin wrapper over scipy.integrate.quad which takes the integrand array as `y` and the bounds of the integral from the first and last elements of `x`.
+    This is done to match the signature of the fixed-sample integrators in scipy.integrate.
+
+    Parameters
+    ----------
+    y
+    x
+    kwargs
+
+    Returns
+    -------
+
+    """
+    if not callable(y):
+        if len(y) == 1 or len(x) == 1:  # they should have the same length, but whatever
+            return 0  # integral over a single point is zero
+
+        interpolator = {
+            'linear': interp.interp1d,
+            'cubic spline': interp.CubicSpline,
+        }[interpolation_type]
+
+        # print('x', x)
+        # print('y', y)
+
+        integrand = interpolator(x, y)
+    else:
+        integrand = y
+
+    result, real_err, imag_error = complex_quad(integrand, x[0], x[-1], **kwargs)
+    # print(result, real_err, imag_error)
+
+    return result
+
+
 def complex_quad(integrand: Callable, a, b, **kwargs):
     def real_func(x):
         return np.real(integrand(x))
@@ -155,7 +192,7 @@ def complex_quad(integrand: Callable, a, b, **kwargs):
     real_integral = integ.quad(real_func, a, b, **kwargs)
     imag_integral = integ.quad(imag_func, a, b, **kwargs)
 
-    return (real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:])
+    return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
 
 
 def complex_dblquad(integrand, a, b, gfun, hfun, **kwargs):
