@@ -126,7 +126,7 @@ class SphericalHarmonic:
     @property
     def latex(self) -> str:
         """Returns a LaTeX-formatted string for the SphericalHarmonic."""
-        return fr'Y_{{self.m}}^{{self.l}}'
+        return fr'Y_{{{self.m}}}^{{{self.l}}}'
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.l == other.l and self.m == other.m
@@ -153,8 +153,13 @@ def quad_from_array(y, x, interpolation_type = 'linear', **kwargs):
     Parameters
     ----------
     y
+        An array or callable of y-values.
     x
+        An array of x-values to perform the integral over. The first and last points are used as the bounds.
+    interpolation_type : {'linear', 'cubic spline'}
+        Which type of interpolation to use on the `y` array.
     kwargs
+        Keyword arguments are passed to :func:`complex_quad`.
 
     Returns
     -------
@@ -205,7 +210,7 @@ def complex_dblquad(integrand, a, b, gfun, hfun, **kwargs):
     real_integral = integ.dblquad(real_func, a, b, gfun, hfun, **kwargs)
     imag_integral = integ.dblquad(imag_func, a, b, gfun, hfun, **kwargs)
 
-    return (real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:])
+    return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
 
 
 def complex_nquad(integrand, ranges, **kwargs):
@@ -218,7 +223,7 @@ def complex_nquad(integrand, ranges, **kwargs):
     real_integral = integ.nquad(real_func, ranges, **kwargs)
     imag_integral = integ.nquad(imag_func, ranges, **kwargs)
 
-    return (real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:])
+    return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
 
 
 @utils.memoize
@@ -245,7 +250,7 @@ def is_prime(n: int) -> bool:
         return True
     elif n % 2 == 0:
         return False
-    for divisor in range(3, np.ceil(np.sqrt(n)) + 1, 2):
+    for divisor in range(3, int(np.ceil(np.sqrt(n)) + 1), 2):
         if n % divisor == 0:
             return False
     return True
@@ -271,7 +276,7 @@ def prime_generator() -> Generator:
 
 
 def prime_sieve(limit: int) -> Generator:
-    """A generator that yields all of the primes below the limit, via trial division."""
+    """A generator that yields all of the primes below the limit using the Sieve of Eratosthenes."""
     yield 2
 
     primes = {n: True for n in range(3, limit + 1, 2)}

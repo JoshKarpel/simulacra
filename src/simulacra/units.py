@@ -1,5 +1,5 @@
 """
-Simulacra units and constants file.
+Simulacra units and constants sub-package.
 
 
 Copyright 2017 Josh Karpel
