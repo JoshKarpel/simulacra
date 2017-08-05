@@ -69,19 +69,17 @@ class TestSimulation(TestBeet):
         si.utils.ensure_dir_exists(TEST_DIR)
 
     def testStatus(self):
-        self.obj.status = ''  # set status to blank
-
-        passes = (si.STATUS_INI, si.STATUS_PAU, si.STATUS_FIN, si.STATUS_ERR, si.STATUS_RUN)
+        passes = (si.Status.INITIALIZED, si.Status.RUNNING, si.Status.RUNNING, si.Status.FINISHED, si.Status.PAUSED)
         fails = ('foo', 'foobar', 5, 10, None)
 
-        for x in passes:
-            with self.subTest(x = x):
-                self.obj.status = x
+        for status in passes:
+            with self.subTest(x = status):
+                self.obj.status = status
 
-        for x in fails:
-            with self.subTest(x = x):
-                with self.assertRaises(ValueError):
-                    self.obj.status = x
+        for status in fails:
+            with self.subTest(x = status):
+                with self.assertRaises(TypeError):
+                    self.obj.status = status
 
 
 class TestSumming(unittest.TestCase):
