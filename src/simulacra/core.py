@@ -265,7 +265,7 @@ class Beet:
         try:
             with gzip.open(file_path, mode = 'rb') as file:
                 beet = pickle.load(file)
-        except OSError:
+        except OSError:  # file is not gzipped
             with open(file_path, mode = 'rb') as file:
                 beet = pickle.load(file)
 

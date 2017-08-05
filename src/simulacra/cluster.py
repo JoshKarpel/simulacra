@@ -39,7 +39,6 @@ from tqdm import tqdm
 from . import core, vis, utils
 from .units import *  # also for ask_for_eval
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -882,12 +881,13 @@ skip_filechecks = true
 max_materialize = {max_materialize}
 #
 on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
+periodic_hold = (NumJobCompletions >= 5) && (ExitCode == 1)
 #
 request_cpus = 1
 request_memory = {memory}GB
 request_disk = {disk}GB
 #
-requirements = (OpSysMajorVer == 6) || (OpSysMajorVer == 7)
+requirements = ((OpSysMajorVer == 6) || (OpSysMajorVer == 7)) && (COLLECTOR_HOST_STRING =!= "10.27.0.1")
 #
 queue {num_jobs}
 """
@@ -903,13 +903,13 @@ def generate_chtc_submit_string(job_name, specification_count, checkpoints = Tru
     :return: an HTCondor submit string
     """
     fmt = dict(
-            batch_name = ask_for_input('Job batch name?', default = job_name, cast_to = str),
-            checkpoints = str(checkpoints).lower(),
-            flockglide = str(ask_for_bool('Flock and Glide?', default = 'y')).lower(),
-            memory = ask_for_input('Memory (in GB)?', default = 4, cast_to = float),
-            disk = ask_for_input('Disk (in GB)?', default = 10, cast_to = float),
-            num_jobs = specification_count,
-            max_materialize = ask_for_input('Max Materialize?', default = 1000, cast_to = int),
+        batch_name = ask_for_input('Job batch name?', default = job_name, cast_to = str),
+        checkpoints = str(checkpoints).lower(),
+        flockglide = str(ask_for_bool('Flock and Glide?', default = 'y')).lower(),
+        memory = ask_for_input('Memory (in GB)?', default = 4, cast_to = float),
+        disk = ask_for_input('Disk (in GB)?', default = 10, cast_to = float),
+        num_jobs = specification_count,
+        max_materialize = ask_for_input('Max Materialize?', default = 1000, cast_to = int),
     )
 
     return CHTC_SUBMIT_STRING.format(**fmt).strip()
