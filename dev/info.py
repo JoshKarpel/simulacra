@@ -52,13 +52,15 @@ class Bat:
 
 
 class BarSpec(si.Specification):
+    simulation_type = BarSim
+
     def __init__(self, name, foo = 5, bar = 3, bat = Bat(), pot = si.Summand(), **kwargs):
         self.foo = foo
         self.bar = bar
         self.bat = bat
         self.pot = pot
 
-        super().__init__(name, simulation_type = BarSim, **kwargs)
+        super().__init__(name, **kwargs)
 
     def info(self):
         info = super().info()
@@ -90,3 +92,18 @@ if __name__ == '__main__':
         print(sim.info())
         # print(sim.info().fields)
         print()
+
+        sim.info().log()
+
+        # info = si.Info(header = 'top')
+        # info.add_field('foo', 'bar')
+        #
+        # subinfo = si.Info(header = 'middle')
+        # subinfo.add_field('gaz', 'baz')
+        # info.add_info(subinfo)
+        #
+        # info.add_field('bar', 'foo')
+        #
+        # p = str(info)
+        # print('\n------------------------------------------\n')
+        # print(p)

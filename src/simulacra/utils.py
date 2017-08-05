@@ -27,6 +27,7 @@ import os
 import sys
 import time
 import logging
+import enum
 from typing import Optional, Union, NamedTuple, Callable, Iterable
 
 import numpy as np
@@ -796,3 +797,7 @@ class SuspendProcesses:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         resume_processes(self.processes)
+
+class Enum(enum.Enum):
+    def __str__(self):
+        return self.value

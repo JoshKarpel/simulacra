@@ -22,6 +22,7 @@ import gzip
 import pickle
 import uuid
 import collections
+import enum
 from copy import deepcopy
 from typing import Optional, Union, List, Tuple, Iterable
 
@@ -29,7 +30,6 @@ import logging
 import os
 
 from . import utils
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -52,8 +52,7 @@ class Info:
     """
 
     def __init__(self, *,
-                 header: str,
-                 indentation: int = 2):
+                 header: str):
         """
         Parameters
         ----------
@@ -63,24 +62,33 @@ class Info:
             Sets the indentation level of the :class:`Info` (how many spaces will be added at each level of the hierarchy).
         """
         self.header = header
-        self.indentation = indentation
 
         self.children = collections.OrderedDict()
 
-    def _field_strs(self) -> List[str]:
-        s = []
+    def __str__(self) -> List[str]:
+        field_strings = [self.header]
+
         for field, value in self.children.items():
-            try:
-                s.extend(value._field_strs())
-            except AttributeError:
-                s.append(f'{field}: {value}')
-        s = [self.header] + [' ' * self.indentation + f for f in s]
+            if isinstance(value, Info):
+                info_strings = str(value).split('\n')
+                field_strings.append('├─ ' + info_strings[0])
+                field_strings.extend('│  ' + info_string for info_string in info_strings[1:])
+            else:
+                field_strings.append(f'├─ {field}: {value}')
 
-        return s
+        # this loop goes over the field strings in reverse, cleaning up the tail of the structure indicators
+        for index, field_string in reversed(list(enumerate(field_strings))):
+            if field_string[0] == '├':  # this is the last branch on this level, replace it with endcap and break
+                field_strings[index] = field_string.replace('├', '└')
+                break
+            else:  # not yet at last branch, continue cleanup
+                field_strings[index] = field_string.replace('│', ' ')
 
-    def __str__(self):
-        field_strs = self._field_strs()
-        return f'\n{field_strs[0]}\n' + '\n'.join('|' + s[1:] for s in field_strs[1:])
+        return '\n'.join(field_strings)
+
+    def log(self, level = logging.INFO):
+        """Emit a log message."""
+        logger.log(level, '\n' + str(self))
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.header})'
@@ -356,12 +364,15 @@ class Specification(Beet):
         return info
 
 
-# Simulation status names
-STATUS_INI = 'initialized'
-STATUS_RUN = 'running'
-STATUS_FIN = 'finished'
-STATUS_PAU = 'paused'
-STATUS_ERR = 'error'
+class Status(enum.Enum):
+    INITIALIZED = 'initialized'
+    RUNNING = 'running'
+    FINISHED = 'finished'
+    PAUSED = 'paused'
+    ERROR = 'error'
+
+    def __str__(self):
+        return self.value
 
 
 class Simulation(Beet):
@@ -380,7 +391,7 @@ class Simulation(Beet):
         The status of the Simulation. One of ``'initialized'``, ``'running'``, ``'finished'``, ``'paused'``, or ``'error'``.
     """
 
-    _status = utils.RestrictedValues('status', {'', STATUS_INI, STATUS_RUN, STATUS_FIN, STATUS_PAU, STATUS_ERR})
+    _status = utils.Typed('status', Status)
 
     def __init__(self, spec: Specification):
         """
@@ -402,8 +413,7 @@ class Simulation(Beet):
         self.latest_run_time = None
         self.running_time = datetime.timedelta()
 
-        self._status = ''
-        self.status = STATUS_INI
+        self.status = Status.INITIALIZED
 
     @property
     def status(self):
@@ -424,17 +434,17 @@ class Simulation(Beet):
         """
         now = datetime.datetime.utcnow()
 
-        if status == STATUS_INI:
+        if status == Status.INITIALIZED:
             self.init_time = now
-        elif status == STATUS_RUN:
+        elif status == Status.RUNNING:
             if self.latest_run_time is None:
                 self.start_time = now
             self.latest_run_time = now
             self.runs += 1
-        elif status == STATUS_PAU:
+        elif status == Status.PAUSED:
             if self.latest_run_time is not None:
                 self.running_time += now - self.latest_run_time
-        elif status == STATUS_FIN:
+        elif status == Status.FINISHED:
             if self.latest_run_time is not None:
                 self.running_time += now - self.latest_run_time
             self.end_time = now
@@ -465,8 +475,8 @@ class Simulation(Beet):
         :class:`str`
             The path to the saved Simulation.
         """
-        if self.status != STATUS_FIN:
-            self.status = STATUS_PAU
+        if self.status != Status.FINISHED:
+            self.status = Status.PAUSED
 
         return super().save(target_dir = target_dir, file_extension = file_extension, compressed = compressed)
 

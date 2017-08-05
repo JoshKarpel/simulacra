@@ -35,6 +35,7 @@ logger.setLevel(logging.DEBUG)
 
 
 def rand_phase(shape_tuple):
+    """Return random phases (0 to 2pi) in the specified shape."""
     return rand.random_sample(shape_tuple) * twopi
 
 
@@ -45,10 +46,9 @@ def sinc(x):
 
 def gaussian(x, center, sigma, prefactor):
     """
-    Return an unnormalized Gaussian centered at :code:`center` with standard deviation :code:`sigma` and prefactor :code:`prefactor`.
+    Return an unnormalized Gaussian centered at `center` with standard deviation `sigma` and prefactor `prefactor`.
     """
     return prefactor * np.exp(-0.5 * (((x - center) / sigma) ** 2))
-    # return (prefactor / (sigma * np.sqrt(twopi))) * np.exp(-0.5 * (((x - center) / sigma) ** 2))
 
 
 def gaussian_fwhm_from_sigma(sigma):
@@ -174,15 +174,11 @@ def quad_from_array(y, x, interpolation_type = 'linear', **kwargs):
             'cubic spline': interp.CubicSpline,
         }[interpolation_type]
 
-        # print('x', x)
-        # print('y', y)
-
         integrand = interpolator(x, y)
     else:
         integrand = y
 
     result, real_err, imag_error = complex_quad(integrand, x[0], x[-1], **kwargs)
-    # print(result, real_err, imag_error)
 
     return result
 
