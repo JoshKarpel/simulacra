@@ -61,7 +61,8 @@ class ClusterInterface:
 
     """
 
-    def __init__(self, remote_host, username, key_path,
+    def __init__(self,
+                 remote_host, username, key_path,
                  local_mirror_root = 'cluster_mirror', remote_sep = '/'):
         self.remote_host = remote_host
         self.username = username
@@ -80,7 +81,7 @@ class ClusterInterface:
         self.ssh.connect(self.remote_host, username = self.username, key_filename = self.key_path)
         self.ftp = self.ssh.open_sftp()
 
-        logger.info('Opened connection to {} as {}'.format(self.remote_host, self.username))
+        logger.info(f'Opened connection to {self.remote_host} as {self.username}')
 
         return self
 
@@ -89,13 +90,13 @@ class ClusterInterface:
         self.ftp.close()
         self.ssh.close()
 
-        logger.info('Closed connection to {} as {}'.format(self.remote_host, self.username))
+        logger.info(f'Closed connection to {self.remote_host} as {self.username}')
 
     def __str__(self):
-        return 'Interface to {} as {}'.format(self.remote_host, self.username)
+        return f'Interface to {self.remote_host} as {self.username}'
 
     def __repr__(self):
-        return '{}(hostname = {}, username = {})'.format(self.__class__.__name__, self.remote_host, self.username)
+        return f'{self.__class__.__name__}(hostname = {self.remote_host}, username = {self.username})'
 
     @property
     def local_home_dir(self):
@@ -156,7 +157,7 @@ class ClusterInterface:
                 remote_stat = self.ftp.lstat(remote_path)
             os.utime(local_path, (remote_stat.st_atime, remote_stat.st_mtime))
 
-        logger.debug('{}   <--   {}'.format(local_path, remote_path))
+        logger.debug(f'{local_path}   <--   {remote_path}')
 
     def put_file(self, local_path, remote_path, preserve_timestamps = True):
         """
@@ -209,7 +210,7 @@ class ClusterInterface:
         if force_download or not self.is_file_synced(remote_stat, local_path):
             self.get_file(remote_path, local_path, remote_stat = remote_stat, preserve_timestamps = True)
             if integrity_check:
-                output = self.cmd('openssl md5 {}'.format(remote_path))
+                output = self.cmd(f'openssl md5 {remote_path}')
                 md5_remote = output.stdout.readline().split(' ')[1].strip()
                 with open(local_path, mode = 'rb') as f:
                     md5_local = hashlib.md5()
@@ -278,7 +279,7 @@ class ClusterInterface:
 
     def mirror_remote_home_dir(self,
                                blacklist_dir_names = ('python', 'build_python'),
-                               whitelist_file_ext = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl')):
+                               whitelist_file_ext = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl', '.tar.gz')):
         """
         Mirror the entire remote home directory.
 
@@ -475,7 +476,7 @@ class JobProcessor(core.Beet):
             for sim_name in sim_names:
                 sim = self._load_sim(sim_name)
 
-                if sim is not None and sim.status == core.STATUS_FIN:
+                if sim is not None and sim.status == core.Status.FINISHED:
                     try:
                         self.data[sim_name] = self.simulation_result_type(sim, job_processor = self)
                         self.unprocessed_sim_names.discard(sim_name)
@@ -528,7 +529,7 @@ class JobProcessor(core.Beet):
 
     def select_by_lambda(self, test_function):
         """
-        Return all of the :class:`SimulationResult` for which ``test_function(sim_result)`` is True.
+        Return all of the :class:`SimulationResult` for which ``test_function(sim_result)`` evaluates to ``True``.
 
         Parameters
         ----------
@@ -580,14 +581,16 @@ class JobProcessor(core.Beet):
         sim_numbers = [result.file_name for result in self.data.values() if result is not None]
         running_time = [result.running_time for result in self.data.values() if result is not None]
 
-        vis.xy_plot(f'{self.name}__diagnostics',
-                    sim_numbers,
-                    running_time,
-                    line_kwargs = [dict(linestyle = '', marker = '.')],
-                    y_unit = 'hours',
-                    x_label = 'Simulation Number', y_label = 'Time',
-                    title = f'{self.name} Diagnostics',
-                    target_dir = self.summaries_dir)
+        vis.xy_plot(
+            f'{self.name}__diagnostics',
+            sim_numbers,
+            running_time,
+            line_kwargs = [dict(linestyle = '', marker = '.')],
+            y_unit = 'hours',
+            x_label = 'Simulation Number', y_label = 'Time',
+            title = f'{self.name} Diagnostics',
+            target_dir = self.summaries_dir
+        )
 
         logger.debug(f'Generated diagnostics plot for job {self.name}')
 
@@ -662,13 +665,14 @@ def expand_parameters_to_dicts(parameters):
     dicts = [collections.OrderedDict()]
 
     for par in parameters:
+        pn, pv = par.name, par.value
         if par.expandable and hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):  # make sure the value is an iterable that isn't a string and has a length
-            dicts = [deepcopy(d) for d in dicts for _ in range(len(par.value))]
-            for d, v in zip(dicts, itertools.cycle(par.value)):
-                d[par.name] = v
+            dicts = [deepcopy(d) for d in dicts for _ in range(len(pv))]
+            for d, v in zip(dicts, itertools.cycle(pv)):
+                d[pn] = v
         else:
             for d in dicts:
-                d[par.name] = par.value
+                d[pn] = pv
 
     return dicts
 
@@ -844,7 +848,7 @@ def write_specifications_info_to_file(specifications, job_dir):
         for spec in tqdm(specifications):
             file.write(str(spec.info()) + '\n')
 
-    logger.debug('Saved Specification information')
+    logger.debug('Wrote Specification information to file')
 
 
 def write_parameters_info_to_file(parameters, job_dir):
@@ -855,7 +859,7 @@ def write_parameters_info_to_file(parameters, job_dir):
         for param in parameters:
             file.write(repr(param) + '\n')
 
-    logger.debug('Saved parameter information')
+    logger.debug('Wrote parameter information to file')
 
 
 CHTC_SUBMIT_STRING = """
@@ -917,15 +921,14 @@ def generate_chtc_submit_string(job_name, specification_count, checkpoints = Tru
 
 def specification_check(specifications, check = 3):
     """Ask the user whether some number of specifications look correct."""
+    print('-' * 20)
     for s in specifications[0:check]:
-        print('-' * 20)
-        print(s)
-        print(s.info())
+        print(f'\n{s.info()}\n')
         print('-' * 20)
 
-    print('Generated {} Specifications'.format(len(specifications)))
+    print(f'Generated {len(specifications)} Specifications')
 
-    check = ask_for_bool('Do the first {} Specifications look correct?'.format(check), default = 'No')
+    check = ask_for_bool(f'Do the first {check} Specifications look correct?', default = 'No')
     if not check:
         abort_job_creation()
 
@@ -943,12 +946,12 @@ def submit_check(submit_string):
 
 def write_submit_file(submit_string, job_dir):
     """Write the submit string to a file."""
-    print('Saving submit file...')
+    print('Writing submit file...')
 
     with open(os.path.join(job_dir, 'submit_job.sub'), mode = 'w') as file:
         file.write(submit_string)
 
-    logger.debug('Saved submit file')
+    logger.debug('Wrote submit file')
 
 
 def write_job_info_to_file(job_info, job_dir):
@@ -963,11 +966,20 @@ def load_job_info_from_file(job_dir):
         return pickle.load(f)
 
 
-def submit_job(job_dir):
+def submit_job(job_dir, factory = False):
     """Submit a job using a pre-existing submit file."""
     print('Submitting job...')
 
     os.chdir(job_dir)
 
-    subprocess.run(['condor_submit', 'submit_job.sub'])
-    # subprocess.run(['condor_submit', 'submit_job.sub', '-factory'])
+    cmds = [
+        'condor_submit',
+        'submit_job.sub',
+    ]
+
+    if factory:
+        cmds.append('-factory')
+
+    subprocess.run(cmds)
+
+    os.chdir('..')

@@ -42,16 +42,16 @@ logger.setLevel(logging.DEBUG)
 WHITE = '#ffffff'
 BLACK = '#000000'
 
-BLUE = '#1f77b4'  # matplotlib C0
+BLUE = '#1f77b4'    # matplotlib C0
 ORANGE = '#ff7f0e'  # matplotlib C1
-GREEN = '#2ca02c'  # matplotlib C2
-RED = '#d62728'  # matplotlib C3
+GREEN = '#2ca02c'   # matplotlib C2
+RED = '#d62728'     # matplotlib C3
 PURPLE = '#9467bd'  # matplotlib C4
-BROWN = '#8c564b'  # matplotlib C5
-PINK = '#e377c2'  # matplotlib C6
-GRAY = '#7f7f7f'  # matplotlib C7
+BROWN = '#8c564b'   # matplotlib C5
+PINK = '#e377c2'    # matplotlib C6
+GRAY = '#7f7f7f'    # matplotlib C7
 YELLOW = '#bcbd22'  # matplotlib C8
-TEAL = '#17becf'  # matplotlib C9
+TEAL = '#17becf'    # matplotlib C9
 
 # colors opposite common colormaps
 COLOR_OPPOSITE_PLASMA = GREEN
@@ -257,7 +257,8 @@ class FigureManager:
     A class that manages a matplotlib figure: creating it, showing it, saving it, and cleaning it up.
     """
 
-    def __init__(self, name: str,
+    def __init__(self,
+                 name: str,
                  name_postfix: str = '',
                  fig_width = DEFAULT_LATEX_PAGE_WIDTH,
                  aspect_ratio = GOLDEN_RATIO,
@@ -320,11 +321,10 @@ class FigureManager:
         self.img_format = img_format
 
         if len(kwargs) > 0:
-            logger.debug('FigureManager for figure {} absorbed extraneous kwargs: {}'.format(self.name, kwargs))
+            logger.debug(f'FigureManager {self.name} absorbed extraneous kwargs: {kwargs}')
 
         self.close_before_enter = close_before_enter
         self.close_after_exit = close_after_exit
-
         self.save_on_exit = save_on_exit
         self.show = show
 
@@ -1076,8 +1076,6 @@ def xyt_plot(name,
         figure_manager = FigureManager(name, save_on_exit = False, fig_dpi_scale = fig_dpi_scale, **kwargs)
     with figure_manager as fm:
         fig = fm.fig
-        # plt.close()
-        # fig = plt.figure(figsize = (10, 10))
         ax = fig.add_axes([.15, .15, .75, .7])
 
         if grid_kwargs is None:

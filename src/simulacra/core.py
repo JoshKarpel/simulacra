@@ -51,18 +51,14 @@ class Info:
     Field names are unique.
     """
 
-    def __init__(self, *,
-                 header: str):
+    def __init__(self, *, header: str):
         """
         Parameters
         ----------
         header
             The header for this :class:`Info`.
-        indentation
-            Sets the indentation level of the :class:`Info` (how many spaces will be added at each level of the hierarchy).
         """
         self.header = header
-
         self.children = collections.OrderedDict()
 
     def __str__(self) -> List[str]:
@@ -86,12 +82,16 @@ class Info:
 
         return '\n'.join(field_strings)
 
-    def log(self, level = logging.INFO):
-        """Emit a log message."""
-        logger.log(level, '\n' + str(self))
-
     def __repr__(self):
         return f'{self.__class__.__name__}({self.header})'
+
+    def log(self, level = logging.INFO):
+        """Emit a log message containing the formatted info output."""
+        logger.log(level, '\n' + str(self))
+
+    def json(self):
+        # TODO: json output from Info
+        raise NotImplementedError
 
     def add_field(self, name: str, value: Union[str, 'Info']):
         """
@@ -106,16 +106,16 @@ class Info:
         """
         self.children[name] = value
 
-    def add_fields(self, name_value_pairs: Iterable[Tuple[str, str]]):
+    def add_fields(self, name_value_pairs):
         """
         Add a list of fields to the :class:`Info`.
 
         Parameters
         ----------
         name_value_pairs : iterable
-            An iterable of ``(name, value)`` pairs to add as fields.
+            An iterable or dict of ``(name, value)`` pairs to add as fields.
         """
-        self.children.update({k: v for k, v in name_value_pairs})
+        self.children.update(dict(name_value_pairs))
 
     def add_info(self, info: 'Info'):
         """
@@ -126,9 +126,9 @@ class Info:
         info : :class:`Info`
             An :class:`Info` to be added as a sub-Info.
         """
-        self.children[id(info)] = info
+        self.children[info.header] = info
 
-    def add_infos(self, infos: Iterable['Info']):
+    def add_infos(self, *infos):
         """
         Add a list of Infos to this Info as sub-Infos.
 
@@ -177,9 +177,9 @@ class Beet:
 
     def __str__(self):
         if self.name != self.file_name:
-            return f'{self.__class__.__name__}({self.name}, file_name = {self.file_name}) [{self.uuid}]'
+            return f'{self.__class__.__name__}({self.name}, file_name = {self.file_name})'
         else:
-            return f'{self.__class__.__name__}({self.name}) [{self.uuid}]'
+            return f'{self.__class__.__name__}({self.name})'
 
     def __repr__(self):
         return utils.field_str(self, 'name', 'file_name', 'uuid')
@@ -282,7 +282,10 @@ class Beet:
         return beet
 
     def info(self) -> Info:
-        return Info(header = str(self))
+        info = Info(header = str(self))
+        info.add_field('UUID', self.uuid)
+
+        return info
 
 
 class Specification(Beet):
@@ -364,15 +367,12 @@ class Specification(Beet):
         return info
 
 
-class Status(enum.Enum):
+class Status(utils.StrEnum):
     INITIALIZED = 'initialized'
     RUNNING = 'running'
     FINISHED = 'finished'
     PAUSED = 'paused'
     ERROR = 'error'
-
-    def __str__(self):
-        return self.value
 
 
 class Simulation(Beet):
@@ -488,15 +488,18 @@ class Simulation(Beet):
         """Return a string describing the parameters of the Simulation and its associated Specification."""
         info = super().info()
 
-        info.add_info(self.spec.info())
+        info.add_field('UUID', self.uuid)
 
         info_diag = Info(header = f'Status: {self.status}')
-        info_diag.add_field('Start Time', self.init_time)
-        info_diag.add_field('Latest Run Time', self.latest_run_time)
-        info_diag.add_field('End Time', self.end_time)
-        info_diag.add_field('Elapsed Time', self.elapsed_time)
-        info_diag.add_field('Run Time', self.running_time)
-        info.add_info(info_diag)
+        info_diag.add_fields({
+            'Initialization Time': self.init_time,
+            'Latest Run Time': self.latest_run_time,
+            'End Time': self.end_time,
+            'Running Time': self.running_time,
+            'Elapsed Time': self.elapsed_time,
+        })
+
+        info.add_infos(info_diag, self.spec.info())
 
         return info
 
@@ -569,9 +572,6 @@ class Sum(Summand):
         info = super().info()
 
         for x in self._container:
-            try:
-                info.add_info(x.info())
-            except AttributeError:
-                info.add_field(x.__class__.__name__, str(x))
+            info.add_info(x.info())
 
         return info

@@ -265,12 +265,6 @@ def ensure_dir_exists(path):
     :class:`str`
         The path that was created.
     """
-    """
-    
-
-    :param path: the path to a file or directory
-    :type path: str
-    """
     split_path = os.path.splitext(path)
     if split_path[0] != path:  # path is file
         path_to_make = os.path.dirname(split_path[0])
@@ -314,23 +308,6 @@ def downsample(dense_x_array: np.ndarray,
     return sparse_y_array
 
 
-def run_in_process(func, args = (), kwargs = None):
-    """
-    Run a function in a separate thread.
-
-    :param func: the function to run
-    :param args: positional arguments for function
-    :param kwargs: keyword arguments for function
-    """
-    if kwargs is None:
-        kwargs = {}
-
-    with multiprocessing.Pool(processes = 1) as pool:
-        output = pool.apply(func, args, kwargs)
-
-    return output
-
-
 def find_or_init_sim(spec, search_dir: Optional[str] = None, file_extension = '.sim'):
     """
     Try to load a :class:`simulacra.Simulation` by looking for a pickled :class:`simulacra.core.Simulation` named ``{search_dir}/{spec.file_name}.{file_extension}``.
@@ -357,7 +334,24 @@ def find_or_init_sim(spec, search_dir: Optional[str] = None, file_extension = '.
     return sim
 
 
-def multi_map(function, targets, processes = None, **kwargs):
+def run_in_process(func, args = (), kwargs = None):
+    """
+    Run a function in a separate thread.
+
+    :param func: the function to run
+    :param args: positional arguments for function
+    :param kwargs: keyword arguments for function
+    """
+    if kwargs is None:
+        kwargs = {}
+
+    with multiprocessing.Pool(processes = 1) as pool:
+        output = pool.apply(func, args, kwargs)
+
+    return output
+
+
+def multi_map(func: Callable, targets: Iterable, processes: Optional[int] = None, **kwargs):
     """
     Map a function over a list of inputs using multiprocessing.
 
@@ -365,7 +359,7 @@ def multi_map(function, targets, processes = None, **kwargs):
 
     Parameters
     ----------
-    function : a callable
+    func : a callable
         The function to call on each of the `targets`.
     targets : an iterable
         An iterable of arguments to call the function on.
@@ -383,7 +377,7 @@ def multi_map(function, targets, processes = None, **kwargs):
         processes = max(int(multiprocessing.cpu_count() / 2) - 1, 1)
 
     with multiprocessing.Pool(processes = processes) as pool:
-        output = pool.map(function, targets, **kwargs)
+        output = pool.map(func, targets, **kwargs)
 
     return tuple(output)
 
@@ -635,7 +629,7 @@ def bytes_to_str(num: Union[float, int]) -> str:
         num /= 1024.0
 
 
-def get_file_size(file_path: str):
+def get_file_size(file_path: str) -> int:
     """Return the size of the file at file_path."""
     return os.stat(file_path).st_size
 
@@ -672,18 +666,17 @@ def try_loop(*functions_to_run,
                 try:
                     f()
                 except Exception as e:
-                    logger.exception(f'Exception encountered while executing loop function {f}')
+                    logger.exception(f'Exception encountered while executing loop function: {f}')
                     failed = True
 
-        logger.info(complete_text + '. Elapsed time: {}'.format(timer.wall_time_elapsed))
+        logger.info(f'{complete_text}. Elapsed time: {timer.wall_time_elapsed}')
 
         if failed:
-            wait = wait_after_failure
-            logger.info(f'Loop cycle failed, retrying in {wait_after_failure.total_seconds()} seconds')
+            s, wait = 'failed', wait_after_failure
         else:
-            wait = wait_after_success
-            logger.info(f'Loop cycle succeeded, next cycle in {wait_after_success.total_seconds()} seconds')
+            s, wait = 'succeeded', wait_after_success
 
+        logger.info(f'Loop cycle {s}, next cycle in {wait.total_seconds()} seconds')
         time.sleep(wait.total_seconds())
 
 
@@ -798,6 +791,7 @@ class SuspendProcesses:
     def __exit__(self, exc_type, exc_val, exc_tb):
         resume_processes(self.processes)
 
-class Enum(enum.Enum):
+
+class StrEnum(enum.Enum):
     def __str__(self):
-        return self.value
+        return str(self.value)
