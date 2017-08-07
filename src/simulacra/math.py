@@ -145,7 +145,7 @@ class SphericalHarmonic:
         return special.sph_harm(self.m, self.l, phi, theta)
 
 
-def quad_from_array(y, x, interpolation_type = 'linear', **kwargs):
+def quad_from_array(y, x, interpolation_type = 'cubic spline', **kwargs):
     """
     A thin wrapper over scipy.integrate.quad which takes the integrand array as `y` and the bounds of the integral from the first and last elements of `x`.
     This is done to match the signature of the fixed-sample integrators in scipy.integrate.

@@ -485,7 +485,7 @@ class JobProcessor(core.Beet):
 
                 self.save(target_dir = self.job_dir_path)
 
-        logger.info('Finished loading simulations from job {}. Failed to find {} / {} simulations. Elapsed time: {}'.format(self.name, len(self.unprocessed_sim_names), self.sim_count, t.wall_time_elapsed))
+        logger.info(f'Finished loading simulations from job {self.name}. Failed to find {len(self.unprocessed_sim_names)} / {self.sim_count} simulations. Elapsed time: {t.wall_time_elapsed}')
 
     def summarize(self):
         with utils.BlockTimer() as t:
@@ -666,7 +666,9 @@ def expand_parameters_to_dicts(parameters):
 
     for par in parameters:
         pn, pv = par.name, par.value
-        if par.expandable and hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):  # make sure the value is an iterable that isn't a string and has a length
+
+        # make sure the value is an iterable that isn't a string and has a length
+        if par.expandable and hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):
             dicts = [deepcopy(d) for d in dicts for _ in range(len(pv))]
             for d, v in zip(dicts, itertools.cycle(pv)):
                 d[pn] = v
