@@ -32,6 +32,7 @@ import zlib
 from copy import copy, deepcopy
 
 import numpy as np  # needs to be here so that ask_for_eval works
+import scipy as sp
 
 import paramiko
 from tqdm import tqdm

@@ -427,9 +427,11 @@ def memoize(func: Callable):
     @functools.wraps(func)
     def memoizer(*args, **kwargs):
         key = hash_args_kwargs(*args, **kwargs)
-        if key not in memo:
+        try:
+            return memo[key]
+        except KeyError:
             memo[key] = func(*args, **kwargs)
-        return memo[key]
+            return memo[key]
 
     return memoizer
 
@@ -793,5 +795,6 @@ class SuspendProcesses:
 
 
 class StrEnum(enum.Enum):
+    """An enum where, when printed, an enum member displays its value, cast to a string."""
     def __str__(self):
         return str(self.value)

@@ -607,6 +607,7 @@ speed_of_light = c
 mu_0 = pi * 4e-7 * N / (A ** 2)
 epsilon_0 = 1 / (mu_0 * (c ** 2))
 coulomb_constant = 1 / (4 * pi * epsilon_0)
+k_e = coulomb_constant
 n_vacuum = 1
 
 UNIT_NAME_TO_VALUE.update({
@@ -623,6 +624,7 @@ UNIT_NAME_TO_LATEX.update({
     'mu_0': r'\mu_0',
     'epsilon_0': r'\epsilon_0',
     'coulomb_force_constant': r'k_e',
+    'k_e': r'k_e',
     'n_vacuum': r'n_{\mathrm{vac}}'
 })
 

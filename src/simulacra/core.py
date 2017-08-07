@@ -22,7 +22,6 @@ import gzip
 import pickle
 import uuid
 import collections
-import enum
 from copy import deepcopy
 from typing import Optional, Union, List, Tuple, Iterable
 
