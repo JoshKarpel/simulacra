@@ -391,8 +391,6 @@ class Simulation(Beet):
         The status of the Simulation. One of ``'initialized'``, ``'running'``, ``'finished'``, ``'paused'``, or ``'error'``.
     """
 
-    _status = utils.Typed('status', Status)
-
     def __init__(self, spec: Specification):
         """
         Parameters
@@ -413,7 +411,7 @@ class Simulation(Beet):
         self.latest_run_time = None
         self.running_time = datetime.timedelta()
 
-        self.status = Status.INITIALIZED
+        self._status = Status.INITIALIZED
 
     @property
     def status(self):
@@ -432,12 +430,16 @@ class Simulation(Beet):
         status : :class:`str`
             The new status for the simulation
         """
+        if not isinstance(status, Status):
+            raise TypeError(f'{status} is not a member of Status')
+
+        old_status = self.status
         now = datetime.datetime.utcnow()
 
         if status == Status.INITIALIZED:
             self.init_time = now
         elif status == Status.RUNNING:
-            if self.latest_run_time is None:
+            if self.start_time is None:
                 self.start_time = now
             self.latest_run_time = now
             self.runs += 1
@@ -452,7 +454,7 @@ class Simulation(Beet):
 
         self._status = status
 
-        logger.debug("{} {} ({}) status set to {}".format(self.__class__.__name__, self.name, self.file_name, status))
+        logger.debug(f'{self.__class__.__name__} {self.name} status set to {self.status} from {old_status}')
 
     def __str__(self):
         return super().__str__() + f' {{{self.status}}}'
