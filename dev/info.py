@@ -74,7 +74,9 @@ class BarSpec(si.Specification):
         return info
 
 if __name__ == '__main__':
-    with si.utils.LogManager('simulacra', stdout_logs = True, stdout_level = logging.DEBUG) as logger:
+    with si.utils.LogManager('simulacra',
+                             stdout_logs = True, stdout_level = logging.DEBUG,
+                             file_logs = True, file_level = logging.DEBUG, file_dir = OUT_DIR) as logger:
         foo = Foo('foo', a = 6)
 
         print(foo.info())

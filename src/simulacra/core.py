@@ -411,7 +411,8 @@ class Simulation(Beet):
         self.latest_run_time = None
         self.running_time = datetime.timedelta()
 
-        self._status = Status.INITIALIZED
+        self._status = None
+        self.status = Status.INITIALIZED
 
     @property
     def status(self):

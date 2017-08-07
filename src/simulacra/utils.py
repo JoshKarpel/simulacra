@@ -189,7 +189,7 @@ class LogManager:
 
             ensure_dir_exists(log_file_path)  # the log message emitted here will not be included in the logger being created by this context manager
 
-            file_handler = logging.FileHandler(log_file_path, mode = self.file_mode)
+            file_handler = logging.FileHandler(log_file_path, mode = self.file_mode, encoding = 'utf-8')
             file_handler.setLevel(self.file_level)
             file_handler.setFormatter(LOG_FORMATTER)
 

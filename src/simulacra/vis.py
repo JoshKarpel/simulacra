@@ -73,7 +73,7 @@ CMAP_TO_OPPOSITE = {
 GRID_KWARGS = dict(
     linestyle = '-',
     color = 'black',
-    linewidth = .25,
+    linewidth = .5,
     alpha = 0.4
 )
 
@@ -82,7 +82,7 @@ MINOR_GRID_KWARGS['alpha'] -= .1
 
 COLORMESH_GRID_KWARGS = dict(
     linestyle = '-',
-    linewidth = .25,
+    linewidth = .5,
     alpha = 0.4,
 )
 
