@@ -437,6 +437,46 @@ UNIT_NAME_TO_LATEX.update({
     'PV': r'\mathrm{PV}'
 })
 
+# magnetic field strength
+T = V * s / (m ** 2)
+mT = 1e-3 * T
+uT = 1e-6 * T
+nT = 1e-9 * T
+pT = 1e-12 * T
+fT = 1e-15 * T
+kT = 1e3 * T
+MT = 1e6 * T
+GT = 1e9 * T
+TT = 1e12 * T
+PT = 1e15 * T
+
+UNIT_NAME_TO_VALUE.update({
+    'T': T,
+    'mT': mT,
+    'uT': uT,
+    'nT': nT,
+    'pT': pT,
+    'fT': fT,
+    'kT': kT,
+    'MT': MT,
+    'GT': GT,
+    'TT': TT,
+    'PT': PT
+})
+UNIT_NAME_TO_LATEX.update({
+    'T': r'\mathrm{T}',
+    'mT': r'\mathrm{mT}',
+    'uT': r'\mathrm{uT}',
+    'nT': r'\mathrm{nT}',
+    'pT': r'\mathrm{pT}',
+    'fT': r'\mathrm{fT}',
+    'kT': r'\mathrm{kT}',
+    'MT': r'\mathrm{MT}',
+    'GT': r'\mathrm{GT}',
+    'TT': r'\mathrm{TT}',
+    'PT': r'\mathrm{PT}'
+})
+
 # energies in electron-volts
 eV = proton_charge * V
 keV = 1e3 * eV
@@ -644,14 +684,17 @@ UNIT_NAME_TO_LATEX.update({
     'h': r'h',
     'hbar': r'\hbar',
     'rydberg': r'\mathrm{Ry}',
-    'hartree': r'\mathrm{Ha}'
+    'hartree': r'\mathrm{Ha}',
+    'atomic_energy': r'\mathrm{Ha}',
 })
 
 atomic_energy = hartree
 atomic_electric_field = coulomb_constant * proton_charge / (bohr_radius ** 2)
+atomic_magnetic_field = hbar / (proton_charge * (bohr_radius ** 2))
 atomic_intensity = .5 * epsilon_0 * c * (atomic_electric_field ** 2)
 atomic_electric_potential = coulomb_constant * proton_charge / bohr_radius
 atomic_electric_dipole_moment = proton_charge * bohr_radius
+atomic_magnetic_dipole_moment = bohr_magneton = proton_charge * hbar / (2 * electron_mass)
 atomic_velocity = alpha * c
 atomic_momentum = electron_mass * atomic_velocity
 atomic_time = hbar / hartree
@@ -659,12 +702,16 @@ atomic_force = hartree / bohr_radius
 atomic_temperature = hartree / k_B
 
 UNIT_NAME_TO_VALUE.update({
+    'atomic_energy': atomic_energy,
     'atomic_electric_field': atomic_electric_field,
+    'atomic_magnetic_field': atomic_magnetic_field,
     'aef': atomic_electric_field,
     'AEF': atomic_electric_field,
     'atomic_intensity': atomic_intensity,
     'atomic_electric_potential': atomic_electric_potential,
     'atomic_electric_dipole_moment': atomic_electric_dipole_moment,
+    'atomic_magnetic_dipole_moment': atomic_magnetic_dipole_moment,
+    'bohr_magneton': atomic_magnetic_dipole_moment,
     'atomic_velocity': atomic_velocity,
     'atomic_momentum': atomic_momentum,
     'atomic_force': atomic_force,
@@ -672,11 +719,14 @@ UNIT_NAME_TO_VALUE.update({
 })
 UNIT_NAME_TO_LATEX.update({
     'atomic_electric_field': r'\mathrm{a.u.}',
+    'atomic_magnetic_field': r'\mathrm{a.u.}',
     'aef': r'\mathrm{a.u.}',
     'AEF': r'\mathrm{a.u.}',
     'atomic_intensity': r'\mathrm{a.u.}',
     'atomic_electric_potential': r'\mathrm{a.u.}',
     'atomic_electric_dipole_moment': r'e \, a_0',
+    'atomic_magnetic_dipole_moment': r'\mu_B',
+    'bohr_magneton': r'\mu_B',
     'atomic_velocity': r'\mathrm{a.u.}',
     'atomic_momentum': r'\mathrm{a.u.}',
     'atomic_force': r'\mathrm{a.u.}',
