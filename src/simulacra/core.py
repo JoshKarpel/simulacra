@@ -77,7 +77,7 @@ class Info:
                 field_strings[index] = field_string.replace('├', '└')
                 break
             else:  # not yet at last branch, continue cleanup
-                field_strings[index] = field_string.replace('│', ' ')
+                field_strings[index] = field_string.replace('│', ' ', 1)
 
         return '\n'.join(field_strings)
 

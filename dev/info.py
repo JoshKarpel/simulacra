@@ -47,6 +47,7 @@ class Bat:
     def info(self):
         info = si.Info(header = 'Bat')
         info.add_field('species', self.species)
+        info.add_field('favorite pancake', 'blueberry')
 
         return info
 
@@ -69,7 +70,10 @@ class BarSpec(si.Specification):
         info.add_field('car', self.bar)
 
         info.add_info(self.bat.info())
+        info.add_field('wassup', 'nuthin')
         info.add_info(self.pot.info())
+
+        info.add_field('yo', 'dawg')
 
         return info
 

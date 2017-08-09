@@ -1626,7 +1626,7 @@ class Animator:
         self.sim = simulation
         self.spec = simulation.spec
 
-        self.file_name = '{}_{}.mp4'.format(self.sim.file_name, self.postfix)
+        self.file_name = f'{self.sim.file_name}{self.postfix}.mp4'
         self.file_path = os.path.join(self.target_dir, self.file_name)
         utils.ensure_dir_exists(self.file_path)
         try:
