@@ -42,16 +42,16 @@ logger.setLevel(logging.DEBUG)
 WHITE = '#ffffff'
 BLACK = '#000000'
 
-BLUE = '#1f77b4'    # matplotlib C0
+BLUE = '#1f77b4'  # matplotlib C0
 ORANGE = '#ff7f0e'  # matplotlib C1
-GREEN = '#2ca02c'   # matplotlib C2
-RED = '#d62728'     # matplotlib C3
+GREEN = '#2ca02c'  # matplotlib C2
+RED = '#d62728'  # matplotlib C3
 PURPLE = '#9467bd'  # matplotlib C4
-BROWN = '#8c564b'   # matplotlib C5
-PINK = '#e377c2'    # matplotlib C6
-GRAY = '#7f7f7f'    # matplotlib C7
+BROWN = '#8c564b'  # matplotlib C5
+PINK = '#e377c2'  # matplotlib C6
+GRAY = '#7f7f7f'  # matplotlib C7
 YELLOW = '#bcbd22'  # matplotlib C8
-TEAL = '#17becf'    # matplotlib C9
+TEAL = '#17becf'  # matplotlib C9
 
 # colors opposite common colormaps
 COLOR_OPPOSITE_PLASMA = GREEN
@@ -715,7 +715,7 @@ def xy_plot(name,
                 legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
             if legend_on_right:
                 legend_kwargs['loc'] = 'upper left'
-                legend = ax.legend(bbox_to_anchor = (1.05, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
+                legend = ax.legend(bbox_to_anchor = (1.15, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
@@ -845,7 +845,7 @@ def xxyy_plot(name,
                 legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
             if legend_on_right:
                 legend_kwargs['loc'] = 'upper left'
-                legend = ax.legend(bbox_to_anchor = (1.05, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
+                legend = ax.legend(bbox_to_anchor = (1.15, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
@@ -1184,7 +1184,7 @@ def xyt_plot(name,
             if not legend_on_right:
                 legend = ax.legend(loc = 'upper right', fontsize = font_size_legend)
             if legend_on_right:
-                legend = ax.legend(bbox_to_anchor = (1.05, 1), loc = 'upper left', borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17))
+                legend = ax.legend(bbox_to_anchor = (1.15, 1), loc = 'upper left', borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17))
 
         if t_text_kwargs is None:
             t_text_kwargs = {}

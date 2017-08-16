@@ -211,8 +211,8 @@ class ClusterInterface:
         if force_download or not self.is_file_synced(remote_stat, local_path):
             self.get_file(remote_path, local_path, remote_stat = remote_stat, preserve_timestamps = True)
             if integrity_check:
-                output = self.cmd(f'openssl md5 {remote_path}')
-                md5_remote = output.stdout.readline().split(' ')[1].strip()
+                output = self.cmd(f'md5sum {remote_path}')
+                md5_remote = output.stdout.readline().split(' ')[0].strip()
                 with open(local_path, mode = 'rb') as f:
                     md5_local = hashlib.md5()
                     md5_local.update(f.read())
