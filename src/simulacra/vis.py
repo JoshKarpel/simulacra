@@ -42,16 +42,16 @@ logger.setLevel(logging.DEBUG)
 WHITE = '#ffffff'
 BLACK = '#000000'
 
-BLUE = '#1f77b4'    # matplotlib C0
+BLUE = '#1f77b4'  # matplotlib C0
 ORANGE = '#ff7f0e'  # matplotlib C1
-GREEN = '#2ca02c'   # matplotlib C2
-RED = '#d62728'     # matplotlib C3
+GREEN = '#2ca02c'  # matplotlib C2
+RED = '#d62728'  # matplotlib C3
 PURPLE = '#9467bd'  # matplotlib C4
-BROWN = '#8c564b'   # matplotlib C5
-PINK = '#e377c2'    # matplotlib C6
-GRAY = '#7f7f7f'    # matplotlib C7
+BROWN = '#8c564b'  # matplotlib C5
+PINK = '#e377c2'  # matplotlib C6
+GRAY = '#7f7f7f'  # matplotlib C7
 YELLOW = '#bcbd22'  # matplotlib C8
-TEAL = '#17becf'    # matplotlib C9
+TEAL = '#17becf'  # matplotlib C9
 
 # colors opposite common colormaps
 COLOR_OPPOSITE_PLASMA = GREEN
@@ -500,6 +500,33 @@ def set_axis_limits(axis, *data, lower_limit = None, upper_limit = None, log = F
     return getattr(axis, f'set_{direction}lim')(lower_limit / unit_value, upper_limit / unit_value)
 
 
+def set_title_and_axis_labels(axis,
+                              title = '',
+                              x_label = '',
+                              x_unit_label = '',
+                              y_label = '',
+                              y_unit_label = '',
+                              title_offset = 1.1,
+                              font_size_title = 16,
+                              font_size_axis_labels = 14,
+                              title_kwargs = None,
+                              axis_label_kwargs = None,
+                              x_label_kwargs = None,
+                              y_label_kwargs = None,
+                              ):
+    title, x_label, y_label = None, None, None
+
+    if title is not None:
+        title = axis.set_title(title, fontsize = font_size_title, **title_kwargs)
+        title.set_y(title_offset)
+    if x_label is not None:
+        x_label = axis.set_xlabel(x_label + x_unit_label, fontsize = font_size_axis_labels, **axis_label_kwargs, **x_label_kwargs)
+    if y_label is not None:
+        y_label = axis.set_ylabel(y_label + y_unit_label, fontsize = font_size_axis_labels, **axis_label_kwargs, **y_label_kwargs)
+
+    return title, x_label, y_label
+
+
 def get_unit_label(unit):
     """
     Get a LaTeX-formatted unit label for `unit`.
@@ -558,6 +585,7 @@ def xy_plot(name,
             font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10, font_size_legend = 12,
             ticks_on_top = True, ticks_on_right = True, legend_on_right = False, legend_kwargs = None,
             grid_kwargs = None, minor_grid_kwargs = None,
+            square_axis = False,
             save_csv = False,
             **kwargs):
     """
@@ -654,18 +682,14 @@ def xy_plot(name,
         fm.elements = {}
 
         fig = fm.fig
-        ax = plt.subplot(111)
+        if not square_axis:
+            ax = plt.subplot(111)
+        if square_axis:
+            ax = plt.subplot(111, aspect = 'equal')
 
-        if grid_kwargs is None:
-            grid_kwargs = {}
-        if minor_grid_kwargs is None:
-            minor_grid_kwargs = {}
-        if legend_kwargs is None:
-            legend_kwargs = {}
-
-        grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
-        minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
-        legend_kwargs = {**LEGEND_KWARGS, **legend_kwargs}
+        grid_kwargs = utils.handle_dict_default_merge(GRID_KWARGS, grid_kwargs)
+        minor_grid_kwargs = utils.handle_dict_default_merge(MINOR_GRID_KWARGS, minor_grid_kwargs)
+        legend_kwargs = utils.handle_dict_default_merge(LEGEND_KWARGS, legend_kwargs)
 
         # ensure data is in numpy arrays
         x_data = np.array(x_data)
@@ -689,16 +713,26 @@ def xy_plot(name,
         attach_hv_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
         attach_hv_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
 
-        x_lower_limit, x_upper_limit = set_axis_limits(ax, x_data,
-                                                       lower_limit = x_lower_limit, upper_limit = x_upper_limit,
-                                                       log = x_log_axis,
-                                                       pad = 0, log_pad = 1,
-                                                       unit = x_unit, direction = 'x')
-        y_lower_limit, y_upper_limit = set_axis_limits(ax, *y_data,
-                                                       lower_limit = y_lower_limit, upper_limit = y_upper_limit,
-                                                       log = y_log_axis,
-                                                       pad = y_pad, log_pad = y_log_pad,
-                                                       unit = y_unit, direction = 'y')
+        x_lower_limit, x_upper_limit = set_axis_limits(
+            ax, x_data,
+            lower_limit = x_lower_limit,
+            upper_limit = x_upper_limit,
+            log = x_log_axis,
+            pad = 0,
+            log_pad = 1,
+            unit = x_unit,
+            direction = 'x'
+        )
+        y_lower_limit, y_upper_limit = set_axis_limits(
+            ax, *y_data,
+            lower_limit = y_lower_limit,
+            upper_limit = y_upper_limit,
+            log = y_log_axis,
+            pad = y_pad,
+            log_pad = y_log_pad,
+            unit = y_unit,
+            direction = 'y'
+        )
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
@@ -715,7 +749,7 @@ def xy_plot(name,
                 legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
             if legend_on_right:
                 legend_kwargs['loc'] = 'upper left'
-                legend = ax.legend(bbox_to_anchor = (1.05, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
+                legend = ax.legend(bbox_to_anchor = (1.15, 1), borderaxespad = 0, fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
@@ -786,16 +820,9 @@ def xxyy_plot(name,
 
         fm.elements = {}
 
-        if grid_kwargs is None:
-            grid_kwargs = {}
-        if minor_grid_kwargs is None:
-            minor_grid_kwargs = {}
-        if legend_kwargs is None:
-            legend_kwargs = {}
-
-        grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
-        minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
-        legend_kwargs = {**LEGEND_KWARGS, **legend_kwargs}
+        grid_kwargs = utils.handle_dict_default_merge(GRID_KWARGS, grid_kwargs)
+        minor_grid_kwargs = utils.handle_dict_default_merge(MINOR_GRID_KWARGS, minor_grid_kwargs)
+        legend_kwargs = utils.handle_dict_default_merge(LEGEND_KWARGS, legend_kwargs)
 
         # ensure data is in numpy arrays
         x_data = [np.array(x) for x in x_data]
@@ -819,16 +846,26 @@ def xxyy_plot(name,
         attach_hv_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
         attach_hv_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
 
-        x_lower_limit, x_upper_limit = set_axis_limits(ax, *x_data,
-                                                       lower_limit = x_lower_limit, upper_limit = x_upper_limit,
-                                                       log = x_log_axis,
-                                                       pad = 0, log_pad = 1,
-                                                       unit = x_unit, direction = 'x')
-        y_lower_limit, y_upper_limit = set_axis_limits(ax, *y_data,
-                                                       lower_limit = y_lower_limit, upper_limit = y_upper_limit,
-                                                       log = y_log_axis,
-                                                       pad = y_pad, log_pad = y_log_pad,
-                                                       unit = y_unit, direction = 'y')
+        x_lower_limit, x_upper_limit = set_axis_limits(
+            ax, *x_data,
+            lower_limit = x_lower_limit,
+            upper_limit = x_upper_limit,
+            log = x_log_axis,
+            pad = 0,
+            log_pad = 1,
+            unit = x_unit,
+            direction = 'x'
+        )
+        y_lower_limit, y_upper_limit = set_axis_limits(
+            ax, *y_data,
+            lower_limit = y_lower_limit,
+            upper_limit = y_upper_limit,
+            log = y_log_axis,
+            pad = y_pad,
+            log_pad = y_log_pad,
+            unit = y_unit,
+            direction = 'y'
+        )
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
@@ -845,7 +882,7 @@ def xxyy_plot(name,
                 legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
             if legend_on_right:
                 legend_kwargs['loc'] = 'upper left'
-                legend = ax.legend(bbox_to_anchor = (1.05, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
+                legend = ax.legend(bbox_to_anchor = (1.15, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
@@ -900,7 +937,7 @@ def xyz_plot(name,
              x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, z_lower_limit = None, z_upper_limit = None,
              z_pad = 0, z_log_pad = 1,
              x_extra_ticks = None, y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
-             z_label = None, x_label = None, y_label = None,
+             title = None, x_label = None, y_label = None,
              font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10,
              ticks_on_top = True, ticks_on_right = True,
              grid_kwargs = None, minor_grid_kwargs = None,
@@ -918,24 +955,15 @@ def xyz_plot(name,
         fig = fm.fig
         ax = plt.subplot(111)
 
-        if grid_kwargs is None:
-            grid_kwargs = {}
-        if minor_grid_kwargs is None:
-            minor_grid_kwargs = {}
+        grid_kwargs = utils.handle_dict_default_merge(GRID_KWARGS, grid_kwargs)
+        minor_grid_kwargs = utils.handle_dict_default_merge(MINOR_GRID_KWARGS, minor_grid_kwargs)
 
-        if contour_kwargs is None:
-            contour_kwargs = {}
-        if contour_label_kwargs is None:
-            contour_label_kwargs = {}
+        contour_kwargs = utils.handle_dict_default_merge(CONTOUR_KWARGS, contour_kwargs)
+        contour_label_kwargs = utils.handle_dict_default_merge(CONTOUR_LABEL_KWARGS, contour_label_kwargs)
 
         grid_color = CMAP_TO_OPPOSITE.get(colormap, 'black')
         grid_kwargs['color'] = grid_color
         minor_grid_kwargs['color'] = grid_color
-        grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
-        minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
-
-        contour_kwargs = {**CONTOUR_KWARGS, **contour_kwargs}
-        contour_label_kwargs = {**CONTOUR_LABEL_KWARGS, **contour_label_kwargs}
 
         plt.set_cmap(colormap)
 
@@ -948,16 +976,26 @@ def xyz_plot(name,
         z_unit_value, z_unit_name = get_unit_value_and_latex_from_unit(z_unit)
         z_unit_label = get_unit_label(z_unit)
 
-        x_lower_limit, x_upper_limit = set_axis_limits(ax, x_mesh,
-                                                       lower_limit = x_lower_limit, upper_limit = x_upper_limit,
-                                                       log = x_log_axis,
-                                                       pad = 0, log_pad = 1,
-                                                       unit = x_unit, direction = 'x')
-        y_lower_limit, y_upper_limit = set_axis_limits(ax, y_mesh,
-                                                       lower_limit = y_lower_limit, upper_limit = y_upper_limit,
-                                                       log = y_log_axis,
-                                                       pad = 0, log_pad = 1,
-                                                       unit = y_unit, direction = 'y')
+        x_lower_limit, x_upper_limit = set_axis_limits(
+            ax, x_mesh,
+            lower_limit = x_lower_limit,
+            upper_limit = x_upper_limit,
+            log = x_log_axis,
+            pad = 0,
+            log_pad = 1,
+            unit = x_unit,
+            direction = 'x'
+        )
+        y_lower_limit, y_upper_limit = set_axis_limits(
+            ax, y_mesh,
+            lower_limit = y_lower_limit,
+            upper_limit = y_upper_limit,
+            log = y_log_axis,
+            pad = 0,
+            log_pad = 1,
+            unit = y_unit,
+            direction = 'y'
+        )
 
         if not isinstance(colormap, RichardsonColormap):
             z_lower_limit, z_upper_limit = get_axis_limits(z_mesh,
@@ -996,9 +1034,9 @@ def xyz_plot(name,
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
         # make title, axis labels, and legend
-        if z_label is not None:
-            z_label = ax.set_title(r'{}'.format(z_label), fontsize = font_size_title)
-            z_label.set_y(TITLE_OFFSET)  # move title up a little
+        if title is not None:
+            title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
+            title.set_y(TITLE_OFFSET)  # move title up a little
         if x_label is not None:
             x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
         if y_label is not None:
@@ -1070,6 +1108,7 @@ def xyt_plot(name,
              title_offset = TITLE_OFFSET,
              ticks_on_top = True, ticks_on_right = True, legend_on_right = False,
              grid_kwargs = None, minor_grid_kwargs = None,
+             legend_kwargs = None,
              length = 30,
              fig_dpi_scale = 3,
              save_csv = False,
@@ -1082,13 +1121,9 @@ def xyt_plot(name,
         fig = fm.fig
         ax = fig.add_axes([.15, .15, .75, .7])
 
-        if grid_kwargs is None:
-            grid_kwargs = {}
-        if minor_grid_kwargs is None:
-            minor_grid_kwargs = {}
-
-        grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
-        minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
+        grid_kwargs = utils.handle_dict_default_merge(GRID_KWARGS, grid_kwargs)
+        minor_grid_kwargs = utils.handle_dict_default_merge(MINOR_GRID_KWARGS, minor_grid_kwargs)
+        legend_kwargs = utils.handle_dict_default_merge(LEGEND_KWARGS, legend_kwargs)
 
         # ensure data is in numpy arrays
         x_data = np.array(x_data)
@@ -1182,9 +1217,9 @@ def xyt_plot(name,
 
         if len(line_labels) > 0:
             if not legend_on_right:
-                legend = ax.legend(loc = 'upper right', fontsize = font_size_legend)
+                legend = ax.legend(loc = 'upper right', fontsize = font_size_legend, **legend_kwargs)
             if legend_on_right:
-                legend = ax.legend(bbox_to_anchor = (1.05, 1), loc = 'upper left', borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17))
+                legend = ax.legend(bbox_to_anchor = (1.15, 1), loc = 'upper left', borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
 
         if t_text_kwargs is None:
             t_text_kwargs = {}
@@ -1289,16 +1324,16 @@ def xyzt_plot(name,
         fig = fm.fig
         ax = fig.add_axes([.15, .15, .75, .7])
 
-        if grid_kwargs is None:
-            grid_kwargs = {}
-        if minor_grid_kwargs is None:
-            minor_grid_kwargs = {}
+        grid_kwargs = utils.handle_dict_default_merge(GRID_KWARGS, grid_kwargs)
+        minor_grid_kwargs = utils.handle_dict_default_merge(MINOR_GRID_KWARGS, minor_grid_kwargs)
+
+        # TODO: implement contours for xyzt plot
+        # contour_kwargs = utils.handle_dict_default_merge(CONTOUR_KWARGS, contour_kwargs)
+        # contour_label_kwargs = utils.handle_dict_default_merge(CONTOUR_LABEL_KWARGS, contour_label_kwargs)
 
         grid_color = CMAP_TO_OPPOSITE.get(colormap, 'black')
         grid_kwargs['color'] = grid_color
         minor_grid_kwargs['color'] = grid_color
-        grid_kwargs = {**GRID_KWARGS, **grid_kwargs}
-        minor_grid_kwargs = {**MINOR_GRID_KWARGS, **minor_grid_kwargs}
 
         if z_func_kwargs is None:
             z_func_kwargs = {}
@@ -1671,6 +1706,7 @@ class Animator:
         Should always be called via a try...finally clause (namely, in the finally) in Simulation.run_simulation.
         """
         self.ffmpeg.communicate()
+        plt.close(self.fig)
         logger.info('Cleaned up {}'.format(self))
 
     def _initialize_figure(self):

@@ -44,6 +44,13 @@ LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', d
 key_value_arrays = collections.namedtuple('key_value_arrays', ('key_array', 'value_array'))
 
 
+def handle_dict_default_merge(default, dct):
+    if dct is None:
+        dct = {}
+
+    return {**default, **dct}
+
+
 def field_str(obj, *fields, digits: int = 3):
     """
     Generate a repr-like string from the object's attributes.
@@ -127,21 +134,6 @@ class LogManager:
         file_mode : :class:`str`
             the file mode to open the log file with, defaults to 'a' (append)
         disable_level
-        """
-        """
-        Initialize a Logger context manager.
-
-        :param logger_names: the names of loggers to catch/modify and/or create
-        :param manual_logger_name: the name of the logger that will be returned by the context manager's __enter__ method
-        :param stdout_logs: whether to print log messages to stdout
-        :param stdout_level: the lowest level for stdout log messages
-        :param file_logs: whether to print log messages to a file
-        :param file_level: the lowest level for file log messages
-        :param file_name: the filename for the log file, defaults to 'log__{timestamp}'. If file_name does not end with '.log', it will be appended.
-        :param file_dir: the director for the log file, defaults to the current working directory
-        :param file_mode: the file mode to open the log file with, defaults to 'a' (append)
-        :param disable_level: log level to disable, short-circuits propagation of logs <= this level
-        :return None
         """
         self.logger_names = list(logger_names)
         if manual_logger_name is not None and manual_logger_name not in self.logger_names:
@@ -796,5 +788,6 @@ class SuspendProcesses:
 
 class StrEnum(enum.Enum):
     """An enum where, when printed, an enum member displays its value, cast to a string."""
+
     def __str__(self):
         return str(self.value)
