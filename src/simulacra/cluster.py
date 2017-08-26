@@ -913,7 +913,7 @@ def generate_chtc_submit_string(job_name, specification_count, checkpoints = Tru
         batch_name = ask_for_input('Job batch name?', default = job_name, cast_to = str),
         checkpoints = str(checkpoints).lower(),
         flockglide = str(ask_for_bool('Flock and Glide?', default = 'y')).lower(),
-        memory = ask_for_input('Memory (in GB)?', default = 4, cast_to = float),
+        memory = ask_for_input('Memory (in GB)?', default = 2, cast_to = float),
         disk = ask_for_input('Disk (in GB)?', default = 10, cast_to = float),
         num_jobs = specification_count,
         max_materialize = ask_for_input('Max Materialize?', default = 1000, cast_to = int),
