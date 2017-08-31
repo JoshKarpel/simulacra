@@ -865,7 +865,7 @@ def write_parameters_info_to_file(parameters, job_dir):
     logger.debug('Wrote parameter information to file')
 
 
-CHTC_SUBMIT_STRING = """
+CHTC_SUBMIT_STRING = r"""
 universe = vanilla
 log = logs/cluster_$(Cluster).log
 error = logs/$(Process).err
@@ -894,7 +894,16 @@ request_cpus = 1
 request_memory = {memory}GB
 request_disk = {disk}GB
 #
-requirements = ((OpSysMajorVer == 6) || (OpSysMajorVer == 7)) && (COLLECTOR_HOST_STRING =!= "10.27.0.1")
+job_machine_attrs = Machine
+job_machine_attrs_history_length = 6
+#
+requirements = ((OpSysMajorVer == 6) || (OpSysMajorVer == 7)) && \
+    (COLLECTOR_HOST_STRING =!= "10.27.0.1") && \
+    (target.machine =!= MachineAttrMachine1) && \
+    (target.machine =!= MachineAttrMachine2) && \
+    (target.machine =!= MachineAttrMachine3) && \
+    (target.machine =!= MachineAttrMachine4) && \
+    (target.machine =!= MachineAttrMachine5) && \
 #
 queue {num_jobs}
 """

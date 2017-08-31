@@ -343,6 +343,42 @@ def run_in_process(func, args = (), kwargs = None):
     return output
 
 
+def run_spec(spec, pre_run = None, post_run = None, log_manager = None):
+    """
+
+    Parameters
+    ----------
+    spec
+    pre_run : Callable
+        function that takes the simulation as an argument, called before sim.run_simulation()
+    post_run : Callable
+        function that takes the simulation as an argument, called after sim.run_simulation()
+    log_manager
+
+    Returns
+    -------
+
+    """
+    if pre_run is None:
+        pre_call = lambda s: None
+    if post_run is None:
+        post_call = lambda s: None
+
+    if log_manager is None:
+        sim = spec.to_simulation
+        pre_call(sim)
+        sim.run_simulation()
+        post_call(sim)
+    else:
+        with log_manager as logger:
+            sim = spec.to_simulation
+            pre_call(sim)
+            sim.run_simulation()
+            post_call(sim)
+
+    return sim
+
+
 def multi_map(func: Callable, targets: Iterable, processes: Optional[int] = None, **kwargs):
     """
     Map a function over a list of inputs using multiprocessing.
