@@ -1006,7 +1006,9 @@ def xyz_plot(name,
                 if z_lower_limit > 0:
                     norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
                 else:
-                    norm = matplotlib.colors.SymLogNorm(((np.abs(z_lower_limit) + np.abs(z_upper_limit)) / 2) * sym_log_norm_epsilon)
+                    norm = matplotlib.colors.SymLogNorm(((np.abs(z_lower_limit) + np.abs(z_upper_limit)) / 2) * sym_log_norm_epsilon,
+                                                        vmin = z_lower_limit / z_unit_value,
+                                                        vmax = z_upper_limit / z_unit_value)
             else:
                 norm = matplotlib.colors.Normalize(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
         else:
