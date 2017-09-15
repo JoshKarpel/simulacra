@@ -903,7 +903,7 @@ requirements = ((OpSysMajorVer == 6) || (OpSysMajorVer == 7)) && \
     (target.machine =!= MachineAttrMachine2) && \
     (target.machine =!= MachineAttrMachine3) && \
     (target.machine =!= MachineAttrMachine4) && \
-    (target.machine =!= MachineAttrMachine5) && \
+    (target.machine =!= MachineAttrMachine5)
 #
 queue {num_jobs}
 """

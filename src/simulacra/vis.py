@@ -578,7 +578,7 @@ def xy_plot(name,
             figure_manager = None,
             x_unit = None, y_unit = None,
             x_log_axis = False, y_log_axis = False,
-            x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, y_pad = 0.05, y_log_pad = 10,
+            x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, y_pad = 0.05, y_log_pad = 2,
             vlines = (), vline_kwargs = (), hlines = (), hline_kwargs = (),
             x_extra_ticks = None, y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
             title = None, title_offset = TITLE_OFFSET, x_label = None, y_label = None,
@@ -802,7 +802,7 @@ def xxyy_plot(name,
               figure_manager = None,
               x_unit = None, y_unit = None,
               x_log_axis = False, y_log_axis = False,
-              x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, y_pad = .05, y_log_pad = 10,
+              x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, y_pad = .05, y_log_pad = 2,
               vlines = (), vline_kwargs = (), hlines = (), hline_kwargs = (),
               x_extra_ticks = None, y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
               title = None, title_offset = TITLE_OFFSET, x_label = None, y_label = None,
@@ -1513,10 +1513,15 @@ def xyzt_plot(name,
     return fm
 
 
-def animate(figure_manager, update_function, update_function_arguments,
-            artists = (),
+def animate(figure_manager,
+            update_function,
+            update_function_arguments,
+            artists = None,
             length = 30,
             progress_bar = True):
+    if artists is None:
+        artists = []
+
     fig = figure_manager.fig
 
     path = os.path.join(figure_manager.target_dir, figure_manager.name + figure_manager.name_postfix + '.mp4')

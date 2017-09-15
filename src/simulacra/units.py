@@ -69,7 +69,7 @@ UNIT_NAME_TO_LATEX.update({
 
 # base units
 m = 1
-s = 1
+s = sec = 1
 kg = 1
 A = 1
 K = 1
@@ -305,6 +305,65 @@ UNIT_NAME_TO_LATEX.update({
     'THz': r'\mathrm{THz}',
     'PHz': r'\mathrm{PHz}'
 })
+
+
+# frequency, again
+per_sec = 1 / sec
+per_msec = 1 / msec
+per_usec = 1 / usec
+per_nsec = 1 / nsec
+per_psec = 1 / psec
+per_fsec = 1 / fsec
+per_asec = 1 / asec
+per_minute = 1 / minute
+per_hour = 1 / hour
+per_day = 1 / day
+per_week = 1 / week
+per_year = 1 / year
+
+UNIT_NAME_TO_VALUE.update({
+    'per_s': per_sec,
+    'per_sec': per_sec,
+    'per_ms': per_msec,
+    'per_msec': per_msec,
+    'per_us': per_usec,
+    'per_usec': per_usec,
+    'per_ns': per_nsec,
+    'per_nsec': per_nsec,
+    'per_ps': per_psec,
+    'per_psec': per_psec,
+    'per_fs': per_fsec,
+    'per_fsec': per_fsec,
+    'per_as': per_asec,
+    'per_asec': per_asec,
+    'per_minute': per_minute,
+    'per_hour': per_hour,
+    'per_day': per_day,
+    'per_week': per_week,
+    'per_year': per_year,
+})
+UNIT_NAME_TO_LATEX.update({
+    'per_s': r'\mathrm{s^{-1]}',
+    'per_sec': r'\mathrm{s^{-1]}',
+    'per_ms': r'\mathrm{ms^{-1]}',
+    'per_msec': r'\mathrm{ms^{-1]}',
+    'per_us': r'\mathrm{us^{-1]}',
+    'per_usec': r'\mathrm{us^{-1]}',
+    'per_ns': r'\mathrm{ns^{-1]}',
+    'per_nsec': r'\mathrm{ns^{-1]}',
+    'per_ps': r'\mathrm{ps^{-1]}',
+    'per_psec': r'\mathrm{ps^{-1]}',
+    'per_fs': r'\mathrm{fs^{-1]}',
+    'per_fsec': r'\mathrm{fs^{-1]}',
+    'per_as': r'\mathrm{as^{-1]}',
+    'per_asec': r'\mathrm{as^{-1]}',
+    'per_minute': '\mathrm{minute^{-1]}',
+    'per_hour': '\mathrm{hour^{-1]}',
+    'per_day': '\mathrm{day^{-1]}',
+    'per_week': '\mathrm{week^{-1]}',
+    'per_year': '\mathrm{year^{-1]}',
+})
+
 
 # electric charge
 C = 1 * A * s
