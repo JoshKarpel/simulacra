@@ -937,7 +937,7 @@ def xyz_plot(name,
              x_lower_limit = None, x_upper_limit = None, y_lower_limit = None, y_upper_limit = None, z_lower_limit = None, z_upper_limit = None,
              z_pad = 0, z_log_pad = 1,
              x_extra_ticks = None, y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
-             title = None, x_label = None, y_label = None,
+             title = None, x_label = None, y_label = None, z_label = None,
              font_size_title = 15, font_size_axis_labels = 15, font_size_tick_labels = 10,
              ticks_on_top = True, ticks_on_right = True,
              grid_kwargs = None, minor_grid_kwargs = None,
@@ -1045,7 +1045,9 @@ def xyz_plot(name,
             y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
 
         if show_colorbar and colormap.name != 'richardson':
-            plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
+            cbar = plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
+            if z_label is not None:
+                z_label = cbar.set_label(r'{}'.format(z_label) + z_unit_label, fontsize = font_size_axis_labels)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
