@@ -78,7 +78,7 @@ GRID_KWARGS = dict(
 )
 
 MINOR_GRID_KWARGS = GRID_KWARGS.copy()
-MINOR_GRID_KWARGS['alpha'] -= .1
+MINOR_GRID_KWARGS['alpha'] -= .2
 
 COLORMESH_GRID_KWARGS = dict(
     linestyle = '-',
@@ -454,9 +454,9 @@ def get_axis_limits(*data,
         The lower and upper limits, in the specified units.
     """
     if lower_limit is None:
-        lower_limit = min(np.nanmin(d) for d in data)
+        lower_limit = min(np.nanmin(d) for d in data if len(d) > 0)
     if upper_limit is None:
-        upper_limit = max(np.nanmax(d) for d in data)
+        upper_limit = max(np.nanmax(d) for d in data if len(d) > 0)
 
     if not log:
         limit_range = np.abs(upper_limit - lower_limit)
@@ -944,7 +944,7 @@ def xyz_plot(name,
              contours = (), contour_kwargs = None, show_contour_labels = True, contour_label_kwargs = None,
              save_csv = False,
              colormap = plt.get_cmap('viridis'),
-             shading = 'gouraud', show_colorbar = True,
+             shading = 'flat', show_colorbar = True,
              richardson_equator_magnitude = 1,
              sym_log_norm_epsilon = 1e-3,
              **kwargs):
@@ -1809,6 +1809,25 @@ class RichardsonColormap(matplotlib.colors.Colormap):
 matplotlib.cm.register_cmap(name = 'richardson', cmap = RichardsonColormap())  # register cmap so that plt.get_cmap('richardson') can find it
 CMAP_TO_OPPOSITE[plt.get_cmap('richardson')] = WHITE
 CMAP_TO_OPPOSITE['richardson'] = WHITE
+
+blue_black_red_cdit = {
+    'red': (
+        (0.0, 0.0, 0.0),
+        (0.5, 0.0, 0.1),
+        (1.0, 1.0, 1.0)
+    ),
+    'blue': (
+        (0.0, 0.0, 1.0),
+        (0.5, 0.1, 0.0),
+        (1.0, 0.0, 0.0)
+    ),
+    'green': (
+        (0.0, 0.0, 0.0),
+        (1.0, 0.0, 0.0)
+    ),
+}
+blue_black_red_cmap = matplotlib.colors.LinearSegmentedColormap('BlueBlackRed', blue_black_red_cdit)
+matplotlib.cm.register_cmap(name = 'BlueBlackRed', cmap = blue_black_red_cmap)
 
 
 class RichardsonNormalization(matplotlib.colors.Normalize):

@@ -887,8 +887,10 @@ transfer_output_remaps = "$(Process).sim = outputs/$(Process).sim ; $(Process).l
 skip_filechecks = true
 max_materialize = {max_materialize}
 #
-on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
-periodic_hold = (NumJobCompletions >= 5) && (ExitCode == 1)
+# on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
+# periodic_hold = (NumJobCompletions >= 5) && (ExitCode == 1)
+on_exit_hold = (ExitCode =!= 0)
+periodic_release = (JobStatus==5) && (HoldReasonCode == 3) && (CurrentTime - EnteredCurrentStatus >= 300)
 #
 request_cpus = 1
 request_memory = {memory}GB
