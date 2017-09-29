@@ -663,7 +663,7 @@ def expand_parameters_to_dicts(parameters):
     iterable of :class:`dict`
         An iterable of dictionaries containing all of the combinations of parameters.
     """
-    dicts = [collections.OrderedDict()]
+    dicts = [{}]
 
     for par in parameters:
         pn, pv = par.name, par.value
@@ -711,7 +711,7 @@ def ask_for_input(question, default = None, cast_to = str):
         return out
     except Exception as e:
         print(e)
-        ask_for_input(question, default = default, cast_to = cast_to)
+        return ask_for_input(question, default = default, cast_to = cast_to)
 
 
 def ask_for_bool(question, default = False):
@@ -751,7 +751,7 @@ def ask_for_bool(question, default = False):
             raise ValueError('Invalid answer to question "{}"'.format(question))
     except Exception as e:
         print(e)
-        ask_for_bool(question, default = default)
+        return ask_for_bool(question, default = default)
 
 
 def ask_for_choice(question, choices, default = None):
@@ -837,7 +837,7 @@ def save_specifications(specifications, job_dir):
     """Save a list of Specifications."""
     print('Saving Specifications...')
 
-    for spec in tqdm(specifications):
+    for spec in tqdm(specifications, ascii = True):
         spec.save(target_dir = os.path.join(job_dir, 'inputs/'))
 
     logger.debug('Saved Specifications')
@@ -848,7 +848,7 @@ def write_specifications_info_to_file(specifications, job_dir):
     print('Writing Specification info to file...')
 
     with open(os.path.join(job_dir, 'specifications.txt'), 'w') as file:
-        for spec in tqdm(specifications):
+        for spec in tqdm(specifications, ascii = True):
             file.write(str(spec.info()) + '\n')
 
     logger.debug('Wrote Specification information to file')
@@ -887,42 +887,29 @@ transfer_output_remaps = "$(Process).sim = outputs/$(Process).sim ; $(Process).l
 skip_filechecks = true
 max_materialize = {max_materialize}
 #
-# on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
-# periodic_hold = (NumJobCompletions >= 5) && (ExitCode == 1)
 on_exit_hold = (ExitCode =!= 0)
-periodic_release = (JobStatus==5) && (HoldReasonCode == 3) && (CurrentTime - EnteredCurrentStatus >= 300)
+periodic_release = (JobStatus == 5) && (HoldReasonCode == 3) && (CurrentTime - EnteredCurrentStatus >= 300) && (NumJobCompletions <= 10)
 #
 request_cpus = 1
 request_memory = {memory}GB
 request_disk = {disk}GB
 #
-job_machine_attrs = Machine
-job_machine_attrs_history_length = 6
-#
-requirements = ((OpSysMajorVer == 6) || (OpSysMajorVer == 7)) && \
-    (COLLECTOR_HOST_STRING =!= "10.27.0.1") && \
-    (target.machine =!= MachineAttrMachine1) && \
-    (target.machine =!= MachineAttrMachine2) && \
-    (target.machine =!= MachineAttrMachine3) && \
-    (target.machine =!= MachineAttrMachine4) && \
-    (target.machine =!= MachineAttrMachine5)
-#
 queue {num_jobs}
 """
 
 
-def generate_chtc_submit_string(job_name, specification_count, checkpoints = True):
+def generate_chtc_submit_string(job_name, specification_count, do_checkpoints = True):
     """
     Return a formatted submit string for an HTCondor job.
 
     :param job_name: the name of the job
     :param specification_count: the number of Specifications in the job
-    :param checkpoints: if the Simulations are going to use checkpoints, this should be True
+    :param do_checkpoints: if the Simulations are going to use checkpoints, this should be True
     :return: an HTCondor submit string
     """
     fmt = dict(
         batch_name = ask_for_input('Job batch name?', default = job_name, cast_to = str),
-        checkpoints = str(checkpoints).lower(),
+        checkpoints = str(do_checkpoints).lower(),
         flockglide = str(ask_for_bool('Flock and Glide?', default = 'y')).lower(),
         memory = ask_for_input('Memory (in GB)?', default = 2, cast_to = float),
         disk = ask_for_input('Disk (in GB)?', default = 10, cast_to = float),
