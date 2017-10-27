@@ -868,6 +868,7 @@ def write_parameters_info_to_file(parameters, job_dir):
 CHTC_SUBMIT_STRING = r"""
 universe = vanilla
 log = logs/cluster_$(Cluster).log
+output = logs/$(Process).out
 error = logs/$(Process).err
 #
 executable = /home/karpel/backend/run_sim.sh

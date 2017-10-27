@@ -517,7 +517,9 @@ def timed(func: Callable):
 
         time_elapsed = time_end - time_start
 
-        logger.debug(f'Execution of {func} took {time_elapsed}')
+        msg = f'Execution of {func} took {time_elapsed}'
+        logger.debug(msg)
+        print(msg)
 
         return val
 
@@ -593,16 +595,16 @@ class RestrictedValues(Descriptor):
     If the value is not in the set of legal values a ValueError is raised.
     """
 
-    __slots__ = ('name', 'legal_values')
+    __slots__ = ('name', 'choices')
 
-    def __init__(self, name, legal_values = set()):
-        self.legal_values = set(legal_values)
+    def __init__(self, name, choices = set()):
+        self.choices = set(choices)
 
         super().__init__(name)
 
     def __set__(self, instance, value):
-        if value not in self.legal_values:
-            raise ValueError('Expected {} to be from {}'.format(value, self.legal_values))
+        if value not in self.choices:
+            raise ValueError('Expected {} to be from {}'.format(value, self.choices))
         else:
             super().__set__(instance, value)
 
