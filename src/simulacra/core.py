@@ -214,7 +214,7 @@ class Beet:
 
         return new_beet
 
-    def save(self, target_dir: Optional[str] = None, file_extension: str = '.beet', compressed: bool = True) -> str:
+    def save(self, target_dir: Optional[str] = None, file_extension: str = '.beet', compressed: bool = True, ensure_dir_exists: bool = True) -> str:
         """
         Atomically pickle the Beet to a file.
 
@@ -238,7 +238,8 @@ class Beet:
         file_path = os.path.join(target_dir, self.file_name + file_extension)
         file_path_working = file_path + '.working'
 
-        utils.ensure_dir_exists(file_path_working)
+        if ensure_dir_exists:
+            utils.ensure_dir_exists(file_path_working)
 
         if compressed:
             op = gzip.open

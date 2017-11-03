@@ -773,6 +773,7 @@ UNIT_NAME_TO_VALUE.update({
     'bohr_magneton': atomic_magnetic_dipole_moment,
     'atomic_velocity': atomic_velocity,
     'atomic_momentum': atomic_momentum,
+    'atomic_time': atomic_time,
     'atomic_force': atomic_force,
     'atomic_temperature': atomic_temperature,
 })
@@ -788,6 +789,7 @@ UNIT_NAME_TO_LATEX.update({
     'bohr_magneton': r'\mu_B',
     'atomic_velocity': r'\mathrm{a.u.}',
     'atomic_momentum': r'\mathrm{a.u.}',
+    'atomic_time': r'\mathrm{a.u.}',
     'atomic_force': r'\mathrm{a.u.}',
     'atomic_temperature': r'\mathrm{a.u.}',
 })

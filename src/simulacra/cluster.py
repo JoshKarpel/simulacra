@@ -28,7 +28,6 @@ import posixpath
 import stat
 import subprocess
 import sys
-import zlib
 from copy import copy, deepcopy
 
 import numpy as np  # needs to be here so that ask_for_eval works
@@ -326,6 +325,10 @@ class SimulationResult:
         self.running_time = copy(sim.running_time.total_seconds())
 
 
+class UnfinishedSimulation(core.SimulacraException):
+    pass
+
+
 class JobProcessor(core.Beet):
     """
     A class that processes a collection of pickled Simulations. Should be subclassed for specialization.
@@ -338,9 +341,10 @@ class JobProcessor(core.Beet):
         The elapsed time of the job (first simulation started to last simulation ended).
     """
 
+    simulation_type = core.Simulation
     simulation_result_type = SimulationResult
 
-    def __init__(self, job_name, job_dir_path, simulation_type):
+    def __init__(self, job_name, job_dir_path):
         """
         Parameters
         ----------
@@ -348,23 +352,16 @@ class JobProcessor(core.Beet):
             The name of the job.
         job_dir_path : :class:`str`
             The path to the job directory.
-        simulation_type
-            The type of the Simulation used in the job.
         """
         super().__init__(job_name)
 
         self.job_dir_path = job_dir_path
-
-        for directory in (self.inputs_dir, self.outputs_dir, self.plots_dir, self.movies_dir, self.summaries_dir):
-            utils.ensure_dir_exists(directory)
 
         self.sim_names = self.get_sim_names_from_specs()
         self.sim_count = len(self.sim_names)
         self.unprocessed_sim_names = set(self.sim_names)
 
         self.data = collections.OrderedDict((sim_name, None) for sim_name in self.sim_names)
-
-        self.simulation_type = simulation_type
 
     def __str__(self):
         return '{} for job {}, processed {}/{} Simulations'.format(self.__class__.__name__, self.name, self.sim_count - len(self.unprocessed_sim_names), self.sim_count)
@@ -420,7 +417,7 @@ class JobProcessor(core.Beet):
         Returns
         -------
         """
-        return super(JobProcessor, self).save(target_dir = target_dir, file_extension = file_extension, **kwargs)
+        return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
     def _load_sim(self, sim_file_name, **load_kwargs):
         """
@@ -438,25 +435,17 @@ class JobProcessor(core.Beet):
         :class:`Simulation`
             The loaded :class:`Simulation`.
         """
-        sim = None
-        sim_path = os.path.join(self.outputs_dir, '{}.sim'.format(sim_file_name))
+        sim_path = os.path.join(self.outputs_dir, f'{sim_file_name}.sim')
 
         try:
             sim = self.simulation_type.load(os.path.join(sim_path), **load_kwargs)
+        except FileNotFoundError as e:
+            logger.exception(f'Failed to find completed {sim_file_name}.sim from job {self.name}')
 
-            if sim.status != 'finished':
-                raise FileNotFoundError
+        if sim.status != core.Status.FINISHED:
+            raise UnfinishedSimulation(f'{sim_file_name}.sim from job {self.name} exists but is not finished')
 
-            logger.debug('Loaded {}.sim from job {}'.format(sim_file_name, self.name))
-        except (FileNotFoundError, EOFError) as e:
-            logger.debug('Failed to find completed {}.sim from job {} due to {}'.format(sim_file_name, self.name, e))
-        except zlib.error as e:
-            logger.warning('Encountered zlib error while trying to read {}.sim from job {}: {}'.format(sim_file_name, self.name, e))
-            os.remove(sim_path)
-        except Exception as e:
-            logger.exception('Exception encountered while trying to find completed {}.sim from job {} due to {}'.format(sim_file_name, self.name, e))
-            raise e
-
+        logger.debug(f'Loaded {sim_file_name}.sim from job {self.name}')
         return sim
 
     def load_sims(self, force_reprocess = False):
@@ -475,16 +464,14 @@ class JobProcessor(core.Beet):
                 sim_names = tqdm(new_sims)
 
             for sim_name in sim_names:
-                sim = self._load_sim(sim_name)
+                try:
+                    sim = self._load_sim(sim_name)
+                    self.data[sim_name] = self.simulation_result_type(sim, job_processor = self)
+                    self.unprocessed_sim_names.discard(sim_name)
 
-                if sim is not None and sim.status == core.Status.FINISHED:
-                    try:
-                        self.data[sim_name] = self.simulation_result_type(sim, job_processor = self)
-                        self.unprocessed_sim_names.discard(sim_name)
-                    except AttributeError:
-                        logger.exception('Exception encountered while processing simulation {}'.format(sim_name))
-
-                self.save(target_dir = self.job_dir_path)
+                    self.save(target_dir = self.job_dir_path, ensure_dir_exists = False)
+                except Exception as e:
+                    logger.exception(f'Exception encountered while processing simulation {sim_name}')
 
         logger.info(f'Finished loading simulations from job {self.name}. Failed to find {len(self.unprocessed_sim_names)} / {self.sim_count} simulations. Elapsed time: {t.wall_time_elapsed}')
 
@@ -499,7 +486,7 @@ class JobProcessor(core.Beet):
 
             self.make_summary_plots()
 
-        logger.info('Finished summaries for job {}. Elapsed time: {}'.format(self.name, t.wall_time_elapsed))
+        logger.info(f'Finished summaries for job {self.name}. Elapsed time: {t.wall_time_elapsed}')
 
     def write_to_csv(self):
         raise NotImplementedError
@@ -541,7 +528,8 @@ class JobProcessor(core.Beet):
         -------
 
         """
-        return list([sim_result for sim_result in self.data.values() if test_function(sim_result) and sim_result is not None])
+        return list([sim_result for sim_result in self.data.values()
+                     if test_function(sim_result) and sim_result is not None])
 
     @utils.memoize
     def parameter_set(self, parameter):
@@ -643,7 +631,7 @@ class Parameter:
         if not self.expandable:
             return '{}(name = {}, value = {})'.format(self.__class__.__name__, self.name, self.value)
         else:
-            return '{}(name = {}) expandable: \n{}'.format(self.__class__.__name__, self.name, self.value, '\n  '.join(str(v) for v in self.value))
+            return '{}(name = {} expandable: \n{})'.format(self.__class__.__name__, self.name, self.value, '\n  '.join(str(v) for v in self.value))
 
 
 def expand_parameters_to_dicts(parameters):
