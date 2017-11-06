@@ -773,7 +773,7 @@ def suspend_processes(processes: Iterable[psutil.Process]):
     """
     for p in processes:
         p.suspend()
-        logger.info('Suspended {}'.format(p))
+        logger.debug('Suspended {}'.format(p))
 
 
 def resume_processes(processes: Iterable[psutil.Process]):
@@ -786,7 +786,7 @@ def resume_processes(processes: Iterable[psutil.Process]):
     """
     for p in processes:
         p.resume()
-        logger.info('Resumed {}'.format(p))
+        logger.debug('Resumed {}'.format(p))
 
 
 def suspend_processes_by_name(process_name: str):
