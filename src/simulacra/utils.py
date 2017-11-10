@@ -829,3 +829,30 @@ class StrEnum(enum.Enum):
 
     def __str__(self):
         return str(self.value)
+
+
+def obj_to_filename(obj, attrs = None, seperator = '__', prepend_type = True):
+    attr_strings = []
+    if prepend_type:
+        attr_strings.append(obj.__class__.__name__)
+    for attr in attrs:
+        if isinstance(attr, str):
+            name = attr
+            val = getattr(obj, attr)
+        elif isinstance(attr, tuple):
+            *sub_attrs, func = attr
+
+            if not callable(func):
+                sub_attrs.append(func)
+                func = lambda x: x
+
+            val = obj
+            for sub_attr in sub_attrs:  # drill through
+                val = getattr(val, sub_attr)
+
+            name = '.'.join(sub_attrs)
+            val = func(val)
+
+        attr_strings.append(f'{name}={val}')
+
+    return seperator.join(attr_strings)

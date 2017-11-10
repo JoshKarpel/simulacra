@@ -195,6 +195,17 @@ def complex_quad(integrand: Callable, a, b, **kwargs):
 
     return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
 
+def complex_quadrature(integrand: Callable, a, b, **kwargs):
+    def real_func(x):
+        return np.real(integrand(x))
+
+    def imag_func(x):
+        return np.imag(integrand(x))
+
+    real_integral = integ.quadrature(real_func, a, b, **kwargs)
+    imag_integral = integ.quadrature(imag_func, a, b, **kwargs)
+
+    return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
 
 def complex_dblquad(integrand, a, b, gfun, hfun, **kwargs):
     def real_func(y, x):
