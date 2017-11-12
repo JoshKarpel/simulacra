@@ -60,7 +60,7 @@ class Info:
         self.header = header
         self.children = collections.OrderedDict()
 
-    def __str__(self) -> List[str]:
+    def __str__(self) -> str:
         field_strings = [self.header]
 
         for field, value in self.children.items():
@@ -329,7 +329,7 @@ class Specification(Beet):
             self._extra_attr_keys.append(k)
             logger.debug('{} stored additional attribute {} = {}'.format(self.name, k, v))
 
-    def save(self, target_dir: Optional[str] = None, file_extension: str = '.spec', compressed: bool = True) -> str:
+    def save(self, target_dir: Optional[str] = None, file_extension: str = '.spec', **kwargs) -> str:
         """
         Atomically pickle the Specification to a file.
 
@@ -347,7 +347,7 @@ class Specification(Beet):
         :class:`str`
             The path to the saved Specification.
         """
-        return super().save(target_dir = target_dir, file_extension = file_extension, compressed = compressed)
+        return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
     def to_simulation(self) -> 'Simulation':
         """Return a Simulation of the type associated with the Specification, generated from this instance."""
@@ -460,7 +460,7 @@ class Simulation(Beet):
     def __str__(self):
         return super().__str__() + f' {{{self.status}}}'
 
-    def save(self, target_dir: Optional[str] = None, file_extension: str = '.sim', compressed: bool = True) -> str:
+    def save(self, target_dir: Optional[str] = None, file_extension: str = '.sim', **kwargs) -> str:
         """
         Atomically pickle the Simulation to a file.
 
@@ -481,7 +481,7 @@ class Simulation(Beet):
         if self.status != Status.FINISHED:
             self.status = Status.PAUSED
 
-        return super().save(target_dir = target_dir, file_extension = file_extension, compressed = compressed)
+        return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
     def run_simulation(self):
         """Hook method for running the Simulation, whatever that may entail."""

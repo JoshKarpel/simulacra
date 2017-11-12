@@ -978,41 +978,54 @@ def xyz_plot(name,
 
         x_lower_limit, x_upper_limit = set_axis_limits(
             ax, x_mesh,
+            direction = 'x',
             lower_limit = x_lower_limit,
             upper_limit = x_upper_limit,
             log = x_log_axis,
             pad = 0,
             log_pad = 1,
             unit = x_unit,
-            direction = 'x'
         )
         y_lower_limit, y_upper_limit = set_axis_limits(
             ax, y_mesh,
+            direction = 'y',
             lower_limit = y_lower_limit,
             upper_limit = y_upper_limit,
             log = y_log_axis,
             pad = 0,
             log_pad = 1,
             unit = y_unit,
-            direction = 'y'
         )
 
-        if not isinstance(colormap, RichardsonColormap):
+        if isinstance(colormap, RichardsonColormap):
+            norm = RichardsonNormalization(
+                equator_magnitude = richardson_equator_magnitude
+            )
+        else:
             z_lower_limit, z_upper_limit = get_axis_limits(z_mesh,
                                                            lower_limit = z_lower_limit, upper_limit = z_upper_limit,
                                                            log = z_log_axis,
                                                            pad = z_pad, log_pad = z_log_pad)
+
+            norm_kwargs = dict(
+                vmin = z_lower_limit / z_unit_value,
+                vmax = z_upper_limit / z_unit_value,
+            )
+
             if z_log_axis:
                 if z_lower_limit > 0:
-                    norm = matplotlib.colors.LogNorm(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
+                    norm = matplotlib.colors.LogNorm(
+                        **norm_kwargs,
+                    )
                 else:
-                    norm = matplotlib.colors.SymLogNorm(((np.abs(z_lower_limit) + np.abs(z_upper_limit)) / 2) * sym_log_norm_epsilon,
-                                                        vmin = z_lower_limit / z_unit_value,
-                                                        vmax = z_upper_limit / z_unit_value)
+                    norm = matplotlib.colors.SymLogNorm(
+                        ((np.abs(z_lower_limit) + np.abs(z_upper_limit)) / 2) * sym_log_norm_epsilon,
+                        **norm_kwargs,
+                    )
             else:
-                norm = matplotlib.colors.Normalize(vmin = z_lower_limit / z_unit_value, vmax = z_upper_limit / z_unit_value)
-        else:
-            norm = RichardsonNormalization(equator_magnitude = richardson_equator_magnitude)
+                norm = matplotlib.colors.Normalize(
+                    **norm_kwargs,
+                )
 
         colormesh = ax.pcolormesh(
             x_mesh / x_unit_value,

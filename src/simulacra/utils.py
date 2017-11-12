@@ -360,21 +360,21 @@ def run_spec(spec, pre_run = None, post_run = None, log_manager = None):
 
     """
     if pre_run is None:
-        pre_call = lambda s: None
+        pre_run = lambda s: None
     if post_run is None:
-        post_call = lambda s: None
+        post_run = lambda s: None
 
     if log_manager is None:
         sim = spec.to_simulation
-        pre_call(sim)
+        pre_run(sim)
         sim.run_simulation()
-        post_call(sim)
+        post_run(sim)
     else:
         with log_manager as logger:
             sim = spec.to_simulation
-            pre_call(sim)
+            pre_run(sim)
             sim.run_simulation()
-            post_call(sim)
+            post_run(sim)
 
     return sim
 
