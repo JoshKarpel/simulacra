@@ -21,7 +21,6 @@ from typing import Union
 
 import numpy as _np  # I often * import this module, so this avoid polluting my namespaces
 
-
 UNIT_NAME_TO_VALUE = {}
 UNIT_NAME_TO_LATEX = {}
 
@@ -306,7 +305,6 @@ UNIT_NAME_TO_LATEX.update({
     'PHz': r'\mathrm{PHz}'
 })
 
-
 # frequency, again
 per_sec = 1 / sec
 per_msec = 1 / msec
@@ -363,7 +361,6 @@ UNIT_NAME_TO_LATEX.update({
     'per_week': '\mathrm{week^{-1}}',
     'per_year': '\mathrm{year^{-1}}',
 })
-
 
 # electric charge
 C = 1 * A * s
@@ -757,8 +754,12 @@ atomic_magnetic_dipole_moment = bohr_magneton = proton_charge * hbar / (2 * elec
 atomic_velocity = alpha * c
 atomic_momentum = electron_mass * atomic_velocity
 atomic_time = hbar / hartree
+atomic_angular_frequency = 1 / atomic_time
+atomic_frequency = atomic_angular_frequency / twopi
 atomic_force = hartree / bohr_radius
 atomic_temperature = hartree / k_B
+
+per_bohr_radius = 1 / bohr_radius
 
 UNIT_NAME_TO_VALUE.update({
     'atomic_energy': atomic_energy,
@@ -774,8 +775,11 @@ UNIT_NAME_TO_VALUE.update({
     'atomic_velocity': atomic_velocity,
     'atomic_momentum': atomic_momentum,
     'atomic_time': atomic_time,
+    'atomic_frequency': atomic_frequency,
+    'atomic_angular_frequency': atomic_angular_frequency,
     'atomic_force': atomic_force,
     'atomic_temperature': atomic_temperature,
+    'per_bohr_radius': per_bohr_radius,
 })
 UNIT_NAME_TO_LATEX.update({
     'atomic_electric_field': r'\mathrm{a.u.}',
@@ -790,6 +794,9 @@ UNIT_NAME_TO_LATEX.update({
     'atomic_velocity': r'\mathrm{a.u.}',
     'atomic_momentum': r'\mathrm{a.u.}',
     'atomic_time': r'\mathrm{a.u.}',
+    'atomic_frequency': r'\mathrm{a.u.}',
+    'atomic_angular_frequency': r'\mathrm{a.u.}',
     'atomic_force': r'\mathrm{a.u.}',
     'atomic_temperature': r'\mathrm{a.u.}',
+    'per_bohr_radius': r'1/a_0',
 })

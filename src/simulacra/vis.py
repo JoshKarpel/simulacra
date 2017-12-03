@@ -773,6 +773,7 @@ def xy_plot(name,
             ax.set_yticklabels(y_tick_labels)
 
         ax.grid(True, which = 'major', **grid_kwargs)
+        ax.minorticks_on()
         if x_log_axis:
             ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
         if y_log_axis:

@@ -572,7 +572,7 @@ class Descriptor:
 
     __slots__ = ('name',)
 
-    def __init__(self, name):
+    def __set_name__(self, owner, name):
         self.name = name
 
     def __get__(self, instance, cls):
@@ -597,16 +597,14 @@ class RestrictedValues(Descriptor):
 
     __slots__ = ('name', 'choices')
 
-    def __init__(self, name, choices = set()):
+    def __init__(self, choices = set()):
         self.choices = set(choices)
-
-        super().__init__(name)
 
     def __set__(self, instance, value):
         if value not in self.choices:
             raise ValueError('Expected {} to be from {}'.format(value, self.choices))
-        else:
-            super().__set__(instance, value)
+
+        super().__set__(instance, value)
 
 
 class Typed(Descriptor):
@@ -616,18 +614,16 @@ class Typed(Descriptor):
     If the value does not match the provided type a TypeError is raised.
     """
 
-    __slots__ = ('name', 'legal_type')
+    __slots__ = ('name', 'type')
 
-    def __init__(self, name, legal_type = str):
-        self.legal_type = legal_type
-
-        super().__init__(name)
+    def __init__(self, type):
+        self.type = type
 
     def __set__(self, instance, value):
-        if not isinstance(value, self.legal_type):
-            raise TypeError('Expected {} to be a {}'.format(value, self.legal_type))
-        else:
-            super().__set__(instance, value)
+        if not isinstance(value, self.type):
+            raise TypeError('Expected {} to be a {}'.format(value, self.type))
+
+        super().__set__(instance, value)
 
 
 class Checked(Descriptor):
@@ -639,18 +635,16 @@ class Checked(Descriptor):
 
     __slots__ = ('name', 'check')
 
-    def __init__(self, name, check = None):
+    def __init__(self, check = None):
         if check is None:
             check = lambda value: True
         self.check = check
 
-        super().__init__(name)
-
     def __set__(self, instance, value):
         if not self.check(value):
             raise ValueError(f'Value {value} did not pass the check function {self.check} for attribute {self.name} on {instance}')
-        else:
-            super().__set__(instance, value)
+
+        super().__set__(instance, value)
 
 
 def bytes_to_str(num: Union[float, int]) -> str:

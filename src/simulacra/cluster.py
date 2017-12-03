@@ -606,8 +606,8 @@ def combine_job_processors(*job_processors, job_dir_path = None):
 class Parameter:
     """A class that represents a parameter of a :class:`Specification`."""
 
-    name = utils.Typed('name', legal_type = str)
-    expandable = utils.Typed('expandable', legal_type = bool)
+    name = utils.Typed('name', type = str)
+    expandable = utils.Typed('expandable', type = bool)
 
     def __init__(self, name, value = None, expandable = False):
         """

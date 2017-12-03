@@ -145,11 +145,11 @@ class SphericalHarmonic:
 
 
 def complex_quad(integrand: Callable, a, b, **kwargs):
-    def real_func(x):
-        return np.real(integrand(x))
+    def real_func(*args, **kwargs):
+        return np.real(integrand(*args, **kwargs))
 
-    def imag_func(x):
-        return np.imag(integrand(x))
+    def imag_func(*args, **kwargs):
+        return np.imag(integrand(*args, **kwargs))
 
     real_integral = integ.quad(real_func, a, b, **kwargs)
     imag_integral = integ.quad(imag_func, a, b, **kwargs)
@@ -158,11 +158,11 @@ def complex_quad(integrand: Callable, a, b, **kwargs):
 
 
 def complex_quadrature(integrand: Callable, a, b, **kwargs):
-    def real_func(x):
-        return np.real(integrand(x))
+    def real_func(*args, **kwargs):
+        return np.real(integrand(*args, **kwargs))
 
-    def imag_func(x):
-        return np.imag(integrand(x))
+    def imag_func(*args, **kwargs):
+        return np.imag(integrand(*args, **kwargs))
 
     real_integral = integ.quadrature(real_func, a, b, **kwargs)
     imag_integral = integ.quadrature(imag_func, a, b, **kwargs)
