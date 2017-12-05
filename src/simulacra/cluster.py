@@ -872,7 +872,6 @@ transfer_output_remaps = "$(Process).sim = outputs/$(Process).sim ; $(Process).l
 +WantFlocking = {flockglide}
 #
 skip_filechecks = true
-max_materialize = {max_materialize}
 #
 on_exit_hold = (ExitCode =!= 0)
 periodic_release = (JobStatus == 5) && (HoldReasonCode == 3) && (CurrentTime - EnteredCurrentStatus >= 300) && (NumJobCompletions <= 10)
@@ -901,7 +900,6 @@ def generate_chtc_submit_string(job_name, specification_count, do_checkpoints = 
         memory = ask_for_input('Memory (in GB)?', default = 2, cast_to = float),
         disk = ask_for_input('Disk (in GB)?', default = 10, cast_to = float),
         num_jobs = specification_count,
-        max_materialize = ask_for_input('Max Materialize?', default = 1000, cast_to = int),
     )
 
     return CHTC_SUBMIT_STRING.format(**fmt).strip()
