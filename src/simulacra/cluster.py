@@ -29,6 +29,7 @@ import stat
 import subprocess
 import sys
 from copy import copy, deepcopy
+from typing import Any, Iterable
 
 import numpy as np  # needs to be here so that ask_for_eval works
 import scipy as sp
@@ -606,10 +607,7 @@ def combine_job_processors(*job_processors, job_dir_path = None):
 class Parameter:
     """A class that represents a parameter of a :class:`Specification`."""
 
-    name = utils.Typed('name', type = str)
-    expandable = utils.Typed('expandable', type = bool)
-
-    def __init__(self, name, value = None, expandable = False):
+    def __init__(self, name: str, value: Any = None, expandable: bool = False):
         """
         Parameters
         ----------
@@ -634,7 +632,7 @@ class Parameter:
             return '{}(name = {} expandable: \n{})'.format(self.__class__.__name__, self.name, self.value, '\n  '.join(str(v) for v in self.value))
 
 
-def expand_parameters_to_dicts(parameters):
+def expand_parameters_to_dicts(parameters: Iterable[Parameter]):
     """
     Expand an iterable of :class:`Parameter` to a list of dictionaries containing all of the combinations of parameter values.
     Each of these dictionaries can then be unpacked into a :class:`Specification`.

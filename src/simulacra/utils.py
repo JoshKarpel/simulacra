@@ -39,7 +39,7 @@ from .units import uround
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', datefmt = '%y/%m/%d %H:%M:%S')  # global log format specification
+LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s', datefmt = '%y-%m-%d %H:%M:%S')  # global log format specification
 
 key_value_arrays = collections.namedtuple('key_value_arrays', ('key_array', 'value_array'))
 
