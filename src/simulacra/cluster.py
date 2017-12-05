@@ -478,9 +478,8 @@ class JobProcessor(core.Beet):
 
     def summarize(self):
         with utils.BlockTimer() as t:
-            if len(self.unprocessed_sim_names) < self.sim_count:
-                self.make_time_diagnostics_plot()
-                self.write_time_diagnostics_to_file()
+            self.make_time_diagnostics_plot()
+            self.write_time_diagnostics_to_file()
 
             # self.write_to_txt()
             # self.write_to_csv()
