@@ -833,7 +833,7 @@ def write_specifications_info_to_file(specifications, job_dir):
     """Write information from the list of the Specifications to a file."""
     print('Writing Specification info to file...')
 
-    with open(os.path.join(job_dir, 'specifications.txt'), 'w') as file:
+    with open(os.path.join(job_dir, 'specifications.txt'), 'w', encoding = 'utf-8') as file:
         for spec in tqdm(specifications, ascii = True):
             file.write(str(spec.info()) + '\n')
 
@@ -844,7 +844,7 @@ def write_parameters_info_to_file(parameters, job_dir):
     """Write information from the list of Parameters to a file."""
     print('Writing parameters to file...')
 
-    with open(os.path.join(job_dir, 'parameters.txt'), 'w') as file:
+    with open(os.path.join(job_dir, 'parameters.txt'), 'w', encoding = 'utf-8') as file:
         for param in parameters:
             file.write(repr(param) + '\n')
 
@@ -936,7 +936,7 @@ def write_submit_file(submit_string, job_dir):
     """Write the submit string to a file."""
     print('Writing submit file...')
 
-    with open(os.path.join(job_dir, 'submit_job.sub'), mode = 'w') as file:
+    with open(os.path.join(job_dir, 'submit_job.sub'), mode = 'w', encoding = 'utf-8') as file:
         file.write(submit_string)
 
     logger.debug('Wrote submit file')
