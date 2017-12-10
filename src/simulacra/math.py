@@ -133,18 +133,26 @@ class SphericalHarmonic:
     def __hash__(self):
         return hash((self.l, self.m))
 
-    def __call__(self, theta, phi = 0):
+    def __call__(self, theta: float, phi: float = 0) -> float:
         """
         Evaluate the spherical harmonic at a point, or vectorized over an array of points.
 
-        :param theta: polar coordinate
-        :param phi: azimuthal coordinate
-        :return: the value(s) of the spherical harmonic at (theta, phi)
+        Parameters
+        ----------
+        theta : :class:`float`
+            The polar coordinate.
+        phi : :class:`float`
+            The azimuthal coordinate.
+
+        Returns
+        -------
+        :class:`float`
+            The value of the spherical harmonic evaluated at (`theta`, `phi`).
         """
         return special.sph_harm(self.m, self.l, phi, theta)
 
 
-def complex_quad(integrand: Callable, a, b, **kwargs):
+def complex_quad(integrand: Callable, a: float, b: float, **kwargs) -> (complex, float, float):
     def real_func(*args, **kwargs):
         return np.real(integrand(*args, **kwargs))
 
@@ -157,7 +165,7 @@ def complex_quad(integrand: Callable, a, b, **kwargs):
     return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
 
 
-def complex_quadrature(integrand: Callable, a, b, **kwargs):
+def complex_quadrature(integrand: Callable, a: float, b: float, **kwargs) -> (complex, float, float):
     def real_func(*args, **kwargs):
         return np.real(integrand(*args, **kwargs))
 
@@ -170,7 +178,7 @@ def complex_quadrature(integrand: Callable, a, b, **kwargs):
     return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
 
 
-def complex_dblquad(integrand, a, b, gfun, hfun, **kwargs):
+def complex_dblquad(integrand: Callable, a: float, b: float, gfun: Callable, hfun: Callable, **kwargs) -> (complex, float, float):
     def real_func(y, x):
         return np.real(integrand(y, x))
 
@@ -183,7 +191,7 @@ def complex_dblquad(integrand, a, b, gfun, hfun, **kwargs):
     return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
 
 
-def complex_nquad(integrand, ranges, **kwargs):
+def complex_nquad(integrand, ranges, **kwargs) -> (complex, float, float):
     def real_func(y, x):
         return np.real(integrand(y, x))
 

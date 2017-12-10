@@ -23,7 +23,7 @@ import pickle
 import uuid
 import collections
 from copy import deepcopy
-from typing import Optional, Union, List, Tuple, Iterable
+from typing import Optional, Union, List, Tuple, Iterable, Any
 
 import logging
 import os
@@ -92,7 +92,7 @@ class Info:
         # TODO: json output from Info
         raise NotImplementedError
 
-    def add_field(self, name: str, value: Union[str, 'Info']):
+    def add_field(self, name: str, value: Any):
         """
         Add a field to the :class:`Info`, which will be displayed as ``'{name}: {value}'``.
 
@@ -226,6 +226,8 @@ class Beet:
             The file extension to name the Beet with (for keeping track of things, no actual effect).
         compressed : :class:`bool`
             Whether to compress the Beet using gzip.
+        ensure_dir_exists : :class:`bool`
+            Whether to ensure that the target directory exists before saving.
 
         Returns
         -------
@@ -288,85 +290,6 @@ class Beet:
         return info
 
 
-class Specification(Beet):
-    """
-    A class that contains the information necessary to run a simulation.
-
-    It should be subclassed for each type of simulation and all additional information necessary to run that kind of simulation should be added via keyword arguments.
-
-    Any number of additional keyword arguments can be passed to the constructor.
-    They will be stored as attributes if they don't conflict with any attributes already set.
-
-    Attributes
-    ----------
-    simulation_type
-        A class attribute which determines what kind of :class:`Simulation` will be generated via :func:`Specification.to_simulation`.
-    uuid
-        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Specification`.
-    """
-
-    simulation_type = None
-
-    def __init__(self, name: str, file_name: Optional[str] = None, **kwargs):
-        """
-        Parameters
-        ----------
-        name : :class:`str`
-            The internal name of the Specification.
-        file_name : :class:`str`
-            The desired external name of the Specification.
-            Automatically derived from `name` if ``None`` is passed.
-            Illegal characters are stripped before use, and spaces are replaced with underscores.
-        kwargs
-            Any number of keyword arguments, which will be stored as attributes.
-        """
-        super().__init__(name, file_name = file_name)
-
-        self._extra_attr_keys = list()
-
-        for k, v in ((k, v) for k, v in kwargs.items() if k not in self.__dict__):
-            setattr(self, k, v)
-            self._extra_attr_keys.append(k)
-            logger.debug('{} stored additional attribute {} = {}'.format(self.name, k, v))
-
-    def save(self, target_dir: Optional[str] = None, file_extension: str = '.spec', **kwargs) -> str:
-        """
-        Atomically pickle the Specification to a file.
-
-        Parameters
-        ----------
-        target_dir : :class:`str`
-            The directory to save the Specification to.
-        file_extension : :class:`str`
-            The file extension to name the Specification with (for keeping track of things, no actual effect).
-        compressed : :class:`bool`
-            Whether to compress the Beet using gzip.
-
-        Returns
-        -------
-        :class:`str`
-            The path to the saved Specification.
-        """
-        return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
-
-    def to_simulation(self) -> 'Simulation':
-        """Return a Simulation of the type associated with the Specification, generated from this instance."""
-        return self.simulation_type(self)
-
-    def info(self) -> Info:
-        info = super().info()
-
-        if len(self._extra_attr_keys) > 0:
-            info_extra = Info(header = f'Extra Attributes')
-
-            for k in self._extra_attr_keys:
-                info_extra.add_field(k, getattr(self, k))
-
-            info.add_info(info_extra)
-
-        return info
-
-
 class Status(utils.StrEnum):
     INITIALIZED = 'initialized'
     RUNNING = 'running'
@@ -391,7 +314,7 @@ class Simulation(Beet):
         The status of the Simulation. One of ``'initialized'``, ``'running'``, ``'finished'``, ``'paused'``, or ``'error'``.
     """
 
-    def __init__(self, spec: Specification):
+    def __init__(self, spec):
         """
         Parameters
         ----------
@@ -419,7 +342,7 @@ class Simulation(Beet):
         return self._status
 
     @status.setter
-    def status(self, status):
+    def status(self, status: Status):
         """
         Set the status of the :class:`Simulation`.
 
@@ -428,8 +351,8 @@ class Simulation(Beet):
 
         Parameters
         ----------
-        status : :class:`str`
-            The new status for the simulation
+        status : Status
+            The new status for the simulation.
         """
         if not isinstance(status, Status):
             raise TypeError(f'{status} is not a member of Status')
@@ -503,6 +426,85 @@ class Simulation(Beet):
         })
 
         info.add_infos(info_diag, self.spec.info())
+
+        return info
+
+
+class Specification(Beet):
+    """
+    A class that contains the information necessary to run a simulation.
+
+    It should be subclassed for each type of simulation and all additional information necessary to run that kind of simulation should be added via keyword arguments.
+
+    Any number of additional keyword arguments can be passed to the constructor.
+    They will be stored as attributes if they don't conflict with any attributes already set.
+
+    Attributes
+    ----------
+    simulation_type
+        A class attribute which determines what kind of :class:`Simulation` will be generated via :func:`Specification.to_simulation`.
+    uuid
+        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Specification`.
+    """
+
+    simulation_type = Simulation
+
+    def __init__(self, name: str, file_name: Optional[str] = None, **kwargs):
+        """
+        Parameters
+        ----------
+        name : :class:`str`
+            The internal name of the Specification.
+        file_name : :class:`str`
+            The desired external name of the Specification.
+            Automatically derived from `name` if ``None`` is passed.
+            Illegal characters are stripped before use, and spaces are replaced with underscores.
+        kwargs
+            Any number of keyword arguments, which will be stored as attributes.
+        """
+        super().__init__(name, file_name = file_name)
+
+        self._extra_attr_keys = list()
+
+        for k, v in ((k, v) for k, v in kwargs.items() if k not in self.__dict__):
+            setattr(self, k, v)
+            self._extra_attr_keys.append(k)
+            logger.debug('{} stored additional attribute {} = {}'.format(self.name, k, v))
+
+    def save(self, target_dir: Optional[str] = None, file_extension: str = '.spec', **kwargs) -> str:
+        """
+        Atomically pickle the Specification to a file.
+
+        Parameters
+        ----------
+        target_dir : :class:`str`
+            The directory to save the Specification to.
+        file_extension : :class:`str`
+            The file extension to name the Specification with (for keeping track of things, no actual effect).
+        compressed : :class:`bool`
+            Whether to compress the Beet using gzip.
+
+        Returns
+        -------
+        :class:`str`
+            The path to the saved Specification.
+        """
+        return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
+
+    def to_simulation(self) -> 'Simulation':
+        """Return a Simulation of the type associated with the Specification, generated from this instance."""
+        return self.simulation_type(self)
+
+    def info(self) -> Info:
+        info = super().info()
+
+        if len(self._extra_attr_keys) > 0:
+            info_extra = Info(header = f'Extra Attributes')
+
+            for k in self._extra_attr_keys:
+                info_extra.add_field(k, getattr(self, k))
+
+            info.add_info(info_extra)
 
         return info
 

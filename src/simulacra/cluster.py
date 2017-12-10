@@ -29,7 +29,7 @@ import stat
 import subprocess
 import sys
 from copy import copy, deepcopy
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional, Callable, Type
 
 import numpy as np  # needs to be here so that ask_for_eval works
 import scipy as sp
@@ -63,8 +63,25 @@ class ClusterInterface:
     """
 
     def __init__(self,
-                 remote_host, username, key_path,
-                 local_mirror_root = 'cluster_mirror', remote_sep = '/'):
+                 remote_host: str,
+                 username: str,
+                 key_path: str,
+                 local_mirror_root: str = 'cluster_mirror',
+                 remote_sep: str = '/'):
+        """
+        Parameters
+        ----------
+        remote_host : :class:`str`
+            The hostname of the remote host.
+        username : :class:`str`
+            The username to log in with.
+        key_path : :class:`str`
+            The path to the SSH key file that corresponds to the `username`.
+        local_mirror_root : :class:`str`
+            The name to give the root directory of the local mirror.
+        remote_sep : :class:`str`
+            The path separator on the remote host. Almost undoubtedly, this is ``'/'``.
+        """
         self.remote_host = remote_host
         self.username = username
         self.key_path = key_path
@@ -79,19 +96,27 @@ class ClusterInterface:
 
     def __enter__(self):
         """Open the SSH and FTP connections."""
-        self.ssh.connect(self.remote_host, username = self.username, key_filename = self.key_path)
-        self.ftp = self.ssh.open_sftp()
-
-        logger.info(f'Opened connection to {self.remote_host} as {self.username}')
+        self.connect()
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Close the SSH and FTP connections."""
+        self.close()
+
+    def connect(self):
+        """Open the connection to the remote host."""
+        self.ssh.connect(self.remote_host, username = self.username, key_filename = self.key_path)
+        self.ftp = self.ssh.open_sftp()
+
+        logger.info(f'Opened connection to {self.username}@{self.remote_host}')
+
+    def close(self):
+        """Close the connection to the remote host."""
         self.ftp.close()
         self.ssh.close()
 
-        logger.info(f'Closed connection to {self.remote_host} as {self.username}')
+        logger.info(f'Closed connection to {self.username}@{self.remote_host}')
 
     def __str__(self):
         return f'Interface to {self.remote_host} as {self.username}'
@@ -105,7 +130,7 @@ class ClusterInterface:
 
         return local_home
 
-    def cmd(self, *cmds):
+    def cmd(self, *cmds: Iterable[str]):
         """Run a list of commands sequentially on the remote host. Each command list begins in a totally fresh environment."""
         cmd_list = ['. ~/.profile', '. ~/.bash_profile'] + list(cmds)  # run the remote bash profile to pick up settings
         cmd = ';'.join(cmd_list)
@@ -134,20 +159,27 @@ class ClusterInterface:
         return status_str
 
     def remote_path_to_local_path(self, remote_path):
-        """Convert a remote path to a local path."""
+        """Return the local path corresponding to a remote path."""
         return os.path.join(self.local_mirror_root, *remote_path.split(self.remote_sep))
 
-    def get_file(self, remote_path, local_path, remote_stat = None, preserve_timestamps = True):
+    def get_file(self,
+                 remote_path: str,
+                 local_path: str,
+                 remote_stat = None,
+                 preserve_timestamps: bool = True):
         """
         Download a file from the remote machine to the local machine.
 
-        :param remote_path: the remote path to download
-        :type remote_path: str
-        :param local_path: the local path to place the downloaded file
-        :type local_path: str
-        :param remote_stat: the stat of the remote path (optimization, this method will fetch it if not passed in)
-        :param preserve_timestamps: if True, copy the modification timestamps from the remote file to the local file
-        :type preserve_timestamps: bool
+        Parameters
+        ----------
+        remote_path : :class:`str`
+            The remote path to download.
+        local_path : :class:`str`
+            The local path to place the downloaded file.
+        remote_stat
+            The stat of the remote path (optimization, this method will fetch it if not passed in).
+        preserve_timestamps : :class:`bool`
+            If ``True``, copy the modification timestamps from the remote file to the local file.
         """
         utils.ensure_dir_exists(local_path)
 
@@ -160,20 +192,27 @@ class ClusterInterface:
 
         logger.debug(f'{local_path}   <--   {remote_path}')
 
-    def put_file(self, local_path, remote_path, preserve_timestamps = True):
+    def put_file(self,
+                 local_path: str,
+                 remote_path: str,
+                 preserve_timestamps: bool = True):
         """
-        Push a file from the local machine to the remote machine.
+        Upload a file from the local machine to the remote machine.
 
-        :param local_path: the local path to push from
-        :type local_path: str
-        :param remote_path: the remove path to push to
-        :type remote_path: str
-        :param preserve_timestamps: if True, copy the modification timestamps from the remote file to the local file
-        :type preserve_timestamps: bool
+        Parameters
+        ----------
+        local_path : :class:`str`
+            The local path to push from.
+        remote_path : :class:`str`
+            The remove path to push to.
+        preserve_timestamps : bool
+            If ``True``, copy the modification timestamps from the remote file to the local file.
         """
         raise NotImplementedError
 
-    def is_file_synced(self, remote_stat, local_path):
+    def is_file_synced(self,
+                       remote_stat,
+                       local_path: str):
         """
         Determine whether a local file is the same as a remote file by checking the file size and modification times.
 
@@ -181,7 +220,7 @@ class ClusterInterface:
         ----------
         remote_stat
             The stat of the remote file.
-        local_path
+        local_path : :class:`str`
             The path to the local file.
 
         Returns
@@ -196,16 +235,31 @@ class ClusterInterface:
 
         return False
 
-    def mirror_file(self, remote_path, remote_stat, force_download = False, integrity_check = True):
+    def mirror_file(self,
+                    remote_path: str,
+                    remote_stat: str,
+                    force_download: bool = False,
+                    integrity_check: bool = True):
         """
         Mirror a remote file, only downloading it if it does not match a local copy at a derived local path name.
 
         File integrity is checked by comparing the MD5 hash of the remote and local files.
 
-        :param remote_path: the remote path to mirror
-        :param remote_stat: the stat of the remote file
-        :param force_download: if True, download the file even if it is synced
-        :param integrity_check: if True, check that the MD5 hash of the remote and local files are the same, and redownload if they are not
+        Parameters
+        ----------
+        remote_path
+            The remote path to mirror.
+        remote_stat
+            The stat of the remote path.
+        force_download
+            If ``True``, download the file even if it synced.
+        integrity_check
+            If ``True``, check that the MD5 hash of the remote and local files are the same, and redownload if they are not.
+
+        Returns
+        -------
+        local_path : str
+            The path to the local file.
         """
         local_path = self.remote_path_to_local_path(remote_path)
         if force_download or not self.is_file_synced(remote_stat, local_path):
@@ -221,18 +275,39 @@ class ClusterInterface:
                     logger.debug(f'MD5 hash on {self.remote_host} for file {remote_path} did not match local file at {local_path}, retrying')
                     self.mirror_file(remote_path, remote_stat, force_download = True)
 
-    def walk_remote_path(self, remote_path, func_on_dirs = None, func_on_files = None, exclude_hidden = True, blacklist_dir_names = None, whitelist_file_ext = None):
+        return local_path
+
+    def walk_remote_path(self,
+                         remote_path,
+                         func_on_dirs: Optional[Callable] = None,
+                         func_on_files: Optional[Callable] = None,
+                         exclude_hidden: bool = True,
+                         blacklist_dir_names: Optional[Iterable[str]] = None,
+                         whitelist_file_ext: Optional[Iterable[str]] = None):
         """
         Walk a remote directory starting at the given path.
 
         The functions func_on_dirs and func_on_files are passed the full path to the remote file and the ftp.stat of that file.
 
-        :param remote_path: the remote path to start walking on
-        :param func_on_dirs: the function to call on directories (takes the directory file path as an argument)
-        :param func_on_files: the function to call on files (takes the file path as an argument)
-        :param exclude_hidden: do not walk over hidden files or directories
-        :param blacklist_dir_names: do not walk over directories with these names
-        :param whitelist_file_ext: only walk over files with these extensions
+        Parameters
+        ----------
+        remote_path
+            The remote path to start walking from.
+        func_on_dirs
+            The function to call on directories (takes the directory file path as an argument).
+        func_on_files
+            The function to call on files (takes the file path as an argument).
+        exclude_hidden
+            Do not walk over hidden files or directories.
+        blacklist_dir_names
+            Do not walk over directories with these names.
+        whitelist_file_ext
+            Only walk over files with these extensions.
+
+        Returns
+        -------
+        path_count : int
+            The number of paths checked.
         """
         if func_on_dirs is None:
             func_on_dirs = lambda *args: None
@@ -251,36 +326,42 @@ class ClusterInterface:
 
         path_count = 0
 
-        def walk(remote_path):
-            for remote_stat in self.ftp.listdir_attr(remote_path):  # don't try to sort these, they're actually SFTPAttribute objects that don't have guaranteed attributes
-                full_remote_path = posixpath.join(remote_path, remote_stat.filename)
+        def walk(remote_path: str):
+            try:
+                remote_stats = self.ftp.listdir_iter(remote_path)
+                for remote_stat in remote_stats:
+                    full_remote_path = posixpath.join(remote_path, remote_stat.filename)
 
-                logger.debug('Checking remote path {}'.format(full_remote_path))
+                    logger.debug('Checking remote path {}'.format(full_remote_path))
 
-                # print a string that keeps track of the walked paths
-                nonlocal path_count
-                path_count += 1
-                status_str = '\rPaths Found: {}'.format(path_count).ljust(25)
-                status_str += '  |  '
-                status_str += 'Current Path: {}'.format(full_remote_path).ljust(100)
-                print(status_str, end = '')
+                    # print a string that keeps track of the walked paths
+                    nonlocal path_count
+                    path_count += 1
+                    status_str = '\rPaths Found: {}'.format(path_count).ljust(25)
+                    status_str += '  |  '
+                    status_str += 'Current Path: {}'.format(full_remote_path).ljust(100)
+                    print(status_str, end = '')
 
-                if not exclude_hidden or remote_stat.filename[0] != '.':
-                    if stat.S_ISDIR(remote_stat.st_mode) and remote_stat.filename not in blacklist_dir_names:
-                        func_on_dirs(full_remote_path, remote_stat)
+                    if not exclude_hidden or remote_stat.filename[0] != '.':
+                        if stat.S_ISDIR(remote_stat.st_mode) and remote_stat.filename not in blacklist_dir_names:
+                            func_on_dirs(full_remote_path, remote_stat)
 
-                        logger.debug('Walking remote dir {}'.format(full_remote_path))
-                        walk(full_remote_path)
+                            logger.debug('Walking remote dir {}'.format(full_remote_path))
+                            walk(full_remote_path)
 
-                    elif stat.S_ISREG(remote_stat.st_mode) and full_remote_path.endswith(whitelist_file_ext):
-                        func_on_files(full_remote_path, remote_stat)
+                        elif stat.S_ISREG(remote_stat.st_mode) and full_remote_path.endswith(whitelist_file_ext):
+                            func_on_files(full_remote_path, remote_stat)
+            except UnicodeDecodeError as e:
+                logger.exception(f'Encountered unicode decode error while getting directory attributes for {remote_path}. This can happen if there is a unicode filename in the directory.')
 
         walk(remote_path)
         print()
 
+        return path_count
+
     def mirror_remote_home_dir(self,
-                               blacklist_dir_names = ('python', 'build_python'),
-                               whitelist_file_ext = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl', '.tar.gz')):
+                               blacklist_dir_names: Iterable[str] = ('python', 'build_python'),
+                               whitelist_file_ext: Iterable[str] = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl', '.tar.gz')):
         """
         Mirror the entire remote home directory.
 
@@ -345,7 +426,7 @@ class JobProcessor(core.Beet):
     simulation_type = core.Simulation
     simulation_result_type = SimulationResult
 
-    def __init__(self, job_name, job_dir_path):
+    def __init__(self, job_name: str, job_dir_path: str):
         """
         Parameters
         ----------
@@ -406,21 +487,10 @@ class JobProcessor(core.Beet):
         """Get a list of Simulation file names actually found in the output directory."""
         return sorted([f.strip('.sim') for f in os.listdir(self.outputs_dir)], key = int)
 
-    def save(self, target_dir = None, file_extension = '.job', **kwargs):
-        """
-
-        Parameters
-        ----------
-        target_dir
-        file_extension
-        kwargs
-
-        Returns
-        -------
-        """
+    def save(self, target_dir: Optional[str] = None, file_extension: str = '.job', **kwargs):
         return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
-    def _load_sim(self, sim_file_name, **load_kwargs):
+    def _load_sim(self, sim_file_name: str, **load_kwargs) -> core.Simulation:
         """
         Load a :class:`Simulation` by its ``file_name``.
 
@@ -449,11 +519,14 @@ class JobProcessor(core.Beet):
         logger.debug(f'Loaded {sim_file_name}.sim from job {self.name}')
         return sim
 
-    def load_sims(self, force_reprocess = False):
+    def load_sims(self, force_reprocess: bool = False):
         """
         Process the job by loading newly-downloaded Simulations and generating SimulationResults from them.
 
-        :param force_reprocess: if True, process all Simulations in the output directory regardless of prior processing status
+        Parameters
+        ----------
+        force_reprocess : :class:`bool`
+            If ``True``, process all Simulations in the output directory regardless of prior processing status.
         """
         with utils.BlockTimer() as t:
             logger.info('Loading simulations from job {}'.format(self.name))
@@ -494,7 +567,7 @@ class JobProcessor(core.Beet):
     def write_to_txt(self):
         raise NotImplementedError
 
-    def select_by_kwargs(self, **kwargs):
+    def select_by_kwargs(self, **kwargs) -> Iterable[SimulationResult]:
         """
         Return all of the :class:`SimulationResult` that match the key-value pairs passed as keyword arguments.
 
@@ -515,7 +588,7 @@ class JobProcessor(core.Beet):
 
         return out
 
-    def select_by_lambda(self, test_function):
+    def select_by_lambda(self, test_function: Callable) -> Iterable[SimulationResult]:
         """
         Return all of the :class:`SimulationResult` for which ``test_function(sim_result)`` evaluates to ``True``.
 
@@ -528,11 +601,11 @@ class JobProcessor(core.Beet):
         -------
 
         """
-        return list([sim_result for sim_result in self.data.values()
-                     if test_function(sim_result) and sim_result is not None])
+        return [sim_result for sim_result in self.data.values()
+                if test_function(sim_result) and sim_result is not None]
 
     @utils.memoize
-    def parameter_set(self, parameter):
+    def parameter_set(self, parameter: 'Parameter'):
         """Get the set of values of a parameter from the collected data."""
         return set(getattr(result, parameter) for result in self.data.values())
 
@@ -585,13 +658,6 @@ class JobProcessor(core.Beet):
 
 
 def combine_job_processors(*job_processors, job_dir_path = None):
-    """
-
-    JobProcessor and Simulation types are inherited from the first JobProcessor in the arguments
-
-    :param job_processors:
-    :return:
-    """
     sim_type = job_processors[0].simulation_type
     jp_type = job_processors[0].__class__
     combined_jp = jp_type(name = '-'.join(jp.name for jp in job_processors),
@@ -631,7 +697,7 @@ class Parameter:
             return '{}(name = {} expandable: \n{})'.format(self.__class__.__name__, self.name, self.value, '\n  '.join(str(v) for v in self.value))
 
 
-def expand_parameters_to_dicts(parameters: Iterable[Parameter]):
+def expand_parameters_to_dicts(parameters: Iterable[Parameter]) -> Iterable[dict]:
     """
     Expand an iterable of :class:`Parameter` to a list of dictionaries containing all of the combinations of parameter values.
     Each of these dictionaries can then be unpacked into a :class:`Specification`.
@@ -665,7 +731,7 @@ def expand_parameters_to_dicts(parameters: Iterable[Parameter]):
     return dicts
 
 
-def ask_for_input(question, default = None, cast_to = str):
+def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> Any:
     """
     Ask for input from the user, with a default value, which will be cast to a specified type.
 
@@ -699,7 +765,7 @@ def ask_for_input(question, default = None, cast_to = str):
         return ask_for_input(question, default = default, cast_to = cast_to)
 
 
-def ask_for_bool(question, default = False):
+def ask_for_bool(question: str, default: bool = False) -> bool:
     """
     Ask for input from the user, with a default value, which will be interpreted as a boolean.
 
@@ -739,25 +805,7 @@ def ask_for_bool(question, default = False):
         return ask_for_bool(question, default = default)
 
 
-def ask_for_choice(question, choices, default = None):
-    """
-    Ask the user to make a choice from `choices`.
-
-    Parameters
-    ----------
-    question
-    choices
-    default
-        If ``None``, the `default` will be the first entry in `choices`.
-
-    Returns
-    -------
-
-    """
-    raise NotImplementedError
-
-
-def ask_for_eval(question, default = 'None'):
+def ask_for_eval(question: str, default: str = 'None') -> Any:
     """
     Ask for input from the user, with a default value, which will be evaluated as a Python command.
 
@@ -784,20 +832,11 @@ def ask_for_eval(question, default = 'None'):
 
     logger.debug('Got input from stdin for question "{}": {}'.format(question, input_str))
 
-    # print(input_str)
-
     try:
         return eval(input_str)
-    except NameError as e:
-        # print(e)
-        did_you_mean = ask_for_bool("Did you mean '{}'?".format(input_str), default = 'yes')
-        if did_you_mean:
-            return eval("'{}'".format(input_str))
-        else:
-            raise e
     except Exception as e:
         print(e)
-        ask_for_eval(question, default = default)
+        return ask_for_eval(question, default = default)
 
 
 def abort_job_creation():
@@ -807,7 +846,7 @@ def abort_job_creation():
     sys.exit(0)
 
 
-def create_job_subdirs(job_dir):
+def create_job_subdirs(job_dir: str):
     """Create directories for the inputs, outputs, logs, and movies."""
     print('Creating job directory and subdirectories...')
 
@@ -818,7 +857,7 @@ def create_job_subdirs(job_dir):
     utils.ensure_dir_exists(os.path.join(job_dir, 'movies'))
 
 
-def save_specifications(specifications, job_dir):
+def save_specifications(specifications: Iterable[core.Specification], job_dir: str):
     """Save a list of Specifications."""
     print('Saving Specifications...')
 
@@ -828,7 +867,7 @@ def save_specifications(specifications, job_dir):
     logger.debug('Saved Specifications')
 
 
-def write_specifications_info_to_file(specifications, job_dir):
+def write_specifications_info_to_file(specifications: Iterable[core.Specification], job_dir: str):
     """Write information from the list of the Specifications to a file."""
     print('Writing Specification info to file...')
 
@@ -839,7 +878,7 @@ def write_specifications_info_to_file(specifications, job_dir):
     logger.debug('Wrote Specification information to file')
 
 
-def write_parameters_info_to_file(parameters, job_dir):
+def write_parameters_info_to_file(parameters: Iterable[Parameter], job_dir: str):
     """Write information from the list of Parameters to a file."""
     print('Writing parameters to file...')
 
@@ -883,16 +922,25 @@ queue {num_jobs}
 """
 
 
-def generate_chtc_submit_string(job_name, specification_count, do_checkpoints = True):
+def generate_chtc_submit_string(job_name: str, specification_count: int, do_checkpoints: bool = True) -> str:
     """
     Return a formatted submit string for an HTCondor job.
 
-    :param job_name: the name of the job
-    :param specification_count: the number of Specifications in the job
-    :param do_checkpoints: if the Simulations are going to use checkpoints, this should be True
-    :return: an HTCondor submit string
+    Parameters
+    ----------
+    job_name : :class:`str`
+        The name of the job.
+    specification_count : :class:`int`
+        The number of specifications in the job.
+    do_checkpoints : :class:`bool`
+        If the simulations are going to use checkpoints, this should be ``True``.
+
+    Returns
+    -------
+    str
+        An HTCondor submit string.
     """
-    fmt = dict(
+    format_data = dict(
         batch_name = ask_for_input('Job batch name?', default = job_name, cast_to = str),
         checkpoints = str(do_checkpoints).lower(),
         flockglide = str(ask_for_bool('Flock and Glide?', default = 'y')).lower(),
@@ -901,10 +949,10 @@ def generate_chtc_submit_string(job_name, specification_count, do_checkpoints = 
         num_jobs = specification_count,
     )
 
-    return CHTC_SUBMIT_STRING.format(**fmt).strip()
+    return CHTC_SUBMIT_STRING.format(**format_data).strip()
 
 
-def specification_check(specifications, check = 3):
+def specification_check(specifications: Iterable[core.Specification], check: int = 3):
     """Ask the user whether some number of specifications look correct."""
     print('-' * 20)
     for s in specifications[0:check]:
@@ -918,7 +966,7 @@ def specification_check(specifications, check = 3):
         abort_job_creation()
 
 
-def submit_check(submit_string):
+def submit_check(submit_string: str):
     """Ask the user whether the submit string looks correct."""
     print('-' * 20)
     print(submit_string)
@@ -929,7 +977,7 @@ def submit_check(submit_string):
         abort_job_creation()
 
 
-def write_submit_file(submit_string, job_dir):
+def write_submit_file(submit_string: str, job_dir: str):
     """Write the submit string to a file."""
     print('Writing submit file...')
 
@@ -939,19 +987,19 @@ def write_submit_file(submit_string, job_dir):
     logger.debug('Wrote submit file')
 
 
-def write_job_info_to_file(job_info, job_dir):
+def write_job_info_to_file(job_info, job_dir: str):
     """Write job information to a file."""
     with open(os.path.join(job_dir, 'info.pkl'), mode = 'wb') as f:
         pickle.dump(job_info, f, protocol = -1)
 
 
-def load_job_info_from_file(job_dir):
+def load_job_info_from_file(job_dir: str):
     """Load job information from a file."""
     with open(os.path.join(job_dir, 'info.pkl'), mode = 'rb') as f:
         return pickle.load(f)
 
 
-def submit_job(job_dir, factory = False):
+def submit_job(job_dir: str, factory: bool = False):
     """Submit a job using a pre-existing submit file."""
     print('Submitting job...')
 
