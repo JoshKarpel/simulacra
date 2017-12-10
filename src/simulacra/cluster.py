@@ -439,6 +439,9 @@ class JobProcessor(core.Beet):
 
         self.job_dir_path = job_dir_path
 
+        for dir in (self.inputs_dir, self.outputs_dir, self.plots_dir, self.movies_dir, self.summaries_dir):
+            utils.ensure_dir_exists(dir)
+
         self.sim_names = self.get_sim_names_from_specs()
         self.sim_count = len(self.sim_names)
         self.unprocessed_sim_names = set(self.sim_names)
@@ -944,8 +947,8 @@ def generate_chtc_submit_string(job_name: str, specification_count: int, do_chec
         batch_name = ask_for_input('Job batch name?', default = job_name, cast_to = str),
         checkpoints = str(do_checkpoints).lower(),
         flockglide = str(ask_for_bool('Flock and Glide?', default = 'y')).lower(),
-        memory = ask_for_input('Memory (in GB)?', default = 2, cast_to = float),
-        disk = ask_for_input('Disk (in GB)?', default = 10, cast_to = float),
+        memory = ask_for_input('Memory (in GB)?', default = 1, cast_to = float),
+        disk = ask_for_input('Disk (in GB)?', default = 5, cast_to = float),
         num_jobs = specification_count,
     )
 

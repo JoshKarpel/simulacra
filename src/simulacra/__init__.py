@@ -17,15 +17,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-
 __all__ = ['core', 'math', 'utils', 'units', 'vis']
 
 import logging
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.NullHandler())
+
+import os
+
+# see https://github.com/ContinuumIO/anaconda-issues/issues/905
+os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'
 
 import matplotlib
 
@@ -47,6 +50,7 @@ except Exception as e:
     logger.exception('Failed to set matplotlib options')
 
 import numpy as _np
+
 _np.set_printoptions(linewidth = 200)  # screw character limits
 
 from simulacra.core import *
