@@ -282,8 +282,8 @@ class ClusterInterface:
                          func_on_dirs: Optional[Callable] = None,
                          func_on_files: Optional[Callable] = None,
                          exclude_hidden: bool = True,
-                         blacklist_dir_names: Optional[Iterable[str]] = None,
-                         whitelist_file_ext: Optional[Iterable[str]] = None):
+                         blacklist_dir_names: Iterable[str] = (),
+                         whitelist_file_ext: Iterable[str] = ()):
         """
         Walk a remote directory starting at the given path.
 
@@ -314,17 +314,10 @@ class ClusterInterface:
         if func_on_files is None:
             func_on_files = lambda *args: None
 
-        # make sure each whitelisted file extension actually looks like a file extension
-        cleaned = []
-        for ext in whitelist_file_ext:
-            if ext[0] != '.':
-                clean = '.' + ext
-            else:
-                clean = ext
-            cleaned.append(clean)
-        whitelist_file_ext = tuple(cleaned)
+        whitelist_file_ext = [ext if ext.startswith('.') else f'.{ext}' for ext in whitelist_file_ext]
 
         path_count = 0
+        longest_full_remote_path_len = 0
 
         def walk(remote_path: str):
             try:
@@ -332,21 +325,21 @@ class ClusterInterface:
                 for remote_stat in remote_stats:
                     full_remote_path = posixpath.join(remote_path, remote_stat.filename)
 
-                    logger.debug('Checking remote path {}'.format(full_remote_path))
+                    logger.debug(f'Checking remote path {full_remote_path}')
 
                     # print a string that keeps track of the walked paths
-                    nonlocal path_count
+                    nonlocal path_count, longest_full_remote_path_len
                     path_count += 1
-                    status_str = '\rPaths Found: {}'.format(path_count).ljust(25)
-                    status_str += '  |  '
-                    status_str += 'Current Path: {}'.format(full_remote_path).ljust(100)
+                    longest_full_remote_path_len = max(longest_full_remote_path_len, len(full_remote_path))
+
+                    status_str = f'\rPaths Found: {path_count}'.ljust(25) + f'|  Current Path: {full_remote_path}'.ljust(longest_full_remote_path_len + 20)
                     print(status_str, end = '')
 
                     if not exclude_hidden or remote_stat.filename[0] != '.':
                         if stat.S_ISDIR(remote_stat.st_mode) and remote_stat.filename not in blacklist_dir_names:
                             func_on_dirs(full_remote_path, remote_stat)
 
-                            logger.debug('Walking remote dir {}'.format(full_remote_path))
+                            logger.debug(f'Walking remote dir {full_remote_path}')
                             walk(full_remote_path)
 
                         elif stat.S_ISREG(remote_stat.st_mode) and full_remote_path.endswith(whitelist_file_ext):
@@ -360,8 +353,8 @@ class ClusterInterface:
         return path_count
 
     def mirror_remote_home_dir(self,
-                               blacklist_dir_names: Iterable[str] = ('python', 'build_python'),
-                               whitelist_file_ext: Iterable[str] = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl', '.tar.gz')):
+                               blacklist_dir_names: Iterable[str] = ('python', 'build_python', 'backend'),
+                               whitelist_file_ext: Iterable[str] = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl')):
         """
         Mirror the entire remote home directory.
 
