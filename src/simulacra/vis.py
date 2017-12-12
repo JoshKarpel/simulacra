@@ -744,7 +744,7 @@ def xy_plot(name,
             x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
         if y_label is not None:
             y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
-        if len(line_labels) > 0:
+        if len(line_labels) > 0 or 'handles' in legend_kwargs:
             if not legend_on_right:
                 legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
             if legend_on_right:

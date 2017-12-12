@@ -29,7 +29,7 @@ import stat
 import subprocess
 import sys
 from copy import copy, deepcopy
-from typing import Any, Iterable, Optional, Callable, Type
+from typing import Any, Iterable, Optional, Callable, Type, Tuple
 
 import numpy as np  # needs to be here so that ask_for_eval works
 import scipy as sp
@@ -282,8 +282,8 @@ class ClusterInterface:
                          func_on_dirs: Optional[Callable] = None,
                          func_on_files: Optional[Callable] = None,
                          exclude_hidden: bool = True,
-                         blacklist_dir_names: Iterable[str] = (),
-                         whitelist_file_ext: Iterable[str] = ()):
+                         blacklist_dir_names: Tuple[str] = (),
+                         whitelist_file_ext: Tuple[str] = ()):
         """
         Walk a remote directory starting at the given path.
 
@@ -314,7 +314,8 @@ class ClusterInterface:
         if func_on_files is None:
             func_on_files = lambda *args: None
 
-        whitelist_file_ext = [ext if ext.startswith('.') else f'.{ext}' for ext in whitelist_file_ext]
+        blacklist_dir_names = tuple(blacklist_dir_names)
+        whitelist_file_ext = tuple(ext if ext.startswith('.') else f'.{ext}' for ext in whitelist_file_ext)
 
         path_count = 0
         longest_full_remote_path_len = 0
