@@ -322,7 +322,7 @@ class ClusterInterface:
 
         def walk(remote_path: str):
             try:
-                remote_stats = self.ftp.listdir_iter(remote_path)
+                remote_stats = self.ftp.listdir_attr(remote_path)
                 for remote_stat in remote_stats:
                     full_remote_path = posixpath.join(remote_path, remote_stat.filename)
 
@@ -354,8 +354,8 @@ class ClusterInterface:
         return path_count
 
     def mirror_remote_home_dir(self,
-                               blacklist_dir_names: Iterable[str] = ('python', 'build_python', 'backend'),
-                               whitelist_file_ext: Iterable[str] = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl')):
+                               blacklist_dir_names: Tuple[str] = ('python', 'build_python', 'backend'),
+                               whitelist_file_ext: Tuple[str] = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl')):
         """
         Mirror the entire remote home directory.
 
@@ -369,11 +369,13 @@ class ClusterInterface:
         logger.info('Mirroring remote home directory')
 
         with utils.BlockTimer() as timer:
-            self.walk_remote_path(self.remote_home_dir,
-                                  func_on_files = self.mirror_file,
-                                  func_on_dirs = lambda d, _: utils.ensure_dir_exists(d),
-                                  blacklist_dir_names = blacklist_dir_names,
-                                  whitelist_file_ext = whitelist_file_ext)
+            self.walk_remote_path(
+                self.remote_home_dir,
+                func_on_files = self.mirror_file,
+                func_on_dirs = lambda d, _: utils.ensure_dir_exists(d),
+                blacklist_dir_names = blacklist_dir_names,
+                whitelist_file_ext = whitelist_file_ext
+            )
 
         logger.info(f'Mirroring complete. {timer}')
 
