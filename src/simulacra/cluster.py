@@ -354,7 +354,7 @@ class ClusterInterface:
         return path_count
 
     def mirror_remote_home_dir(self,
-                               blacklist_dir_names: Iterable[str] = ('python', 'build_python', 'backend', 'logs', 'inputs'),
+                               blacklist_dir_names: Iterable[str] = ('python', 'build_python', 'backend', 'logs'),
                                whitelist_file_ext: Iterable[str] = ('.txt', '.json', '.spec', '.sim', '.pkl')):
         """
         Mirror the entire remote home directory.
