@@ -1548,20 +1548,22 @@ def animate(figure_manager,
 
     fps = int(len(update_function_arguments) / length)
 
-    cmd = ("ffmpeg",
-           '-y',
-           '-r', f'{fps}',  # choose fps
-           '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
-           '-pix_fmt', 'argb',  # pixel format
-           '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
-           '-vcodec', 'mpeg4',  # output encoding
-           '-q:v', '1',  # maximum quality
-           path)
-
-    if progress_bar:
-        update_function_arguments = tqdm(update_function_arguments)
+    cmd = (
+        "ffmpeg",
+        '-y',
+        '-r', f'{fps}',  # choose fps
+        '-s', '%dx%d' % (canvas_width, canvas_height),  # size of image string
+        '-pix_fmt', 'argb',  # pixel format
+        '-f', 'rawvideo', '-i', '-',  # tell ffmpeg to expect raw video from the pipe
+        '-vcodec', 'mpeg4',  # output encoding
+        '-q:v', '1',  # maximum quality
+        path,
+    )
 
     with utils.SubprocessManager(cmd, **FFMPEG_PROCESS_KWARGS) as ffmpeg:
+        if progress_bar:
+            update_function_arguments = tqdm(update_function_arguments)
+
         for arg in update_function_arguments:
             fig.canvas.restore_region(background)
 
@@ -1573,9 +1575,6 @@ def animate(figure_manager,
             fig.canvas.blit(fig.bbox)
 
             ffmpeg.stdin.write(fig.canvas.tostring_argb())
-
-            if not progress_bar:
-                logger.debug(f'Wrote frame for t = {uround(t, t_unit, 3)} {t_unit} to ffmpeg')
 
 
 class AxisManager:
