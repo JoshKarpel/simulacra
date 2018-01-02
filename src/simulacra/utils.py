@@ -445,7 +445,12 @@ def method_dispatch(func):
 
 def hash_args_kwargs(*args, **kwargs):
     """Return the hash of a tuple containing the args and kwargs."""
-    return hash(args + tuple(kwargs.items()))
+    try:
+        key = hash(args + tuple(kwargs.items()))
+    except TypeError:  # unhashable type, see if we've got numpy arrays
+        key = hash(tuple(tuple(a) if type(a) == np.ndarray else a for a in args) + tuple(kwargs.items()))
+
+    return key
 
 
 def memoize(func: Callable):

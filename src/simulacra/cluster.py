@@ -543,6 +543,8 @@ class JobProcessor(core.Beet):
                     self.unprocessed_sim_names.discard(sim_name)
 
                     self.save(target_dir = self.job_dir_path, ensure_dir_exists = False)
+                except UnfinishedSimulation as e:
+                    logger.debug(e)
                 except Exception as e:
                     logger.exception(f'Exception encountered while processing simulation {sim_name}')
 
