@@ -66,7 +66,7 @@ class ClusterInterface:
                  remote_host: str,
                  username: str,
                  key_path: str,
-                 local_mirror_root: str = 'cluster_mirror',
+                 local_mirror_root: str = 'mirror',
                  remote_sep: str = '/'):
         """
         Parameters
@@ -282,8 +282,8 @@ class ClusterInterface:
                          func_on_dirs: Optional[Callable] = None,
                          func_on_files: Optional[Callable] = None,
                          exclude_hidden: bool = True,
-                         blacklist_dir_names: Tuple[str] = (),
-                         whitelist_file_ext: Tuple[str] = ()):
+                         blacklist_dir_names: Iterable[str] = (),
+                         whitelist_file_ext: Iterable[str] = ()):
         """
         Walk a remote directory starting at the given path.
 
@@ -354,8 +354,8 @@ class ClusterInterface:
         return path_count
 
     def mirror_remote_home_dir(self,
-                               blacklist_dir_names: Tuple[str] = ('python', 'build_python', 'backend'),
-                               whitelist_file_ext: Tuple[str] = ('.txt', '.log', '.json', '.spec', '.sim', '.pkl')):
+                               blacklist_dir_names: Iterable[str] = ('python', 'build_python', 'backend', 'logs'),
+                               whitelist_file_ext: Iterable[str] = ('.txt', '.json', '.spec', '.sim', '.pkl')):
         """
         Mirror the entire remote home directory.
 
@@ -373,8 +373,8 @@ class ClusterInterface:
                 self.remote_home_dir,
                 func_on_files = self.mirror_file,
                 func_on_dirs = lambda d, _: utils.ensure_dir_exists(d),
-                blacklist_dir_names = blacklist_dir_names,
-                whitelist_file_ext = whitelist_file_ext
+                blacklist_dir_names = tuple(blacklist_dir_names),
+                whitelist_file_ext = tuple(whitelist_file_ext),
             )
 
         logger.info(f'Mirroring complete. {timer}')
