@@ -21,8 +21,8 @@ from typing import Union
 
 import numpy as _np  # I often * import this module, so this avoid polluting my namespaces
 
-UNIT_NAME_TO_VALUE = {}
-UNIT_NAME_TO_LATEX = {}
+UNIT_NAME_TO_VALUE = {None: 1, '': 1}
+UNIT_NAME_TO_LATEX = {None: '', '': ''}
 
 
 def get_unit_value_and_latex_from_unit(unit: Union[float, int, str]):
