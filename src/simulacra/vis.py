@@ -1003,10 +1003,14 @@ def xyz_plot(name,
                 equator_magnitude = richardson_equator_magnitude
             )
         else:
-            z_lower_limit, z_upper_limit = get_axis_limits(z_mesh,
-                                                           lower_limit = z_lower_limit, upper_limit = z_upper_limit,
-                                                           log = z_log_axis,
-                                                           pad = z_pad, log_pad = z_log_pad)
+            z_lower_limit, z_upper_limit = get_axis_limits(
+                z_mesh,
+                lower_limit = z_lower_limit,
+                upper_limit = z_upper_limit,
+                log = z_log_axis,
+                pad = z_pad,
+                log_pad = z_log_pad,
+            )
 
             norm_kwargs = dict(
                 vmin = z_lower_limit / z_unit_value,

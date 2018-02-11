@@ -367,13 +367,13 @@ def run_spec(spec, pre_run = None, post_run = None, log_manager = None):
     if log_manager is None:
         sim = spec.to_simulation
         pre_run(sim)
-        sim.run_simulation()
+        sim.run()
         post_run(sim)
     else:
         with log_manager as logger:
             sim = spec.to_simulation
             pre_run(sim)
-            sim.run_simulation()
+            sim.run()
             post_run(sim)
 
     return sim

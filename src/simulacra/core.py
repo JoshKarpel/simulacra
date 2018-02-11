@@ -406,7 +406,7 @@ class Simulation(Beet):
 
         return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
-    def run_simulation(self):
+    def run(self):
         """Hook method for running the Simulation, whatever that may entail."""
         raise NotImplementedError
 
