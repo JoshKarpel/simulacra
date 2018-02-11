@@ -87,7 +87,7 @@ if __name__ == '__main__':
         print()
 
         spec = BarSpec('test', file_name = 'foo', pot = si.Summand() + si.Summand())
-        sim = spec.to_simulation()
+        sim = spec.to_sim()
 
         print(spec.info())
 

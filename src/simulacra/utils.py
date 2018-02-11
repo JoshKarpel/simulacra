@@ -321,7 +321,7 @@ def find_or_init_sim(spec, search_dir: Optional[str] = None, file_extension = '.
         path = os.path.join(search_dir, spec.file_name + file_extension)
         sim = core.Simulation.load(file_path = path)
     except FileNotFoundError:
-        sim = spec.to_simulation()
+        sim = spec.to_sim()
 
     return sim
 
@@ -365,13 +365,13 @@ def run_spec(spec, pre_run = None, post_run = None, log_manager = None):
         post_run = lambda s: None
 
     if log_manager is None:
-        sim = spec.to_simulation
+        sim = spec.to_sim
         pre_run(sim)
         sim.run()
         post_run(sim)
     else:
         with log_manager as logger:
-            sim = spec.to_simulation
+            sim = spec.to_sim
             pre_run(sim)
             sim.run()
             post_run(sim)
@@ -823,11 +823,8 @@ class SuspendProcesses:
         resume_processes(self.processes)
 
 
-class StrEnum(enum.Enum):
-    """An enum where, when printed, an enum member displays its value, cast to a string."""
-
-    def __str__(self):
-        return str(self.value)
+class StrEnum(str, enum.Enum):
+    pass
 
 
 def obj_to_filename(obj, attrs = None, seperator = '__', prepend_type = True):

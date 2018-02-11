@@ -22,7 +22,6 @@ import os
 import logging
 import fractions
 import subprocess
-import sys
 from typing import Union, Optional, Iterable
 
 import numpy as np
@@ -116,6 +115,11 @@ FFMPEG_PROCESS_KWARGS = dict(
     stderr = subprocess.DEVNULL,
     bufsize = -1,
 )
+
+
+class ColormapShader(utils.StrEnum):
+    FLAT = 'flat'
+    GOURAUD = 'gouraud'
 
 
 def points_to_inches(points: Union[float, int]) -> Union[float, int]:

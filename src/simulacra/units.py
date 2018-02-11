@@ -17,15 +17,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from typing import Union
+from typing import Union, NewType, Optional
 
 import numpy as _np  # I often * import this module, so this avoid polluting my namespaces
 
 UNIT_NAME_TO_VALUE = {None: 1, '': 1}
 UNIT_NAME_TO_LATEX = {None: '', '': ''}
 
+Unit = NewType('Unit', Union[float, int, str])
 
-def get_unit_value_and_latex_from_unit(unit: Union[float, int, str]):
+
+def get_unit_value_and_latex_from_unit(unit: Optional[Unit]):
     """Return the numerical value of the unit and its LaTeX representation from a unit name."""
     if unit is None:
         unit = 1
@@ -40,7 +42,7 @@ def get_unit_value_and_latex_from_unit(unit: Union[float, int, str]):
     return unit_value, unit_latex
 
 
-def uround(value: Union[float, int, _np.ndarray], unit: Union[float, int, str] = None, digits: int = 3):
+def uround(value: Union[float, int, _np.ndarray], unit: Optional[Unit] = None, digits: int = 3):
     """Round value to the number of digits, represented in the given units (by name or value)."""
     unit_value, _ = get_unit_value_and_latex_from_unit(unit)
 

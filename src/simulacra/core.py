@@ -304,7 +304,7 @@ class Simulation(Beet):
 
     It should be subclassed and customized for each variety of simulation.
 
-    Simulations should generally be instantiated using Specification.to_simulation() to avoid possible mismatches.
+    Simulations should generally be instantiated using Specification.to_sim() to avoid possible mismatches.
 
     Attributes
     ----------
@@ -442,7 +442,7 @@ class Specification(Beet):
     Attributes
     ----------
     simulation_type
-        A class attribute which determines what kind of :class:`Simulation` will be generated via :func:`Specification.to_simulation`.
+        A class attribute which determines what kind of :class:`Simulation` will be generated via :func:`Specification.to_sim`.
     uuid
         A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Specification`.
     """
@@ -491,7 +491,7 @@ class Specification(Beet):
         """
         return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
-    def to_simulation(self) -> 'Simulation':
+    def to_sim(self):
         """Return a Simulation of the type associated with the Specification, generated from this instance."""
         return self.simulation_type(self)
 

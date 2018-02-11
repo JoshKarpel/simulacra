@@ -8,7 +8,7 @@ Specifications and Simulations
 
 The core of the Simulacra framework are the :class:`Specification` and :class:`Simulation` classes.
 A :class:`Specification` collects the data required to run a simulation, but doesn't do any actual computation.
-The specification can then be used to to generate a :class:`Simulation` via :func:`Specification.to_simulation`, which will perform actual computations via the hook method :func:`Simulation.run_simulation`.
+The specification can then be used to to generate a :class:`Simulation` via :func:`Specification.to_sim`, which will perform actual computations via the hook method :func:`Simulation.run_simulation`.
 
 The :class:`Beet` is the superclass of both :class:`Specification` and :class:`Simulation`.
 It provides a common interface for saving, loading, and cloning operations, as well as storing a unique identifier.
@@ -17,7 +17,7 @@ It provides a common interface for saving, loading, and cloning operations, as w
 
 .. autoclass:: Specification
 
-   .. automethod:: to_simulation
+   .. automethod:: to_sim
 
    .. automethod:: clone
 
