@@ -291,6 +291,7 @@ class Beet:
 
 
 class Status(utils.StrEnum):
+    UNINITIALIZED = 'uninitialized'
     INITIALIZED = 'initialized'
     RUNNING = 'running'
     FINISHED = 'finished'
@@ -334,7 +335,7 @@ class Simulation(Beet):
         self.latest_run_time = None
         self.running_time = datetime.timedelta()
 
-        self._status = None
+        self._status = Status.UNINITIALIZED
         self.status = Status.INITIALIZED
 
     @property

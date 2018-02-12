@@ -1507,7 +1507,7 @@ def xyzt_plot(name,
 
                 z = z_func(x_mesh, y_mesh, t, **z_func_kwargs)
 
-                if shading == 'flat':
+                if shading == ColormapShader.FLAT:
                     z = z[:-1, :-1]
 
                 colormesh.set_array(z.ravel())
