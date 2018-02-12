@@ -754,6 +754,7 @@ atomic_magnetic_dipole_moment = bohr_magneton = proton_charge * hbar / (2 * elec
 atomic_velocity = alpha * c
 atomic_momentum = electron_mass * atomic_velocity
 atomic_time = hbar / hartree
+atomic_power = atomic_energy / atomic_time
 atomic_angular_frequency = 1 / atomic_time
 atomic_frequency = atomic_angular_frequency / twopi
 atomic_force = hartree / bohr_radius
@@ -775,6 +776,7 @@ UNIT_NAME_TO_VALUE.update({
     'atomic_velocity': atomic_velocity,
     'atomic_momentum': atomic_momentum,
     'atomic_time': atomic_time,
+    'atomic_power': atomic_power,
     'atomic_frequency': atomic_frequency,
     'atomic_angular_frequency': atomic_angular_frequency,
     'atomic_force': atomic_force,
@@ -794,6 +796,7 @@ UNIT_NAME_TO_LATEX.update({
     'atomic_velocity': r'\mathrm{a.u.}',
     'atomic_momentum': r'\mathrm{a.u.}',
     'atomic_time': r'\mathrm{a.u.}',
+    'atomic_power': r'\mathrm{a.u.}',
     'atomic_frequency': r'\mathrm{a.u.}',
     'atomic_angular_frequency': r'\mathrm{a.u.}',
     'atomic_force': r'\mathrm{a.u.}',
