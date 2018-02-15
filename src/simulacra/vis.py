@@ -139,10 +139,11 @@ PPT_WIDESCREEN_HEIGHT = 7.5
 PPT_WIDESCREEN_ASPECT_RATIO = 16 / 9
 
 
-def _get_fig_dims(fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
-                  aspect_ratio: Union[float, int] = GOLDEN_RATIO,
-                  fig_height = None,
-                  fig_scale: Union[float, int] = 1):
+def _get_fig_dims(
+        fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
+        aspect_ratio: Union[float, int] = GOLDEN_RATIO,
+        fig_height = None,
+        fig_scale: Union[float, int] = 1):
     """
     Return the dimensions (width, height) for a figure based on the scale, width (in points), and aspect ratio.
 
@@ -171,11 +172,12 @@ def _get_fig_dims(fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
     return fig_width, fig_height
 
 
-def get_figure(fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
-               aspect_ratio: Union[float, int] = GOLDEN_RATIO,
-               fig_height = None,
-               fig_scale: Union[float, int, str] = 1,
-               fig_dpi_scale: Union[float, int] = 1):
+def get_figure(
+        fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
+        aspect_ratio: Union[float, int] = GOLDEN_RATIO,
+        fig_height = None,
+        fig_scale: Union[float, int, str] = 1,
+        fig_dpi_scale: Union[float, int] = 1):
     """
     Get a matplotlib figure object with the desired scale relative to a full-text-width LaTeX page.
 
@@ -206,13 +208,14 @@ def get_figure(fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
     return fig
 
 
-def save_current_figure(name: str,
-                        name_postfix: str = '',
-                        target_dir: Optional[str] = None,
-                        img_format: str = 'pdf',
-                        transparent: bool = True,
-                        tight_layout: bool = True,
-                        **kwargs):
+def save_current_figure(
+        name: str,
+        name_postfix: str = '',
+        target_dir: Optional[str] = None,
+        img_format: str = 'pdf',
+        transparent: bool = True,
+        tight_layout: bool = True,
+        **kwargs):
     """
     Save the current matplotlib figure as an image to a file.
 
@@ -261,22 +264,23 @@ class FigureManager:
     A class that manages a matplotlib figure: creating it, showing it, saving it, and cleaning it up.
     """
 
-    def __init__(self,
-                 name: str,
-                 name_postfix: str = '',
-                 fig_width = DEFAULT_LATEX_PAGE_WIDTH,
-                 aspect_ratio = GOLDEN_RATIO,
-                 fig_height = None,
-                 fig_scale = 1,
-                 fig_dpi_scale = 1,
-                 target_dir: Optional[str] = None,
-                 img_format: str = 'pdf',
-                 tight_layout: bool = True,
-                 close_before_enter: bool = True,
-                 close_after_exit: bool = True,
-                 save_on_exit: bool = True,
-                 show: bool = False,
-                 **kwargs):
+    def __init__(
+            self,
+            name: str,
+            name_postfix: str = '',
+            fig_width: float = DEFAULT_LATEX_PAGE_WIDTH,
+            aspect_ratio: float = GOLDEN_RATIO,
+            fig_height: Optional[float] = None,
+            fig_scale: float = 1,
+            fig_dpi_scale: float = 1,
+            target_dir: Optional[str] = None,
+            img_format: str = 'pdf',
+            tight_layout: bool = True,
+            close_before_enter: bool = True,
+            close: bool = True,
+            save: bool = True,
+            show: bool = False,
+            **kwargs):
         """
         Parameters
         ----------
@@ -302,9 +306,9 @@ class FigureManager:
             If ``True``, uses matplotlib's tight layout option before saving.
         close_before_enter
             If ``True``, close whatever matplotlib plot is open before trying to create the new figure.
-        close_after_exit
+        close
             If ``True``, close the figure after exiting the context manager.
-        save_on_exit
+        save
             If ``True``, save the figure after exiting the context manager.
         show
             If ``True``, show the figure after exiting the context manager.
@@ -328,8 +332,8 @@ class FigureManager:
             logger.debug(f'FigureManager {self.name} absorbed extraneous kwargs: {kwargs}')
 
         self.close_before_enter = close_before_enter
-        self.close_after_exit = close_after_exit
-        self.save_on_exit = save_on_exit
+        self.close = close
+        self._save = save
         self.show = show
 
         self.path = None
@@ -360,13 +364,13 @@ class FigureManager:
         return self
 
     def cleanup(self):
-        if self.save_on_exit:
+        if self._save:
             self.save()
 
         if self.show:
             plt.show()
 
-        if self.close_after_exit:
+        if self.close:
             self.fig.clear()
             plt.close(self.fig)
 
@@ -1142,7 +1146,7 @@ def xyt_plot(name,
              **kwargs):
     # set up figure and axis
     if figure_manager is None:
-        figure_manager = FigureManager(name, save_on_exit = False, fig_dpi_scale = fig_dpi_scale, **kwargs)
+        figure_manager = FigureManager(name, save = False, fig_dpi_scale = fig_dpi_scale, **kwargs)
     with figure_manager as fm:
         fig = fm.fig
         ax = fig.add_axes([.15, .15, .75, .7])
@@ -1345,7 +1349,7 @@ def xyzt_plot(name,
               **kwargs):
     # set up figure and axis
     if figure_manager is None:
-        figure_manager = FigureManager(name, save_on_exit = False, **kwargs)
+        figure_manager = FigureManager(name, save = False, **kwargs)
     with figure_manager as fm:
         fig = fm.fig
         ax = fig.add_axes([.15, .15, .75, .7])
