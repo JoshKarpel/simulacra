@@ -2,7 +2,7 @@ import logging
 import os
 
 import simulacra as si
-
+import simulacra.info
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
@@ -17,7 +17,7 @@ class Foo(si.Beet):
     def info(self):
         info = super().info()
 
-        foo_info = si.Info(header = 'foo info')
+        foo_info = simulacra.info.Info(header = 'foo info')
         foo_info.children['a'] = self.a
         # sup_info.fields['FOO INFO'] = foo_info
 
@@ -45,7 +45,7 @@ class Bat:
         self.species = species
 
     def info(self):
-        info = si.Info(header = 'Bat')
+        info = simulacra.info.Info(header = 'Bat')
         info.add_field('species', self.species)
         info.add_field('favorite pancake', 'blueberry')
 

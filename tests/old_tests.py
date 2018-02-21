@@ -4,28 +4,8 @@ import shutil
 
 import simulacra as si
 
-
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 TEST_DIR = os.path.join(THIS_DIR, 'temp-unit-testing')
-
-
-class TestEnsureDirExists(unittest.TestCase):
-    def setUp(self):
-        self.dirname = 'foo'
-        self.filename = 'foo/bar.py'
-        self.target_name = os.path.join(TEST_DIR, 'foo')
-
-    def tearDown(self):
-        shutil.rmtree(TEST_DIR)
-
-    def test_ensure_dir_from_dirname(self):
-        si.utils.ensure_dir_exists(os.path.join(TEST_DIR, self.dirname))
-        self.assertTrue(os.path.exists(self.target_name))
-
-    def test_ensure_dir_from_filename(self):
-        si.utils.ensure_dir_exists(os.path.join(TEST_DIR, self.filename))
-        self.assertTrue(os.path.exists(self.target_name))
-        self.assertFalse(os.path.exists(os.path.join(self.target_name, 'kappa')))  # didn't accidentally create a path with the name of the file
 
 
 class TestBeet(unittest.TestCase):
@@ -158,40 +138,3 @@ class TestSummingSubclassing(unittest.TestCase):
 
         self.assertTrue(self.apple in self.fruit_basket)
         self.assertTrue(self.banana in self.fruit_basket)
-
-
-class TestFibonnaci(unittest.TestCase):
-    def test_fibonnaci_value(self):
-        self.assertEqual(si.math.fibonacci(99), 218922995834555169026)
-
-    def test_fibonnaci_exception(self):
-        with self.assertRaises(TypeError):
-            si.math.fibonacci('foo')
-
-
-class TestPrimeFinders(unittest.TestCase):
-    def test_is_prime(self):
-        for prime in [2, 3, 5, 7, 11, 17]:
-            with self.subTest(p = prime):
-                self.assertTrue(si.math.is_prime(prime))
-
-        for not_prime in [1, 4, 6, 15]:
-            with self.subTest(np = not_prime):
-                self.assertFalse(si.math.is_prime(not_prime))
-
-
-class TestRestrictedValues(unittest.TestCase):
-    legal = ('a', 5, (4, 5, 6))
-    illegal = ('foo', 3, (1, 2, 3))
-    attr = si.utils.RestrictedValues('attr', legal)
-
-    def test_legal_assignments(self):
-        for x in self.legal:
-            with self.subTest(x = x):
-                self.attr = x
-
-    def test_illegal_assignments(self):
-        for x in self.illegal:
-            with self.subTest(x = x):
-                with self.assertRaises(ValueError):
-                    self.attr = x

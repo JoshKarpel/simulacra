@@ -53,5 +53,6 @@ import numpy as _np
 
 _np.set_printoptions(linewidth = 200)  # screw character limits
 
-from simulacra.core import *
-from simulacra import math, utils, vis
+from .core import *
+from .info import Info
+from . import math, utils, vis, exceptions

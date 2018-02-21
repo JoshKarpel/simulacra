@@ -328,7 +328,7 @@ def find_or_init_sim(spec, search_dir: Optional[str] = None, file_extension = '.
 
 def run_in_process(func, args = (), kwargs = None):
     """
-    Run a function in a separate thread.
+    Run a function in a separate process.
 
     :param func: the function to run
     :param args: positional arguments for function
@@ -461,48 +461,50 @@ def memoize(func: Callable):
     def memoizer(*args, **kwargs):
         key = hash_args_kwargs(*args, **kwargs)
         try:
-            return memo[key]
+            v = memo[key]
         except KeyError:
-            memo[key] = func(*args, **kwargs)
-            return memo[key]
+            v = memo[key] = func(*args, **kwargs)
+
+        return v
 
     return memoizer
 
 
-def watcher(watch):
+def watched_memoize(watcher):
     """
-    Returns a decorator that memoizes the result of a method call until the watcher function returns a different value.
+    A decorator that memoizes the result of a method call until the watcher function returns a different value.
 
     The watcher function is passed the instance that the original method is bound to.
 
-    :param watch: a function which is called to check whether to recompute the wrapped function
-    :return: a Watcher decorator
+    Parameters
+    ----------
+    watcher
     """
 
     class Watcher:
-        __slots__ = ('func', 'cached', 'watched', '__doc__')
+        __slots__ = ('func', 'memo', 'watched_value', '__doc__')
 
         def __init__(self, func):
             self.func = func
-            self.cached = {}
-            self.watched = {}
+            self.memo = {}
+            self.watched_value = object()
 
             self.__doc__ = func.__doc__
 
-        def __str__(self):
-            return 'Watcher wrapper over {}'.format(self.func.__name__)
+        def __call__(self, *args, **kwargs):
+            check = watcher(args[0])  # args[0] is the instance
+            key = hash_args_kwargs(*args, **kwargs)
 
-        def __repr__(self):
-            return 'watcher({})'.format(repr(self.func))
+            if self.watched_value != check:
+                self.memo = {}
+                self.watched_value = check
 
-        def __call__(self, instance, *args, **kwargs):
-            check = watch(instance)
+            try:
+                v = self.memo[key]
+            except KeyError:
+                v = self.memo[key] = self.func(*args, **kwargs)
 
-            if self.watched.get(instance) != check:
-                self.cached[instance] = self.func(instance, *args, **kwargs)
-                self.watched[instance] = check
-
-            return self.cached[instance]
+            return v
 
         def __get__(self, instance, cls):
             # support instance methods

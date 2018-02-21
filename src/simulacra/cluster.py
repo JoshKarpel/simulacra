@@ -37,6 +37,7 @@ import scipy as sp
 import paramiko
 from tqdm import tqdm
 
+import simulacra.exceptions
 from . import core, vis, utils
 from .units import *  # also for ask_for_eval
 
@@ -403,7 +404,7 @@ class SimulationResult:
         self.running_time = copy(sim.running_time.total_seconds())
 
 
-class UnfinishedSimulation(core.SimulacraException):
+class UnfinishedSimulation(simulacra.exceptions.SimulacraException):
     pass
 
 

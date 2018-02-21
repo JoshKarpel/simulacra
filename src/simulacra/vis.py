@@ -30,8 +30,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+from .info import Info
 from . import utils
-from . import core
 from .units import *
 
 logger = logging.getLogger(__name__)
@@ -280,6 +280,7 @@ class FigureManager:
             close: bool = True,
             save: bool = True,
             show: bool = False,
+            transparent = True,
             **kwargs):
         """
         Parameters
@@ -324,6 +325,7 @@ class FigureManager:
         self.fig_height = fig_height
         self.aspect_ratio = aspect_ratio
         self.tight_layout = tight_layout
+        self.transparent = transparent
 
         self.target_dir = target_dir
         self.img_format = img_format
@@ -344,7 +346,8 @@ class FigureManager:
             name_postfix = self.name_postfix,
             target_dir = self.target_dir,
             img_format = self.img_format,
-            tight_layout = self.tight_layout
+            tight_layout = self.tight_layout,
+            transparent = self.transparent,
         )
 
         self.path = path
@@ -1625,7 +1628,7 @@ class AxisManager:
         logger.debug(f'Updated axis for {self}')
 
     def info(self):
-        info = core.Info(header = self.__class__.__name__)
+        info = Info(header = self.__class__.__name__)
 
         return info
 
@@ -1789,7 +1792,7 @@ class Animator:
         logger.debug('{} sent frame to ffpmeg from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
     def info(self):
-        info = core.Info(header = f'{self.__class__.__name__}: {self.postfix}')
+        info = Info(header = f'{self.__class__.__name__}: {self.postfix}')
 
         info.add_field('Length', f'{self.length} s')
         info.add_field('FPS', f'{self.fps}')
