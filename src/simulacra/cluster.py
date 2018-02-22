@@ -532,7 +532,7 @@ class JobProcessor(core.Beet):
             logger.info('Loading simulations from job {}'.format(self.name))
 
             if force_reprocess:
-                sim_names = tqdm(copy(self.sim_names))
+                sim_names = tqdm(copy(self.sim_names), ncols = 80)
             else:
                 new_sims = self.unprocessed_sim_names.intersection(self.get_sim_names_from_sims())  # only process newly-downloaded Simulations
                 sim_names = tqdm(new_sims)

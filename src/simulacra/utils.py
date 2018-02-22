@@ -379,6 +379,16 @@ def run_spec(spec, pre_run = None, post_run = None, log_manager = None):
     return sim
 
 
+def run_from_simlib(spec, simlib = None, **kwargs):
+    sim = find_or_init_sim(spec, search_dir = simlib)
+
+    if sim.status != core.Status.FINISHED:
+        sim.run(**kwargs)
+        sim.save(target_dir = simlib)
+
+    return sim
+
+
 def multi_map(func: Callable, targets: Iterable, processes: Optional[int] = None, **kwargs):
     """
     Map a function over a list of inputs using multiprocessing.
