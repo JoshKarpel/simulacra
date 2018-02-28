@@ -76,7 +76,7 @@ kg = 1
 A = 1
 K = 1
 rad = 1
-deg = rad * 180 / pi
+deg = twopi / 360
 
 UNIT_NAME_TO_VALUE.update({
     'm': m,
@@ -496,6 +496,18 @@ UNIT_NAME_TO_LATEX.update({
     'PV': r'\mathrm{PV}'
 })
 
+# electric field strength
+V_per_m = V / m
+
+UNIT_NAME_TO_VALUE.update({
+    'V_per_m': V_per_m,
+    'V/m': V_per_m,
+})
+UNIT_NAME_TO_LATEX.update({
+    'V_per_m': r'\mathrm{V/m}',
+    'V/m': r'\mathrm{V/m}',
+})
+
 # magnetic field strength
 T = V * s / (m ** 2)
 mT = 1e-3 * T
@@ -599,6 +611,18 @@ UNIT_NAME_TO_LATEX.update({
     'GN': r'\mathrm{GN}',
     'TN': r'\mathrm{TN}',
     'PN': r'\mathrm{PN}'
+})
+
+# spring constant
+N_per_m = N / m
+
+UNIT_NAME_TO_VALUE.update({
+    'N_per_m': N_per_m,
+    'N/m': N_per_m,
+})
+UNIT_NAME_TO_LATEX.update({
+    'N_per_m': r'\mathrm{N/m}',
+    'N/m': r'\mathrm{N/m}',
 })
 
 # power

@@ -69,14 +69,14 @@ class Beet:
 
         logger.info('Initialized {}'.format(repr(self)))
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(name = '{self.name}', file_name = '{self.file_name}', uuid = {self.uuid})"
+
     def __str__(self):
         if self.name != self.file_name:
             return f'{self.__class__.__name__}({self.name}, file_name = {self.file_name})'
         else:
             return f'{self.__class__.__name__}({self.name})'
-
-    def __repr__(self):
-        return utils.field_str(self, 'name', 'file_name', 'uuid')
 
     def __eq__(self, other: 'Beet'):
         """Two Beets are equal if they have the same UUID."""
