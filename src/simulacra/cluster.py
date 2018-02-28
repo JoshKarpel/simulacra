@@ -39,7 +39,7 @@ from tqdm import tqdm
 
 import simulacra.exceptions
 from . import core, vis, utils
-from .units import *  # also for ask_for_eval
+from . import units as u
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

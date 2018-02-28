@@ -580,90 +580,6 @@ class BlockTimer:
             return 'Timer started at {}, ended at {}, elapsed time {}. Process time: {}.'.format(self.wall_time_start, self.wall_time_end, self.wall_time_elapsed, datetime.timedelta(seconds = self.proc_time_elapsed))
 
 
-class Descriptor:
-    """
-    A generic descriptor that implements default descriptor methods for easy overriding in subclasses.
-
-    The data is stored in the instance dictionary.
-    """
-
-    __slots__ = ('name',)
-
-    def __set_name__(self, owner, name):
-        self.name = name
-
-    def __get__(self, instance, cls):
-        if instance is None:
-            return self
-        else:
-            return instance.__dict__[self.name]
-
-    def __set__(self, instance, value):
-        instance.__dict__[self.name] = value
-
-    def __delete__(self, instance):
-        del instance.__dict__[self.name]
-
-
-class RestrictedValues(Descriptor):
-    """
-    A descriptor that forces the attribute to have a certain set of possible values.
-
-    If the value is not in the set of legal values a ValueError is raised.
-    """
-
-    __slots__ = ('name', 'choices')
-
-    def __init__(self, choices = set()):
-        self.choices = set(choices)
-
-    def __set__(self, instance, value):
-        if value not in self.choices:
-            raise ValueError('Expected {} to be from {}'.format(value, self.choices))
-
-        super().__set__(instance, value)
-
-
-class Typed(Descriptor):
-    """
-    A descriptor that forces the attribute to have a certain type.
-
-    If the value does not match the provided type a TypeError is raised.
-    """
-
-    __slots__ = ('name', 'type')
-
-    def __init__(self, type):
-        self.type = type
-
-    def __set__(self, instance, value):
-        if not isinstance(value, self.type):
-            raise TypeError('Expected {} to be a {}'.format(value, self.type))
-
-        super().__set__(instance, value)
-
-
-class Checked(Descriptor):
-    """
-    A descriptor that only allows setting with values that return True from a provided checking function.
-
-    If the value does not pass the check a ValueError is raised.
-    """
-
-    __slots__ = ('name', 'check')
-
-    def __init__(self, check = None):
-        if check is None:
-            check = lambda value: True
-        self.check = check
-
-    def __set__(self, instance, value):
-        if not self.check(value):
-            raise ValueError(f'Value {value} did not pass the check function {self.check} for attribute {self.name} on {instance}')
-
-        super().__set__(instance, value)
-
-
 def bytes_to_str(num: Union[float, int]) -> str:
     """Return a number of bytes as a human-readable string."""
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
@@ -864,3 +780,33 @@ def obj_to_filename(obj, attrs = None, seperator = '__', prepend_type = True):
         attr_strings.append(f'{name}={val}')
 
     return seperator.join(attr_strings)
+
+
+def table(headers: Iterable[str], rows: Iterable[Iterable]):
+    lengths = [len(h) for h in headers]
+    rows = [[str(entry) for entry in row] if row is not None else None for row in rows]
+    for row in rows:
+        if row is None:
+            continue
+
+        lengths = [max(curr, len(entry)) for curr, entry in zip(lengths, row)]
+
+    header = ' ' + ' │ '.join(h.center(l) for h, l in zip(headers, lengths)) + ' '
+    bar = ''.join('─' if char != '│' else '┼' for char in header)
+    bottom_bar = bar.replace('┼', '┴')
+
+    lines = []
+    for row in rows:
+        if row is None:
+            lines.append(bar)
+        else:
+            lines.append(' ' + ' │ '.join(f.center(l) for f, l in zip(row, lengths)))
+
+    output = '\n'.join((
+        header,
+        bar,
+        *lines,
+        bottom_bar,
+    ))
+
+    return output
