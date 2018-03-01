@@ -7,19 +7,20 @@ import os
 import pickle
 import posixpath
 import stat
-import subprocess
 import sys
 from copy import copy, deepcopy
-from typing import Any, Iterable, Optional, Callable, Type, Tuple
+from typing import Any, Iterable, Optional, Callable, Type, Tuple, Union
 
-import numpy as np  # needs to be here so that ask_for_eval works
-import scipy as sp
 
 import paramiko
 from tqdm import tqdm
 
 import simulacra.exceptions
 from . import sims, vis, utils
+
+import numpy as np  # needs to be here so that ask_for_eval works
+import scipy as sp
+from . import units as u
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -29,7 +30,7 @@ CmdOutput = collections.namedtuple('CmdOutput', ['stdin', 'stdout', 'stderr'])
 
 class ClusterInterface:
     """
-    A class for communicating with a user's home directory on a remote machine (as written, the UW CHTC HTCondor cluster). Should be used as a context manager.
+    A class for communicating with a user's home directory on a remote machine. Should be used as a context manager.
 
     The remote home directory should be organized like:
 
@@ -130,25 +131,16 @@ class ClusterInterface:
 
         return home_path
 
-    def get_job_status(self):
-        """Get the status of jobs on the cluster."""
-        cmd_output = self.cmd('condor_q -wide')
-
-        status = cmd_output.stdout.readlines()
-
-        status_str = 'Job Status:\n' + ''.join(status[1:])
-
-        return status_str
-
     def remote_path_to_local_path(self, remote_path):
         """Return the local path corresponding to a remote path."""
         return os.path.join(self.local_mirror_root, *remote_path.split(self.remote_sep))
 
-    def get_file(self,
-                 remote_path: str,
-                 local_path: str,
-                 remote_stat = None,
-                 preserve_timestamps: bool = True):
+    def get_file(
+            self,
+            remote_path: str,
+            local_path: str,
+            remote_stat = None,
+            preserve_timestamps: bool = True):
         """
         Download a file from the remote machine to the local machine.
 
@@ -174,27 +166,10 @@ class ClusterInterface:
 
         logger.debug(f'{local_path}   <--   {remote_path}')
 
-    def put_file(self,
-                 local_path: str,
-                 remote_path: str,
-                 preserve_timestamps: bool = True):
-        """
-        Upload a file from the local machine to the remote machine.
-
-        Parameters
-        ----------
-        local_path : :class:`str`
-            The local path to push from.
-        remote_path : :class:`str`
-            The remove path to push to.
-        preserve_timestamps : bool
-            If ``True``, copy the modification timestamps from the remote file to the local file.
-        """
-        raise NotImplementedError
-
-    def is_file_synced(self,
-                       remote_stat,
-                       local_path: str):
+    def is_file_synced(
+            self,
+            remote_stat,
+            local_path: str):
         """
         Determine whether a local file is the same as a remote file by checking the file size and modification times.
 
@@ -217,11 +192,12 @@ class ClusterInterface:
 
         return False
 
-    def mirror_file(self,
-                    remote_path: str,
-                    remote_stat: str,
-                    force_download: bool = False,
-                    integrity_check: bool = True):
+    def mirror_file(
+            self,
+            remote_path: str,
+            remote_stat: str,
+            force_download: bool = False,
+            integrity_check: bool = True):
         """
         Mirror a remote file, only downloading it if it does not match a local copy at a derived local path name.
 
@@ -259,13 +235,14 @@ class ClusterInterface:
 
         return local_path
 
-    def walk_remote_path(self,
-                         remote_path,
-                         func_on_dirs: Optional[Callable] = None,
-                         func_on_files: Optional[Callable] = None,
-                         exclude_hidden: bool = True,
-                         blacklist_dir_names: Iterable[str] = (),
-                         whitelist_file_ext: Iterable[str] = ()):
+    def walk_remote_path(
+            self,
+            remote_path,
+            func_on_dirs: Optional[Callable] = None,
+            func_on_files: Optional[Callable] = None,
+            exclude_hidden: bool = True,
+            blacklist_dir_names: Iterable[str] = (),
+            whitelist_file_ext: Iterable[str] = ()):
         """
         Walk a remote directory starting at the given path.
 
@@ -335,20 +312,28 @@ class ClusterInterface:
 
         return path_count
 
-    def mirror_remote_home_dir(self,
-                               blacklist_dir_names: Iterable[str] = ('python', 'build_python', 'backend', 'logs'),
-                               whitelist_file_ext: Iterable[str] = ('.txt', '.json', '.spec', '.sim', '.pkl')):
+    def mirror_dir(
+            self,
+            remote_dir: str = None,
+            blacklist_dir_names: Iterable[str] = ('python', 'build_python', 'backend', 'logs'),
+            whitelist_file_ext: Iterable[str] = ('.txt', '.json', '.spec', '.sim', '.pkl')):
         """
-        Mirror the entire remote home directory.
+        Mirror a directory recursively.
+
+        If no directory is given, mirror the remote home directory.
 
         Parameters
         ----------
+        remote_dir : str
+            The path to the remote directory to mirror.
         blacklist_dir_names
             Directories with these names will not be walked.
         whitelist_file_ext
             Only files with these file extensions will be transferred.
         """
-        logger.info('Mirroring remote home directory')
+        remote_dir = remote_dir or self.remote_home_dir
+
+        logger.info(f'Mirroring remote dir {remote_dir}')
 
         with utils.BlockTimer() as timer:
             self.walk_remote_path(
@@ -748,7 +733,7 @@ def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> An
         return ask_for_input(question, default = default, cast_to = cast_to)
 
 
-def ask_for_bool(question: str, default: bool = False) -> bool:
+def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
     """
     Ask for input from the user, with a default value, which will be interpreted as a boolean.
 
@@ -837,7 +822,6 @@ def create_job_subdirs(job_dir: str):
     utils.ensure_dir_exists(os.path.join(job_dir, 'inputs'))
     utils.ensure_dir_exists(os.path.join(job_dir, 'outputs'))
     utils.ensure_dir_exists(os.path.join(job_dir, 'logs'))
-    utils.ensure_dir_exists(os.path.join(job_dir, 'movies'))
 
 
 def save_specifications(specifications: Iterable[sims.Specification], job_dir: str):
@@ -872,69 +856,6 @@ def write_parameters_info_to_file(parameters: Iterable[Parameter], job_dir: str)
     logger.debug('Wrote parameter information to file')
 
 
-CHTC_SUBMIT_STRING = r"""
-universe = vanilla
-log = logs/cluster_$(Cluster).log
-output = logs/$(Process).out
-error = logs/$(Process).err
-#
-executable = /home/karpel/backend/run_sim.sh
-arguments = $(Process)
-#
-should_transfer_files = YES
-when_to_transfer_output = ON_EXIT_OR_EVICT
-transfer_input_files = http://proxy.chtc.wisc.edu/SQUID/karpel/python.tar.gz, /home/karpel/backend/simulacra.tar.gz, /home/karpel/backend/ionization.tar.gz, /home/karpel/backend/run_sim.py, inputs/$(Process).spec
-transfer_output_remaps = "$(Process).sim = outputs/$(Process).sim ; $(Process).log = logs/$(Process).log ; $(Process).mp4 = outputs/$(Process).mp4"
-#
-+JobBatchName = "{batch_name}"
-#
-+is_resumable = {checkpoints}
-+WantGlideIn = {flockglide}
-+WantFlocking = {flockglide}
-#
-skip_filechecks = true
-#
-on_exit_hold = (ExitCode =!= 0)
-periodic_release = (JobStatus == 5) && (HoldReasonCode == 3) && (CurrentTime - EnteredCurrentStatus >= 300) && (NumJobCompletions <= 10)
-#
-request_cpus = 1
-request_memory = {memory}GB
-request_disk = {disk}GB
-#
-queue {num_jobs}
-"""
-
-
-def generate_chtc_submit_string(job_name: str, specification_count: int, do_checkpoints: bool = True) -> str:
-    """
-    Return a formatted submit string for an HTCondor job.
-
-    Parameters
-    ----------
-    job_name : :class:`str`
-        The name of the job.
-    specification_count : :class:`int`
-        The number of specifications in the job.
-    do_checkpoints : :class:`bool`
-        If the simulations are going to use checkpoints, this should be ``True``.
-
-    Returns
-    -------
-    str
-        An HTCondor submit string.
-    """
-    format_data = dict(
-        batch_name = ask_for_input('Job batch name?', default = job_name, cast_to = str),
-        checkpoints = str(do_checkpoints).lower(),
-        flockglide = str(ask_for_bool('Flock and Glide?', default = 'y')).lower(),
-        memory = ask_for_input('Memory (in GB)?', default = 1, cast_to = float),
-        disk = ask_for_input('Disk (in GB)?', default = 5, cast_to = float),
-        num_jobs = specification_count,
-    )
-
-    return CHTC_SUBMIT_STRING.format(**format_data).strip()
-
-
 def specification_check(specifications: Iterable[sims.Specification], check: int = 3):
     """Ask the user whether some number of specifications look correct."""
     print('-' * 20)
@@ -949,27 +870,6 @@ def specification_check(specifications: Iterable[sims.Specification], check: int
         abort_job_creation()
 
 
-def submit_check(submit_string: str):
-    """Ask the user whether the submit string looks correct."""
-    print('-' * 20)
-    print(submit_string)
-    print('-' * 20)
-
-    check = ask_for_bool('Does the submit file look correct?', default = 'No')
-    if not check:
-        abort_job_creation()
-
-
-def write_submit_file(submit_string: str, job_dir: str):
-    """Write the submit string to a file."""
-    print('Writing submit file...')
-
-    with open(os.path.join(job_dir, 'submit_job.sub'), mode = 'w', encoding = 'utf-8') as file:
-        file.write(submit_string)
-
-    logger.debug('Wrote submit file')
-
-
 def write_job_info_to_file(job_info, job_dir: str):
     """Write job information to a file."""
     with open(os.path.join(job_dir, 'info.pkl'), mode = 'wb') as f:
@@ -980,22 +880,3 @@ def load_job_info_from_file(job_dir: str):
     """Load job information from a file."""
     with open(os.path.join(job_dir, 'info.pkl'), mode = 'rb') as f:
         return pickle.load(f)
-
-
-def submit_job(job_dir: str, factory: bool = False):
-    """Submit a job using a pre-existing submit file."""
-    print('Submitting job...')
-
-    os.chdir(job_dir)
-
-    cmds = [
-        'condor_submit',
-        'submit_job.sub',
-    ]
-
-    if factory:
-        cmds.append('-factory')
-
-    subprocess.run(cmds)
-
-    os.chdir('..')

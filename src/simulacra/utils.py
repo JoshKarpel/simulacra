@@ -19,7 +19,7 @@ from . import sims
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] ~ %(message)s', datefmt = '%y-%m-%d %H:%M:%S')  # global log format specification
+LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] ~ %(message)s', datefmt = '%y-%m-%d %H:%M:%S')
 
 key_value_arrays = collections.namedtuple('key_value_arrays', ('key_array', 'value_array'))
 
@@ -55,17 +55,19 @@ class LogManager:
     The object returned by the LogManager ``with`` statement can be used as a logger, with name given by `manual_logger_name`.
     """
 
-    def __init__(self,
-                 *logger_names,
-                 manual_logger_name: str = 'simulacra',
-                 stdout_logs: bool = True,
-                 stdout_level = logging.DEBUG,
-                 file_logs: bool = False,
-                 file_level = logging.DEBUG,
-                 file_name: Optional[str] = None,
-                 file_dir: Optional[str] = None,
-                 file_mode: str = 'a',
-                 disable_level = logging.NOTSET):
+    def __init__(
+            self,
+            *logger_names,
+            manual_logger_name: str = 'simulacra',
+            stdout_logs: bool = True,
+            stdout_level = logging.DEBUG,
+            file_logs: bool = False,
+            file_level = logging.DEBUG,
+            file_name: Optional[str] = None,
+            file_dir: Optional[str] = None,
+            file_mode: str = 'a',
+            log_formatter = LOG_FORMATTER,
+            disable_level = logging.NOTSET):
         """
         Parameters
         ----------
@@ -106,6 +108,8 @@ class LogManager:
 
         self.file_mode = file_mode
 
+        self.log_formatter = log_formatter
+
         self.disable_level = disable_level
 
         self.logger = None
@@ -121,7 +125,7 @@ class LogManager:
         if self.stdout_logs:
             stdout_handler = logging.StreamHandler(sys.stdout)
             stdout_handler.setLevel(self.stdout_level)
-            stdout_handler.setFormatter(LOG_FORMATTER)
+            stdout_handler.setFormatter(self.log_formatter)
 
             new_handlers.append(stdout_handler)
 
@@ -132,7 +136,7 @@ class LogManager:
 
             file_handler = logging.FileHandler(log_file_path, mode = self.file_mode, encoding = 'utf-8')
             file_handler.setLevel(self.file_level)
-            file_handler.setFormatter(LOG_FORMATTER)
+            file_handler.setFormatter(self.log_formatter)
 
             new_handlers.append(file_handler)
 
