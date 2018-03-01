@@ -26,17 +26,17 @@ logger.addHandler(file_handler)
 if __name__ == '__main__':
     logger.info('hi from script')
 
-    par = si.core.Specification('test', file_name = 'test_file_name')
+    par = si.sims.Specification('test', file_name = 'test_file_name')
     logger.info(par)
     logger.info(repr(par))
 
     par.save(target_dir = OUT_DIR)
 
-    par2 = si.core.Specification.load(os.path.join(OUT_DIR, 'test_file_name.par'))
+    par2 = si.sims.Specification.load(os.path.join(OUT_DIR, 'test_file_name.par'))
 
     # si.utils.ask_for_input('who are you?', cast_to = str)
 
-    sim = si.core.Simulation(par)
+    sim = si.sims.Simulation(par)
     logger.critical(sim)
     logger.critical(repr(sim))
 

@@ -1,22 +1,3 @@
-"""
-Simulacra utility sub-package.
-
-
-Copyright 2017 Josh Karpel
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-
 import collections
 import datetime
 import functools
@@ -33,8 +14,7 @@ from typing import Optional, Union, NamedTuple, Callable, Iterable
 import numpy as np
 import psutil
 
-from . import core
-from .units import uround
+from . import sims
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -42,13 +22,6 @@ logger.setLevel(logging.DEBUG)
 LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] ~ %(message)s', datefmt = '%y-%m-%d %H:%M:%S')  # global log format specification
 
 key_value_arrays = collections.namedtuple('key_value_arrays', ('key_array', 'value_array'))
-
-
-def handle_dict_default_merge(default, dct):
-    if dct is None:
-        dct = {}
-
-    return {**default, **dct}
 
 
 def dict_to_arrays(dct: dict):
@@ -283,19 +256,19 @@ def find_or_init_sim(spec, search_dir: Optional[str] = None, file_extension = '.
 
     Parameters
     ----------
-    spec : :class:`simulacra.core.Specification`
+    spec : :class:`simulacra.sims.Specification`
     search_dir : str
     file_extension : str
 
     Returns
     -------
-    :class:`simulacra.core.Simulation`
+    :class:`simulacra.sims.Simulation`
     """
     try:
         if search_dir is None:
             search_dir = os.getcwd()
         path = os.path.join(search_dir, spec.file_name + file_extension)
-        sim = core.Simulation.load(file_path = path)
+        sim = sims.Simulation.load(file_path = path)
     except FileNotFoundError:
         sim = spec.to_sim()
 
@@ -358,7 +331,7 @@ def run_spec(spec, pre_run = None, post_run = None, log_manager = None):
 def run_from_simlib(spec, simlib = None, **kwargs):
     sim = find_or_init_sim(spec, search_dir = simlib)
 
-    if sim.status != core.Status.FINISHED:
+    if sim.status != sims.Status.FINISHED:
         sim.run(**kwargs)
         sim.save(target_dir = simlib)
 

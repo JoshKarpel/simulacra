@@ -1,22 +1,3 @@
-"""
-Simulacra cluster integration sub-package.
-
-
-Copyright 2017 Josh Karpel
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-
 import collections
 import datetime
 import hashlib
@@ -38,8 +19,7 @@ import paramiko
 from tqdm import tqdm
 
 import simulacra.exceptions
-from . import core, vis, utils
-from . import units as u
+from . import sims, vis, utils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -63,12 +43,13 @@ class ClusterInterface:
 
     """
 
-    def __init__(self,
-                 remote_host: str,
-                 username: str,
-                 key_path: str,
-                 local_mirror_root: str = 'mirror',
-                 remote_sep: str = '/'):
+    def __init__(
+            self,
+            remote_host: str,
+            username: str,
+            key_path: str,
+            local_mirror_root: str = 'mirror',
+            remote_sep: str = '/'):
         """
         Parameters
         ----------
@@ -145,7 +126,7 @@ class ClusterInterface:
 
         home_path = str(cmd_output.stdout.readline()).strip('\n')  # extract path of home dir from stdout
 
-        logger.debug('Got home directory for {} on {}: {}'.format(self.username, self.remote_host, home_path))
+        logger.debug('Got home directory for {}@{}: {}'.format(self.username, self.remote_host, home_path))
 
         return home_path
 
@@ -408,7 +389,7 @@ class UnfinishedSimulation(simulacra.exceptions.SimulacraException):
     pass
 
 
-class JobProcessor(core.Beet):
+class JobProcessor(sims.Beet):
     """
     A class that processes a collection of pickled Simulations. Should be subclassed for specialization.
 
@@ -420,7 +401,7 @@ class JobProcessor(core.Beet):
         The elapsed time of the job (first simulation started to last simulation ended).
     """
 
-    simulation_type = core.Simulation
+    simulation_type = sims.Simulation
     simulation_result_type = SimulationResult
 
     def __init__(self, job_name: str, job_dir_path: str):
@@ -490,7 +471,7 @@ class JobProcessor(core.Beet):
     def save(self, target_dir: Optional[str] = None, file_extension: str = '.job', **kwargs):
         return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
-    def _load_sim(self, sim_file_name: str, **load_kwargs) -> core.Simulation:
+    def _load_sim(self, sim_file_name: str, **load_kwargs) -> sims.Simulation:
         """
         Load a :class:`Simulation` by its ``file_name``.
 
@@ -513,7 +494,7 @@ class JobProcessor(core.Beet):
         except FileNotFoundError as e:
             logger.exception(f'Failed to find completed {sim_file_name}.sim from job {self.name}')
 
-        if sim.status != core.Status.FINISHED:
+        if sim.status != sims.Status.FINISHED:
             raise UnfinishedSimulation(f'{sim_file_name}.sim from job {self.name} exists but is not finished')
 
         logger.debug(f'Loaded {sim_file_name}.sim from job {self.name}')
@@ -859,7 +840,7 @@ def create_job_subdirs(job_dir: str):
     utils.ensure_dir_exists(os.path.join(job_dir, 'movies'))
 
 
-def save_specifications(specifications: Iterable[core.Specification], job_dir: str):
+def save_specifications(specifications: Iterable[sims.Specification], job_dir: str):
     """Save a list of Specifications."""
     print('Saving Specifications...')
 
@@ -869,7 +850,7 @@ def save_specifications(specifications: Iterable[core.Specification], job_dir: s
     logger.debug('Saved Specifications')
 
 
-def write_specifications_info_to_file(specifications: Iterable[core.Specification], job_dir: str):
+def write_specifications_info_to_file(specifications: Iterable[sims.Specification], job_dir: str):
     """Write information from the list of the Specifications to a file."""
     print('Writing Specification info to file...')
 
@@ -954,7 +935,7 @@ def generate_chtc_submit_string(job_name: str, specification_count: int, do_chec
     return CHTC_SUBMIT_STRING.format(**format_data).strip()
 
 
-def specification_check(specifications: Iterable[core.Specification], check: int = 3):
+def specification_check(specifications: Iterable[sims.Specification], check: int = 3):
     """Ask the user whether some number of specifications look correct."""
     print('-' * 20)
     for s in specifications[0:check]:

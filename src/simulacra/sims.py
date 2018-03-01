@@ -1,28 +1,10 @@
-"""
-Simulacra core functionality.
-
-
-Copyright 2017 Josh Karpel
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-
 import datetime
 import gzip
 import pickle
 import uuid
 from copy import deepcopy
 from typing import Optional, Union
+import abc
 
 import logging
 import os
@@ -194,7 +176,7 @@ class Status(utils.StrEnum):
     ERROR = 'error'
 
 
-class Simulation(Beet):
+class Simulation(Beet, abc.ABC):
     """
     A class that represents a single simulation.
 
@@ -302,6 +284,7 @@ class Simulation(Beet):
 
         return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
+    @abc.abstractmethod
     def run(self):
         """Hook method for running the Simulation, whatever that may entail."""
         raise NotImplementedError
@@ -313,13 +296,11 @@ class Simulation(Beet):
         info.add_field('UUID', self.uuid)
 
         info_diag = Info(header = f'Status: {self.status}')
-        info_diag.add_fields({
-            'Initialization Time': self.init_time,
-            'Latest Run Time': self.latest_run_time,
-            'End Time': self.end_time,
-            'Running Time': self.running_time,
-            'Elapsed Time': self.elapsed_time,
-        })
+        info_diag.add_field('Initialization Time', self.init_time)
+        info_diag.add_field('Latest Run Time', self.latest_run_time)
+        info_diag.add_field('End Time', self.end_time)
+        info_diag.add_field('Running Time', self.running_time)
+        info_diag.add_field('Elapsed Time', self.elapsed_time)
 
         info.add_infos(info_diag, self.spec.info())
 
@@ -388,7 +369,7 @@ class Specification(Beet):
         return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
     def to_sim(self):
-        """Return a Simulation of the type associated with the Specification, generated from this instance."""
+        """Return a Simulation of the type associated with the Specification type, generated from this instance."""
         return self.simulation_type(self)
 
     def info(self) -> Info:
@@ -401,78 +382,5 @@ class Specification(Beet):
                 info_extra.add_field(k, getattr(self, k))
 
             info.add_info(info_extra)
-
-        return info
-
-
-class Summand:
-    """
-    An object that can be added to other objects that it shares a superclass with.
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.summation_class = Sum
-
-    def __str__(self):
-        return self.__class__.__name__
-
-    def __repr__(self):
-        return str(self)
-
-    def __iter__(self):
-        """When unpacked, yield self, to ensure compatability with Sum's __add__ method."""
-        yield self
-
-    def __add__(self, other: Union['Summand', 'Sum']):
-        return self.summation_class(*self, *other)
-
-    def __call__(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def info(self) -> Info:
-        return Info(header = self.__class__.__name__)
-
-
-class Sum(Summand):
-    """
-    A class that represents a sum of Summands.
-
-    Calls to __call__ are passed to the contained Summands and then added together and returned.
-    """
-
-    container_name = 'summands'
-
-    def __init__(self, *summands, **kwargs):
-        setattr(self, self.container_name, summands)
-        super().__init__(**kwargs)
-
-    @property
-    def _container(self):
-        return getattr(self, self.container_name)
-
-    def __str__(self):
-        return '({})'.format(' + '.join([str(s) for s in self._container]))
-
-    def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, ', '.join([repr(p) for p in self._container]))
-
-    def __iter__(self):
-        yield from self._container
-
-    def __getitem__(self, item):
-        return self._container[item]
-
-    def __add__(self, other: Union[Summand, 'Sum']):
-        """Return a new Sum, constructed from all of the contents of self and other."""
-        return self.__class__(*self, *other)
-
-    def __call__(self, *args, **kwargs):
-        return sum(x(*args, **kwargs) for x in self._container)
-
-    def info(self) -> Info:
-        info = super().info()
-
-        for x in self._container:
-            info.add_info(x.info())
 
         return info

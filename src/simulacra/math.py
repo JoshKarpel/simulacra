@@ -1,32 +1,11 @@
-"""
-Simulacra mathematics sub-package.
-
-
-Copyright 2017 Josh Karpel
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-
 import logging
 
 import numpy as np
 import numpy.random as rand
-import scipy.sparse as sparse
 import scipy.special as special
 import scipy.integrate as integ
 from typing import Callable, Generator, Iterable
 
-from . import utils
 from .units import *
 
 logger = logging.getLogger(__name__)
