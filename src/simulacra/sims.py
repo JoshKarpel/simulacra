@@ -51,15 +51,6 @@ class Beet:
 
         logger.info('Initialized {}'.format(repr(self)))
 
-    def __repr__(self):
-        return f"{self.__class__.__name__}(name = '{self.name}', file_name = '{self.file_name}', uuid = {self.uuid})"
-
-    def __str__(self):
-        if self.name != self.file_name:
-            return f'{self.__class__.__name__}({self.name}, file_name = {self.file_name})'
-        else:
-            return f'{self.__class__.__name__}({self.name})'
-
     def __eq__(self, other: 'Beet'):
         """Two Beets are equal if they have the same UUID."""
         return isinstance(other, self.__class__) and self.uuid == other.uuid
@@ -74,6 +65,8 @@ class Beet:
 
         If any kwargs are passed, they will be interpreted as key-value pairs and ``clone`` will try to :func:`setattr` them on the new Beet.
 
+        The new Beet will have a different UUID.
+
         Parameters
         ----------
         kwargs
@@ -85,9 +78,8 @@ class Beet:
             The new (possibly modified) :class:`Beet`.
         """
         new_beet = deepcopy(self)
-
-        for k, v in kwargs.items():
-            setattr(new_beet, k, v)
+        new_beet.__dict__.update(kwargs)
+        new_beet.uuid = uuid.uuid4()
 
         return new_beet
 
@@ -159,6 +151,15 @@ class Beet:
         logger.debug('Loaded {} {} from {}'.format(beet.__class__.__name__, beet.name, file_path))
 
         return beet
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(name = '{self.name}', file_name = '{self.file_name}', uuid = {self.uuid})"
+
+    def __str__(self):
+        if self.name != self.file_name:
+            return f'{self.__class__.__name__}({self.name}, file_name = {self.file_name})'
+        else:
+            return f'{self.__class__.__name__}({self.name})'
 
     def info(self) -> Info:
         info = Info(header = str(self))
@@ -258,9 +259,6 @@ class Simulation(Beet, abc.ABC):
 
         logger.debug(f'{self.__class__.__name__} {self.name} status set to {self.status} from {old_status}')
 
-    def __str__(self):
-        return super().__str__() + f' {{{self.status}}}'
-
     def save(self, target_dir: Optional[str] = None, file_extension: str = '.sim', **kwargs) -> str:
         """
         Atomically pickle the Simulation to a file.
@@ -288,6 +286,9 @@ class Simulation(Beet, abc.ABC):
     def run(self):
         """Hook method for running the Simulation, whatever that may entail."""
         raise NotImplementedError
+
+    def __str__(self):
+        return super().__str__() + f' {{{self.status}}}'
 
     def info(self) -> Info:
         """Return a string describing the parameters of the Simulation and its associated Specification."""

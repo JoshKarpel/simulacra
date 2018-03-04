@@ -14,7 +14,7 @@ class Foo(si.Beet):
 
         super().__init__(name)
 
-    def info(self):
+    def info(self) -> si.Info:
         info = super().info()
 
         foo_info = simulacra.info.Info(header = 'foo info')
@@ -32,7 +32,7 @@ class BarSim(si.Simulation):
 
         self.car = spec.foo * spec.bar
 
-    def info(self):
+    def info(self) -> si.Info:
         info = super().info()
 
         info.add_field('car', self.car)
@@ -44,7 +44,7 @@ class Bat:
     def __init__(self, species = 'brown'):
         self.species = species
 
-    def info(self):
+    def info(self) -> si.Info:
         info = simulacra.info.Info(header = 'Bat')
         info.add_field('species', self.species)
         info.add_field('favorite pancake', 'blueberry')
@@ -63,7 +63,7 @@ class BarSpec(si.Specification):
 
         super().__init__(name, **kwargs)
 
-    def info(self):
+    def info(self) -> si.Info:
         info = super().info()
 
         info.add_field('foo', self.foo)

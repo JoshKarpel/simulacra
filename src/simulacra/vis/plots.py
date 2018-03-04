@@ -549,7 +549,7 @@ def xy_plot(
         name: str,
         x_data: np.array,
         *y_data: np.array,
-        line_labels: Iterable[dict] = (),
+        line_labels: Iterable[str] = (),
         line_kwargs: Iterable[dict] = (),
         figure_manager: Optional[FigureManager] = None,
         x_unit: u.Unit = None,
@@ -862,8 +862,8 @@ def xxyy_plot(
 
         lines = []
         for x, y, lab, kw in itertools.zip_longest(x_data, y_data, line_labels, line_kwargs):
-            if kw is None:
-                kw = {}
+            kw = kw or {}
+            lab = lab or ''
             lines.append(plt.plot(x / x_unit_value, y / y_unit_value, label = lab, **kw)[0])
         fm.elements['lines'] = lines
 

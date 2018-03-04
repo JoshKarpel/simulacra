@@ -42,6 +42,31 @@ def dict_to_arrays(dct: dict):
     return key_value_arrays(np.array(key_list), np.array(val_list))
 
 
+NearestEntry = collections.namedtuple('NearestEntry', ('index', 'value', 'target'))
+
+
+def find_nearest_entry(array: np.ndarray, target: Union[float, int]) -> NamedTuple:
+    """
+    Returns the ``(index, value, target)`` of the `array` entry closest to the given `target`.
+    Parameters
+    ----------
+    array : :class:`numpy.ndarray`
+        The array to for `target` in.
+    target
+        The value to search for in `array`.
+    Returns
+    -------
+    :class:`tuple`
+        A tuple containing the index of the nearest value to the target, that value, and the original target value.
+    """
+    array = np.array(array)  # turn the array into a numpy array
+
+    index = np.argmin(np.abs(array - target))
+    value = array[index]
+
+    return NearestEntry(index, value, target)
+
+
 def get_now_str() -> str:
     """Return a formatted string with the current year-month-day_hour-minute-second."""
     return datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S')
@@ -49,7 +74,7 @@ def get_now_str() -> str:
 
 class LogManager:
     """
-    A context manager to easily set up logging.
+    A context manager to set up logging.
 
     Within a managed block, logging messages are intercepted if their highest-level logger is named in `logger_names`.
     The object returned by the LogManager ``with`` statement can be used as a logger, with name given by `manual_logger_name`.
@@ -169,33 +194,6 @@ def strip_illegal_characters(string: str) -> str:
 NearestEntry = collections.namedtuple('NearestEntry', ('index', 'value', 'target'))
 
 
-def find_nearest_entry(array: np.ndarray, target: Union[float, int]) -> NamedTuple:
-    """
-    Returns the ``(index, value, target)`` of the `array` entry closest to the given `target`.
-
-    Parameters
-    ----------
-    array : :class:`numpy.ndarray`
-        The array to for `target` in.
-    target
-        The value to search for in `array`.
-
-    Returns
-    -------
-    :class:`tuple`
-        A tuple containing the index of the nearest value to the target, that value, and the original target value.
-    """
-    if hasattr(target, '__iter__'):
-        raise ValueError('target must not be iterable')
-
-    array = np.array(array)  # turn the array into a numpy array
-
-    index = np.argmin(np.abs(array - target))
-    value = array[index]
-
-    return NearestEntry(index, value, target)
-
-
 def ensure_dir_exists(path):
     """
     Ensure that the directory tree to the path exists.
@@ -220,37 +218,6 @@ def ensure_dir_exists(path):
     logger.debug('Ensured dir {} exists'.format(path_to_make))
 
     return path_to_make
-
-
-def downsample(dense_x_array: np.ndarray,
-               sparse_x_array: np.ndarray,
-               dense_y_array: np.ndarray):
-    """
-    Downsample (dense_x_array, dense_y_array) to (sparse_x_array, sparse_y_array).
-
-    The downsampling is performed by matching points from sparse_x_array to dense_x_array using find_nearest_entry. Use with caution!
-
-    Parameters
-    ----------
-    dense_x_array : :class:`numpy.ndarray`
-        A dense array of x values.
-    sparse_x_array : :class:`numpy.ndarray`
-        A sparse array of x values.
-    dense_y_array : :class:`numpy.ndarray`
-        A dense array of y values corresponding to `dense_x_array`.
-
-    Returns
-    -------
-    :class:`numpy.ndarray`
-        The sparsified y array.
-    """
-    sparse_y_array = np.zeros(len(sparse_x_array), dtype = dense_y_array.dtype) * np.NaN
-
-    for sparse_index, x in enumerate(sparse_x_array):
-        dense_index, _, _ = find_nearest_entry(dense_x_array, x)
-        sparse_y_array[sparse_index] = dense_y_array[dense_index]
-
-    return sparse_y_array
 
 
 def find_or_init_sim(spec, search_dir: Optional[str] = None, file_extension = '.sim'):
@@ -294,42 +261,6 @@ def run_in_process(func, args = (), kwargs = None):
         output = pool.apply(func, args, kwargs)
 
     return output
-
-
-def run_spec(spec, pre_run = None, post_run = None, log_manager = None):
-    """
-
-    Parameters
-    ----------
-    spec
-    pre_run : Callable
-        function that takes the simulation as an argument, called before sim.run_simulation()
-    post_run : Callable
-        function that takes the simulation as an argument, called after sim.run_simulation()
-    log_manager
-
-    Returns
-    -------
-
-    """
-    if pre_run is None:
-        pre_run = lambda s: None
-    if post_run is None:
-        post_run = lambda s: None
-
-    if log_manager is None:
-        sim = spec.to_sim
-        pre_run(sim)
-        sim.run()
-        post_run(sim)
-    else:
-        with log_manager as logger:
-            sim = spec.to_sim
-            pre_run(sim)
-            sim.run()
-            post_run(sim)
-
-    return sim
 
 
 def run_from_simlib(spec, simlib = None, **kwargs):
@@ -391,19 +322,6 @@ class cached_property:
             return self
         value = obj.__dict__[self.func.__name__] = self.func(obj)
         return value
-
-
-def method_dispatch(func):
-    """Works the same as :func:`functools.singledispatch`, but uses the second argument instead of the first so that it can be used for instance methods."""
-    dispatcher = functools.singledispatch(func)
-
-    def wrapper(*args, **kw):
-        return dispatcher.dispatch(args[1].__class__)(*args, **kw)
-
-    wrapper.register = dispatcher.register
-    functools.update_wrapper(wrapper, func)
-
-    return wrapper
 
 
 def hash_args_kwargs(*args, **kwargs):
@@ -708,34 +626,7 @@ class StrEnum(str, enum.Enum):
     pass
 
 
-def obj_to_filename(obj, attrs = None, seperator = '__', prepend_type = True):
-    attr_strings = []
-    if prepend_type:
-        attr_strings.append(obj.__class__.__name__)
-    for attr in attrs:
-        if isinstance(attr, str):
-            name = attr
-            val = getattr(obj, attr)
-        elif isinstance(attr, tuple):
-            *sub_attrs, func = attr
-
-            if not callable(func):
-                sub_attrs.append(func)
-                func = lambda x: x
-
-            val = obj
-            for sub_attr in sub_attrs:  # drill through
-                val = getattr(val, sub_attr)
-
-            name = '.'.join(sub_attrs)
-            val = func(val)
-
-        attr_strings.append(f'{name}={val}')
-
-    return seperator.join(attr_strings)
-
-
-def table(headers: Iterable[str], rows: Iterable[Iterable]):
+def table(headers: Iterable[str], rows: Iterable[Iterable]) -> str:
     lengths = [len(h) for h in headers]
     rows = [[str(entry) for entry in row] if row is not None else None for row in rows]
     for row in rows:
