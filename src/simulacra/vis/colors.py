@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.cm
 
 # named colors
 WHITE = '#ffffff'
@@ -97,7 +98,7 @@ class RichardsonNormalization(matplotlib.colors.Normalize):
         self.equator_magnitude = np.abs(equator_magnitude)
 
     def __call__(self, x, **kwargs):
-        return ma.masked_invalid(x / self.equator_magnitude, copy = False)
+        return np.ma.masked_invalid(x / self.equator_magnitude, copy = False)
 
     def autoscale(self, *args):
         pass
@@ -112,7 +113,7 @@ class AbsoluteRenormalize(matplotlib.colors.Normalize):
         self.vmax = 1
 
     def __call__(self, x, **kwargs):
-        return ma.masked_invalid(np.abs(x) / np.nanmax(np.abs(x)), copy = False)
+        return np.ma.masked_invalid(np.abs(x) / np.nanmax(np.abs(x)), copy = False)
 
     def autoscale(self, *args):
         pass
