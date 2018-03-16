@@ -8,52 +8,52 @@ from .plots import *
 
 
 def xyt_plot(
-        name,
-        x_data,
-        t_data,
-        *y_funcs,
-        y_func_kwargs = (),
-        line_labels = (),
-        line_kwargs = (),
-        figure_manager = None,
-        x_unit = None,
-        y_unit = None,
-        t_unit = None,
-        t_fmt_string = r'$t = {} \; {}$',
-        t_text_kwargs = None,
-        x_log_axis = False,
-        y_log_axis = False,
-        x_lower_limit = None,
-        x_upper_limit = None,
-        y_lower_limit = None,
-        y_upper_limit = None,
-        vlines = (),
-        vline_kwargs = (),
-        hlines = (),
-        hline_kwargs = (),
-        x_extra_ticks = None,
-        y_extra_ticks = None,
-        x_extra_tick_labels = None,
-        y_extra_tick_labels = None,
-        title = None,
-        x_label = None,
-        y_label = None,
-        font_size_title = 15,
-        font_size_axis_labels = 15,
-        font_size_tick_labels = 10,
-        font_size_legend = 12,
-        title_offset = TITLE_OFFSET,
-        ticks_on_top = True,
-        ticks_on_right = True,
-        legend_on_right = False,
-        grid_kwargs = None,
-        minor_grid_kwargs = None,
-        legend_kwargs = None,
-        length = 30,
-        fig_dpi_scale = 3,
-        save_csv = False,
-        progress_bar = True,
-        **kwargs):
+    name,
+    x_data,
+    t_data,
+    *y_funcs,
+    y_func_kwargs = (),
+    line_labels = (),
+    line_kwargs = (),
+    figure_manager = None,
+    x_unit = None,
+    y_unit = None,
+    t_unit = None,
+    t_fmt_string = r'$t = {} \; {}$',
+    t_text_kwargs = None,
+    x_log_axis = False,
+    y_log_axis = False,
+    x_lower_limit = None,
+    x_upper_limit = None,
+    y_lower_limit = None,
+    y_upper_limit = None,
+    vlines = (),
+    vline_kwargs = (),
+    hlines = (),
+    hline_kwargs = (),
+    x_extra_ticks = None,
+    y_extra_ticks = None,
+    x_extra_tick_labels = None,
+    y_extra_tick_labels = None,
+    title = None,
+    x_label = None,
+    y_label = None,
+    font_size_title = 15,
+    font_size_axis_labels = 15,
+    font_size_tick_labels = 10,
+    font_size_legend = 12,
+    title_offset = TITLE_OFFSET,
+    ticks_on_top = True,
+    ticks_on_right = True,
+    legend_on_right = False,
+    grid_kwargs = None,
+    minor_grid_kwargs = None,
+    legend_kwargs = None,
+    length = 30,
+    fig_dpi_scale = 3,
+    save_csv = False,
+    progress_bar = True,
+    **kwargs):
     # set up figure and axis
     if figure_manager is None:
         figure_manager = FigureManager(name, save = False, fig_dpi_scale = fig_dpi_scale, **kwargs)
@@ -91,16 +91,16 @@ def xyt_plot(
         attach_h_or_v_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
         attach_h_or_v_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
 
-        x_lower_limit, x_upper_limit = set_axis_limits(ax, x_data,
-                                                       lower_limit = x_lower_limit, upper_limit = x_upper_limit,
-                                                       log = x_log_axis,
-                                                       pad = 0, log_pad = 1,
-                                                       unit = x_unit, direction = 'x')
-        y_lower_limit, y_upper_limit = set_axis_limits(ax, *(y_func(x_data, t, **y_kwargs) for y_func, y_kwargs in zip(y_funcs, y_func_kwargs) for t in t_data),
-                                                       lower_limit = y_lower_limit, upper_limit = y_upper_limit,
-                                                       log = y_log_axis,
-                                                       pad = 0.05, log_pad = 10,
-                                                       unit = y_unit, direction = 'y')
+        x_lower_limit, x_upper_limit = set_axis_limits_and_scale(ax, x_data,
+                                                                 lower_limit = x_lower_limit, upper_limit = x_upper_limit,
+                                                                 log = x_log_axis,
+                                                                 pad = 0, log_pad = 1,
+                                                                 unit = x_unit, direction = 'x')
+        y_lower_limit, y_upper_limit = set_axis_limits_and_scale(ax, *(y_func(x_data, t, **y_kwargs) for y_func, y_kwargs in zip(y_funcs, y_func_kwargs) for t in t_data),
+                                                                 lower_limit = y_lower_limit, upper_limit = y_upper_limit,
+                                                                 log = y_log_axis,
+                                                                 pad = 0.05, log_pad = 10,
+                                                                 unit = y_unit, direction = 'y')
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
@@ -322,7 +322,7 @@ def xyzt_plot(name,
         attach_h_or_v_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
         attach_h_or_v_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
 
-        x_lower_limit, x_upper_limit = set_axis_limits(
+        x_lower_limit, x_upper_limit = set_axis_limits_and_scale(
             ax,
             x_mesh,
             lower_limit = x_lower_limit,
@@ -330,7 +330,7 @@ def xyzt_plot(name,
             log = x_log_axis,
             unit = x_unit,
             direction = 'x', )
-        y_lower_limit, y_upper_limit = set_axis_limits(
+        y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
             ax, y_mesh,
             lower_limit = y_lower_limit,
             upper_limit = y_upper_limit,
@@ -340,7 +340,7 @@ def xyzt_plot(name,
         )
 
         if not isinstance(colormap, colors.RichardsonColormap):
-            z_lower_limit, z_upper_limit = get_axis_limits(
+            z_lower_limit, z_upper_limit = calculate_axis_limits(
                 *(z_func(x_mesh, y_mesh, t, **z_func_kwargs) for t in t_data),
                 lower_limit = z_lower_limit, upper_limit = z_upper_limit,
                 log = z_log_axis,
@@ -488,12 +488,12 @@ def xyzt_plot(name,
 
 
 def animate(
-        figure_manager: FigureManager,
-        update_function: Callable,
-        update_function_arguments,
-        artists = None,
-        length: float = 30,
-        progress_bar: bool = True):
+    figure_manager: FigureManager,
+    update_function: Callable,
+    update_function_arguments,
+    artists = None,
+    length: float = 30,
+    progress_bar: bool = True):
     artists = artists or []
 
     fig = figure_manager.fig

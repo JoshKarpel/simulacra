@@ -623,7 +623,11 @@ class SuspendProcesses:
 
 
 class StrEnum(str, enum.Enum):
-    pass
+    def __repr__(self):
+        return f'{self.__class__.__name__}.{self.value.upper()}'
+
+    def __str__(self):
+        return self.value
 
 
 def table(headers: Iterable[str], rows: Iterable[Iterable]) -> str:

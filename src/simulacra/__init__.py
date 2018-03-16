@@ -26,4 +26,4 @@ matplotlib.rcParams.update(mpl_rcParams_update)
 
 from .sims import *
 from .info import Info
-from . import math, utils, vis, summables, exceptions
+from . import math, utils, vis, units, summables, exceptions

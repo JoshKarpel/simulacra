@@ -3,7 +3,7 @@ import gzip
 import pickle
 import uuid
 from copy import deepcopy
-from typing import Optional, Union
+from typing import Optional, Union, Type
 import abc
 
 import logging
@@ -20,7 +20,7 @@ class Beet:
     """
     A class that provides an easy interface for pickling and unpickling instances.
 
-    Two Beets compare and hash equal if they have the same uid attribute, a uuid4 generated during initialization.
+    Beets can be compared and hashed based on their :class:`Beet.uuid` value.
 
     Attributes
     ----------
@@ -32,10 +32,12 @@ class Beet:
         """
         Parameters
         ----------
-        name : :class:`str`
-            The internal name of the Beet.
-        file_name : :class:`str`
-            The desired external name of the Beet. Automatically derived from `name` if ``None``. Illegal characters are stripped before use, and spaces are replaced with underscores.
+        name
+            The internal name of the :class:`Beet`.
+        file_name
+            The desired external name of the :class:`Beet`.
+            Automatically derived from ``name`` if ``None``.
+            Illegal characters are stripped before use, and spaces are replaced with underscores.
         """
         self.name = str(name)
         if file_name is None:
@@ -61,11 +63,11 @@ class Beet:
 
     def clone(self, **kwargs) -> 'Beet':
         """
-        Return a deepcopy of the Beet.
+        Return a deepcopy of the :class:`Beet`.
 
         If any kwargs are passed, they will be interpreted as key-value pairs and ``clone`` will try to :func:`setattr` them on the new Beet.
 
-        The new Beet will have a different UUID.
+        The new :class:`Beet` will have a different UUID.
 
         Parameters
         ----------
@@ -74,7 +76,7 @@ class Beet:
 
         Returns
         -------
-        :class:`Beet`
+        Beet
             The new (possibly modified) :class:`Beet`.
         """
         new_beet = deepcopy(self)
@@ -85,7 +87,7 @@ class Beet:
 
     def save(self, target_dir: Optional[str] = None, file_extension: str = '.beet', compressed: bool = True, ensure_dir_exists: bool = True) -> str:
         """
-        Atomically pickle the Beet to a file.
+        Atomically pickle the :class:`Beet` to a file.
 
         Parameters
         ----------
@@ -100,8 +102,8 @@ class Beet:
 
         Returns
         -------
-        :class:`str`
-            The path to the saved Beet.
+        str
+            The path to the saved :class:`Beet`.
         """
         if target_dir is None:
             target_dir = os.getcwd()
@@ -189,15 +191,15 @@ class Simulation(Beet, abc.ABC):
     ----------
     uuid
         A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Simulation`.
-    status : :class:`str`
-        The status of the Simulation. One of ``'initialized'``, ``'running'``, ``'finished'``, ``'paused'``, or ``'error'``.
+    status : Status
+        The status of the Simulation.
     """
 
     def __init__(self, spec):
         """
         Parameters
         ----------
-        spec : :class:`Specification`
+        spec
             The :class:`Specification` for the Simulation.
         """
         super().__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from spec
@@ -217,7 +219,7 @@ class Simulation(Beet, abc.ABC):
         self.status = Status.INITIALIZED
 
     @property
-    def status(self):
+    def status(self) -> Status:
         return self._status
 
     @status.setter
@@ -230,8 +232,8 @@ class Simulation(Beet, abc.ABC):
 
         Parameters
         ----------
-        status : Status
-            The new status for the simulation.
+        status
+            The new status for the :class:`Simulation`.
         """
         if not isinstance(status, Status):
             raise TypeError(f'{status} is not a member of Status')
@@ -259,18 +261,21 @@ class Simulation(Beet, abc.ABC):
 
         logger.debug(f'{self.__class__.__name__} {self.name} status set to {self.status} from {old_status}')
 
-    def save(self, target_dir: Optional[str] = None, file_extension: str = '.sim', **kwargs) -> str:
+    def save(
+        self,
+        target_dir: Optional[str] = None,
+        file_extension: str = '.sim',
+        **kwargs,
+    ) -> str:
         """
-        Atomically pickle the Simulation to a file.
+        Atomically pickle the :class:`Simulation` to a file.
 
         Parameters
         ----------
-        target_dir : :class:`str`
-            The directory to save the Simulation to.
-        file_extension : :class:`str`
-            The file extension to name the Simulation with (for keeping track of things, no actual effect).
-        compressed : :class:`bool`
-            Whether to compress the Beet using gzip.
+        target_dir
+            The directory to save the :class:`Simulation` to.
+        file_extension
+            The file extension to name the :class:`Simulation` with (for keeping track of things, no actual effect).
 
         Returns
         -------
@@ -308,7 +313,7 @@ class Simulation(Beet, abc.ABC):
         return info
 
 
-class Specification(Beet):
+class Specification(Beet, abc.ABC):
     """
     A class that contains the information necessary to run a simulation.
 
@@ -325,7 +330,7 @@ class Specification(Beet):
         A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Specification`.
     """
 
-    simulation_type = Simulation
+    simulation_type: Type[Simulation] = Simulation
 
     def __init__(self, name: str, file_name: Optional[str] = None, **kwargs):
         """
@@ -349,28 +354,33 @@ class Specification(Beet):
             self._extra_attr_keys.append(k)
             logger.debug('{} stored additional attribute {} = {}'.format(self.name, k, v))
 
-    def save(self, target_dir: Optional[str] = None, file_extension: str = '.spec', **kwargs) -> str:
+    def save(
+        self,
+        target_dir: Optional[str] = None,
+        file_extension: str = '.spec',
+        **kwargs,
+    ) -> str:
         """
-        Atomically pickle the Specification to a file.
+        Pickle the :class:`Specification` to a file.
 
         Parameters
         ----------
-        target_dir : :class:`str`
-            The directory to save the Specification to.
-        file_extension : :class:`str`
+        target_dir
+            The directory to save the :class:`Specification` to.
+        file_extension
             The file extension to name the Specification with (for keeping track of things, no actual effect).
-        compressed : :class:`bool`
+        compressed
             Whether to compress the Beet using gzip.
 
         Returns
         -------
-        :class:`str`
-            The path to the saved Specification.
+        path
+            The path to the saved :class:`Specification`.
         """
         return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
     def to_sim(self):
-        """Return a Simulation of the type associated with the Specification type, generated from this instance."""
+        """Return a :class:`Simulation` of the type associated with the :class:`Specification` type, generated from this instance."""
         return self.simulation_type(self)
 
     def info(self) -> Info:

@@ -4,7 +4,7 @@ import logging
 import fractions
 import subprocess
 import collections
-from typing import Union, Optional, Iterable, Collection
+from typing import Union, Optional, Iterable, Collection, Tuple
 
 import numpy as np
 import matplotlib
@@ -89,10 +89,11 @@ PPT_WIDESCREEN_ASPECT_RATIO = 16 / 9
 
 
 def _get_fig_dims(
-        fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
-        aspect_ratio: Union[float, int] = GOLDEN_RATIO,
-        fig_height = None,
-        fig_scale: Union[float, int] = 1):
+    fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
+    aspect_ratio: Union[float, int] = GOLDEN_RATIO,
+    fig_height = None,
+    fig_scale: Union[float, int] = 1,
+):
     """
     Return the dimensions (width, height) for a figure based on the scale, width (in points), and aspect ratio.
 
@@ -122,20 +123,19 @@ def _get_fig_dims(
 
 
 def get_figure(
-        fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
-        aspect_ratio: Union[float, int] = GOLDEN_RATIO,
-        fig_height = None,
-        fig_scale: Union[float, int, str] = 1,
-        fig_dpi_scale: Union[float, int] = 1):
+    fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
+    aspect_ratio: Union[float, int] = GOLDEN_RATIO,
+    fig_height: Optional[Union[float, int]] = None,
+    fig_scale: Union[float, int, str] = 1,
+    fig_dpi_scale: Union[float, int] = 1,
+) -> plt.Figure:
     """
-    Get a matplotlib figure object with the desired scale relative to a full-text-width LaTeX page.
-
-    Special scales:
-    ``scale = 'full'`` -> ``scale = 0.95``
-    ``scale = 'half'`` -> ``scale = 0.475``
+    Get a matplotlib figure object with the desired dimensions.
 
     Parameters
     ----------
+    fig_width : :class:`float`
+        The "base" width of a figure (e.g. a LaTeX page width), in inches.
     fig_scale : :class:`float`
         The scale of the figure relative to the figure width.
     fig_dpi_scale : :class:`float`
@@ -144,26 +144,32 @@ def get_figure(
         The aspect ratio of the figure (width / height)
     fig_height : :class:`float`
         If not `None`, overrides the aspect ratio. In inches.
-    fig_width : :class:`float`
-        The "base" width of a figure (e.g. a LaTeX page width). In inches.
 
     Returns
     -------
     figure
         A matplotlib figure.
     """
-    fig = plt.figure(figsize = _get_fig_dims(fig_width = fig_width, fig_height = fig_height, aspect_ratio = aspect_ratio, fig_scale = fig_scale), dpi = fig_dpi_scale * 100)
+    fig = plt.figure(
+        figsize = _get_fig_dims(
+            fig_width = fig_width,
+            fig_height = fig_height,
+            aspect_ratio = aspect_ratio,
+            fig_scale = fig_scale,
+        ),
+        dpi = fig_dpi_scale * 100,
+    )
 
     return fig
 
 
 def save_current_figure(
-        name: str,
-        target_dir: Optional[str] = None,
-        img_format: str = 'pdf',
-        transparent: bool = True,
-        tight_layout: bool = True,
-        **kwargs):
+    name: str,
+    target_dir: Optional[str] = None,
+    img_format: str = 'pdf',
+    transparent: bool = True,
+    tight_layout: bool = True,
+) -> str:
     """
     Save the current matplotlib figure as an image to a file.
 
@@ -174,7 +180,7 @@ def save_current_figure(
     name_postfix : :class:`str`
         An additional postfix for the name.
     target_dir
-        The directory to save the image to.
+        The directory to save the figure to.
     img_format
         The image format to save to.
     transparent
@@ -183,8 +189,6 @@ def save_current_figure(
         A matplotlib colormap to use.
     tight_layout : :class:`bool`
         If ``True``, saves the figure with ``bbox_inches = 'tight'``.
-    kwargs
-        This function absorbs keyword arguments silently.
 
     Returns
     -------
@@ -210,48 +214,59 @@ def save_current_figure(
 class FigureManager:
     """
     A class that manages a matplotlib figure: creating it, showing it, saving it, and cleaning it up.
+
+    Attributes
+    ----------
+    elements : :class:`dict`
+        A dictionary that can contain references to parts of the figure that you may want to reference later.
+        The references need to be added manually - this just provides a convenient place to put them.
     """
 
     def __init__(
-            self,
-            name: str,
-            fig_width: float = DEFAULT_LATEX_PAGE_WIDTH,
-            aspect_ratio: float = GOLDEN_RATIO,
-            fig_height: Optional[float] = None,
-            fig_scale: float = 1,
-            fig_dpi_scale: float = 1,
-            target_dir: Optional[str] = None,
-            img_format: str = 'pdf',
-            tight_layout: bool = True,
-            close_before_enter: bool = True,
-            close: bool = True,
-            save: bool = True,
-            show: bool = False,
-            transparent = True,
-            **kwargs):
+        self,
+        name: str,
+        fig_width: float = DEFAULT_LATEX_PAGE_WIDTH,
+        aspect_ratio: float = GOLDEN_RATIO,
+        fig_height: Optional[float] = None,
+        fig_scale: float = 1,
+        fig_dpi_scale: float = 6,
+        target_dir: Optional[str] = None,
+        img_format: str = 'pdf',
+        tight_layout: bool = True,
+        transparent: bool = True,
+        close_before_enter: bool = True,
+        close: bool = True,
+        save: bool = True,
+        show: bool = False,
+    ):
         """
         Parameters
         ----------
         name
             The desired file name for the plot.
-        name_postfix
-            An additional postfix for the file name.
-        fig_scale
-            The relative width of the figure.
-        fig_dpi_scale
-            The relative point density of the figure (i.e., 2 is twice as much dpi as normal).
-        fig_width_pts
-            The width of the figure, in points (72 points per inch).
+        fig_width
+            The width of the figure, in inches.
         aspect_ratio
             The aspect ratio of the figure (height / width).
+        fig_height
+            If not ``None``, overrides the ``aspect_ratio`` to set the height of the figure.
+        fig_scale
+            A multiplier for the overall scale of the figure.
+            This should generally stay at ``1`` so that font sizes and other similar settings make sense.
+        fig_dpi_scale
+            A multiplier for the base DPI of the figure.
+            ``6`` is a good number for high-quality plots.
         target_dir
             The directory to save the plot to.
         img_format
-            The format for the plot. Accepts any matplotlib file format.
+            The format for the plot.
+            Accepts any matplotlib file format.
         img_scale
             The scale for the image.
         tight_layout
             If ``True``, uses matplotlib's tight layout option before saving.
+        transparent
+            If ``True``, and the ``img_format`` allows for it, the background of the saved image will be transparent.
         close_before_enter
             If ``True``, close whatever matplotlib plot is open before trying to create the new figure.
         close
@@ -260,8 +275,6 @@ class FigureManager:
             If ``True``, save the figure after exiting the context manager.
         show
             If ``True``, show the figure after exiting the context manager.
-        kwargs
-            Keyword arguments are silently absorbed.
         """
         self.name = name
 
@@ -276,15 +289,14 @@ class FigureManager:
         self.target_dir = target_dir
         self.img_format = img_format
 
-        if len(kwargs) > 0:
-            logger.debug(f'FigureManager {self.name} absorbed extraneous kwargs: {kwargs}')
-
         self.close_before_enter = close_before_enter
         self.close = close
         self._save = save
         self.show = show
 
         self.path = None
+
+        self.elements = {}
 
     def save(self):
         path = save_current_figure(
@@ -326,7 +338,11 @@ class FigureManager:
         self.cleanup()
 
 
-def get_pi_ticks_and_labels(lower_limit: Union[float, int] = 0, upper_limit: Union[float, int] = u.twopi, denom: int = 4):
+def get_pi_ticks_and_labels(
+    lower_limit: Union[float, int] = 0,
+    upper_limit: Union[float, int] = u.twopi,
+    denom: int = 4,
+):
     """
     NB: doesn't really work for large ranges.
 
@@ -366,7 +382,12 @@ def get_pi_ticks_and_labels(lower_limit: Union[float, int] = 0, upper_limit: Uni
     return list(float(tick) * u.pi for tick in ticks), list(labels)
 
 
-def set_axis_ticks_and_labels(axis, ticks: Iterable[Union[float, int]], labels: Iterable[str], direction: str = 'x'):
+def set_axis_ticks_and_labels(
+    axis: plt.Axes,
+    ticks: Iterable[Union[float, int]],
+    labels: Iterable[str],
+    direction: str = 'x',
+):
     """
     Set the ticks and labels for `axis` along `direction`.
 
@@ -385,13 +406,14 @@ def set_axis_ticks_and_labels(axis, ticks: Iterable[Union[float, int]], labels: 
     getattr(axis, f'set_{direction}ticklabels')(labels)
 
 
-def get_axis_limits(
-        *data,
-        lower_limit: Optional[Union[float, int]] = None,
-        upper_limit: Optional[Union[float, int]] = None,
-        log: bool = False,
-        pad: Union[float, int] = 0,
-        log_pad: Union[float, int] = 1):
+def calculate_axis_limits(
+    *data: np.ndarray,
+    lower_limit: Optional[Union[float, int]] = None,
+    upper_limit: Optional[Union[float, int]] = None,
+    log: bool = False,
+    pad: Union[float, int] = 0,
+    log_pad: Union[float, int] = 1,
+) -> (float, float):
     """
     Calculate axis limits from datasets.
 
@@ -418,28 +440,28 @@ def get_axis_limits(
     if upper_limit is None:
         upper_limit = max(np.nanmax(d) for d in data if len(d) > 0)
 
-    if not log:
+    if log:
+        lower_limit /= log_pad
+        upper_limit *= log_pad
+    else:
         limit_range = np.abs(upper_limit - lower_limit)
         lower_limit -= pad * limit_range
         upper_limit += pad * limit_range
 
-    if log:
-        lower_limit /= log_pad
-        upper_limit *= log_pad
-
     return lower_limit, upper_limit
 
 
-def set_axis_limits(
-        axis: plt.Axes,
-        *data,
-        lower_limit: Optional[float] = None,
-        upper_limit: Optional[float] = None,
-        log: bool = False,
-        pad: float = 0,
-        log_pad: float = 1,
-        unit: Optional[u.Unit] = None,
-        direction: str = 'x'):
+def set_axis_limits_and_scale(
+    axis: plt.Axes,
+    *data: np.ndarray,
+    lower_limit: Optional[float] = None,
+    upper_limit: Optional[float] = None,
+    log: bool = False,
+    pad: float = 0,
+    log_pad: float = 1,
+    unit: Optional[u.Unit] = None,
+    direction: str = 'x',
+) -> (float, float):
     """
 
     Parameters
@@ -461,7 +483,7 @@ def set_axis_limits(
     """
     unit_value, _ = u.get_unit_value_and_latex_from_unit(unit)
 
-    lower_limit, upper_limit = get_axis_limits(*data, lower_limit = lower_limit, upper_limit = upper_limit, log = log, pad = pad, log_pad = log_pad)
+    lower_limit, upper_limit = calculate_axis_limits(*data, lower_limit = lower_limit, upper_limit = upper_limit, log = log, pad = pad, log_pad = log_pad)
 
     if log:
         getattr(axis, f'set_{direction}scale')('log')
@@ -470,20 +492,24 @@ def set_axis_limits(
 
 
 def set_title_and_axis_labels(
-        axis,
-        title = '',
-        x_label = '',
-        x_unit_label = '',
-        y_label = '',
-        y_unit_label = '',
-        title_offset = 1.1,
-        font_size_title = 16,
-        font_size_axis_labels = 14,
-        title_kwargs = None,
-        axis_label_kwargs = None,
-        x_label_kwargs = None,
-        y_label_kwargs = None):
-    title, x_label, y_label = None, None, None
+    axis,
+    title: str = '',
+    x_label: str = '',
+    x_unit_label: str = '',
+    y_label: str = '',
+    y_unit_label: str = '',
+    title_offset = 1.1,
+    font_size_title = 16,
+    font_size_axis_labels = 14,
+    title_kwargs = None,
+    axis_label_kwargs = None,
+    x_label_kwargs = None,
+    y_label_kwargs = None,
+):
+    title_kwargs = title_kwargs or {}
+    axis_label_kwargs = axis_label_kwargs or {}
+    x_label_kwargs = x_label_kwargs or {}
+    y_label_kwargs = y_label_kwargs or {}
 
     if title is not None:
         title = axis.set_title(title, fontsize = font_size_title, **title_kwargs)
@@ -496,7 +522,7 @@ def set_title_and_axis_labels(
     return title, x_label, y_label
 
 
-def get_unit_str_for_axis_label(unit):
+def get_unit_str_for_axis_label(unit: u.Unit):
     """
     Get a LaTeX-formatted unit label for `unit`.
 
@@ -519,7 +545,13 @@ def get_unit_str_for_axis_label(unit):
     return unit_label
 
 
-def attach_h_or_v_lines(axis, line_positions = (), line_kwargs = (), unit = None, direction = 'h'):
+def attach_h_or_v_lines(
+    axis: plt.Axes,
+    line_positions = (),
+    line_kwargs = (),
+    unit = None,
+    direction = 'h',
+):
     """
 
     Parameters
@@ -546,54 +578,55 @@ def attach_h_or_v_lines(axis, line_positions = (), line_kwargs = (), unit = None
 
 
 def xy_plot(
-        name: str,
-        x_data: np.array,
-        *y_data: np.array,
-        line_labels: Iterable[str] = (),
-        line_kwargs: Iterable[dict] = (),
-        figure_manager: Optional[FigureManager] = None,
-        x_unit: u.Unit = None,
-        y_unit: u.Unit = None,
-        x_log_axis: bool = False,
-        y_log_axis: bool = False,
-        x_lower_limit: Optional[float] = None,
-        x_upper_limit: Optional[float] = None,
-        y_lower_limit: Optional[float] = None,
-        y_upper_limit: Optional[float] = None,
-        y_pad: float = 0,
-        y_log_pad: float = 1,
-        vlines: Iterable[float] = (),
-        vline_kwargs: Iterable[dict] = (),
-        hlines: Iterable[float] = (),
-        hline_kwargs: Iterable[dict] = (),
-        x_extra_ticks: Optional[Collection[float]] = None,
-        y_extra_ticks: Optional[Collection[float]] = None,
-        x_extra_tick_labels: Optional[Collection[str]] = None,
-        y_extra_tick_labels: Optional[Collection[str]] = None,
-        title: Optional[str] = None,
-        title_offset: float = TITLE_OFFSET,
-        x_label: Optional[str] = None,
-        y_label: Optional[str] = None,
-        font_size_title: float = 15,
-        font_size_axis_labels: float = 15,
-        font_size_tick_labels: float = 10,
-        font_size_legend: float = 12,
-        ticks_on_top: bool = True,
-        ticks_on_right: bool = True,
-        legend_on_right: bool = False,
-        legend_kwargs: Optional[dict] = None,
-        grid_kwargs: Optional[dict] = None,
-        minor_grid_kwargs: Optional[dict] = None,
-        equal_aspect: bool = False,
-        save_csv: bool = False,
-        **kwargs):
+    name: str,
+    x_data: np.ndarray,
+    *y_data: np.ndarray,
+    line_labels: Iterable[str] = (),
+    line_kwargs: Iterable[dict] = (),
+    x_unit: u.Unit = None,
+    y_unit: u.Unit = None,
+    x_log_axis: bool = False,
+    y_log_axis: bool = False,
+    x_lower_limit: Optional[float] = None,
+    x_upper_limit: Optional[float] = None,
+    y_lower_limit: Optional[float] = None,
+    y_upper_limit: Optional[float] = None,
+    y_pad: float = 0,
+    y_log_pad: float = 1,
+    vlines: Iterable[float] = (),
+    vline_kwargs: Iterable[dict] = (),
+    hlines: Iterable[float] = (),
+    hline_kwargs: Iterable[dict] = (),
+    x_extra_ticks: Optional[Collection[float]] = None,
+    y_extra_ticks: Optional[Collection[float]] = None,
+    x_extra_tick_labels: Optional[Collection[str]] = None,
+    y_extra_tick_labels: Optional[Collection[str]] = None,
+    title: Optional[str] = None,
+    title_offset: float = TITLE_OFFSET,
+    x_label: Optional[str] = None,
+    y_label: Optional[str] = None,
+    font_size_title: float = 15,
+    font_size_axis_labels: float = 15,
+    font_size_tick_labels: float = 10,
+    font_size_legend: float = 12,
+    ticks_on_top: bool = True,
+    ticks_on_right: bool = True,
+    legend_on_right: bool = False,
+    legend_kwargs: Optional[dict] = None,
+    grid_kwargs: Optional[dict] = None,
+    minor_grid_kwargs: Optional[dict] = None,
+    equal_aspect: bool = False,
+    save_csv: bool = False,
+    figure_manager: Optional[FigureManager] = None,
+    **kwargs,
+) -> FigureManager:
     """
     Generate and save a generic x vs. y plot.
 
     Parameters
     ----------
-    name : :class:`str`
-        The filename for the plot (not including path, which should be passed via keyword argument `target_dir`.
+    name
+        The filename for the plot (not including path, which should be passed via they keyword argument ``target_dir``).
     x_data
         A single array that will be used as x-values for all the `y_data`.
     y_data
@@ -602,8 +635,6 @@ def xy_plot(
         Labels for each of the `y_data` lines.
     line_kwargs
         Keyword arguments for each of the `y_data` lines (a list of dictionaries).
-    figure_manager
-        An existing :class:`FigureManager` instance to use instead of creating a new one.
     x_unit
         The unit for the x-axis. Can be a number or the name of a unit as string.
     y_unit
@@ -621,9 +652,9 @@ def xy_plot(
     y_upper_limit
         The upper limit for the y-axis. If ``None``, set automatically from the `y_data`.
     y_pad
-        The linear padding factor for the y-axis. See :func:`get_axis_limits`.
+        The linear padding factor for the y-axis. See :func:`calculate_axis_limits`.
     y_log_pad
-        The logarithmic padding factor for the y-axis. See :func:`get_axis_limits`.
+        The logarithmic padding factor for the y-axis. See :func:`calculate_axis_limits`.
     vlines
         A list of positions to draw vertical lines.
     vline_kwargs
@@ -640,32 +671,40 @@ def xy_plot(
         Labels for the extra x ticks.
     y_extra_tick_labels
         Labels for the extra y ticks.
-    title : :class:`str`
+    title
         The text to display above the plot.
-    x_label : :class:`str`
+    title_offset
+        How far to move the title vertically.
+    x_label
         The label to display below the x-axis.
-    y_label : :class:`str`
+    y_label
         The label to display to the left of the y-axis.
-    font_size_title : :class:`float`
+    font_size_title
         The font size for the title.
-    font_size_axis_labels : :class:`float`
+    font_size_axis_labels
         The font size for the axis labels.
-    font_size_tick_labels : :class:`float`
+    font_size_tick_labels
         The font size for the tick labels.
-    font_size_legend : :class:`float`
+    font_size_legend
         The font size for the legend.
-    ticks_on_top : :class:`bool`
+    ticks_on_top
         If ``True``, axis ticks will be shown along the top side of the plot (in addition to the bottom).
-    ticks_on_right : :class:`bool`
+    ticks_on_right
         If ``True``, axis ticks will be shown along the right side of the plot (in addition to the left).
-    legend_on_right : :class:`bool`
+    legend_on_right
         If ``True``, the legend will be displayed hanging on the right side of the plot.
-    grid_kwargs : :class:`dict`
+    legend_kwargs
+        Keyword arguments for the legend.
+    grid_kwargs
         Keyword arguments for the major gridlines.
-    minor_grid_kwargs : :class:`dict`
+    minor_grid_kwargs
         Keyword arguments for the minor gridlines.
+    equal_aspect
+        If ``True``, the aspect ratio of the axes will be set to ``'equal'``.
     save_csv : :class:`bool`
         If ``True``, the x and y data for the plot will be saved to a CSV file with the same name in the target directory.
+    figure_manager
+        An existing :class:`FigureManager` instance to use instead of creating a new one.
     kwargs
         Keyword arguments are passed to :class:`FigureManager`.
 
@@ -674,12 +713,9 @@ def xy_plot(
     :class:`FigureManager`
         The :class:`FigureManager` that the xy-plot was constructed in.
     """
-    # set up figure and axis
     if figure_manager is None:
         figure_manager = FigureManager(name, **kwargs)
     with figure_manager as fm:
-        fm.elements = {}
-
         fig = fm.fig
         ax = plt.subplot(111)
         if equal_aspect:
@@ -713,17 +749,15 @@ def xy_plot(
         hlines = attach_h_or_v_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
         fm.elements['hlines'] = hlines
 
-        x_lower_limit, x_upper_limit = set_axis_limits(
+        x_lower_limit, x_upper_limit = set_axis_limits_and_scale(
             ax, x_data,
             lower_limit = x_lower_limit,
             upper_limit = x_upper_limit,
             log = x_log_axis,
-            pad = 0,
-            log_pad = 1,
             unit = x_unit,
             direction = 'x'
         )
-        y_lower_limit, y_upper_limit = set_axis_limits(
+        y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
             ax, *y_data,
             lower_limit = y_lower_limit,
             upper_limit = y_upper_limit,
@@ -776,16 +810,15 @@ def xy_plot(
         if y_log_axis:
             ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
 
-        # set limits again to guarantee we don't see ticks oustide the limits
+        # set limits again to guarantee we don't see ticks outside the limits
         ax.set_xlim(x_lower_limit, x_upper_limit)
         ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
         ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
 
-    path = fm.path
-
     if save_csv:
+        path = fm.path
         csv_path = os.path.splitext(path)[0] + '.csv'
         np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
 
@@ -795,47 +828,47 @@ def xy_plot(
 
 
 def xxyy_plot(
-        name,
-        x_data,
-        y_data,
-        line_labels = (),
-        line_kwargs = (),
-        figure_manager = None,
-        x_unit = None,
-        y_unit = None,
-        x_log_axis = False,
-        y_log_axis = False,
-        x_lower_limit = None,
-        x_upper_limit = None,
-        y_lower_limit = None,
-        y_upper_limit = None,
-        y_pad = 0,
-        y_log_pad = 1,
-        vlines = (),
-        vline_kwargs = (),
-        hlines = (),
-        hline_kwargs = (),
-        x_extra_ticks = None,
-        y_extra_ticks = None,
-        x_extra_tick_labels = None,
-        y_extra_tick_labels = None,
-        title = None,
-        title_offset = TITLE_OFFSET,
-        x_label = None,
-        y_label = None,
-        font_size_title = 15,
-        font_size_axis_labels = 15,
-        font_size_tick_labels = 10,
-        font_size_legend = 12,
-        ticks_on_top = True,
-        ticks_on_right = True,
-        legend_on_right = False,
-        grid_kwargs = None,
-        minor_grid_kwargs = None,
-        legend_kwargs = None,
-        save_csv = False,
-        **kwargs):
-    # set up figure and axis
+    name,
+    x_data,
+    y_data,
+    line_labels = (),
+    line_kwargs = (),
+    x_unit = None,
+    y_unit = None,
+    x_log_axis = False,
+    y_log_axis = False,
+    x_lower_limit = None,
+    x_upper_limit = None,
+    y_lower_limit = None,
+    y_upper_limit = None,
+    y_pad = 0,
+    y_log_pad = 1,
+    vlines = (),
+    vline_kwargs = (),
+    hlines = (),
+    hline_kwargs = (),
+    x_extra_ticks = None,
+    y_extra_ticks = None,
+    x_extra_tick_labels = None,
+    y_extra_tick_labels = None,
+    title = None,
+    title_offset = TITLE_OFFSET,
+    x_label = None,
+    y_label = None,
+    font_size_title = 15,
+    font_size_axis_labels = 15,
+    font_size_tick_labels = 10,
+    font_size_legend = 12,
+    ticks_on_top = True,
+    ticks_on_right = True,
+    legend_on_right = False,
+    grid_kwargs = None,
+    minor_grid_kwargs = None,
+    legend_kwargs = None,
+    save_csv = False,
+    figure_manager = None,
+    **kwargs,
+) -> FigureManager:
     if figure_manager is None:
         figure_manager = FigureManager(name, **kwargs)
     with figure_manager as fm:
@@ -870,7 +903,7 @@ def xxyy_plot(
         attach_h_or_v_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
         attach_h_or_v_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
 
-        x_lower_limit, x_upper_limit = set_axis_limits(
+        x_lower_limit, x_upper_limit = set_axis_limits_and_scale(
             ax, *x_data,
             lower_limit = x_lower_limit,
             upper_limit = x_upper_limit,
@@ -880,7 +913,7 @@ def xxyy_plot(
             unit = x_unit,
             direction = 'x'
         )
-        y_lower_limit, y_upper_limit = set_axis_limits(
+        y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
             ax, *y_data,
             lower_limit = y_lower_limit,
             upper_limit = y_upper_limit,
@@ -952,49 +985,49 @@ def xxyy_plot(
 
 
 def xyz_plot(
-        name,
-        x_mesh,
-        y_mesh,
-        z_mesh,
-        figure_manager = None,
-        x_unit = None,
-        y_unit = None,
-        z_unit = None,
-        x_log_axis = False,
-        y_log_axis = False,
-        z_log_axis = False,
-        x_lower_limit = None,
-        x_upper_limit = None,
-        y_lower_limit = None,
-        y_upper_limit = None,
-        z_lower_limit = None,
-        z_upper_limit = None,
-        z_pad = 0,
-        z_log_pad = 1,
-        x_extra_ticks = None,
-        y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
-        title = None,
-        x_label = None,
-        y_label = None,
-        z_label = None,
-        font_size_title = 15,
-        font_size_axis_labels = 15,
-        font_size_tick_labels = 10,
-        ticks_on_top = True,
-        ticks_on_right = True,
-        grid_kwargs = None,
-        minor_grid_kwargs = None,
-        contours = (),
-        contour_kwargs = None,
-        show_contour_labels = True,
-        contour_label_kwargs = None,
-        save_csv = False,
-        colormap = plt.get_cmap('viridis'),
-        shading = 'flat', show_colorbar = True,
-        richardson_equator_magnitude = 1,
-        sym_log_norm_epsilon = 1e-3,
-        **kwargs):
-    # set up figure and axis
+    name,
+    x_mesh,
+    y_mesh,
+    z_mesh,
+    x_unit = None,
+    y_unit = None,
+    z_unit = None,
+    x_log_axis = False,
+    y_log_axis = False,
+    z_log_axis = False,
+    x_lower_limit = None,
+    x_upper_limit = None,
+    y_lower_limit = None,
+    y_upper_limit = None,
+    z_lower_limit = None,
+    z_upper_limit = None,
+    z_pad = 0,
+    z_log_pad = 1,
+    x_extra_ticks = None,
+    y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
+    title = None,
+    x_label = None,
+    y_label = None,
+    z_label = None,
+    font_size_title = 15,
+    font_size_axis_labels = 15,
+    font_size_tick_labels = 10,
+    ticks_on_top = True,
+    ticks_on_right = True,
+    grid_kwargs = None,
+    minor_grid_kwargs = None,
+    contours = (),
+    contour_kwargs = None,
+    show_contour_labels = True,
+    contour_label_kwargs = None,
+    save_csv = False,
+    colormap = plt.get_cmap('viridis'),
+    shading = 'flat', show_colorbar = True,
+    richardson_equator_magnitude = 1,
+    sym_log_norm_epsilon = 1e-3,
+    figure_manager = None,
+    **kwargs,
+) -> FigureManager:
     if figure_manager is None:
         figure_manager = FigureManager(name, **kwargs)
     with figure_manager as fm:
@@ -1022,7 +1055,7 @@ def xyz_plot(
         z_unit_value, z_unit_name = u.get_unit_value_and_latex_from_unit(z_unit)
         z_unit_label = get_unit_str_for_axis_label(z_unit)
 
-        x_lower_limit, x_upper_limit = set_axis_limits(
+        x_lower_limit, x_upper_limit = set_axis_limits_and_scale(
             ax, x_mesh,
             direction = 'x',
             lower_limit = x_lower_limit,
@@ -1032,7 +1065,7 @@ def xyz_plot(
             log_pad = 1,
             unit = x_unit,
         )
-        y_lower_limit, y_upper_limit = set_axis_limits(
+        y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
             ax, y_mesh,
             direction = 'y',
             lower_limit = y_lower_limit,
@@ -1048,7 +1081,7 @@ def xyz_plot(
                 equator_magnitude = richardson_equator_magnitude
             )
         else:
-            z_lower_limit, z_upper_limit = get_axis_limits(
+            z_lower_limit, z_upper_limit = calculate_axis_limits(
                 z_mesh,
                 lower_limit = z_lower_limit,
                 upper_limit = z_upper_limit,
