@@ -9,8 +9,7 @@ import posixpath
 import stat
 import sys
 from copy import copy, deepcopy
-from typing import Any, Iterable, Optional, Callable, Type, Tuple, Union
-
+from typing import Any, Iterable, Optional, Callable, Type, Tuple, Union, List
 
 import paramiko
 from tqdm import tqdm
@@ -45,12 +44,12 @@ class ClusterInterface:
     """
 
     def __init__(
-            self,
-            remote_host: str,
-            username: str,
-            key_path: str,
-            local_mirror_root: str = 'mirror',
-            remote_sep: str = '/'):
+        self,
+        remote_host: str,
+        username: str,
+        key_path: str,
+        local_mirror_root: str = 'mirror',
+        remote_sep: str = '/'):
         """
         Parameters
         ----------
@@ -136,11 +135,11 @@ class ClusterInterface:
         return os.path.join(self.local_mirror_root, *remote_path.split(self.remote_sep))
 
     def get_file(
-            self,
-            remote_path: str,
-            local_path: str,
-            remote_stat = None,
-            preserve_timestamps: bool = True):
+        self,
+        remote_path: str,
+        local_path: str,
+        remote_stat = None,
+        preserve_timestamps: bool = True):
         """
         Download a file from the remote machine to the local machine.
 
@@ -167,9 +166,9 @@ class ClusterInterface:
         logger.debug(f'{local_path}   <--   {remote_path}')
 
     def is_file_synced(
-            self,
-            remote_stat,
-            local_path: str):
+        self,
+        remote_stat,
+        local_path: str):
         """
         Determine whether a local file is the same as a remote file by checking the file size and modification times.
 
@@ -193,11 +192,11 @@ class ClusterInterface:
         return False
 
     def mirror_file(
-            self,
-            remote_path: str,
-            remote_stat: str,
-            force_download: bool = False,
-            integrity_check: bool = True):
+        self,
+        remote_path: str,
+        remote_stat: str,
+        force_download: bool = False,
+        integrity_check: bool = True):
         """
         Mirror a remote file, only downloading it if it does not match a local copy at a derived local path name.
 
@@ -236,13 +235,13 @@ class ClusterInterface:
         return local_path
 
     def walk_remote_path(
-            self,
-            remote_path,
-            func_on_dirs: Optional[Callable] = None,
-            func_on_files: Optional[Callable] = None,
-            exclude_hidden: bool = True,
-            blacklist_dir_names: Iterable[str] = (),
-            whitelist_file_ext: Iterable[str] = ()):
+        self,
+        remote_path,
+        func_on_dirs: Optional[Callable] = None,
+        func_on_files: Optional[Callable] = None,
+        exclude_hidden: bool = True,
+        blacklist_dir_names: Iterable[str] = (),
+        whitelist_file_ext: Iterable[str] = ()):
         """
         Walk a remote directory starting at the given path.
 
@@ -313,10 +312,10 @@ class ClusterInterface:
         return path_count
 
     def mirror_dir(
-            self,
-            remote_dir: str = None,
-            blacklist_dir_names: Iterable[str] = ('python', 'build_python', 'backend', 'logs'),
-            whitelist_file_ext: Iterable[str] = ('.txt', '.json', '.spec', '.sim', '.pkl')):
+        self,
+        remote_dir: str = None,
+        blacklist_dir_names: Iterable[str] = ('python', 'build_python', 'backend', 'logs'),
+        whitelist_file_ext: Iterable[str] = ('.txt', '.json', '.spec', '.sim', '.pkl')):
         """
         Mirror a directory recursively.
 
@@ -628,9 +627,11 @@ class JobProcessor(sims.Beet):
 def combine_job_processors(*job_processors, job_dir_path = None):
     sim_type = job_processors[0].simulation_type
     jp_type = job_processors[0].__class__
-    combined_jp = jp_type(name = '-'.join(jp.name for jp in job_processors),
-                          job_dir_path = job_dir_path,
-                          simulation_type = sim_type)
+    combined_jp = jp_type(
+        name = '-'.join(jp.name for jp in job_processors),
+        job_dir_path = job_dir_path,
+        simulation_type = sim_type,
+    )
 
     combined_jp.data = collections.OrderedDict((ii, copy(sim_result)) for ii, (sim_name, sim_result) in enumerate(itertools.chain(jp.data for jp in job_processors)))
 
@@ -649,7 +650,7 @@ class Parameter:
         value : :class:`str`
             The value of the Parameter, or an iterable of values.
         expandable : :class:`Bool`
-            If True, :func:`expand_parameters_to_dicts` will expand along an iterable `value`.
+            If True, :func:`expand_parameters` will expand along an iterable `value`.
         """
         self.name = name
         self.value = value
@@ -665,7 +666,7 @@ class Parameter:
             return '{}(name = {} expandable: \n{})'.format(self.__class__.__name__, self.name, self.value, '\n  '.join(str(v) for v in self.value))
 
 
-def expand_parameters_to_dicts(parameters: Iterable[Parameter]) -> Iterable[dict]:
+def expand_parameters(parameters: Iterable[Parameter]) -> List[dict]:
     """
     Expand an iterable of :class:`Parameter` to a list of dictionaries containing all of the combinations of parameter values.
     Each of these dictionaries can then be unpacked into a :class:`Specification`.
@@ -679,22 +680,22 @@ def expand_parameters_to_dicts(parameters: Iterable[Parameter]) -> Iterable[dict
 
     Returns
     -------
-    iterable of :class:`dict`
-        An iterable of dictionaries containing all of the combinations of parameters.
+    list of :class:`dict`
+        An list of dictionaries containing all of the combinations of parameters.
     """
     dicts = [{}]
 
     for par in parameters:
-        pn, pv = par.name, par.value
+        name, value = par.name, par.value
 
         # make sure the value is an iterable that isn't a string and has a length
         if par.expandable and hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):
-            dicts = [deepcopy(d) for d in dicts for _ in range(len(pv))]
-            for d, v in zip(dicts, itertools.cycle(pv)):
-                d[pn] = v
+            dicts = [deepcopy(d) for d in dicts for _ in range(len(value))]
+            for d, v in zip(dicts, itertools.cycle(value)):
+                d[name] = v
         else:
             for d in dicts:
-                d[pn] = pv
+                d[name] = value
 
     return dicts
 

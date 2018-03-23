@@ -225,7 +225,7 @@ Creating Specifications and Jobs Programmatically
 
 .. autoclass:: Parameter
 
-.. autofunction:: expand_parameters_to_dicts
+.. autofunction:: expand_parameters
 
 Exceptions
 ----------
