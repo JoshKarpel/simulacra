@@ -73,3 +73,35 @@ def test_watched_mock_resets_if_watched_value_changes(watched_mock):
     watched_mock.memoized(5)
 
     assert watched_mock.inner.call_count == 6 + 2  # 6 from first three pairs, two from last two pairs
+
+
+def test_watched_memoize(mocker):
+    func = mocker.MagicMock(return_value = 'foo')
+
+    class Foo:
+        def __init__(self):
+            self.a = True
+            self.counter = 0
+
+        @si.utils.watched_memoize(lambda self: self.a)
+        def method(self, x):
+            func()
+            self.counter += 1
+            return self.counter
+
+    f = Foo()
+    assert f.method(0) == 1
+    assert f.method(10) == 2
+    assert f.method(10) == 2
+    assert f.method(10) == 2
+    assert f.method(10) == 2
+    assert func.call_count == 2
+
+    assert f.method(0) == 1
+    assert f.method(3) == 3
+    assert func.call_count == 3
+
+    f.a = not f.a  # resets memo
+
+    assert f.method(0) == 4
+    assert func.call_count == 4

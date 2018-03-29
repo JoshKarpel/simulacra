@@ -13,17 +13,6 @@ import matplotlib
 
 matplotlib.use('Agg')
 
-mpl_rcParams_update = {
-    'font.family': 'serif',
-    'mathtext.fontset': 'cm',
-    'mathtext.rm': 'serif',
-    'xtick.top': True,
-    'xtick.bottom': True,
-    'ytick.right': True,
-    'ytick.left': True,
-}
-matplotlib.rcParams.update(mpl_rcParams_update)
-
 from .sims import *
 from .info import Info
-from . import math, utils, vis, units, summables, exceptions
+from . import math, utils, vis, cluster, units, summables, exceptions

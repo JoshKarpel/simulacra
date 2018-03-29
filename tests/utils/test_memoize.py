@@ -43,3 +43,31 @@ def test_memoized_func_is_called_multiple_times_for_different_args(memoized_mock
     memoized_func(5)
 
     assert func.call_count == 5
+
+
+
+def test_cached_property(mocker):
+    func = mocker.MagicMock(return_value = 'foo')
+
+    class Foo:
+        @si.utils.cached_property
+        def prop(self):
+            return func()
+
+    f = Foo()
+    assert f.prop == 'foo'
+    assert 'prop' in f.__dict__
+
+    f.prop
+    f.prop
+    f.prop
+    f.prop
+
+    assert func.call_count == 1  # only called once (i.e., was cached)
+
+    del f.prop  # delete to reset caching
+
+    assert 'prop' not in f.__dict__
+    assert f.prop == 'foo'  # call again
+    assert func.call_count == 2
+    assert 'prop' in f.__dict__
