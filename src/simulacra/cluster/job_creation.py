@@ -4,13 +4,15 @@ import os
 import pickle
 import sys
 from copy import deepcopy
-from typing import Any, Iterable, Optional, Callable, Type, Tuple, Union, List
+import textwrap
+from typing import Any, Iterable, Optional, Callable, Type, Tuple, Union, List, Collection, Dict
 
 from tqdm import tqdm
 
 from .. import sims, utils
 
-import numpy as np  # needs to be here so that ask_for_eval works
+# these imports need to be here so that ask_for_eval works
+import numpy as np
 import scipy as sp
 from .. import units as u
 
@@ -25,28 +27,29 @@ class Parameter:
         """
         Parameters
         ----------
-        name : :class:`str`
+        name
             The name of the Parameter, which should match a keyword argument of the target :class:`Specification`.
-        value : :class:`str`
+        value
             The value of the Parameter, or an iterable of values.
-        expandable : :class:`Bool`
+        expandable
             If True, :func:`expand_parameters` will expand along an iterable `value`.
         """
         self.name = name
         self.value = value
         self.expandable = expandable
 
-    def __str__(self):
-        return '{} {} = {}'.format(self.__class__.__name__, self.name, self.value)
-
     def __repr__(self):
         if not self.expandable:
-            return '{}(name = {}, value = {})'.format(self.__class__.__name__, self.name, self.value)
+            return f'{self.__class__.__name__}(name = {self.name}, value = {self.value})'
         else:
-            return '{}(name = {} expandable: \n{})'.format(self.__class__.__name__, self.name, self.value, '\n  '.join(str(v) for v in self.value))
+            header = f'{self.__class__.__name__}(name = {self.name}, expandable = {self.expandable}, values ='
+            val_text = textwrap.wrap(', '.join(repr(v) for v in self.value), width = 60)
+            out = '\n    '.join([header] + val_text) + ')'
+
+            return out
 
 
-def expand_parameters(parameters: Iterable[Parameter]) -> List[dict]:
+def expand_parameters(parameters: Collection[Parameter]) -> List[Dict[str, Any]]:
     """
     Expand an iterable of :class:`Parameter` to a list of dictionaries containing all of the combinations of parameter values.
     Each of these dictionaries can then be unpacked into a :class:`Specification`.
@@ -55,27 +58,25 @@ def expand_parameters(parameters: Iterable[Parameter]) -> List[dict]:
 
     Parameters
     ----------
-    parameters : iterable of :class:`Parameter`
+    parameters
         The parameters to expand over.
 
     Returns
     -------
-    list of :class:`dict`
+    parameter_combinations
         An list of dictionaries containing all of the combinations of parameters.
     """
     dicts = [{}]
 
     for par in parameters:
-        name, value = par.name, par.value
-
         # make sure the value is an iterable that isn't a string and has a length
         if par.expandable and hasattr(par.value, '__iter__') and not isinstance(par.value, str) and hasattr(par.value, '__len__'):
-            dicts = [deepcopy(d) for d in dicts for _ in range(len(value))]
-            for d, v in zip(dicts, itertools.cycle(value)):
-                d[name] = v
+            dicts = [deepcopy(d) for d in dicts for _ in range(len(par.value))]
+            for d, v in zip(dicts, itertools.cycle(par.value)):
+                d[par.name] = v
         else:
             for d in dicts:
-                d[name] = value
+                d[par.name] = par.value
 
     return dicts
 
@@ -86,7 +87,7 @@ def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> An
 
     Parameters
     ----------
-    question : :class:`str`
+    question
         A string to display on the command prompt for the user.
     default
         The default answer to the question.
@@ -102,9 +103,8 @@ def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> An
 
         trimmed = input_str.replace(' ', '')
         if trimmed == '':
-            out = cast_to(default)
-        else:
-            out = cast_to(trimmed)
+            return default
+        out = cast_to(trimmed)
 
         logger.debug('Got input from stdin for question "{}": {}'.format(question, out))
 
@@ -130,7 +130,7 @@ def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
 
     Returns
     -------
-    :class:`Bool`
+    answer
         The input, interpreted as a boolean.
     """
     try:
@@ -138,7 +138,7 @@ def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
 
         trimmed = input_str.replace(' ', '')
         if trimmed == '':
-            input_str = str(default)
+            return default
 
         logger.debug('Got input from stdin for question "{}": {}'.format(question, input_str))
 
@@ -158,9 +158,11 @@ def ask_for_eval(question: str, default: str = 'None') -> Any:
     """
     Ask for input from the user, with a default value, which will be evaluated as a Python command.
 
-    Numpy's top-level interface (imported as np) and Simulacra's unit module (* imported) are both available. For example, ``'np.linspace(0, twopi, 100)'`` will produce the expected result.
+    Numpy and Scipy's top-level interfaces (imported as ``np`` and ``sp``) and Simulacra's own unit module (imported as ``u``) are both available.
+    For example, ``'np.linspace(0, twopi, 100)'`` will produce the expected result of 100 numbers evenly spaced between zero and twopi..
 
-    NB: this function is not safe! The user can execute arbitrary Python code.
+    NB: this function is not safe!
+    The user can execute arbitrary Python code!
 
     Parameters
     ----------
@@ -171,6 +173,7 @@ def ask_for_eval(question: str, default: str = 'None') -> Any:
 
     Returns
     -------
+    answer
 
     """
     input_str = input(question + ' [Default: {}] (eval) > '.format(default))
@@ -215,15 +218,21 @@ def save_specifications(specifications: Iterable[sims.Specification], job_dir: s
     logger.debug('Saved Specifications')
 
 
-def write_specifications_info_to_file(specifications: Iterable[sims.Specification], job_dir: str):
+def write_specifications_info_to_file(
+    specifications: Collection[sims.Specification],
+    job_dir: str,
+):
     """Write information from the list of the Specifications to a file."""
     print('Writing Specification info to file...')
 
-    with open(os.path.join(job_dir, 'specifications.txt'), 'w', encoding = 'utf-8') as file:
+    path = os.path.join(job_dir, 'specifications.txt')
+    with open(path, 'w', encoding = 'utf-8') as file:
         for spec in tqdm(specifications, ascii = True):
             file.write(str(spec.info()) + '\n')
 
     logger.debug('Wrote Specification information to file')
+
+    return path
 
 
 def write_parameters_info_to_file(parameters: Iterable[Parameter], job_dir: str):
@@ -237,7 +246,7 @@ def write_parameters_info_to_file(parameters: Iterable[Parameter], job_dir: str)
     logger.debug('Wrote parameter information to file')
 
 
-def specification_check(specifications: Iterable[sims.Specification], check: int = 3):
+def specification_check(specifications: Collection[sims.Specification], check: int = 3):
     """Ask the user whether some number of specifications look correct."""
     print('-' * 20)
     for s in specifications[0:check]:
