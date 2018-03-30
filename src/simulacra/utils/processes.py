@@ -1,3 +1,4 @@
+import multiprocessing
 import subprocess
 import logging
 from typing import Optional, Union, NamedTuple, Callable, Iterable
@@ -103,3 +104,51 @@ class SuspendProcesses:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         resume_processes(self.processes)
+
+
+def run_in_process(func, args = (), kwargs = None):
+    """
+    Run a function in a separate process.
+
+    :param func: the function to run
+    :param args: positional arguments for function
+    :param kwargs: keyword arguments for function
+    """
+    if kwargs is None:
+        kwargs = {}
+
+    with multiprocessing.Pool(processes = 1) as pool:
+        output = pool.apply(func, args, kwargs)
+
+    return output
+
+
+def multi_map(func: Callable, targets: Iterable, processes: Optional[int] = None, **kwargs):
+    """
+    Map a function over a list of inputs using multiprocessing.
+
+    Function should take a single positional argument (an element of targets) and any number of keyword arguments, which must be the same for each target.
+
+    Parameters
+    ----------
+    func : a callable
+        The function to call on each of the `targets`.
+    targets : an iterable
+        An iterable of arguments to call the function on.
+    processes : :class:`int`
+        The number of processes to use. Defaults to the half of the number of cores on the computer.
+    kwargs
+        Keyword arguments are passed to :func:`multiprocess.pool.map`.
+
+    Returns
+    -------
+    :class:`tuple`
+        The outputs of the function being applied to the targets.
+    """
+    if processes is None:
+        processes = max(int(multiprocessing.cpu_count() / 2) - 1, 1)
+
+    with multiprocessing.Pool(processes = processes) as pool:
+        output = pool.map(func, targets, **kwargs)
+
+    return tuple(output)

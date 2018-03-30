@@ -29,11 +29,6 @@ def dict_to_arrays(dct: dict, key: Optional[Callable] = None) -> KeyValueArrays:
     key_list = []
     val_list = []
 
-    if key is not None:
-        items = sorted(dct.items())
-    else:
-        items = sorted(dct.items(), key = key)
-
     for key, val in sorted(dct.items(), key = key):
         key_list.append(key)
         val_list.append(val)

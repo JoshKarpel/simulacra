@@ -3,11 +3,10 @@ import os
 import logging
 from typing import Optional, Union, NamedTuple, Callable, Iterable
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-ILLEGAL_FILENAME_CHARACTERS = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']  # these characters should be stripped from file names before use
+ILLEGAL_FILENAME_CHARACTERS = {'<', '>', ':', '"', '/', '\\', '|', '?', '*'}  # these characters should be stripped from file names before use
 
 
 def strip_illegal_characters(string: str) -> str:
@@ -36,6 +35,23 @@ def get_file_size_as_string(file_path: str) -> str:
 
 
 def table(headers: Iterable[str], rows: Iterable[Iterable]) -> str:
+    """
+    Return a string containing a simple table created from headers and rows of entries.
+
+    Parameters
+    ----------
+    headers
+        The column headers for the table.
+    rows
+        The entries for each row, for each column.
+        Should be an iterable of iterables, with the outer level containing the rows, and each inner iterable containing the entries for each column.
+        A ``None`` in the outer iterable produces a horizontal bar at that position.
+
+    Returns
+    -------
+    table
+        A string containing the table.
+    """
     lengths = [len(h) for h in headers]
     rows = [[str(entry) for entry in row] if row is not None else None for row in rows]
     for row in rows:

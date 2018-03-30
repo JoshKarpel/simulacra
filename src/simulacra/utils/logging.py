@@ -3,6 +3,8 @@ import sys
 import logging
 from typing import Optional, Union, NamedTuple, Callable, Iterable
 
+from . import formatting, filesystem
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -59,7 +61,7 @@ class LogManager:
         self.file_level = file_level
 
         if file_name is None:
-            file_name = f'log__{get_now_str()}'
+            file_name = f'log__{formatting.get_now_str()}'
         self.file_name = file_name
         if not self.file_name.endswith('.log'):
             self.file_name += '.log'
@@ -94,7 +96,7 @@ class LogManager:
         if self.file_logs:
             log_file_path = os.path.join(self.file_dir, self.file_name)
 
-            ensure_dir_exists(log_file_path)  # the log message emitted here will not be included in the logger being created by this context manager
+            filesystem.ensure_dir_exists(log_file_path)  # the log message emitted here will not be included in the logger being created by this context manager
 
             file_handler = logging.FileHandler(log_file_path, mode = self.file_mode, encoding = 'utf-8')
             file_handler.setLevel(self.file_level)

@@ -4,6 +4,7 @@ import hashlib
 import posixpath
 import stat
 import collections
+import functools
 from typing import Any, Iterable, Optional, Callable, Type, Tuple, Union, List
 
 import paramiko
@@ -18,48 +19,37 @@ CmdOutput = collections.namedtuple('CmdOutput', ['stdin', 'stdout', 'stderr'])
 
 class ClusterInterface:
     """
-    A class for communicating with a user's home directory on a remote machine. Should be used as a context manager.
-
-    The remote home directory should be organized like:
-
-    .. code::
-
-       home/
-       |-- backend/
-       |-- jobs/
-           |-- job1/
-           |-- job2/
-
+    A class for communicating with a cluster's submit node via SSH and FTP.
+    Should be used as a context manager.
     """
 
     def __init__(
         self,
-        remote_host: str,
+        hostname: str,
         username: str,
         key_path: str,
         local_mirror_root: str = 'mirror',
-        remote_sep: str = '/',
     ):
         """
         Parameters
         ----------
-        remote_host : :class:`str`
+        hostname
             The hostname of the remote host.
-        username : :class:`str`
+        username
             The username to log in with.
-        key_path : :class:`str`
+        key_path
             The path to the SSH key file that corresponds to the `username`.
-        local_mirror_root : :class:`str`
+        local_mirror_root
             The name to give the root directory of the local mirror.
-        remote_sep : :class:`str`
-            The path separator on the remote host. Almost undoubtedly, this is ``'/'``.
+        remote_sep
+            The path separator on the remote host.
+            Almost undoubtedly, this is ``'/'``.
         """
-        self.remote_host = remote_host
+        self.remote_host = hostname
         self.username = username
         self.key_path = key_path
 
         self.local_mirror_root = local_mirror_root
-        self.remote_sep = remote_sep
 
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -98,7 +88,7 @@ class ClusterInterface:
 
     @property
     def local_home_dir(self):
-        local_home = os.path.join(self.local_mirror_root, *self.remote_home_dir.split(self.remote_sep))
+        local_home = os.path.join(self.local_mirror_root, *self.remote_home_dir.split('/'))
 
         return local_home
 
@@ -120,9 +110,9 @@ class ClusterInterface:
 
         return home_path
 
-    def remote_path_to_local_path(self, remote_path):
+    def remote_path_to_local_path(self, remote_path, local_root):
         """Return the local path corresponding to a remote path."""
-        return os.path.join(self.local_mirror_root, *remote_path.split(self.remote_sep))
+        return os.path.join(local_root, *remote_path.split('/'))
 
     def get_file(
         self,
@@ -187,6 +177,7 @@ class ClusterInterface:
         self,
         remote_path: str,
         remote_stat: str,
+        local_root: str,
         force_download: bool = False,
         integrity_check: bool = True,
     ):
@@ -201,6 +192,8 @@ class ClusterInterface:
             The remote path to mirror.
         remote_stat
             The stat of the remote path.
+        local_root
+            The local directory to use as the root directory.
         force_download
             If ``True``, download the file even if it synced.
         integrity_check
@@ -211,7 +204,7 @@ class ClusterInterface:
         local_path : str
             The path to the local file.
         """
-        local_path = self.remote_path_to_local_path(remote_path)
+        local_path = self.remote_path_to_local_path(remote_path, local_root)
         if force_download or not self.is_file_synced(remote_stat, local_path):
             self.get_file(remote_path, local_path, remote_stat = remote_stat, preserve_timestamps = True)
             if integrity_check:
@@ -223,7 +216,7 @@ class ClusterInterface:
                     md5_local = md5_local.hexdigest().strip()
                 if md5_local != md5_remote:
                     logger.debug(f'MD5 hash on {self.remote_host} for file {remote_path} did not match local file at {local_path}, retrying')
-                    self.mirror_file(remote_path, remote_stat, force_download = True)
+                    self.mirror_file(remote_path, remote_stat, local_root = local_root, force_download = True)
 
         return local_path
 
@@ -308,6 +301,7 @@ class ClusterInterface:
     def mirror_dir(
         self,
         remote_dir: str = None,
+        local_root: str = 'mirror',
         blacklist_dir_names: Iterable[str] = ('python', 'build_python', 'backend', 'logs'),
         whitelist_file_ext: Iterable[str] = ('.txt', '.json', '.spec', '.sim', '.pkl'),
     ):
@@ -318,10 +312,12 @@ class ClusterInterface:
 
         Parameters
         ----------
-        remote_dir : str
+        remote_dir
             The path to the remote directory to mirror.
         blacklist_dir_names
             Directories with these names will not be walked.
+        local_root
+            The directory to use as the root directory locally.
         whitelist_file_ext
             Only files with these file extensions will be transferred.
         """
@@ -332,7 +328,7 @@ class ClusterInterface:
         with utils.BlockTimer() as timer:
             self.walk_remote_path(
                 self.remote_home_dir,
-                func_on_files = self.mirror_file,
+                func_on_files = functools.partial(self.mirror_file, local_root = local_root),
                 func_on_dirs = lambda d, _: utils.ensure_dir_exists(d),
                 blacklist_dir_names = tuple(blacklist_dir_names),
                 whitelist_file_ext = tuple(whitelist_file_ext),

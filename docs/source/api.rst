@@ -159,7 +159,7 @@ Simulacra's utility module provides a wide range of functions for working with a
 
 .. autofunction:: find_nearest_entry
 
-.. autofunction:: find_or_init_sim
+.. autofunction:: find_or_init_sim_from_spec
 
 .. autoclass:: LogManager
 
