@@ -47,19 +47,15 @@ class Info:
     def __repr__(self):
         return f'{self.__class__.__name__}({self.header})'
 
-    def json(self):
-        # TODO: json output from Info
-        raise NotImplementedError
-
     def add_field(self, name: str, value: Any):
         """
         Add a field to the :class:`Info`, which will be displayed as ``'{name}: {value}'``.
 
         Parameters
         ----------
-        name : :class:`str`
+        name
             The name of the field.
-        value : :class:`str`
+        value
             The value of the field.
         """
         self.children[name] = value
@@ -70,7 +66,7 @@ class Info:
 
         Parameters
         ----------
-        name_value_pairs : iterable
+        name_value_pairs
             An iterable or dict of ``(name, value)`` pairs to add as fields.
         """
         self.children.update(dict(name_value_pairs))
@@ -81,7 +77,7 @@ class Info:
 
         Parameters
         ----------
-        info : :class:`Info`
+        info
             An :class:`Info` to be added as a sub-Info.
         """
         self.children[info.header] = info
@@ -92,7 +88,7 @@ class Info:
 
         Parameters
         ----------
-        infos : iterable
+        infos
             An iterable of :class:`Info`
         """
         self.children.update({id(info): info for info in infos})

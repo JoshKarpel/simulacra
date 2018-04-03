@@ -37,7 +37,7 @@ class Beet:
         file_name
             The desired external name of the :class:`Beet`.
             Automatically derived from ``name`` if ``None``.
-            Illegal characters are stripped before use, and spaces are replaced with underscores.
+            Either way, illegal characters are stripped and spaces are replaced with underscores.
         """
         self.name = str(name)
         if file_name is None:
@@ -114,11 +114,7 @@ class Beet:
         if ensure_dir_exists:
             utils.ensure_dir_exists(file_path_working)
 
-        if compressed:
-            op = gzip.open
-        else:
-            op = open
-
+        op = gzip.open if compressed else open
         with op(file_path_working, mode = 'wb') as file:
             pickle.dump(self, file, protocol = -1)
 
