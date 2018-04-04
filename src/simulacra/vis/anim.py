@@ -584,9 +584,14 @@ class Animator:
     For this class to function correctly :code:`ffmpeg` must be visible on the system path.
     """
 
-    def __init__(self, postfix = '', target_dir = None,
-                 length = 60, fps = 30,
-                 colormap = plt.cm.get_cmap('inferno')):
+    def __init__(
+        self,
+        postfix = '',
+        target_dir = None,
+        length = 60,
+        fps = 30,
+        colormap = plt.cm.get_cmap('inferno'),
+    ):
         """
         Parameters
         ----------
