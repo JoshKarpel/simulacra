@@ -98,20 +98,21 @@ def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> An
     -------
 
     """
+    input_str = input(question + ' [Default: {}] > '.format(default))
+
+    trimmed = input_str.replace(' ', '')
+    if trimmed == '':
+        return default
+
     try:
-        input_str = input(question + ' [Default: {}] > '.format(default))
-
-        trimmed = input_str.replace(' ', '')
-        if trimmed == '':
-            return default
         out = cast_to(trimmed)
-
-        logger.debug('Got input from stdin for question "{}": {}'.format(question, out))
-
-        return out
     except Exception as e:
         print(e)
         return ask_for_input(question, default = default, cast_to = cast_to)
+
+    logger.debug('Got input from stdin for question "{}": {}'.format(question, out))
+
+    return out
 
 
 def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
