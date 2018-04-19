@@ -29,9 +29,7 @@ def bytes_to_str(num: Union[float, int]) -> str:
 
 def get_file_size_as_string(file_path: str) -> str:
     """Return the size of the file at file_path as a human-readable string."""
-    if os.path.isfile(file_path):
-        file_info = os.stat(file_path)
-        return bytes_to_str(file_info.st_size)
+    return bytes_to_str(os.stat(file_path).st_size)
 
 
 def table(headers: Iterable[str], rows: Iterable[Iterable]) -> str:
