@@ -1,6 +1,7 @@
 import os
 import logging
-from typing import Optional, Callable, Iterable
+from pathlib import Path
+from typing import Optional, Callable, Iterable, Union
 
 from .. import sims
 
@@ -8,7 +9,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def find_or_init_sim_from_spec(spec, search_dir: Optional[str] = None, file_extension = '.sim'):
+def find_or_init_sim_from_spec(spec, search_dir: Optional[Union[Path, str]] = None, file_extension = '.sim'):
     """
     Try to load a :class:`simulacra.Simulation` by looking for a pickled :class:`simulacra.core.Simulation` named ``{search_dir}/{spec.file_name}.{file_extension}``.
     If that fails, create a new Simulation from `spec`.
@@ -27,9 +28,9 @@ def find_or_init_sim_from_spec(spec, search_dir: Optional[str] = None, file_exte
     sim
         The simulation, either loaded or initialized.
     """
-    search_dir = search_dir or os.getcwd()
+    search_dir = Path(search_dir) or Path.cwd()
+    path = search_dir / f'{spec.file_name}.{file_extension}'
     try:
-        path = os.path.join(search_dir, spec.file_name + file_extension)
         sim = sims.Simulation.load(file_path = path)
     except FileNotFoundError:
         sim = spec.to_sim()

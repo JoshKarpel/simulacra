@@ -67,7 +67,7 @@ class JobProcessor(sims.Beet):
         self.job_dir_path = job_dir_path
 
         for dir in (self.inputs_dir, self.outputs_dir, self.plots_dir, self.movies_dir, self.summaries_dir):
-            utils.ensure_dir_exists(dir)
+            utils.ensure_parents_exist(dir)
 
         self.sim_names = self.get_sim_names_from_specs()
         self.sim_count = len(self.sim_names)

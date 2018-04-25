@@ -41,9 +41,6 @@ class ClusterInterface:
             The path to the SSH key file that corresponds to the `username`.
         local_mirror_root
             The name to give the root directory of the local mirror.
-        remote_sep
-            The path separator on the remote host.
-            Almost undoubtedly, this is ``'/'``.
         """
         self.remote_host = hostname
         self.username = username
@@ -135,7 +132,7 @@ class ClusterInterface:
         preserve_timestamps : :class:`bool`
             If ``True``, copy the modification timestamps from the remote file to the local file.
         """
-        utils.ensure_dir_exists(local_path)
+        utils.ensure_parents_exist(local_path)
 
         self.ftp.get(remote_path, local_path)
 
@@ -329,7 +326,7 @@ class ClusterInterface:
             self.walk_remote_path(
                 self.remote_home_dir,
                 func_on_files = functools.partial(self.mirror_file, local_root = local_root),
-                func_on_dirs = lambda d, _: utils.ensure_dir_exists(d),
+                func_on_dirs = lambda d, _: utils.ensure_parents_exist(d),
                 blacklist_dir_names = tuple(blacklist_dir_names),
                 whitelist_file_ext = tuple(whitelist_file_ext),
             )

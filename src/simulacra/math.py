@@ -17,57 +17,6 @@ def rand_phase(shape_tuple):
     return rand.random_sample(shape_tuple) * twopi
 
 
-def sinc(x):
-    """A wrapper over np.sinc, which is really sinc(pi * x). This version is sinc(x)."""
-    return np.sinc(x / pi)
-
-
-def gaussian(x, center, sigma, prefactor):
-    """
-    Return an unnormalized Gaussian centered at `center` with standard deviation `sigma` and prefactor `prefactor`.
-    """
-    return prefactor * np.exp(-0.5 * (((x - center) / sigma) ** 2))
-
-
-def gaussian_fwhm_from_sigma(sigma):
-    """Return the full-width-at-half-max of a Gaussian with standard deviation :code:`sigma`"""
-    return np.sqrt(8 * np.log(2)) * sigma
-
-
-def stirling_approximation_exp(n):
-    r"""
-    Return the Stirling approximation of :math:`n!`, :math:`n! \approx \sqrt{2\pi} \left( \frac{n}{e} \right)^n`.
-
-    Parameters
-    ----------
-    n : :class:`float`
-        The number to approximate the factorial of.
-
-    Returns
-    -------
-    :class:`float`
-        The Stirling approximation to :math:`n!`.
-    """
-    return np.sqrt(twopi * n) * ((n / e) ** n)
-
-
-def stirling_approximation_ln(n):
-    """
-    Return the Stirling approximation of :math:`\log n!`, :math:`\log n! \approx n \, \log n - n`.
-
-    Parameters
-    ----------
-    n : :class:`float`
-        The number to approximate the logarithm of the factorial of.
-
-    Returns
-    -------
-    :class:`float`
-        The Stirling approximation of :math:`\log n!`.
-    """
-    return n * np.log(n) - n
-
-
 class SphericalHarmonic:
     """A class that represents a spherical harmonic."""
 

@@ -1,31 +1,9 @@
 import datetime
-import functools
 import time
 import logging
-from typing import Optional, Callable, Iterable
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-def timed(func: Callable):
-    """A decorator that times the execution of the decorated function. A log message is emitted at level ``DEBUG`` with the timing information."""
-
-    @functools.wraps(func)
-    def timed_wrapper(*args, **kwargs):
-        time_start = datetime.datetime.now()
-        val = func(*args, **kwargs)
-        time_end = datetime.datetime.now()
-
-        time_elapsed = time_end - time_start
-
-        msg = f'Execution of {func} took {time_elapsed}'
-        logger.debug(msg)
-        print(msg)
-
-        return val
-
-    return timed_wrapper
 
 
 class BlockTimer:

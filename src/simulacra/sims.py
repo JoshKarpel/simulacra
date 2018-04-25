@@ -3,8 +3,9 @@ import gzip
 import pickle
 import uuid
 from copy import deepcopy
-from typing import Optional, Union, Type
+from pathlib import Path
 import abc
+from typing import Optional, Union, Type
 
 import logging
 import os
@@ -72,7 +73,7 @@ class Beet:
         Parameters
         ----------
         kwargs
-            Key-value pairs to modify attributes on the new Beet.
+            Key-value pairs to update attributes on the new Beet.
 
         Returns
         -------
@@ -85,7 +86,12 @@ class Beet:
 
         return new_beet
 
-    def save(self, target_dir: Optional[str] = None, file_extension: str = '.beet', compressed: bool = True, ensure_dir_exists: bool = True) -> str:
+    def save(
+        self,
+        target_dir: Optional[Path] = None,
+        file_extension: str = '.beet',
+        compressed: bool = True,
+    ) -> str:
         """
         Atomically pickle the :class:`Beet` to a file.
 
@@ -97,8 +103,6 @@ class Beet:
             The file extension to name the Beet with (for keeping track of things, no actual effect).
         compressed : :class:`bool`
             Whether to compress the Beet using gzip.
-        ensure_dir_exists : :class:`bool`
-            Whether to ensure that the target directory exists before saving.
 
         Returns
         -------
@@ -106,13 +110,12 @@ class Beet:
             The path to the saved :class:`Beet`.
         """
         if target_dir is None:
-            target_dir = os.getcwd()
+            target_dir = Path.cwd()
 
-        file_path = os.path.join(target_dir, self.file_name + file_extension)
-        file_path_working = file_path + '.working'
+        file_path = (Path(target_dir).absolute() / self.file_name).with_suffix(file_extension)
+        file_path_working = file_path.with_suffix(f'{file_extension}.working')
 
-        if ensure_dir_exists:
-            utils.ensure_dir_exists(file_path_working)
+        utils.ensure_parents_exist(file_path_working)
 
         op = gzip.open if compressed else open
         with op(file_path_working, mode = 'wb') as file:
@@ -120,7 +123,7 @@ class Beet:
 
         os.replace(file_path_working, file_path)
 
-        logger.debug('Saved {} {} to {}'.format(self.__class__.__name__, self.name, file_path))
+        logger.debug(f'Saved {self} to {file_path}')
 
         return file_path
 
@@ -139,14 +142,15 @@ class Beet:
         :class:`Beet`
             The loaded Beet.
         """
+        file_path = Path(file_path)
         try:
             with gzip.open(file_path, mode = 'rb') as file:
                 beet = pickle.load(file)
         except OSError:  # file is not gzipped
-            with open(file_path, mode = 'rb') as file:
+            with file_path.open(mode = 'rb') as file:
                 beet = pickle.load(file)
 
-        logger.debug('Loaded {} {} from {}'.format(beet.__class__.__name__, beet.name, file_path))
+        logger.debug(f'Loaded {beet} from {file_path}')
 
         return beet
 
@@ -255,7 +259,7 @@ class Simulation(Beet, abc.ABC):
 
         self._status = status
 
-        logger.debug(f'{self.__class__.__name__} {self.name} status set to {self.status} from {old_status}')
+        logger.debug(f'{self} status set to {self.status} from {old_status}')
 
     def save(
         self,

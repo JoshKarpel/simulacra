@@ -155,7 +155,7 @@ Simulacra's utility module provides a wide range of functions for working with a
 
 .. autofunction:: get_now_str
 
-.. autofunction:: ensure_dir_exists
+.. autofunction:: ensure_parents_exist
 
 .. autofunction:: find_nearest_entry
 

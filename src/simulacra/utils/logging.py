@@ -31,7 +31,8 @@ class LogManager:
         file_dir: Optional[str] = None,
         file_mode: str = 'a',
         log_formatter = LOG_FORMATTER,
-        disable_level = logging.NOTSET):
+        disable_level = logging.NOTSET,
+    ):
         """
         Parameters
         ----------
@@ -96,7 +97,7 @@ class LogManager:
         if self.file_logs:
             log_file_path = os.path.join(self.file_dir, self.file_name)
 
-            filesystem.ensure_dir_exists(log_file_path)  # the log message emitted here will not be included in the logger being created by this context manager
+            filesystem.ensure_parents_exist(log_file_path)  # the log message emitted here will not be included in the logger being created by this context manager
 
             file_handler = logging.FileHandler(log_file_path, mode = self.file_mode, encoding = 'utf-8')
             file_handler.setLevel(self.file_level)

@@ -199,7 +199,7 @@ def save_current_figure(
         target_dir = os.getcwd()
     path = os.path.join(target_dir, utils.strip_illegal_characters(f'{name}.{img_format}'))
 
-    utils.ensure_dir_exists(path)
+    utils.ensure_parents_exist(path)
 
     if tight_layout:
         plt.savefig(path, bbox_inches = 'tight', transparent = transparent)

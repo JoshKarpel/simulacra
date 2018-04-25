@@ -5,6 +5,7 @@ import pickle
 import sys
 from copy import deepcopy
 import textwrap
+from pathlib import Path
 from typing import Any, Iterable, Optional, Callable, Type, Tuple, Union, List, Collection, Dict
 
 from tqdm import tqdm
@@ -160,7 +161,7 @@ def ask_for_eval(question: str, default: str = 'None') -> Any:
     Ask for input from the user, with a default value, which will be evaluated as a Python command.
 
     Numpy and Scipy's top-level interfaces (imported as ``np`` and ``sp``) and Simulacra's own unit module (imported as ``u``) are both available.
-    For example, ``'np.linspace(0, twopi, 100)'`` will produce the expected result of 100 numbers evenly spaced between zero and twopi..
+    For example, ``'np.linspace(0, twopi, 100)'`` will produce the expected result of 100 numbers evenly spaced between zero and twopi.
 
     NB: this function is not safe!
     The user can execute arbitrary Python code!
@@ -203,33 +204,33 @@ def create_job_subdirs(job_dir: str):
     """Create directories for the inputs, outputs, logs, and movies."""
     print('Creating job directory and subdirectories...')
 
-    utils.ensure_dir_exists(job_dir)
-    utils.ensure_dir_exists(os.path.join(job_dir, 'inputs'))
-    utils.ensure_dir_exists(os.path.join(job_dir, 'outputs'))
-    utils.ensure_dir_exists(os.path.join(job_dir, 'logs'))
+    job_dir = Path(job_dir)
+    job_dir.mkdir(parents = True, exist_ok = True)
+    for subdir in ('inputs', 'outputs', 'logs'):
+        (job_dir / subdir).mkdir(parents = True, exist_ok = True)
 
 
-def save_specifications(specifications: Iterable[sims.Specification], job_dir: str):
+def save_specifications(specifications: Iterable[sims.Specification], job_dir: Union[Path, str]):
     """Save a list of Specifications."""
     print('Saving Specifications...')
 
     for spec in tqdm(specifications, ascii = True):
-        spec.save(target_dir = os.path.join(job_dir, 'inputs/'))
+        spec.save(target_dir = Path(job_dir) / 'inputs')
 
     logger.debug('Saved Specifications')
 
 
 def write_specifications_info_to_file(
     specifications: Collection[sims.Specification],
-    job_dir: str,
+    job_dir: Union[Path, str],
 ):
     """Write information from the list of the Specifications to a file."""
     print('Writing Specification info to file...')
 
-    path = os.path.join(job_dir, 'specifications.txt')
-    with open(path, 'w', encoding = 'utf-8') as file:
-        for spec in tqdm(specifications, ascii = True):
-            file.write(str(spec.info()) + '\n')
+    path = Path(job_dir) / 'specifications.txt'
+    text = '\n'.join(str(spec.info()) for spec in specifications)
+    with path.open(mode = 'w', encoding = 'utf-8') as file:
+        file.write(text)
 
     logger.debug('Wrote Specification information to file')
 
@@ -240,9 +241,10 @@ def write_parameters_info_to_file(parameters: Iterable[Parameter], job_dir: str)
     """Write information from the list of Parameters to a file."""
     print('Writing parameters to file...')
 
-    with open(os.path.join(job_dir, 'parameters.txt'), 'w', encoding = 'utf-8') as file:
-        for param in parameters:
-            file.write(repr(param) + '\n')
+    path = Path(job_dir) / 'parameters.txt'
+    text = '\n'.join(repr(param) for param in parameters)
+    with path.open(mode = 'w', encoding = 'utf-8') as file:
+        file.write(text)
 
     logger.debug('Wrote parameter information to file')
 
@@ -261,13 +263,15 @@ def specification_check(specifications: Collection[sims.Specification], check: i
         abort_job_creation()
 
 
-def write_job_info_to_file(job_info, job_dir: str):
+def write_job_info_to_file(job_info, job_dir: Union[Path, str]):
     """Write job information to a file."""
-    with open(os.path.join(job_dir, 'info.pkl'), mode = 'wb') as f:
-        pickle.dump(job_info, f, protocol = -1)
+    path = job_dir / 'info.pkl'
+    with path.open(mode = 'wb') as file:
+        pickle.dump(job_info, file, protocol = -1)
 
 
-def load_job_info_from_file(job_dir: str):
+def load_job_info_from_file(job_dir: Union[Path, str]):
     """Load job information from a file."""
-    with open(os.path.join(job_dir, 'info.pkl'), mode = 'rb') as f:
-        return pickle.load(f)
+    path = job_dir / 'info.pkl'
+    with path.open(mode = 'rb') as file:
+        return pickle.load(file)

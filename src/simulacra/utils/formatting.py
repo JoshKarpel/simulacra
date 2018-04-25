@@ -1,7 +1,10 @@
 import datetime
 import os
+from pathlib import Path
 import logging
 from typing import Optional, Union, NamedTuple, Callable, Iterable
+
+from . import filesystem
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -19,17 +22,18 @@ def get_now_str() -> str:
     return datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S')
 
 
-def bytes_to_str(num: Union[float, int]) -> str:
+def bytes_to_str(num_bytes: int) -> str:
     """Return a number of bytes as a human-readable string."""
-    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
-        if num < 1024.0:
-            return "%3.1f %s" % (num, x)
-        num /= 1024.0
+    for unit in ('bytes', 'KB', 'MB', 'GB'):
+        if num_bytes < 1024:
+            return f'{num_bytes:.1f} {unit}'
+        num_bytes /= 1024
+    return f'{num_bytes:.1f} TB'
 
 
-def get_file_size_as_string(file_path: str) -> str:
+def get_file_size_as_string(path: Union[Path, str]) -> str:
     """Return the size of the file at file_path as a human-readable string."""
-    return bytes_to_str(os.stat(file_path).st_size)
+    return bytes_to_str(filesystem.get_file_size(Path(path)))
 
 
 def table(headers: Iterable[str], rows: Iterable[Iterable]) -> str:

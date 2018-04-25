@@ -183,7 +183,7 @@ def xyt_plot(
         fps = int(frames / length)
 
         path = f"{os.path.join(kwargs['target_dir'], name)}.mp4"
-        utils.ensure_dir_exists(path)
+        utils.ensure_parents_exist(path)
 
         fig.canvas.draw()
         background = fig.canvas.copy_from_bbox(fig.bbox)
@@ -430,7 +430,7 @@ def xyzt_plot(name,
         fps = int(frames / length)
 
         path = f"{os.path.join(kwargs['target_dir'], name)}.mp4"
-        utils.ensure_dir_exists(path)
+        utils.ensure_parents_exist(path)
 
         fig.canvas.draw()
         background = fig.canvas.copy_from_bbox(fig.bbox)
@@ -641,7 +641,7 @@ class Animator:
 
         self.file_name = f'{self.sim.file_name}{self.postfix}.mp4'
         self.file_path = os.path.join(self.target_dir, self.file_name)
-        utils.ensure_dir_exists(self.file_path)
+        utils.ensure_parents_exist(self.file_path)
         try:
             os.remove(self.file_path)  # ffmpeg complains if you try to overwrite an existing file, so remove it first
         except FileNotFoundError:

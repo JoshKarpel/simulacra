@@ -13,7 +13,7 @@ class TestBeet(unittest.TestCase):
         self.obj = si.Beet('foo')
         self.obj_name = 'foo'
         self.target_name = 'foo.beet'
-        si.utils.ensure_dir_exists(TEST_DIR)
+        si.utils.ensure_parents_exist(TEST_DIR)
 
     def tearDown(self):
         shutil.rmtree(TEST_DIR)
@@ -38,7 +38,7 @@ class TestSpecification(TestBeet):
         self.obj = si.Specification('bar')
         self.obj_name = 'bar'
         self.target_name = 'bar.spec'
-        si.utils.ensure_dir_exists(TEST_DIR)
+        si.utils.ensure_parents_exist(TEST_DIR)
 
 
 class TestSimulation(TestBeet):
@@ -46,7 +46,7 @@ class TestSimulation(TestBeet):
         self.obj = si.Simulation(si.Specification('baz'))
         self.obj_name = 'baz'
         self.target_name = 'baz.sim'
-        si.utils.ensure_dir_exists(TEST_DIR)
+        si.utils.ensure_parents_exist(TEST_DIR)
 
     def testStatus(self):
         passes = (si.Status.INITIALIZED, si.Status.RUNNING, si.Status.RUNNING, si.Status.FINISHED, si.Status.PAUSED)

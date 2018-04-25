@@ -1,4 +1,3 @@
-import collections
 from typing import Any, Tuple, Iterable
 
 
@@ -21,12 +20,12 @@ class Info:
             The header for this :class:`Info`.
         """
         self.header = header
-        self.children = collections.OrderedDict()
+        self._children = {}
 
     def __str__(self) -> str:
         field_strings = [self.header]
 
-        for field, value in self.children.items():
+        for field, value in self._children.items():
             if isinstance(value, Info):
                 info_strings = str(value).split('\n')
                 field_strings.append('├─ ' + info_strings[0])
@@ -58,7 +57,10 @@ class Info:
         value
             The value of the field.
         """
-        self.children[name] = value
+        self._children[name] = value
+
+    def rm_field(self, name):
+        return self._children.pop(name, None)
 
     def add_fields(self, name_value_pairs: Iterable[Tuple[str, Any]]):
         """
@@ -69,7 +71,7 @@ class Info:
         name_value_pairs
             An iterable or dict of ``(name, value)`` pairs to add as fields.
         """
-        self.children.update(dict(name_value_pairs))
+        self._children.update(dict(name_value_pairs))
 
     def add_info(self, info: 'Info'):
         """
@@ -80,7 +82,7 @@ class Info:
         info
             An :class:`Info` to be added as a sub-Info.
         """
-        self.children[info.header] = info
+        self._children[id(info)] = info
 
     def add_infos(self, *infos: 'Info'):
         """
@@ -91,4 +93,4 @@ class Info:
         infos
             An iterable of :class:`Info`
         """
-        self.children.update({id(info): info for info in infos})
+        self._children.update({id(info): info for info in infos})

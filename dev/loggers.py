@@ -8,7 +8,7 @@ import simulacra as si
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
-si.utils.ensure_dir_exists(OUT_DIR)
+si.utils.ensure_parents_exist(OUT_DIR)
 
 logger = logging.getLogger('simulacra')
 logger.setLevel(logging.DEBUG)
