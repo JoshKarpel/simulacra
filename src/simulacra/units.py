@@ -82,74 +82,6 @@ UNIT_NAME_TO_LATEX.update({
     'degrees': r'\mathrm{deg}',
 })
 
-# distance
-cm = 1e-2 * m
-mm = 1e-3 * m
-um = 1e-6 * m
-nm = 1e-9 * m
-per_nm = 1 / nm
-pm = 1e-12 * m
-fm = 1e-15 * m
-km = 1e3 * m
-Mm = 1e6 * m
-Gm = 1e9 * m
-Tm = 1e12 * m
-Pm = 1e15 * m
-angstrom = 1e-10 * m
-bohr_radius = 5.2917721067e-11 * m
-inch = 2.54 * cm
-
-UNIT_NAME_TO_VALUE.update({
-    'cm': cm,
-    'mm': mm,
-    'um': um,
-    'nm': nm,
-    'pm': pm,
-    'fm': fm,
-    'km': km,
-    'Mm': Mm,
-    'Gm': Gm,
-    'Tm': Tm,
-    'Pm': Pm,
-    'angstrom': angstrom,
-    'bohr_radius': bohr_radius,
-    'inch': inch,
-    'per_nm': per_nm
-})
-UNIT_NAME_TO_LATEX.update({
-    'cm': r'\mathrm{cm}',
-    'cetimeter': r'\mathrm{cm}',
-    'cetimeters': r'\mathrm{cm}',
-    'mm': r'\mathrm{mm}',
-    'millimeter': r'\mathrm{mm}',
-    'millimeters': r'\mathrm{mm}',
-    'um': r'\mathrm{um}',
-    'micrometer': r'\mathrm{um}',
-    'micrometers': r'\mathrm{um}',
-    'micron': r'\mathrm{um}',
-    'microns': r'\mathrm{um}',
-    'nm': r'\mathrm{nm}',
-    'nanometer': r'\mathrm{nm}',
-    'nanometers': r'\mathrm{nm}',
-    'pm': r'\mathrm{pm}',
-    'picometer': r'\mathrm{pm}',
-    'picometers': r'\mathrm{pm}',
-    'fm': r'\mathrm{fm}',
-    'femtometer': r'\mathrm{fm}',
-    'femtometers': r'\mathrm{fm}',
-    'km': r'\mathrm{km}',
-    'kilometer': r'\mathrm{km}',
-    'kilometers': r'\mathrm{km}',
-    'Mm': r'\mathrm{Mm}',
-    'Gm': r'\mathrm{Gm}',
-    'Tm': r'\mathrm{Tm}',
-    'Pm': r'\mathrm{Pm}',
-    'angstrom': r'\mathrm{\AA}',
-    'bohr_radius': r'a_0',
-    'inch': r'\mathrm{in}',
-    'per_nm': r'\mathrm{nm^{-1}}'
-})
-
 # time
 msec = 1e-3 * s
 usec = 1e-6 * s
@@ -210,6 +142,74 @@ UNIT_NAME_TO_LATEX.update({
     'weeks': '\mathrm{weeks}',
     'year': '\mathrm{years}',
     'years': '\mathrm{years}'
+})
+
+# distance
+cm = 1e-2 * m
+mm = 1e-3 * m
+um = 1e-6 * m
+nm = 1e-9 * m
+per_nm = 1 / nm
+pm = 1e-12 * m
+fm = 1e-15 * m
+km = 1e3 * m
+Mm = 1e6 * m
+Gm = 1e9 * m
+Tm = 1e12 * m
+Pm = 1e15 * m
+angstrom = 1e-10 * m
+bohr_radius = 5.2917721067e-11 * m
+inch = 2.54 * cm
+
+UNIT_NAME_TO_VALUE.update({
+    'cm': cm,
+    'mm': mm,
+    'um': um,
+    'nm': nm,
+    'pm': pm,
+    'fm': fm,
+    'km': km,
+    'Mm': Mm,
+    'Gm': Gm,
+    'Tm': Tm,
+    'Pm': Pm,
+    'angstrom': angstrom,
+    'bohr_radius': bohr_radius,
+    'inch': inch,
+    'per_nm': per_nm
+})
+UNIT_NAME_TO_LATEX.update({
+    'cm': r'\mathrm{cm}',
+    'centimeter': r'\mathrm{cm}',
+    'centimeters': r'\mathrm{cm}',
+    'mm': r'\mathrm{mm}',
+    'millimeter': r'\mathrm{mm}',
+    'millimeters': r'\mathrm{mm}',
+    'um': r'\mathrm{um}',
+    'micrometer': r'\mathrm{um}',
+    'micrometers': r'\mathrm{um}',
+    'micron': r'\mathrm{um}',
+    'microns': r'\mathrm{um}',
+    'nm': r'\mathrm{nm}',
+    'nanometer': r'\mathrm{nm}',
+    'nanometers': r'\mathrm{nm}',
+    'pm': r'\mathrm{pm}',
+    'picometer': r'\mathrm{pm}',
+    'picometers': r'\mathrm{pm}',
+    'fm': r'\mathrm{fm}',
+    'femtometer': r'\mathrm{fm}',
+    'femtometers': r'\mathrm{fm}',
+    'km': r'\mathrm{km}',
+    'kilometer': r'\mathrm{km}',
+    'kilometers': r'\mathrm{km}',
+    'Mm': r'\mathrm{Mm}',
+    'Gm': r'\mathrm{Gm}',
+    'Tm': r'\mathrm{Tm}',
+    'Pm': r'\mathrm{Pm}',
+    'angstrom': r'\mathrm{\AA}',
+    'bohr_radius': r'a_0',
+    'inch': r'\mathrm{in}',
+    'per_nm': r'\mathrm{nm^{-1}}'
 })
 
 # mass
@@ -706,19 +706,20 @@ UNIT_NAME_TO_LATEX.update({
 })
 
 # speed of light and E&M
-c = 299792458 * m / s
-speed_of_light = c
-mu_0 = pi * 4e-7 * N / (A ** 2)
-epsilon_0 = 1 / (mu_0 * (c ** 2))
-coulomb_constant = 1 / (4 * pi * epsilon_0)
-k_e = coulomb_constant
+c = speed_of_light = 299792458 * m / s
+mu_0 = vacuum_permeability = pi * 4e-7 * N / (A ** 2)
+epsilon_0 = vacuum_permittivity = 1 / (mu_0 * (c ** 2))
+k_e = coulomb_constant = 1 / (4 * pi * epsilon_0)
 n_vacuum = 1
 
 UNIT_NAME_TO_VALUE.update({
     'c': c,
     'speed_of_light': c,
     'mu_0': mu_0,
+    'vacuum_permeability': mu_0,
     'epsilon_0': epsilon_0,
+    'vacuum_permittivity': epsilon_0,
+    'coulomb_constant': coulomb_constant,
     'coulomb_force_constant': coulomb_constant,
     'n_vacuum': n_vacuum
 })
@@ -726,17 +727,20 @@ UNIT_NAME_TO_LATEX.update({
     'c': r'c',
     'speed_of_light': r'c',
     'mu_0': r'\mu_0',
+    'vacuum_permeability': r'\mu_0',
     'epsilon_0': r'\epsilon_0',
+    'vacuum_permittivity': r'\epsilon_0',
+    'coulomb_constant': r'k_e',
     'coulomb_force_constant': r'k_e',
     'k_e': r'k_e',
     'n_vacuum': r'n_{\mathrm{vac}}'
 })
 
 # quantum mechanics
-h = 6.626070040e-34 * J * s  # Planck's constant
+h = 6.626_070_040e-34 * J * s  # Planck's constant
 hbar = h / twopi
-rydberg = 13.605693009 * eV
-hartree = 27.21138602 * eV
+rydberg = 13.605_693_009 * eV
+hartree = 2 * rydberg
 
 UNIT_NAME_TO_VALUE.update({
     'h': h,
@@ -767,7 +771,6 @@ atomic_angular_frequency = 1 / atomic_time
 atomic_frequency = atomic_angular_frequency / twopi
 atomic_force = hartree / bohr_radius
 atomic_temperature = hartree / k_B
-
 per_bohr_radius = 1 / bohr_radius
 
 UNIT_NAME_TO_VALUE.update({
@@ -810,4 +813,17 @@ UNIT_NAME_TO_LATEX.update({
     'atomic_force': r'\mathrm{a.u.}',
     'atomic_temperature': r'\mathrm{a.u.}',
     'per_bohr_radius': r'1/a_0',
+})
+
+# astronomy
+light_year = speed_of_light * year
+parsec = 3.085_678e18 * m
+
+UNIT_NAME_TO_VALUE.update({
+    'light_year': light_year,
+    'light_years': light_year,
+    'ly': light_year,
+    'parsec': parsec,
+    'parsecs': parsec,
+    'pc': parsec,
 })

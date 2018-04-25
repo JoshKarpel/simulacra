@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Callable
 
 from tqdm import tqdm
@@ -53,7 +54,8 @@ def xyt_plot(
     fig_dpi_scale = 3,
     save_csv = False,
     progress_bar = True,
-    **kwargs):
+    **kwargs,
+):
     # set up figure and axis
     if figure_manager is None:
         figure_manager = FigureManager(name, save = False, fig_dpi_scale = fig_dpi_scale, **kwargs)
@@ -587,9 +589,9 @@ class Animator:
     def __init__(
         self,
         postfix = '',
-        target_dir = None,
-        length = 60,
-        fps = 30,
+        target_dir: Optional[Union[Path, str]] = None,
+        length: int = 60,
+        fps: int = 30,
         colormap = plt.cm.get_cmap('inferno'),
     ):
         """

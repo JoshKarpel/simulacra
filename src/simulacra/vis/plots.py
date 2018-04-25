@@ -419,20 +419,20 @@ def calculate_axis_limits(
 
     Parameters
     ----------
-    data : any number of numpy arrays
+    data
         The data that axis limits need to be constructed for.
-    lower_limit, upper_limit : :class:`float`
+    lower_limit, upper_limit
         Bypass automatic construction of this axis limit, and use the given value instead.
-    log : :class:`bool`
+    log
         Set ``True`` if this axis direction is going to be log-scaled.
-    pad : :class:`float`
+    pad
         The fraction of the data range to pad both sides of the range by.
-    log_pad : :class:`float`
+    log_pad
         If `log` is ``True``, the limits will be padded by this value multiplicatively (down for lower limit, up for upper limit).
 
     Returns
     -------
-    lower_limit, upper_limit : tuple of floats
+    lower_limit, upper_limit
         The lower and upper limits, in the specified units.
     """
     if lower_limit is None:
