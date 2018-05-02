@@ -8,7 +8,7 @@ with open(os.path.join(THIS_DIR, 'README.rst')) as f:
 
 setup(
     name = 'simulacra',
-    version = '0.1.0',
+    version = '0.2.0',
     author = 'Josh Karpel',
     author_email = 'josh.karpel@gmail.com',
     # license = 'Apache',
