@@ -1,32 +1,12 @@
-"""
-Simulacra mathematics sub-package.
-
-
-Copyright 2017 Josh Karpel
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-
 import logging
 
 import numpy as np
 import numpy.random as rand
-import scipy.sparse as sparse
 import scipy.special as special
 import scipy.integrate as integ
 from typing import Callable, Generator, Iterable
 
-from . import utils
+from . import exceptions
 from .units import *
 
 logger = logging.getLogger(__name__)
@@ -36,57 +16,6 @@ logger.setLevel(logging.DEBUG)
 def rand_phase(shape_tuple):
     """Return random phases (0 to 2pi) in the specified shape."""
     return rand.random_sample(shape_tuple) * twopi
-
-
-def sinc(x):
-    """A wrapper over np.sinc, which is really sinc(pi * x). This version is sinc(x)."""
-    return np.sinc(x / pi)
-
-
-def gaussian(x, center, sigma, prefactor):
-    """
-    Return an unnormalized Gaussian centered at `center` with standard deviation `sigma` and prefactor `prefactor`.
-    """
-    return prefactor * np.exp(-0.5 * (((x - center) / sigma) ** 2))
-
-
-def gaussian_fwhm_from_sigma(sigma):
-    """Return the full-width-at-half-max of a Gaussian with standard deviation :code:`sigma`"""
-    return np.sqrt(8 * np.log(2)) * sigma
-
-
-def stirling_approximation_exp(n):
-    r"""
-    Return the Stirling approximation of :math:`n!`, :math:`n! \approx \sqrt{2\pi} \left( \frac{n}{e} \right)^n`.
-
-    Parameters
-    ----------
-    n : :class:`float`
-        The number to approximate the factorial of.
-
-    Returns
-    -------
-    :class:`float`
-        The Stirling approximation to :math:`n!`.
-    """
-    return np.sqrt(twopi * n) * ((n / e) ** n)
-
-
-def stirling_approximation_ln(n):
-    """
-    Return the Stirling approximation of :math:`\log n!`, :math:`\log n! \approx n \, \log n - n`.
-
-    Parameters
-    ----------
-    n : :class:`float`
-        The number to approximate the logarithm of the factorial of.
-
-    Returns
-    -------
-    :class:`float`
-        The Stirling approximation of :math:`\log n!`.
-    """
-    return n * np.log(n) - n
 
 
 class SphericalHarmonic:
@@ -103,9 +32,11 @@ class SphericalHarmonic:
         l
             Orbital angular momentum "quantum number". Must be >= 0.
         m
-            Azimuthal angular momentum "quantum number". Must have ``abs(m) < l``.
+            Azimuthal angular momentum "quantum number". Must have ``abs(m) <= l``.
         """
         self._l = l
+        if not abs(m) <= l:
+            raise exceptions.SimulacraException(f'invalid spherical harmonic: |m| = {abs(m)} must be less than l = {l}')
         self._m = m
 
     @property

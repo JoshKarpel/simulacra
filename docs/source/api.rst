@@ -8,35 +8,36 @@ Specifications and Simulations
 
 The core of the Simulacra framework are the :class:`Specification` and :class:`Simulation` classes.
 A :class:`Specification` collects the data required to run a simulation, but doesn't do any actual computation.
-The specification can then be used to to generate a :class:`Simulation` via :func:`Specification.to_simulation`, which will perform actual computations via the hook method :func:`Simulation.run_simulation`.
+The specification can then be used to to generate a :class:`Simulation` via :func:`Specification.to_sim`, which will perform actual computations via the hook method :func:`Simulation.run`.
 
 The :class:`Beet` is the superclass of both :class:`Specification` and :class:`Simulation`.
 It provides a common interface for saving, loading, and cloning operations, as well as storing a unique identifier.
 
-.. autoclass:: Beet
+.. currentmodule:: simulacra.sims
 
-.. autoclass:: Specification
+.. autoclass:: simulacra.Beet
 
-   .. automethod:: to_simulation
+    .. automethod:: clone
 
-   .. automethod:: clone
+.. autoclass:: simulacra.Specification
 
-   .. automethod:: save
+    .. automethod:: to_sim
 
-   .. automethod:: load
+    .. automethod:: save
 
-   .. automethod:: info
+    .. automethod:: load
 
-.. autoclass:: Simulation
+    .. automethod:: info
 
-   .. automethod:: run_simulation
+.. autoclass:: simulacra.Simulation
 
-   .. automethod:: save
+    .. automethod:: run
 
-   .. automethod:: load
+    .. automethod:: save
 
-   .. automethod:: info
+    .. automethod:: load
 
+.. autoclass:: Status
 
 Info
 ----
@@ -44,6 +45,8 @@ Info
 Simulacra provides a system for hierarchically displaying information from nested objects.
 To participate, an object should define an ``info()`` method that takes no arguments and returns an :class:`Info` instance which it gets from calling ``super().info()``.
 Inside this method more fields and :class:`Info` objects can be added to the top-level :class:`Info`, which could represent information from attributes and nested objects, respectively.
+
+.. currentmodule:: simulacra.info
 
 .. autoclass:: Info
 
@@ -69,11 +72,9 @@ Simulacra's high-level plotting functions are intended for quickly generating pl
 
 .. autofunction:: xxyy_plot
 
-.. autofunction:: xyt_plot
 
 .. autofunction:: xyz_plot
 
-.. autofunction:: xyzt_plot
 
 Low-Level Plotting Utilities
 ++++++++++++++++++++++++++++
@@ -85,6 +86,15 @@ The low-level plotting interface is designed to individually wrap common visuali
 .. autofunction:: simulacra.vis.get_figure
 
 .. autofunction:: simulacra.vis.save_current_figure
+
+Animation Tools
++++++++++++++++
+
+.. autofunction:: xyt_plot
+
+.. autofunction:: xyzt_plot
+
+.. autofunction:: animate
 
 Simulation Animators
 ++++++++++++++++++++
@@ -117,7 +127,7 @@ Summables
 :class:`Summand` and :class:`Sum` implement a composite pattern, where summands are summed to form sums, which delegate calls to the summands inside them.
 For example, a :class:`Summand` could be the electric field of a single particle, and the electric field of a group of particles could be a sum of those electric fields.
 
-.. currentmodule:: simulacra
+.. currentmodule:: simulacra.summables
 
 .. autoclass:: Summand
 
@@ -145,21 +155,17 @@ Simulacra's utility module provides a wide range of functions for working with a
 
 .. autofunction:: get_now_str
 
-.. autofunction:: ensure_dir_exists
+.. autofunction:: ensure_parents_exist
 
 .. autofunction:: find_nearest_entry
 
-.. autofunction:: find_or_init_sim
-
-.. autofunction:: downsample
+.. autofunction:: find_or_init_sim_from_spec
 
 .. autoclass:: LogManager
 
 .. autofunction:: timed
 
 .. autoclass:: BlockTimer
-
-.. autoclass:: RestrictedValues
 
 .. autofunction:: get_file_size
 
@@ -188,15 +194,13 @@ Simulacra provides an object-oriented data processing interface that can talk to
 
    .. automethod:: get_file
 
-   .. automethod:: put_file
-
    .. automethod:: is_file_synced
 
    .. automethod:: mirror_file
 
    .. automethod:: walk_remote_path
 
-   .. automethod:: mirror_remote_home_dir
+   .. automethod:: mirror_dir
 
 .. autoclass:: SimulationResult
 
@@ -221,11 +225,11 @@ Creating Specifications and Jobs Programmatically
 
 .. autoclass:: Parameter
 
-.. autofunction:: expand_parameters_to_dicts
+.. autofunction:: expand_parameters
 
 Exceptions
 ----------
 
-.. currentmodule:: simulacra
+.. currentmodule:: simulacra.exceptions
 
 .. autoexception:: SimulacraException

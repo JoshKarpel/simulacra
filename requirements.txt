@@ -1,4 +1,4 @@
-Cython
+cython
 matplotlib
 mpmath
 numpy
@@ -6,3 +6,7 @@ paramiko
 psutil
 scipy
 tqdm
+pytest
+pytest-mock
+pytest-xdist
+hypothesis

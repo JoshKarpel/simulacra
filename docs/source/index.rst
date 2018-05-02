@@ -11,11 +11,11 @@ It is focused on producing portable simulations that can be easily run on remote
 :doc:`tutorial`
    A brief tutorial in using Simulacra.
 
-:doc:`faq`
-   These questions are asked, sometimes frequently.
-
 :doc:`api`
    Complete-ish API documentation.
+
+:doc:`faq`
+   These questions are asked, sometimes frequently.
 
 :doc:`changelog`
    Change logs going back to the initial release.
@@ -32,6 +32,6 @@ Indices
 
    self
    tutorial
-   faq
    api
+   faq
    changelog

@@ -4,52 +4,57 @@ import os
 import numpy as np
 
 import simulacra as si
+import simulacra.units as u
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
 
 if __name__ == '__main__':
     with si.utils.LogManager('simulacra', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
-        pi = 3.1415
-        twopi = 2 * pi
-
         x = np.linspace(0, 10, 1000)
         y = [np.sin(x), np.cos(x), np.arctan(x)]
 
         plt_kwargs = dict(
-            line_kwargs = ({'linestyle': '-'}, {'linestyle': ':', 'color': 'teal'}),  # note that we don't need to explicitly add None for the third line
+            line_kwargs = ({'linestyle': '-'}, {'linestyle': ':', 'color': 'teal'}, None),  # note that we don't need to explicitly add None for the third line
             line_labels = (r'$\sin(x)$', r'$\cos(x)$', r'$\arctan(x)$'),
             x_unit = 1, y_unit = 'mm',
-            hlines = (-.5, .2, .33), hline_kwargs = ({'color': 'blue'}, {'color': 'orange'}, None),
-            vlines = (2, 4, twopi), vline_kwargs = (None, {'color': 'red', 'linestyle': '-.'}, None),
-            x_extra_ticks = (pi, pi / 2), x_extra_tick_labels = (r'$\pi$', r'$\frac{\pi}{2}$'),
-            y_extra_ticks = (.66, .88), y_extra_tick_labels = (r'$\alpha$', r'$\beta$'),
-            title = 'foo', x_label = 'bar', y_label = '$baz$',
-            font_size_title = 22,
+            hlines = (-.5, .2, .33),
+            hline_kwargs = ({'color': 'blue'}, {'color': 'orange'}, None),
+            vlines = (2, 4, u.twopi),
+            vline_kwargs = (None, {'color': 'red', 'linestyle': '-.'}, None),
+            x_extra_ticks = (u.pi, u.pi / 2),
+            x_extra_tick_labels = (r'$\pi$', r'$\frac{\pi}{2}$'),
+            y_extra_ticks = (.66, .88),
+            y_extra_tick_labels = (r'$\alpha$', r'$\beta$'),
+            title = 'foo',
+            x_label = 'bar',
+            y_label = '$baz$',
             save_csv = True,
-            fig_width = 10,
-            # fig_width = si.vis.PPT_WIDESCREEN_WIDTH,
-            # aspect_ratio = 1,
+            img_format = 'png',
             target_dir = OUT_DIR,
         )
 
         extra_kwargs = [
-            dict(),
-            dict(name_postfix = 'scale=1', img_format = 'png', fig_scale = 1, tight_layout = False),
-            dict(name_postfix = 'scale=1_tight', img_format = 'png', fig_scale = 1, tight_layout = True),
-            dict(name_postfix = 'scale=1_dpi=2', img_format = 'png', fig_scale = 1, fig_dpi_scale = 2, tight_layout = False),
-            dict(name_postfix = 'scale=2', img_format = 'png', fig_scale = 2, tight_layout = False),
-            dict(name_postfix = 'scale=2_dpi=2', img_format = 'png', fig_scale = 2, fig_dpi_scale = 2, tight_layout = False),
-            dict(name_postfix = 'scale=1_dpi=6', img_format = 'png', fig_scale = 1, fig_dpi_scale = 6, tight_layout = False),
-            dict(name_postfix = 'logX', x_log_axis = True),
-            dict(name_postfix = 'logY', y_log_axis = True),
-            dict(name_postfix = 'logXY', x_log_axis = True, y_log_axis = True),
+            # dict(name_postfix = '',),
+            # dict(name_postfix = 'scale=1', fig_scale = 1),
+            # dict(name_postfix = 'scale=1_tight', fig_scale = 1),
+            # dict(name_postfix = 'scale=1_dpi=2', fig_scale = 1, fig_dpi_scale = 2),
+            # dict(name_postfix = 'scale=2', fig_scale = 2),
+            # dict(name_postfix = 'scale=2_dpi=2', fig_scale = 2, fig_dpi_scale = 2),
+            # dict(name_postfix = 'scale=1_dpi=6', fig_scale = 1, fig_dpi_scale = 6),
+            # dict(name_postfix = 'logX', x_log_axis = True),
+            # dict(name_postfix = 'logY', y_log_axis = True),
+            # dict(name_postfix = 'logXY', x_log_axis = True, y_log_axis = True),
+            dict(name_postfix = 'square', equal_aspect = True, fig_dpi_scale = 6,),
         ]
 
         for extras in extra_kwargs:
-            kwargs = {**plt_kwargs, **extras}
+            figman = si.vis.xy_plot(
+                'test' + extras.pop('name_postfix'),
+                x,
+                *y,
+                **plt_kwargs,
+                **extras,
+            )
 
-            path = si.vis.xy_plot('test', x, *y,
-                                  **kwargs)
-
-            print(path)
+            print(figman)
