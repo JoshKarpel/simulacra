@@ -27,7 +27,6 @@ def get_unit_value_and_latex_from_unit(unit: Optional[Unit]) -> Tuple[float, TeX
 def uround(value, unit: Optional[Unit] = None, digits: int = 3):
     """Round value to the number of digits, represented in the given units (by name or value)."""
     unit_value, _ = get_unit_value_and_latex_from_unit(unit)
-
     return _np.around(value / unit_value, digits)
 
 

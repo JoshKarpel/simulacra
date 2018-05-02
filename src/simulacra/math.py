@@ -6,6 +6,7 @@ import scipy.special as special
 import scipy.integrate as integ
 from typing import Callable, Generator, Iterable
 
+from . import exceptions
 from .units import *
 
 logger = logging.getLogger(__name__)
@@ -31,9 +32,11 @@ class SphericalHarmonic:
         l
             Orbital angular momentum "quantum number". Must be >= 0.
         m
-            Azimuthal angular momentum "quantum number". Must have ``abs(m) < l``.
+            Azimuthal angular momentum "quantum number". Must have ``abs(m) <= l``.
         """
         self._l = l
+        if not abs(m) <= l:
+            raise exceptions.SimulacraException(f'invalid spherical harmonic: |m| = {abs(m)} must be less than l = {l}')
         self._m = m
 
     @property
