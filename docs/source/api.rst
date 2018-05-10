@@ -72,7 +72,6 @@ Simulacra's high-level plotting functions are intended for quickly generating pl
 
 .. autofunction:: xxyy_plot
 
-
 .. autofunction:: xyz_plot
 
 
@@ -163,8 +162,6 @@ Simulacra's utility module provides a wide range of functions for working with a
 
 .. autoclass:: LogManager
 
-.. autofunction:: timed
-
 .. autoclass:: BlockTimer
 
 .. autofunction:: get_file_size
@@ -179,12 +176,13 @@ Simulacra's utility module provides a wide range of functions for working with a
 Cluster
 -------
 
+.. currentmodule:: simulacra.cluster
+
 Interfacing with a Cluster
 ++++++++++++++++++++++++++
 
 Simulacra provides an object-oriented data processing interface that can talk to a cluster, load simulations, and perform analysis on them.
 
-.. currentmodule:: simulacra.cluster
 
 .. autoclass:: ClusterInterface
 
