@@ -264,3 +264,7 @@ def get_doc(self, encoding = None, ignore = 1):
 
 
 sphinx.ext.autodoc.ClassDocumenter.get_doc = get_doc
+
+
+def setup(app):
+    app.add_stylesheet('source/_static/css/simulacra.css')
