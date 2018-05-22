@@ -4,7 +4,7 @@ import itertools
 import logging
 import os
 from copy import copy
-from typing import Any, Iterable, Optional, Callable, Type, Tuple, Union, List
+from typing import Any, Iterable, Optional, Callable, Type, Tuple, Union, List, Collection
 
 from tqdm import tqdm
 
