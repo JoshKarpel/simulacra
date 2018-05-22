@@ -36,7 +36,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
-    'sphinx_autodoc_typehints',
+    # 'sphinx_autodoc_typehints',
     'sphinx.ext.intersphinx',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
@@ -264,3 +264,7 @@ def get_doc(self, encoding = None, ignore = 1):
 
 
 sphinx.ext.autodoc.ClassDocumenter.get_doc = get_doc
+
+
+def setup(app):
+    app.add_stylesheet('css/simulacra.css')
