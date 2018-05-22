@@ -265,13 +265,13 @@ def specification_check(specifications: Collection[sims.Specification], check: i
 
 def write_job_info_to_file(job_info, job_dir: Union[Path, str]):
     """Write job information to a file."""
-    path = job_dir / 'info.pkl'
+    path = Path(job_dir) / 'info.pkl'
     with path.open(mode = 'wb') as file:
         pickle.dump(job_info, file, protocol = -1)
 
 
 def load_job_info_from_file(job_dir: Union[Path, str]):
     """Load job information from a file."""
-    path = job_dir / 'info.pkl'
+    path = Path(job_dir) / 'info.pkl'
     with path.open(mode = 'rb') as file:
         return pickle.load(file)

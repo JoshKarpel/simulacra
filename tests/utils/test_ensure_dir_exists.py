@@ -3,7 +3,7 @@ import os
 import simulacra as si
 
 
-def test_ensure_dir_exists(tmpdir):
+def test_ensure_parents_exist(tmpdir):
     dirname = 'foo'
     filename = 'bar.py'
     dirpath = os.path.join(tmpdir, dirname)

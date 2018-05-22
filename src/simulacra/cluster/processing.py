@@ -225,7 +225,7 @@ class JobProcessor(sims.Beet):
 
         return out
 
-    def select_by_lambda(self, test_function: Callable) -> Iterable[SimulationResult]:
+    def select_by_lambda(self, test_function: Callable) -> Collection[SimulationResult]:
         """
         Return all of the :class:`SimulationResult` for which ``test_function(sim_result)`` evaluates to ``True``.
 
