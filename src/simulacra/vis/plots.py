@@ -781,8 +781,8 @@ def xy_plot(
             if not legend_on_right:
                 legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
             if legend_on_right:
-                legend_kwargs['loc'] = 'upper left'
-                legend = ax.legend(bbox_to_anchor = (1.15, 1), borderaxespad = 0, fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
+                legend_kwargs = collections.ChainMap(legend_kwargs, dict(loc = 'upper left', bbox_to_anchor = (1.15, 1), borderaxespad = 0, fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17)))
+                legend = ax.legend(**legend_kwargs)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 

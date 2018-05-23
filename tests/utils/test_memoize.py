@@ -45,7 +45,6 @@ def test_memoized_func_is_called_multiple_times_for_different_args(memoized_mock
     assert func.call_count == 5
 
 
-
 def test_cached_property(mocker):
     func = mocker.MagicMock(return_value = 'foo')
 
