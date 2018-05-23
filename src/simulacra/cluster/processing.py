@@ -178,7 +178,7 @@ class JobProcessor(sims.Beet):
                     self.data[sim_name] = self.simulation_result_type(sim, job_processor = self)
                     self.unprocessed_sim_names.discard(sim_name)
 
-                    self.save(target_dir = self.job_dir_path, ensure_dir_exists = False)
+                    self.save(target_dir = self.job_dir_path)
                 except exceptions.UnfinishedSimulation as e:
                     logger.debug(e)
                 except Exception as e:
