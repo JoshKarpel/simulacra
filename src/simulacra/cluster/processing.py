@@ -291,7 +291,8 @@ class JobProcessor(sims.Beet):
             y_unit = 'hours',
             x_label = 'Simulation Number', y_label = 'Time',
             title = f'{self.name} Diagnostics',
-            target_dir = self.summaries_dir
+            target_dir = self.summaries_dir,
+            img_format = 'png',
         )
 
         logger.debug(f'Generated diagnostics plot for job {self.name}')
