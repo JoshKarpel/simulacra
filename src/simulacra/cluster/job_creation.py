@@ -116,6 +116,12 @@ def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> An
     return out
 
 
+def ask_for_choices(question: str, choices: Dict[str, Any], default: Optional[str] = None):
+    if default is None:
+        default = list(choices.keys())[0]
+    return choices[ask_for_input(question + f' [{" | ".join(choices)}]', default = default)]
+
+
 def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
     """
     Ask for input from the user, with a default value, which will be interpreted as a boolean.
@@ -138,16 +144,15 @@ def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
     try:
         input_str = input(question + ' [Default: {}] > '.format(default))
 
-        trimmed = input_str.replace(' ', '')
-        if trimmed == '':
-            return default
+        if input_str == '':
+            input_str = default
+        trimmed = input_str.replace(' ', '').lower()
 
         logger.debug('Got input from stdin for question "{}": {}'.format(question, input_str))
 
-        input_str_lower = input_str.lower()
-        if input_str_lower in ('true', 't', 'yes', 'y', '1', 'on'):
+        if trimmed in ('true', 't', 'yes', 'y', '1', 'on'):
             return True
-        elif input_str_lower in ('false', 'f', 'no', 'n', '0', 'off'):
+        elif trimmed in ('false', 'f', 'no', 'n', '0', 'off'):
             return False
         else:
             raise ValueError('Invalid answer to question "{}"'.format(question))
@@ -200,13 +205,13 @@ def abort_job_creation():
     sys.exit(0)
 
 
-def create_job_subdirs(job_dir: str):
+def create_job_subdirs(job_dir: str, subdirs = ('inputs', 'outputs', 'logs')):
     """Create directories for the inputs, outputs, logs, and movies."""
     print('Creating job directory and subdirectories...')
 
     job_dir = Path(job_dir)
     job_dir.mkdir(parents = True, exist_ok = True)
-    for subdir in ('inputs', 'outputs', 'logs'):
+    for subdir in subdirs:
         (job_dir / subdir).mkdir(parents = True, exist_ok = True)
 
 

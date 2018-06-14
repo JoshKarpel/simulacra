@@ -656,9 +656,9 @@ class Animator:
         self._initialize_figure()  # call figure initialization hook
 
         # AXES MUST BE ASSIGNED DURING FIGURE INITIALIZATION
-        for ax in self.axis_managers:
-            logger.debug(f'Initializing axis {ax} for {self}')
-            ax.initialize(sim)
+        for axman in self.axis_managers:
+            logger.debug(f'Initializing axis {axman} for {self}')
+            axman.initialize(sim)
 
         self.fig.canvas.draw()
         self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
@@ -701,8 +701,8 @@ class Animator:
         """Hook for a method to update the data for each animated figure element."""
         logger.debug('{} updating data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 
-        for ax in self.axis_managers:
-            ax.update_axis()
+        for axman in self.axis_managers:
+            axman.update_axis()
 
         logger.debug('{} updated data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
 

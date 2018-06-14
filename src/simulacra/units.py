@@ -345,6 +345,8 @@ UNIT_NAME_TO_LATEX.update({
     'per_year': '\mathrm{year^{-1}}',
 })
 
+G = 6.67408e-11 * (m ** 3) / (kg * (s ** 2))
+
 # electric charge
 C = 1 * A * s
 mC = 1e-3 * C

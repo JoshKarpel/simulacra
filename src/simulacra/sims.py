@@ -89,7 +89,7 @@ class Beet:
     def save(
         self,
         target_dir: Optional[Path] = None,
-        file_extension: str = '.beet',
+        file_extension: str = 'beet',
         compressed: bool = True,
     ) -> str:
         """
@@ -112,29 +112,29 @@ class Beet:
         if target_dir is None:
             target_dir = Path.cwd()
 
-        file_path = (Path(target_dir).absolute() / self.file_name).with_suffix(file_extension)
-        file_path_working = file_path.with_suffix(f'{file_extension}.working')
+        path = (Path(target_dir).absolute() / f'{self.file_name}.{file_extension}')
+        working_path = path.with_name(f'{path.name}.working')
 
-        utils.ensure_parents_exist(file_path_working)
+        utils.ensure_parents_exist(working_path)
 
         op = gzip.open if compressed else open
-        with op(file_path_working, mode = 'wb') as file:
+        with op(working_path, mode = 'wb') as file:
             pickle.dump(self, file, protocol = -1)
 
-        os.replace(file_path_working, file_path)
+        os.replace(working_path, path)
 
-        logger.debug(f'Saved {self} to {file_path}')
+        logger.debug(f'Saved {self} to {path}')
 
-        return file_path
+        return path
 
     @classmethod
-    def load(cls, file_path: str) -> 'Beet':
+    def load(cls, path: str) -> 'Beet':
         """
         Load a Beet from `file_path`.
 
         Parameters
         ----------
-        file_path
+        path
             The path to load a Beet from.
 
         Returns
@@ -142,15 +142,15 @@ class Beet:
         :class:`Beet`
             The loaded Beet.
         """
-        file_path = Path(file_path)
+        path = Path(path)
         try:
-            with gzip.open(file_path, mode = 'rb') as file:
+            with gzip.open(path, mode = 'rb') as file:
                 beet = pickle.load(file)
         except OSError:  # file is not gzipped
-            with file_path.open(mode = 'rb') as file:
+            with path.open(mode = 'rb') as file:
                 beet = pickle.load(file)
 
-        logger.debug(f'Loaded {beet} from {file_path}')
+        logger.debug(f'Loaded {beet} from {path}')
 
         return beet
 
@@ -264,7 +264,7 @@ class Simulation(Beet, abc.ABC):
     def save(
         self,
         target_dir: Optional[str] = None,
-        file_extension: str = '.sim',
+        file_extension: str = 'sim',
         **kwargs,
     ) -> str:
         """
@@ -357,7 +357,7 @@ class Specification(Beet, abc.ABC):
     def save(
         self,
         target_dir: Optional[str] = None,
-        file_extension: str = '.spec',
+        file_extension: str = 'spec',
         **kwargs,
     ) -> str:
         """
