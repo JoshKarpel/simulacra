@@ -24,6 +24,10 @@ import sphinx_rtd_theme
 
 sys.path.insert(0, os.path.abspath('../../src'))
 
+autodoc_mock_imports = ['_tkinter']  # solves https://stackoverflow.com/questions/45484077/sphinx-autodoc-on-readthedocs-importerror-no-module-named-tkinter
+import matplotlib
+matplotlib.use('agg')
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -188,8 +192,6 @@ intersphinx_mapping = {
     'http://docs.scipy.org/doc/numpy/': None,
     'http://matplotlib.org': None,
 }
-
-autodoc_mock_imports = ['_tkinter']  # solves https://stackoverflow.com/questions/45484077/sphinx-autodoc-on-readthedocs-importerror-no-module-named-tkinter
 
 autodoc_member_order = 'bysource'
 autoclass_content = 'both'
