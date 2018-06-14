@@ -189,6 +189,8 @@ intersphinx_mapping = {
     'http://matplotlib.org': None,
 }
 
+autodoc_mock_imports = ['_tkinter']  # solves https://stackoverflow.com/questions/45484077/sphinx-autodoc-on-readthedocs-importerror-no-module-named-tkinter
+
 autodoc_member_order = 'bysource'
 autoclass_content = 'both'
 autodoc_default_flags = ['show-inheritance']
