@@ -6,7 +6,3 @@ paramiko
 psutil
 scipy
 tqdm
-pytest
-pytest-mock
-pytest-xdist
-hypothesis

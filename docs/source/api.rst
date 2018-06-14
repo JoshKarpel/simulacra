@@ -172,6 +172,8 @@ Simulacra's utility module provides a wide range of functions for working with a
 
 .. autoclass:: SubprocessManager
 
+.. autoclass:: SuspendProcesses
+
 
 Cluster
 -------

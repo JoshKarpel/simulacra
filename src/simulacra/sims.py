@@ -282,9 +282,6 @@ class Simulation(Beet, abc.ABC):
         :class:`str`
             The path to the saved Simulation.
         """
-        if self.status != Status.FINISHED:
-            self.status = Status.PAUSED
-
         return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
 
     @abc.abstractmethod
