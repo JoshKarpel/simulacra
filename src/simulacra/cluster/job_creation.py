@@ -150,9 +150,9 @@ def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
 
         logger.debug('Got input from stdin for question "{}": {}'.format(question, input_str))
 
-        if trimmed in ('true', 't', 'yes', 'y', '1', 'on'):
+        if trimmed in ('true', 't', 'yes', 'y', '1', 'on', True):
             return True
-        elif trimmed in ('false', 'f', 'no', 'n', '0', 'off'):
+        elif trimmed in ('false', 'f', 'no', 'n', '0', 'off', False):
             return False
         else:
             raise ValueError('Invalid answer to question "{}"'.format(question))
