@@ -145,8 +145,8 @@ def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
         input_str = input(question + ' [Default: {}] > '.format(default))
 
         trimmed = input_str.replace(' ', '').lower()
-        if input_str == '':
-            input_str = default
+        if trimmed == '':
+            trimmed = default
 
         logger.debug('Got input from stdin for question "{}": {}'.format(question, input_str))
 
