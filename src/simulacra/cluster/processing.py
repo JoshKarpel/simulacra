@@ -299,8 +299,7 @@ class JobProcessor(sims.Beet):
             fig = fm.fig
             ax = fig.add_subplot(111)
 
-            n, bins, patches = ax.hist(running_time, 50, normed = 1, alpha = 0.75)
-
+            n, bins, patches = ax.hist([r / u.hour for r in running_time], 50)
             ax.set_xlabel('Runtime')
             ax.set_ylabel('Number of Simulations')
 
