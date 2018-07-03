@@ -122,7 +122,7 @@ class JobProcessor(sims.Beet):
     def save(
         self,
         target_dir: Optional[str] = None,
-        file_extension: str = '.job',
+        file_extension: str = 'job',
         **kwargs,
     ):
         return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
