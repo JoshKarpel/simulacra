@@ -295,7 +295,18 @@ class JobProcessor(sims.Beet):
             img_format = 'png',
         )
 
-        logger.debug(f'Generated diagnostics plot for job {self.name}')
+        with vis.FigureManager(f'{self.name}__runtime_histogram', target_dir = self.summaries_dir, img_format = 'png') as fm:
+            fig = fm.fig
+            ax = fig.add_subplot(111)
+
+            n, bins, patches = ax.hist(running_time, 50, normed = 1, alpha = 0.75)
+
+            ax.set_xlabel('Runtime')
+            ax.set_ylabel('Number of Simulations')
+
+            ax.set_title(f'{self.name} Runtime Histogram')
+
+        logger.debug(f'Generated runtime histogram plot for job {self.name}')
 
 
 def combine_job_processors(*job_processors, job_dir_path = None):
