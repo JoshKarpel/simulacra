@@ -58,11 +58,27 @@ class SphericalHarmonic:
         """Returns a LaTeX-formatted string for the SphericalHarmonic."""
         return fr'Y_{{{self.m}}}^{{{self.l}}}'
 
+    @property
+    def _lm(self):
+        return self.l, self.m
+
     def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.l == other.l and self.m == other.m
+        return isinstance(other, self.__class__) and self._lm == other._lm()
 
     def __hash__(self):
-        return hash((self.l, self.m))
+        return hash(self._lm)
+
+    def __le__(self, other):
+        return self._lm <= other._lm
+
+    def __ge__(self, other):
+        return self._lm >= other._lm
+
+    def __lt__(self, other):
+        return self._lm < other._lm
+
+    def __gt__(self, other):
+        return self._lm > other._lm
 
     def __call__(self, theta, phi = 0):
         """
