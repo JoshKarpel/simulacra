@@ -36,7 +36,7 @@ class SphericalHarmonic:
         """
         self._l = l
         if not abs(m) <= l:
-            raise exceptions.SimulacraException(f'invalid spherical harmonic: |m| = {abs(m)} must be less than l = {l}')
+            raise exceptions.IllegalSphericalHarmonic(f'invalid spherical harmonic: |m| = {abs(m)} must be less than l = {l}')
         self._m = m
 
     @property

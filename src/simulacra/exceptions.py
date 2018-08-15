@@ -9,3 +9,6 @@ class UnfinishedSimulation(SimulacraException):
 
 class MissingSimulation(SimulacraException):
     pass
+
+class IllegalSphericalHarmonic(SimulacraException):
+    pass
