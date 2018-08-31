@@ -63,7 +63,7 @@ class SphericalHarmonic:
         return self.l, self.m
 
     def __eq__(self, other):
-        return isinstance(other, self.__class__) and self._lm == other._lm()
+        return isinstance(other, self.__class__) and self._lm == other._lm
 
     def __hash__(self):
         return hash(self._lm)
