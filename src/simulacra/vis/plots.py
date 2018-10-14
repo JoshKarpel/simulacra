@@ -827,6 +827,259 @@ def xy_plot(
     return fm
 
 
+def xy_stackplot(
+    name: str,
+    x_data: np.ndarray,
+    *y_data: np.ndarray,
+    line_labels: Iterable[str] = (),
+    line_kwargs: Iterable[dict] = (),
+    x_unit: u.Unit = None,
+    y_unit: u.Unit = None,
+    x_log_axis: bool = False,
+    y_log_axis: bool = False,
+    x_lower_limit: Optional[float] = None,
+    x_upper_limit: Optional[float] = None,
+    y_lower_limit: Optional[float] = None,
+    y_upper_limit: Optional[float] = None,
+    y_pad: float = 0,
+    y_log_pad: float = 1,
+    vlines: Iterable[float] = (),
+    vline_kwargs: Iterable[dict] = (),
+    hlines: Iterable[float] = (),
+    hline_kwargs: Iterable[dict] = (),
+    x_extra_ticks: Optional[Collection[float]] = None,
+    y_extra_ticks: Optional[Collection[float]] = None,
+    x_extra_tick_labels: Optional[Collection[str]] = None,
+    y_extra_tick_labels: Optional[Collection[str]] = None,
+    title: Optional[str] = None,
+    title_offset: float = TITLE_OFFSET,
+    x_label: Optional[str] = None,
+    y_label: Optional[str] = None,
+    font_size_title: float = 15,
+    font_size_axis_labels: float = 15,
+    font_size_tick_labels: float = 10,
+    font_size_legend: float = 12,
+    ticks_on_top: bool = True,
+    ticks_on_right: bool = True,
+    legend_on_right: bool = False,
+    legend_kwargs: Optional[dict] = None,
+    grid_kwargs: Optional[dict] = None,
+    minor_grid_kwargs: Optional[dict] = None,
+    equal_aspect: bool = False,
+    save_csv: bool = False,
+    figure_manager: Optional[FigureManager] = None,
+    **kwargs,
+) -> FigureManager:
+    """
+    Generate and save a generic x vs. y plot.
+
+    Parameters
+    ----------
+    name
+        The filename for the plot (not including path, which should be passed via they keyword argument ``target_dir``).
+    x_data
+        A single array that will be used as x-values for all the `y_data`.
+    y_data
+        Any number of arrays of the same length as `x_data`, each of which will appear as a line on the plot.
+    line_labels
+        Labels for each of the `y_data` lines.
+    line_kwargs
+        Keyword arguments for each of the `y_data` lines (a list of dictionaries).
+    x_unit
+        The unit for the x-axis. Can be a number or the name of a unit as string.
+    y_unit
+        The unit for the y-axis. Can be a number or the name of a unit as string.
+    x_log_axis
+        If ``True``, the x-axis will be log-scaled.
+    y_log_axis
+        If ``True``, the y-axis will be log-scaled.
+    x_lower_limit
+        The lower limit for the x-axis. If ``None``, set automatically from the `x_data`.
+    x_upper_limit
+        The upper limit for the x-axis. If ``None``, set automatically from the `x_data`.
+    y_lower_limit
+        The lower limit for the y-axis. If ``None``, set automatically from the `y_data`.
+    y_upper_limit
+        The upper limit for the y-axis. If ``None``, set automatically from the `y_data`.
+    y_pad
+        The linear padding factor for the y-axis. See :func:`calculate_axis_limits`.
+    y_log_pad
+        The logarithmic padding factor for the y-axis. See :func:`calculate_axis_limits`.
+    vlines
+        A list of positions to draw vertical lines.
+    vline_kwargs
+        Keyword arguments for each of the `vlines` (a list of dictionaries).
+    hlines
+        A list of positions to draw horizontal lines.
+    hline_kwargs
+        Keyword arguments for each of the `hlines` (a list of dictionaries).
+    x_extra_ticks
+        Additional tick marks to display on the x-axis.
+    y_extra_ticks
+        Additional tick marks to display on the y-axis.
+    x_extra_tick_labels
+        Labels for the extra x ticks.
+    y_extra_tick_labels
+        Labels for the extra y ticks.
+    title
+        The text to display above the plot.
+    title_offset
+        How far to move the title vertically.
+    x_label
+        The label to display below the x-axis.
+    y_label
+        The label to display to the left of the y-axis.
+    font_size_title
+        The font size for the title.
+    font_size_axis_labels
+        The font size for the axis labels.
+    font_size_tick_labels
+        The font size for the tick labels.
+    font_size_legend
+        The font size for the legend.
+    ticks_on_top
+        If ``True``, axis ticks will be shown along the top side of the plot (in addition to the bottom).
+    ticks_on_right
+        If ``True``, axis ticks will be shown along the right side of the plot (in addition to the left).
+    legend_on_right
+        If ``True``, the legend will be displayed hanging on the right side of the plot.
+    legend_kwargs
+        Keyword arguments for the legend.
+    grid_kwargs
+        Keyword arguments for the major gridlines.
+    minor_grid_kwargs
+        Keyword arguments for the minor gridlines.
+    equal_aspect
+        If ``True``, the aspect ratio of the axes will be set to ``'equal'``.
+    save_csv : :class:`bool`
+        If ``True``, the x and y data for the plot will be saved to a CSV file with the same name in the target directory.
+    figure_manager
+        An existing :class:`FigureManager` instance to use instead of creating a new one.
+    kwargs
+        Keyword arguments are passed to :class:`FigureManager`.
+
+    Returns
+    -------
+    :class:`FigureManager`
+        The :class:`FigureManager` that the xy-plot was constructed in.
+    """
+    if figure_manager is None:
+        figure_manager = FigureManager(name, **kwargs)
+    with figure_manager as fm:
+        fig = fm.fig
+        ax = plt.subplot(111)
+        if equal_aspect:
+            ax.set_aspect('equal')
+
+        grid_kwargs = collections.ChainMap(grid_kwargs or {}, GRID_KWARGS)
+        minor_grid_kwargs = collections.ChainMap(minor_grid_kwargs or {}, MINOR_GRID_KWARGS)
+        legend_kwargs = collections.ChainMap(legend_kwargs or {}, LEGEND_KWARGS)
+
+        # ensure data is in numpy arrays
+        x_data = np.array(x_data)
+        y_data = [np.array(y) for y in y_data]
+        line_labels = tuple(line_labels)
+        line_kwargs = tuple(line_kwargs)
+
+        x_unit_value, _ = u.get_unit_value_and_latex_from_unit(x_unit)
+        x_unit_label = get_unit_str_for_axis_label(x_unit)
+
+        y_unit_value, _ = u.get_unit_value_and_latex_from_unit(y_unit)
+        y_unit_label = get_unit_str_for_axis_label(y_unit)
+
+        x = x_data / x_unit_value
+        ys = [y / y_unit_value for y, label in itertools.zip_longest(y_data, line_labels)]
+        line_labels = [label or '' for y, label in itertools.zip_longest(y_data, line_labels)]
+
+        ax.stackplot(
+            x,
+            *ys,
+            labels = line_labels,
+        )
+
+        vlines = attach_h_or_v_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
+        fm.elements['vlines'] = vlines
+        hlines = attach_h_or_v_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
+        fm.elements['hlines'] = hlines
+
+        x_lower_limit, x_upper_limit = set_axis_limits_and_scale(
+            ax, x_data,
+            lower_limit = x_lower_limit,
+            upper_limit = x_upper_limit,
+            log = x_log_axis,
+            unit = x_unit,
+            direction = 'x'
+        )
+        y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
+            ax, *y_data,
+            lower_limit = y_lower_limit,
+            upper_limit = y_upper_limit,
+            log = y_log_axis,
+            pad = y_pad,
+            log_pad = y_log_pad,
+            unit = y_unit,
+            direction = 'y'
+        )
+
+        ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
+
+        if title is not None:
+            title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
+            title.set_y(title_offset)  # move title up a little
+        if x_label is not None:
+            x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
+        if y_label is not None:
+            y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
+        if len(line_labels) > 0 or 'handles' in legend_kwargs:
+            if not legend_on_right:
+                legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
+            if legend_on_right:
+                legend_kwargs = collections.ChainMap(legend_kwargs, dict(loc = 'upper left', bbox_to_anchor = (1.15, 1), borderaxespad = 0, fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17)))
+                legend = ax.legend(**legend_kwargs)
+
+        fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
+
+        for unit, direction in zip((x_unit, y_unit), ('x', 'y')):
+            if unit == 'rad':
+                ticks, labels = get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
+                set_axis_ticks_and_labels(ax, ticks, labels, direction = direction)
+
+        if x_extra_ticks is not None and x_extra_tick_labels is not None:
+            ax.set_xticks(list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_unit_value))  # append the extra tick labels, scaled appropriately
+            x_tick_labels = list(ax.get_xticklabels())
+            x_tick_labels[-len(x_extra_ticks):] = x_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            ax.set_xticklabels(x_tick_labels)
+
+        if y_extra_ticks is not None and y_extra_tick_labels is not None:
+            ax.set_yticks(list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_unit_value))  # append the extra tick labels, scaled appropriately
+            y_tick_labels = list(ax.get_yticklabels())
+            y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            ax.set_yticklabels(y_tick_labels)
+
+        ax.grid(True, which = 'major', **grid_kwargs)
+        ax.minorticks_on()
+        if x_log_axis:
+            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+        if y_log_axis:
+            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
+
+        # set limits again to guarantee we don't see ticks outside the limits
+        ax.set_xlim(x_lower_limit, x_upper_limit)
+        ax.set_ylim(y_lower_limit, y_upper_limit)
+
+        # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
+        ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
+
+    if save_csv:
+        path = fm.path
+        csv_path = os.path.splitext(path)[0] + '.csv'
+        np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
+
+        logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
+
+    return fm
+
+
 def xxyy_plot(
     name,
     x_data,
