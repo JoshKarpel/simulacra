@@ -1269,13 +1269,18 @@ def xyz_plot(
     ticks_on_right = True,
     grid_kwargs = None,
     minor_grid_kwargs = None,
+    vlines = (),
+    vline_kwargs = (),
+    hlines = (),
+    hline_kwargs = (),
     contours = (),
     contour_kwargs = None,
     show_contour_labels = True,
     contour_label_kwargs = None,
     save_csv = False,
     colormap = plt.get_cmap('viridis'),
-    shading = 'flat', show_colorbar = True,
+    shading = 'flat',
+    show_colorbar = True,
     richardson_equator_magnitude = 1,
     sym_log_norm_epsilon = 1e-3,
     figure_manager = None,
@@ -1381,6 +1386,9 @@ def xyz_plot(
             )
             if show_contour_labels:
                 ax.clabel(contour, **contour_label_kwargs)
+
+        attach_h_or_v_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
+        attach_h_or_v_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
 
