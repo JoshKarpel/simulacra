@@ -1277,6 +1277,8 @@ def xyz_plot(
     contour_kwargs = None,
     show_contour_labels = True,
     contour_label_kwargs = None,
+    lines = (),
+    line_kwargs = (),
     save_csv = False,
     colormap = plt.get_cmap('viridis'),
     shading = 'flat',
@@ -1386,6 +1388,10 @@ def xyz_plot(
             )
             if show_contour_labels:
                 ax.clabel(contour, **contour_label_kwargs)
+
+        for (x, y), kw in itertools.zip_longest(lines, line_kwargs):
+            kw = kw or {}
+            plt.plot(x / x_unit_value, y / y_unit_value, **kw)
 
         attach_h_or_v_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
         attach_h_or_v_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
