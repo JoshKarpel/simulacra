@@ -35,7 +35,7 @@ if __name__ == '__main__':
         )
 
         extra_kwargs = [
-            # dict(name_postfix = '',),
+            dict(name_postfix = '',),
             # dict(name_postfix = 'scale=1', fig_scale = 1),
             # dict(name_postfix = 'scale=1_tight', fig_scale = 1),
             # dict(name_postfix = 'scale=1_dpi=2', fig_scale = 1, fig_dpi_scale = 2),
@@ -45,7 +45,7 @@ if __name__ == '__main__':
             # dict(name_postfix = 'logX', x_log_axis = True),
             # dict(name_postfix = 'logY', y_log_axis = True),
             # dict(name_postfix = 'logXY', x_log_axis = True, y_log_axis = True),
-            dict(name_postfix = 'square', equal_aspect = True, fig_dpi_scale = 6,),
+            # dict(name_postfix = 'square', equal_aspect = True, fig_dpi_scale = 6,),
         ]
 
         for extras in extra_kwargs:

@@ -815,7 +815,7 @@ def xy_plot(
         ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
+        ax.tick_params(top = ticks_on_top, labeltop = ticks_on_top, right = ticks_on_right, labelright = ticks_on_right)
 
     if save_csv:
         path = fm.path
@@ -1068,7 +1068,7 @@ def xy_stackplot(
         ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
+        ax.tick_params(top = ticks_on_top, labeltop = ticks_on_top, right = ticks_on_right, labelright = ticks_on_right)
 
     if save_csv:
         path = fm.path
@@ -1224,7 +1224,7 @@ def xxyy_plot(
         ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
+        ax.tick_params(top = ticks_on_top, labeltop = ticks_on_top, right = ticks_on_right, labelright = ticks_on_right)
 
     path = fm.path
 
@@ -1446,7 +1446,7 @@ def xyz_plot(
         ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(labeltop = ticks_on_top, labelright = ticks_on_right)
+        ax.tick_params(top = ticks_on_top, labeltop = ticks_on_top, right = ticks_on_right, labelright = ticks_on_right)
 
     path = fm.path
 
