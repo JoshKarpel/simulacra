@@ -495,7 +495,8 @@ def animate(
     update_function_arguments,
     artists = None,
     length: float = 30,
-    progress_bar: bool = True):
+    progress_bar: bool = True,
+):
     artists = artists or []
 
     fig = figure_manager.fig
@@ -552,19 +553,19 @@ class AxisManager:
 
         self.initialize_axis()
 
-        logger.debug(f'Initialized {self}')
+        logger.debug(f'initialized {self}')
 
     def assign_axis(self, axis):
         self.axis = axis
 
-        logger.debug(f'Assigned {self} to {axis}')
+        logger.debug(f'assigned {self} to {axis}')
 
     def initialize_axis(self):
-        logger.debug(f'Initialized {self}')
+        logger.debug(f'initialized {self}')
 
     def update_axis(self):
         """Hook method for updating the AxisManager's internal state."""
-        logger.debug(f'Updated axis for {self}')
+        logger.debug(f'updated axis for {self}')
 
     def __repr__(self):
         return self.__class__.__name__
@@ -579,7 +580,7 @@ class Animator:
     """
     A superclass that handles sending frames to ffmpeg to create animations.
 
-    To actually make an animation there are three hook methods that need to be overwritten: _initialize_figure, _update_data, and _redraw_frame.
+    To actually make an animation there are two hook methods that need to be overwritten: _initialize_figure and _update_data.
 
     An Animator will generally contain a single matplotlib figure with some animation code of its own in addition to a list of :class:`AxisManagers ~<AxisManager>` that handle axes on the figure.
 
@@ -592,7 +593,7 @@ class Animator:
         target_dir: Optional[Union[Path, str]] = None,
         length: int = 60,
         fps: int = 30,
-        colormap = plt.cm.get_cmap('inferno'),
+        colormap = plt.cm.get_cmap('viridis'),
     ):
         """
         Parameters
@@ -630,7 +631,8 @@ class Animator:
         """
         Initialize the Animation by setting the Simulation and Specification, determining the target path for output, determining fps and decimation, and setting up the ffmpeg subprocess.
 
-        _initialize_figure() is called during the execution of this method. It should assign a matplotlib figure object to self.fig.
+        _initialize_figure() is called during the execution of this method.
+        It should assign a matplotlib figure object to ``self.fig``.
 
         The simulation should have an attribute available_animation_frames that returns an int describing how many raw frames might be available for use by the animation.
 
@@ -695,20 +697,18 @@ class Animator:
 
         Make sure that any plot element that will be mutated during the animation is created using the animation = True keyword argument and has a reference in self.redraw.
         """
-        logger.debug('Initialized figure for {}'.format(self))
+        logger.debug(f'initialized figure for {self}')
 
     def _update_data(self):
         """Hook for a method to update the data for each animated figure element."""
-        logger.debug('{} updating data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
-
         for axman in self.axis_managers:
             axman.update_axis()
 
-        logger.debug('{} updated data from {} {}'.format(self, self.sim.__class__.__name__, self.sim.name))
+        logger.debug(f'{self} updating data from {self.sim}')
 
     def _redraw_frame(self):
         """Redraw the figure frame."""
-        logger.debug('Redrawing frame for {}'.format(self))
+        logger.debug('redrawing frame for {}'.format(self))
 
         plt.set_cmap(self.colormap)  # make sure the colormap is correct, in case other figures have been created somewhere
 
@@ -722,7 +722,7 @@ class Animator:
 
         self.fig.canvas.blit(self.fig.bbox)  # blit the canvas, finalizing all of the draw_artists
 
-        logger.debug('Redrew frame for {}'.format(self))
+        logger.debug(f'redrew frame for {self}')
 
     def send_frame_to_ffmpeg(self):
         """Redraw anything that needs to be redrawn, then write the figure to an RGB string and send it to ffmpeg."""
