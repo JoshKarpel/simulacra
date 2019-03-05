@@ -119,7 +119,16 @@ def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> An
 def ask_for_choices(question: str, choices: Dict[str, Any], default: Optional[str] = None):
     if default is None:
         default = list(choices.keys())[0]
-    return choices[ask_for_input(question + f' [{" | ".join(choices)}]', default = default)]
+    while True:
+        try:
+            answer = ask_for_input(question + f' [{" | ".join(choices)}]', default = default)
+            choice = choices[answer]
+            break
+        except KeyError:
+            print(f'{answer} is not a valid choice')
+
+    return choice
+
 
 
 def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:

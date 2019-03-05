@@ -349,7 +349,7 @@ class Specification(Beet, abc.ABC):
         for k, v in ((k, v) for k, v in kwargs.items() if k not in self.__dict__):
             setattr(self, k, v)
             self._extra_attr_keys.append(k)
-            logger.debug('{} stored additional attribute {} = {}'.format(self.name, k, v))
+            logger.debug('{} stored additional attribute {} = {}'.format(self, k, v))
 
     def save(
         self,
