@@ -561,7 +561,7 @@ class AxisManager:
         logger.debug(f'assigned {self} to {axis}')
 
     def initialize_axis(self):
-        logger.debug(f'initialized {self}')
+        pass
 
     def update_axis(self):
         """Hook method for updating the AxisManager's internal state."""
@@ -659,12 +659,13 @@ class Animator:
 
         # AXES MUST BE ASSIGNED DURING FIGURE INITIALIZATION
         for axman in self.axis_managers:
-            logger.debug(f'Initializing axis {axman} for {self}')
+            logger.debug(f'initializing axis {axman} for {self}')
             axman.initialize(sim)
 
         self.fig.canvas.draw()
         self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
         canvas_width, canvas_height = self.fig.canvas.get_width_height()
+
         self.cmd = (
             'ffmpeg',
             '-y',
@@ -679,7 +680,7 @@ class Animator:
 
         self.ffmpeg = subprocess.Popen(self.cmd, **FFMPEG_PROCESS_KWARGS)
 
-        logger.info('Initialized {}'.format(self))
+        logger.info(f'initialized {self} for {self.sim}')
 
     def cleanup(self):
         """
@@ -704,7 +705,7 @@ class Animator:
         for axman in self.axis_managers:
             axman.update_axis()
 
-        logger.debug(f'{self} updating data from {self.sim}')
+        logger.debug(f'{self} updated data from {self.sim}')
 
     def _redraw_frame(self):
         """Redraw the figure frame."""
