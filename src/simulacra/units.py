@@ -831,3 +831,7 @@ UNIT_NAME_TO_VALUE.update({
     'parsecs': parsec,
     'pc': parsec,
 })
+
+
+# temperature
+zero_celsius = 273.15 * K
