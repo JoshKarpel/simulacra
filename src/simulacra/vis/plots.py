@@ -461,6 +461,7 @@ def set_axis_limits_and_scale(
     log_pad: float = 1,
     unit: Optional[u.Unit] = None,
     direction: str = 'x',
+    sym_log_linear_threshold = None,
 ) -> (float, float):
     """
 
@@ -486,7 +487,11 @@ def set_axis_limits_and_scale(
     lower_limit, upper_limit = calculate_axis_limits(*data, lower_limit = lower_limit, upper_limit = upper_limit, log = log, pad = pad, log_pad = log_pad)
 
     if log:
-        getattr(axis, f'set_{direction}scale')('log')
+        if lower_limit >0:
+            getattr(axis, f'set_{direction}scale')('log')
+        else:
+            getattr(axis, f'set_{direction}scale')('symlog', **{f'linthresh{direction}': sym_log_linear_threshold})
+
 
     return getattr(axis, f'set_{direction}lim')(lower_limit / unit_value, upper_limit / unit_value)
 
@@ -593,6 +598,7 @@ def xy_plot(
     y_upper_limit: Optional[float] = None,
     y_pad: float = 0,
     y_log_pad: float = 1,
+    sym_log_linear_threshold = 1e-3,
     vlines: Iterable[float] = (),
     vline_kwargs: Iterable[dict] = (),
     hlines: Iterable[float] = (),
@@ -721,6 +727,8 @@ def xy_plot(
         if equal_aspect:
             ax.set_aspect('equal')
 
+        fm.elements['axis'] = ax
+
         grid_kwargs = collections.ChainMap(grid_kwargs or {}, GRID_KWARGS)
         minor_grid_kwargs = collections.ChainMap(minor_grid_kwargs or {}, MINOR_GRID_KWARGS)
         legend_kwargs = collections.ChainMap(legend_kwargs or {}, LEGEND_KWARGS)
@@ -755,7 +763,8 @@ def xy_plot(
             upper_limit = x_upper_limit,
             log = x_log_axis,
             unit = x_unit,
-            direction = 'x'
+            direction = 'x',
+            sym_log_linear_threshold = sym_log_linear_threshold,
         )
         y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
             ax, *y_data,
@@ -765,7 +774,8 @@ def xy_plot(
             pad = y_pad,
             log_pad = y_log_pad,
             unit = y_unit,
-            direction = 'y'
+            direction = 'y',
+            sym_log_linear_threshold = sym_log_linear_threshold,
         )
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
@@ -788,7 +798,11 @@ def xy_plot(
 
         for unit, direction in zip((x_unit, y_unit), ('x', 'y')):
             if unit == 'rad':
-                ticks, labels = get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
+                if direction == 'x':
+                    ticks, labels = get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
+                if direction == 'y':
+                    ticks, labels = get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
+
                 set_axis_ticks_and_labels(ax, ticks, labels, direction = direction)
 
         if x_extra_ticks is not None and x_extra_tick_labels is not None:
@@ -1008,7 +1022,8 @@ def xy_stackplot(
             upper_limit = x_upper_limit,
             log = x_log_axis,
             unit = x_unit,
-            direction = 'x'
+            direction = 'x',
+            sym_log_linear_threshold = sym_log_linear_threshold,
         )
         y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
             ax, *y_data,
@@ -1018,7 +1033,8 @@ def xy_stackplot(
             pad = y_pad,
             log_pad = y_log_pad,
             unit = y_unit,
-            direction = 'y'
+            direction = 'y',
+            sym_log_linear_threshold = sym_log_linear_threshold,
         )
 
         ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
@@ -1128,7 +1144,7 @@ def xxyy_plot(
         fig = fm.fig
         ax = plt.subplot(111)
 
-        fm.elements = {}
+        fm.elements['axis'] = ax
 
         grid_kwargs = collections.ChainMap(grid_kwargs or {}, GRID_KWARGS)
         minor_grid_kwargs = collections.ChainMap(minor_grid_kwargs or {}, MINOR_GRID_KWARGS)
@@ -1189,10 +1205,10 @@ def xxyy_plot(
             y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
         if len(line_labels) > 0 or 'handles' in legend_kwargs:
             if not legend_on_right:
-                legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
+                legend = ax.legend(**{**legend_kwargs, **dict(fontsize = font_size_legend)})
             if legend_on_right:
                 legend_kwargs['loc'] = 'upper left'
-                legend = ax.legend(bbox_to_anchor = (1.15, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17), **legend_kwargs)
+                legend = ax.legend(**{**legend_kwargs, **dict(bbox_to_anchor = (1.15, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17))})
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
@@ -1267,7 +1283,9 @@ def xyz_plot(
     font_size_tick_labels = 10,
     ticks_on_top = True,
     ticks_on_right = True,
+    grids = True,
     grid_kwargs = None,
+    minor_grids = True,
     minor_grid_kwargs = None,
     vlines = (),
     vline_kwargs = (),
@@ -1300,9 +1318,9 @@ def xyz_plot(
         contour_kwargs = collections.ChainMap(contour_kwargs or {}, CONTOUR_KWARGS)
         contour_label_kwargs = collections.ChainMap(contour_label_kwargs or {}, CONTOUR_LABEL_KWARGS)
 
-        grid_color = colors.CMAP_TO_OPPOSITE.get(colormap, 'black')
-        grid_kwargs['color'] = grid_color
-        minor_grid_kwargs['color'] = grid_color
+        # grid_color = colors.CMAP_TO_OPPOSITE.get(colormap, 'black')
+        # grid_kwargs['color'] = grid_color
+        # minor_grid_kwargs['color'] = grid_color
 
         plt.set_cmap(colormap)
 
@@ -1379,15 +1397,19 @@ def xyz_plot(
         )
 
         if len(contours) > 0:
-            contour = ax.contour(
+            contours = ax.contour(
                 x_mesh / x_unit_value,
                 y_mesh / y_unit_value,
                 z_mesh / z_unit_value,
-                levels = np.array(sorted(contours)) / z_unit_value,
+                levels = np.array(contours) / z_unit_value,
                 **contour_kwargs,
             )
+            fm.elements['contours'] = contours
+
             if show_contour_labels:
-                ax.clabel(contour, **contour_label_kwargs)
+                contour_labels = ax.clabel(contours, **contour_label_kwargs)
+                fm.elements['contour_labels'] = contour_labels
+
 
         for (x, y), kw in itertools.zip_longest(lines, line_kwargs):
             kw = kw or {}
@@ -1435,11 +1457,13 @@ def xyz_plot(
             y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_yticklabels(y_tick_labels)
 
-        ax.grid(True, which = 'major', **grid_kwargs)
-        if x_log_axis:
-            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
-        if y_log_axis:
-            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
+        if grids:
+            ax.grid(grids, which = 'major', **grid_kwargs)
+        if minor_grids:
+            if x_log_axis:
+                ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+            if y_log_axis:
+                ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
 
         # set limits again to guarantee we don't see ticks oustide the limits
         ax.set_xlim(x_lower_limit, x_upper_limit)

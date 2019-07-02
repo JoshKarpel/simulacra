@@ -392,3 +392,6 @@ class Specification(Beet, abc.ABC):
             info.add_info(info_extra)
 
         return info
+
+    def copy(self):
+        return deepcopy(self)
