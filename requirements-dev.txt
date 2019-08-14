@@ -3,3 +3,5 @@ pytest
 pytest-mock
 pytest-xdist
 hypothesis
+coverage
+pytest-cov
