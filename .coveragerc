@@ -2,7 +2,7 @@
 branch = True
 
 include =
-    src/simulacra/*
+    simulacra/*
 
 omit =
     tests/*
@@ -12,7 +12,6 @@ exclude_lines =
     pragma: no cover
 
     def __str__
-
     def __repr__
 
     raise NotImplementedError
