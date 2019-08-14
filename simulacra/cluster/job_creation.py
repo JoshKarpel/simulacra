@@ -1,16 +1,15 @@
 import itertools
 import logging
-import os
 import pickle
 import sys
 from copy import deepcopy
 import textwrap
 from pathlib import Path
-from typing import Any, Iterable, Optional, Callable, Type, Tuple, Union, List, Collection, Dict
+from typing import Any, Iterable, Optional, Type, Union, List, Collection, Dict
 
 from tqdm import tqdm
 
-from .. import sims, utils
+from .. import sims
 
 # these imports need to be here so that ask_for_eval works
 import numpy as np

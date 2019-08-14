@@ -8,8 +8,8 @@ from . import filesystem
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-ILLEGAL_FILENAME_CHARACTERS = {'<', '>', ':', '"', '/', '\\', '|', '?', '*'}  # these characters should be stripped from file names before use
-
+# these characters should be stripped from file names before use
+ILLEGAL_FILENAME_CHARACTERS = {'<', '>', ':', '"', '/', '\\', '|', '?', '*'}
 
 def strip_illegal_characters(string: str) -> str:
     """Strip characters that cannot be included in file names from a string."""

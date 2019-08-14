@@ -5,7 +5,7 @@ import posixpath
 import stat
 import collections
 import functools
-from typing import Any, Iterable, Optional, Callable, Type, Tuple, Union, List
+from typing import Iterable, Optional, Callable
 
 import paramiko
 
