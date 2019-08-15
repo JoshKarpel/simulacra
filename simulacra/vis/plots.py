@@ -20,6 +20,9 @@ from . import colors
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+DEFAULT_TITLE_KWARGS = dict(fontsize=16)
+DEFAULT_LABEL_KWARGS = dict(fontsize=14)
+
 GRID_KWARGS = dict(linestyle="-", color="black", linewidth=0.5, alpha=0.4)
 
 MINOR_GRID_KWARGS = GRID_KWARGS.copy()
@@ -339,8 +342,6 @@ def xy_plot(
     x_label_kwargs: Optional[dict] = None,
     y_label: Optional[str] = None,
     y_label_kwargs: Optional[dict] = None,
-    font_size_title: float = 15,
-    font_size_axis_labels: float = 15,
     font_size_tick_labels: float = 10,
     font_size_legend: float = 12,
     ticks_on_top: bool = True,
@@ -350,7 +351,6 @@ def xy_plot(
     grid_kwargs: Optional[dict] = None,
     minor_grid_kwargs: Optional[dict] = None,
     equal_aspect: bool = False,
-    save_csv: bool = False,
     figure_manager: Optional[FigureManager] = None,
     **kwargs,
 ) -> FigureManager:
@@ -429,11 +429,14 @@ def xy_plot(
     font_size_legend
         The font size for the legend.
     ticks_on_top
-        If ``True``, axis ticks will be shown along the top side of the plot (in addition to the bottom).
+        If ``True``, axis ticks will be shown along the top side of the plot
+        (in addition to the bottom).
     ticks_on_right
-        If ``True``, axis ticks will be shown along the right side of the plot (in addition to the left).
+        If ``True``, axis ticks will be shown along the right side of the plot
+        (in addition to the left).
     legend_on_right
-        If ``True``, the legend will be displayed hanging on the right side of the plot.
+        If ``True``, the legend will be displayed hanging on the right side of
+        the plot.
     legend_kwargs
         Keyword arguments for the legend.
     grid_kwargs
@@ -442,21 +445,17 @@ def xy_plot(
         Keyword arguments for the minor gridlines.
     equal_aspect
         If ``True``, the aspect ratio of the axes will be set to ``'equal'``.
-    save_csv : :class:`bool`
-        If ``True``, the x and y data for the plot will be saved to a CSV file with the same name in the target directory.
     figure_manager
-        An existing :class:`FigureManager` instance to use instead of creating a new one.
+        An existing :class:`FigureManager` instance to use instead of creating
+        a new one.
     kwargs
-        Keyword arguments are passed to :class:`FigureManager`.
+        Additional keyword arguments are passed to :class:`FigureManager`.
 
     Returns
     -------
     :class:`FigureManager`
         The :class:`FigureManager` that the xy-plot was constructed in.
     """
-    title_kwargs = title_kwargs or {}
-    x_label_kwargs = x_label_kwargs or {}
-    y_label_kwargs = y_label_kwargs or {}
     legend_kwargs = collections.ChainMap(legend_kwargs or {}, LEGEND_KWARGS)
     grid_kwargs = collections.ChainMap(grid_kwargs or {}, GRID_KWARGS)
     minor_grid_kwargs = collections.ChainMap(minor_grid_kwargs or {}, MINOR_GRID_KWARGS)
@@ -534,27 +533,13 @@ def xy_plot(
         ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
         _set_title(
-            ax,
-            title_text=title,
-            title_offset=title_offset,
-            font_size=font_size_title,
-            **title_kwargs,
+            ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
         )
         _set_axis_label(
-            ax,
-            which="x",
-            label=x_label,
-            unit=x_unit,
-            font_size=font_size_axis_labels,
-            **x_label_kwargs,
+            ax, which="x", label=x_label, unit=x_unit, label_kwargs=x_label_kwargs
         )
         _set_axis_label(
-            ax,
-            which="y",
-            label=y_label,
-            unit=y_unit,
-            font_size=font_size_axis_labels,
-            **y_label_kwargs,
+            ax, which="y", label=y_label, unit=y_unit, label_kwargs=y_label_kwargs
         )
 
         if len(line_labels) > 0 or "handles" in legend_kwargs:
@@ -573,20 +558,14 @@ def xy_plot(
                 )
                 legend = ax.legend(**legend_kwargs)
 
-        fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
+        # draw that figure so that the ticks exist, so that we can add more ticks
+        fig.canvas.draw()
 
-        for unit, direction in zip((x_unit, y_unit), ("x", "y")):
-            if unit == "rad":
-                if direction == "x":
-                    ticks, labels = _get_pi_ticks_and_labels(
-                        x_lower_limit, x_upper_limit
-                    )
-                if direction == "y":
-                    ticks, labels = _get_pi_ticks_and_labels(
-                        y_lower_limit, y_upper_limit
-                    )
-
-                _set_axis_ticks_and_labels(ax, ticks, labels, direction=direction)
+        for which, unit, limits in [
+            ("x", x_unit, (x_lower_limit, x_upper_limit)),
+            ("y", y_unit, (y_lower_limit, y_upper_limit)),
+        ]:
+            _maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
 
         _add_extra_ticks(
             ax,
@@ -622,13 +601,6 @@ def xy_plot(
             labelright=ticks_on_right,
         )
 
-    if save_csv:
-        path = fm.path
-        csv_path = os.path.splitext(path)[0] + ".csv"
-        np.savetxt(csv_path, (x_data, *y_data), delimiter=",")
-
-        logger.debug("Saved figure data from {} to {}".format(name, csv_path))
-
     return fm
 
 
@@ -663,8 +635,6 @@ def xy_stackplot(
     x_label_kwargs: Optional[dict] = None,
     y_label: Optional[str] = None,
     y_label_kwargs: Optional[dict] = None,
-    font_size_title: float = 15,
-    font_size_axis_labels: float = 15,
     font_size_tick_labels: float = 10,
     font_size_legend: float = 12,
     ticks_on_top: bool = True,
@@ -674,7 +644,6 @@ def xy_stackplot(
     grid_kwargs: Optional[dict] = None,
     minor_grid_kwargs: Optional[dict] = None,
     equal_aspect: bool = False,
-    save_csv: bool = False,
     figure_manager: Optional[FigureManager] = None,
     **kwargs,
 ) -> FigureManager:
@@ -759,21 +728,16 @@ def xy_stackplot(
         Keyword arguments for the minor gridlines.
     equal_aspect
         If ``True``, the aspect ratio of the axes will be set to ``'equal'``.
-    save_csv : :class:`bool`
-        If ``True``, the x and y data for the plot will be saved to a CSV file with the same name in the target directory.
     figure_manager
         An existing :class:`FigureManager` instance to use instead of creating a new one.
     kwargs
-        Keyword arguments are passed to :class:`FigureManager`.
+        Additional keyword arguments are passed to :class:`FigureManager`.
 
     Returns
     -------
     :class:`FigureManager`
         The :class:`FigureManager` that the xy-plot was constructed in.
     """
-    title_kwargs = title_kwargs or {}
-    x_label_kwargs = x_label_kwargs or {}
-    y_label_kwargs = y_label_kwargs or {}
     legend_kwargs = collections.ChainMap(legend_kwargs or {}, LEGEND_KWARGS)
     grid_kwargs = collections.ChainMap(grid_kwargs or {}, GRID_KWARGS)
     minor_grid_kwargs = collections.ChainMap(minor_grid_kwargs or {}, MINOR_GRID_KWARGS)
@@ -849,27 +813,13 @@ def xy_stackplot(
         ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
         _set_title(
-            ax,
-            title_text=title,
-            title_offset=title_offset,
-            font_size=font_size_title,
-            **title_kwargs,
+            ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
         )
         _set_axis_label(
-            ax,
-            which="x",
-            label=x_label,
-            unit=x_unit,
-            font_size=font_size_axis_labels,
-            **x_label_kwargs,
+            ax, which="x", label=x_label, unit=x_unit, label_kwargs=x_label_kwargs
         )
         _set_axis_label(
-            ax,
-            which="y",
-            label=y_label,
-            unit=y_unit,
-            font_size=font_size_axis_labels,
-            **y_label_kwargs,
+            ax, which="y", label=y_label, unit=y_unit, label_kwargs=y_label_kwargs
         )
 
         if len(line_labels) > 0 or "handles" in legend_kwargs:
@@ -888,12 +838,14 @@ def xy_stackplot(
                 )
                 legend = ax.legend(**legend_kwargs)
 
-        fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
+        # draw that figure so that the ticks exist, so that we can add more ticks
+        fig.canvas.draw()
 
-        for unit, direction in zip((x_unit, y_unit), ("x", "y")):
-            if unit == "rad":
-                ticks, labels = _get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
-                _set_axis_ticks_and_labels(ax, ticks, labels, direction=direction)
+        for which, unit, limits in [
+            ("x", x_unit, (x_lower_limit, x_upper_limit)),
+            ("y", y_unit, (y_lower_limit, y_upper_limit)),
+        ]:
+            _maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
 
         _add_extra_ticks(
             ax,
@@ -929,13 +881,6 @@ def xy_stackplot(
             labelright=ticks_on_right,
         )
 
-    if save_csv:
-        path = fm.path
-        csv_path = os.path.splitext(path)[0] + ".csv"
-        np.savetxt(csv_path, (x_data, *y_data), delimiter=",")
-
-        logger.debug("Saved figure data from {} to {}".format(name, csv_path))
-
     return fm
 
 
@@ -970,8 +915,6 @@ def xxyy_plot(
     x_label_kwargs: Optional[dict] = None,
     y_label=None,
     y_label_kwargs: Optional[dict] = None,
-    font_size_title=15,
-    font_size_axis_labels=15,
     font_size_tick_labels=10,
     font_size_legend=12,
     ticks_on_top=True,
@@ -980,13 +923,9 @@ def xxyy_plot(
     grid_kwargs=None,
     minor_grid_kwargs=None,
     legend_kwargs=None,
-    save_csv=False,
     figure_manager=None,
     **kwargs,
 ) -> FigureManager:
-    title_kwargs = title_kwargs or {}
-    x_label_kwargs = x_label_kwargs or {}
-    y_label_kwargs = y_label_kwargs or {}
     legend_kwargs = collections.ChainMap(legend_kwargs or {}, LEGEND_KWARGS)
     grid_kwargs = collections.ChainMap(grid_kwargs or {}, GRID_KWARGS)
     minor_grid_kwargs = collections.ChainMap(minor_grid_kwargs or {}, MINOR_GRID_KWARGS)
@@ -1060,27 +999,13 @@ def xxyy_plot(
         ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
         _set_title(
-            ax,
-            title_text=title,
-            title_offset=title_offset,
-            font_size=font_size_title,
-            **title_kwargs,
+            ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
         )
         _set_axis_label(
-            ax,
-            which="x",
-            label=x_label,
-            unit=x_unit,
-            font_size=font_size_axis_labels,
-            **x_label_kwargs,
+            ax, which="x", label=x_label, unit=x_unit, label_kwargs=x_label_kwargs
         )
         _set_axis_label(
-            ax,
-            which="y",
-            label=y_label,
-            unit=y_unit,
-            font_size=font_size_axis_labels,
-            **y_label_kwargs,
+            ax, which="y", label=y_label, unit=y_unit, label_kwargs=y_label_kwargs
         )
         if len(line_labels) > 0 or "handles" in legend_kwargs:
             if not legend_on_right:
@@ -1101,12 +1026,14 @@ def xxyy_plot(
                     }
                 )
 
-        fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
+        # draw that figure so that the ticks exist, so that we can add more ticks
+        fig.canvas.draw()
 
-        for unit, direction in zip((x_unit, y_unit), ("x", "y")):
-            if unit == "rad":
-                ticks, labels = _get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
-                _set_axis_ticks_and_labels(ax, ticks, labels, direction=direction)
+        for which, unit, limits in [
+            ("x", x_unit, (x_lower_limit, x_upper_limit)),
+            ("y", y_unit, (y_lower_limit, y_upper_limit)),
+        ]:
+            _maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
 
         _add_extra_ticks(
             ax,
@@ -1141,28 +1068,20 @@ def xxyy_plot(
             labelright=ticks_on_right,
         )
 
-    path = fm.path
-
-    if save_csv:
-        csv_path = os.path.splitext(path)[0] + ".csv"
-        np.savetxt(csv_path, (x_data, *y_data), delimiter=",")
-
-        logger.debug("Saved figure data from {} to {}".format(name, csv_path))
-
     return fm
 
 
 def xyz_plot(
-    name,
-    x_mesh,
-    y_mesh,
-    z_mesh,
-    x_unit=None,
-    y_unit=None,
-    z_unit=None,
-    x_log_axis=False,
-    y_log_axis=False,
-    z_log_axis=False,
+    name: str,
+    x_mesh: np.array,
+    y_mesh: np.array,
+    z_mesh: np.array,
+    x_unit: Optional[u.Unit] = None,
+    y_unit: Optional[u.Unit] = None,
+    z_unit: Optional[u.Unit] = None,
+    x_log_axis: bool = False,
+    y_log_axis: bool = False,
+    z_log_axis: bool = False,
     x_lower_limit=None,
     x_upper_limit=None,
     y_lower_limit=None,
@@ -1183,8 +1102,6 @@ def xyz_plot(
     y_label=None,
     y_label_kwargs: Optional[dict] = None,
     z_label=None,
-    font_size_title=15,
-    font_size_axis_labels=15,
     font_size_tick_labels=10,
     ticks_on_top=True,
     ticks_on_right=True,
@@ -1202,7 +1119,6 @@ def xyz_plot(
     contour_label_kwargs=None,
     lines=(),
     line_kwargs=(),
-    save_csv=False,
     colormap=plt.get_cmap("viridis"),
     shading="flat",
     show_colorbar=True,
@@ -1211,9 +1127,6 @@ def xyz_plot(
     figure_manager=None,
     **kwargs,
 ) -> FigureManager:
-    title_kwargs = title_kwargs or {}
-    x_label_kwargs = x_label_kwargs or {}
-    y_label_kwargs = y_label_kwargs or {}
     grid_kwargs = collections.ChainMap(grid_kwargs or {}, GRID_KWARGS)
     minor_grid_kwargs = collections.ChainMap(minor_grid_kwargs or {}, MINOR_GRID_KWARGS)
 
@@ -1336,46 +1249,28 @@ def xyz_plot(
         ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
         _set_title(
-            ax,
-            title_text=title,
-            title_offset=title_offset,
-            font_size=font_size_title,
-            **title_kwargs,
+            ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
         )
         _set_axis_label(
-            ax,
-            which="x",
-            label=x_label,
-            unit=x_unit,
-            font_size=font_size_axis_labels,
-            **x_label_kwargs,
+            ax, which="x", label=x_label, unit=x_unit, label_kwargs=x_label_kwargs
         )
         _set_axis_label(
-            ax,
-            which="y",
-            label=y_label,
-            unit=y_unit,
-            font_size=font_size_axis_labels,
-            **y_label_kwargs,
+            ax, which="y", label=y_label, unit=y_unit, label_kwargs=y_label_kwargs
         )
 
         if show_colorbar and colormap.name != "richardson":
             cbar = plt.colorbar(mappable=colormesh, ax=ax, pad=0.1)
             if z_label is not None:
-                z_label = cbar.set_label(
-                    r"{}".format(z_label) + z_unit_label, fontsize=font_size_axis_labels
-                )
+                z_label = cbar.set_label(r"{}".format(z_label) + z_unit_label)
 
-        fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
+        # draw that figure so that the ticks exist, so that we can add more ticks
+        fig.canvas.draw()
 
-        if x_unit == "rad":
-            ticks, labels = _get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
-            ax.set_xticks(ticks)
-            ax.set_xticklabels(labels)
-        if y_unit == "rad":
-            ticks, labels = _get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
-            ax.set_yticks(ticks)
-            ax.set_yticklabels(labels)
+        for which, unit, limits in [
+            ("x", x_unit, (x_lower_limit, x_upper_limit)),
+            ("y", y_unit, (y_lower_limit, y_upper_limit)),
+        ]:
+            _maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
 
         _add_extra_ticks(
             ax,
@@ -1411,15 +1306,6 @@ def xyz_plot(
             right=ticks_on_right,
             labelright=ticks_on_right,
         )
-
-    path = fm.path
-
-    if save_csv:
-        raise NotImplementedError
-        # csv_path = os.path.splitext(path)[0] + '.csv'
-        # np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
-        #
-        # logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
 
     return fm
 
@@ -1474,11 +1360,36 @@ def _get_pi_ticks_and_labels(
     return list(float(tick) * u.pi for tick in ticks), list(labels)
 
 
-def _set_axis_ticks_and_labels(
+def _maybe_set_pi_ticks_and_labels(
+    ax, which: str, unit: u.Unit, lower_limit, upper_limit
+):
+    """
+    This function handles the special case where an axis's units are in radians,
+    in which case we should use a special set of axis ticks with fractions-of-pi
+    labels.
+
+    Parameters
+    ----------
+    ax
+    which
+    unit
+    lower_limit
+    upper_limit
+
+    Returns
+    -------
+
+    """
+    if unit == "rad":
+        ticks, labels = _get_pi_ticks_and_labels(lower_limit, upper_limit)
+        _set_axis_ticks_and_ticklabels(ax, which, ticks, labels)
+
+
+def _set_axis_ticks_and_ticklabels(
     axis: plt.Axes,
+    which: str,
     ticks: Iterable[Union[float, int]],
     labels: Iterable[str],
-    direction: str = "x",
 ):
     """
     Set the ticks and labels for `axis` along `direction`.
@@ -1487,15 +1398,15 @@ def _set_axis_ticks_and_labels(
     ----------
     axis
         The axis to act on.
+    which : {``'x'``, ``'y'``, ``'z'``}
+        Which axis to act on.
     ticks
         The tick positions.
     labels
         The tick labels.
-    direction : {``'x'``, ``'y'``, ``'z'``}
-        Which axis to act on.
     """
-    getattr(axis, f"set_{direction}ticks")(ticks)
-    getattr(axis, f"set_{direction}ticklabels")(labels)
+    getattr(axis, f"set_{which}ticks")(ticks)
+    getattr(axis, f"set_{which}ticklabels")(labels)
 
 
 def _calculate_axis_limits(
@@ -1602,10 +1513,9 @@ def _set_title(
     axis: plt.Axes,
     title_text: Optional[str],
     title_offset: float = 1.1,
-    font_size: float = 16,
-    **title_kwargs,
+    title_kwargs: Optional[dict] = None,
 ) -> Optional[plt.Text]:
-    title_kwargs["fontsize"] = font_size
+    title_kwargs = collections.ChainMap(title_kwargs or {}, DEFAULT_TITLE_KWARGS)
     if title_text is not None:
         title = axis.set_title(title_text, **title_kwargs)
         title.set_y(title_offset)
@@ -1617,10 +1527,9 @@ def _set_axis_label(
     which: str,
     label: Optional[str] = None,
     unit: Optional[u.Unit] = None,
-    font_size: float = 14,
-    **label_kwargs,
+    label_kwargs: Optional[dict] = None,
 ) -> Optional[plt.Text]:
-    label_kwargs["fontsize"] = font_size
+    label_kwargs = collections.ChainMap(label_kwargs or {}, DEFAULT_LABEL_KWARGS)
     unit_label = _get_unit_str_for_axis_label(unit)
     if label is not None:
         ax_label = getattr(axis, f"set_{which}label")(
