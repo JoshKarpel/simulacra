@@ -280,7 +280,7 @@ def get_unit_str_for_axis_label(unit: u.Unit):
 
 def attach_h_or_v_lines(
     axis: plt.Axes,
-    direction: str,
+    which: str,
     line_positions: Optional[Iterable[float]] = None,
     line_kwargs: Optional[Iterable[Dict[str, Any]]] = None,
     unit: Optional[u.Unit] = None,
@@ -291,7 +291,7 @@ def attach_h_or_v_lines(
     ----------
     axis
         The :class:`matplotlib.pyplot.Axes` to act on.
-    direction : {``'h'``, ``'v'``}
+    which : {``'h'``, ``'v'``}
         Which direction the lines are for (horizontal ``'h'`` or vertical ``'v'``).
     line_positions
         The positions of the lines to draw.
@@ -313,12 +313,12 @@ def attach_h_or_v_lines(
         if kw is None:
             kw = {}
         kw = {**DEFAULT_HVLINE_KWARGS, **kw}
-        lines.append(getattr(axis, f"ax{direction}line")(position / unit_value, **kw))
+        lines.append(getattr(axis, f"ax{which}line")(position / unit_value, **kw))
 
     return lines
 
 
-def add_extra_ticks(ax, which: str, extra_ticks, labels, unit: u.Unit):
+def add_extra_ticks(ax, which: str, extra_ticks, extra_tick_labels, unit: u.Unit):
     unit_value = u.UNIT_NAME_TO_VALUE[unit]
 
     if extra_ticks is not None:
@@ -328,9 +328,9 @@ def add_extra_ticks(ax, which: str, extra_ticks, labels, unit: u.Unit):
         ax.set_xticks(existing_ticks + new_ticks)
 
         # replace the last set of tick labels (the ones we just added) with the custom tick labels
-        if labels is not None:
+        if extra_tick_labels is not None:
             x_tick_labels = list(ax.get_xticklabels())
-            x_tick_labels[-len(extra_ticks) :] = labels
+            x_tick_labels[-len(extra_ticks) :] = extra_tick_labels
             ax.set_xticklabels(x_tick_labels)
 
 

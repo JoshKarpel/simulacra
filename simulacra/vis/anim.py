@@ -6,6 +6,7 @@ import os
 import itertools
 import collections
 from pathlib import Path
+import abc
 
 from tqdm import tqdm
 
@@ -70,10 +71,17 @@ def xyt_plot(
     legend_kwargs=None,
     length=30,
     fig_dpi_scale=3,
-    save_csv=False,
     progress_bar=True,
     **kwargs,
 ):
+    grid_kwargs = collections.ChainMap(grid_kwargs or {}, vutils.DEFAULT_GRID_KWARGS)
+    minor_grid_kwargs = collections.ChainMap(
+        minor_grid_kwargs or {}, vutils.DEFAULT_MINOR_GRID_KWARGS
+    )
+    legend_kwargs = collections.ChainMap(
+        legend_kwargs or {}, vutils.DEFAULT_LEGEND_KWARGS
+    )
+
     if figure_manager is None:
         figure_manager = figman.FigureManager(
             name, save=False, fig_dpi_scale=fig_dpi_scale, **kwargs
@@ -81,16 +89,6 @@ def xyt_plot(
     with figure_manager as fm:
         fig = fm.fig
         ax = fig.add_axes([0.15, 0.15, 0.75, 0.7])
-
-        grid_kwargs = collections.ChainMap(
-            grid_kwargs or {}, vutils.DEFAULT_GRID_KWARGS
-        )
-        minor_grid_kwargs = collections.ChainMap(
-            minor_grid_kwargs or {}, vutils.DEFAULT_MINOR_GRID_KWARGS
-        )
-        legend_kwargs = collections.ChainMap(
-            legend_kwargs or {}, vutils.DEFAULT_LEGEND_KWARGS
-        )
 
         # ensure data is in numpy arrays
         x_data = np.array(x_data)
@@ -115,8 +113,8 @@ def xyt_plot(
         t_unit_value, t_unit_tex = u.get_unit_value_and_latex_from_unit(t_unit)
         t_unit_label = t_unit_tex
 
-        vutils.attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, direction="v")
-        vutils.attach_h_or_v_lines(ax, hlines, hline_kwargs, unit=y_unit, direction="h")
+        vutils.attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, which="v")
+        vutils.attach_h_or_v_lines(ax, hlines, hline_kwargs, unit=y_unit, which="h")
 
         x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
             ax,
@@ -321,13 +319,6 @@ def xyt_plot(
                         f"Wrote frame for t = {u.uround(t, t_unit, 3)} {t_unit} to ffmpeg"
                     )
 
-    if save_csv:
-        raise NotImplementedError
-        # csv_path = os.path.splitext(path)[0] + '.csv'
-        # np.savetxt(csv_path, (x_data, *(y_func(x_data, t, **y_kwargs) for y_func, y_kwargs in zip(y_funcs, y_func_kwargs) for t in t_data)), delimiter = ',')
-        #
-        # logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
-
     return fm
 
 
@@ -422,18 +413,10 @@ def xyzt_plot(
         t_unit_label = t_unit_tex
 
         vutils.attach_h_or_v_lines(
-            ax,
-            direction="v",
-            line_positions=vlines,
-            line_kwargs=vline_kwargs,
-            unit=x_unit,
+            ax, which="v", line_positions=vlines, line_kwargs=vline_kwargs, unit=x_unit
         )
         vutils.attach_h_or_v_lines(
-            ax,
-            direction="h",
-            line_positions=hlines,
-            line_kwargs=hline_kwargs,
-            unit=y_unit,
+            ax, which="h", line_positions=hlines, line_kwargs=hline_kwargs, unit=y_unit
         )
 
         x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
@@ -634,13 +617,6 @@ def xyzt_plot(
                         f"Wrote frame for t = {u.uround(t, t_unit, 3)} {t_unit} to ffmpeg"
                     )
 
-    if save_csv:
-        raise NotImplementedError
-        # csv_path = os.path.splitext(path)[0] + '.csv'
-        # np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
-        #
-        # logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
-
     return fm
 
 
@@ -648,9 +624,9 @@ def animate(
     figure_manager: figman.FigureManager,
     update_function: Callable,
     update_function_arguments,
-    artists=None,
+    artists: Optional[list] = None,
     length: float = 30,
-    progress_bar: bool = True,
+    show_progress_bar: bool = True,
 ):
     artists = artists or []
 
@@ -685,7 +661,7 @@ def animate(
     )
 
     with utils.SubprocessManager(cmd, **FFMPEG_PROCESS_KWARGS) as ffmpeg:
-        if progress_bar:
+        if show_progress_bar:
             update_function_arguments = tqdm(update_function_arguments)
 
         for arg in update_function_arguments:
@@ -739,15 +715,19 @@ class AxisManager:
         return info
 
 
-class Animator:
+class Animator(abc.ABC):
     """
     A superclass that handles sending frames to ffmpeg to create animations.
 
-    To actually make an animation there are two hook methods that need to be overwritten: _initialize_figure and _update_data.
+    To actually make an animation there are two hook methods that need to be
+    overwritten: _initialize_figure and _update_data.
 
-    An Animator will generally contain a single matplotlib figure with some animation code of its own in addition to a list of :class:`AxisManagers ~<AxisManager>` that handle axes on the figure.
+    An Animator will generally contain a single matplotlib figure with some
+    animation code of its own in addition to a list of
+    :class:`AxisManagers ~<AxisManager>` that handle axes on the figure.
 
-    For this class to function correctly :code:`ffmpeg` must be visible on the system path.
+    For this class to function correctly :code:`ffmpeg` must be visible on the
+    system path.
     """
 
     def __init__(

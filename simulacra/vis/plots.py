@@ -200,22 +200,17 @@ def xy_plot(
             )
         fm.elements["lines"] = lines
 
-        vlines = vutils.attach_h_or_v_lines(
-            ax,
-            direction="v",
-            line_positions=vlines,
-            line_kwargs=vline_kwargs,
-            unit=x_unit,
-        )
-        fm.elements["vlines"] = vlines
-        hlines = vutils.attach_h_or_v_lines(
-            ax,
-            direction="h",
-            line_positions=hlines,
-            line_kwargs=hline_kwargs,
-            unit=y_unit,
-        )
-        fm.elements["hlines"] = hlines
+        for which, line_positions, line_kwargs, unit in (
+            ("v", vlines, vline_kwargs, x_unit),
+            ("h", hlines, hline_kwargs, y_unit),
+        ):
+            fm.elements[f"{which}lines"] = vutils.attach_h_or_v_lines(
+                ax,
+                which=which,
+                line_positions=line_positions,
+                line_kwargs=line_kwargs,
+                unit=unit,
+            )
 
         x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
             ax,
@@ -242,15 +237,16 @@ def xy_plot(
 
         ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
-        vutils.set_title(
+        fm.elements["title"] = vutils.set_title(
             ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
         )
-        vutils.set_axis_label(
-            ax, which="x", label=x_label, unit=x_unit, label_kwargs=x_label_kwargs
-        )
-        vutils.set_axis_label(
-            ax, which="y", label=y_label, unit=y_unit, label_kwargs=y_label_kwargs
-        )
+        for which, unit, label, label_kwargs in (
+            ("x", x_unit, x_label, x_label_kwargs),
+            ("y", y_unit, y_label, y_label_kwargs),
+        ):
+            fm.elements[f"{which}_axis_label"] = vutils.set_axis_label(
+                ax, which=which, label=label, unit=unit, label_kwargs=label_kwargs
+            )
 
         if len(line_labels) > 0 or "handles" in legend_kwargs:
             if not legend_on_right:
@@ -271,21 +267,21 @@ def xy_plot(
         # draw that figure so that the ticks exist, so that we can add more ticks
         fig.canvas.draw()
 
-        for which, unit, limits in [
+        for which, unit, limits in (
             ("x", x_unit, (x_lower_limit, x_upper_limit)),
             ("y", y_unit, (y_lower_limit, y_upper_limit)),
-        ]:
+        ):
             vutils.maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
 
-        for which, unit, extra_ticks, extra_tick_labels in [
+        for which, unit, extra_ticks, extra_tick_labels in (
             ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
             ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
-        ]:
+        ):
             vutils.add_extra_ticks(
                 ax,
                 which=which,
                 extra_ticks=extra_ticks,
-                labels=extra_tick_labels,
+                extra_tick_labels=extra_tick_labels,
                 unit=unit,
             )
 
@@ -482,22 +478,17 @@ def xy_stackplot(
         stackplot = ax.stackplot(x, *ys, labels=line_labels)
         fm.elements["stackplot"] = stackplot
 
-        vlines = vutils.attach_h_or_v_lines(
-            ax,
-            direction="v",
-            line_positions=vlines,
-            line_kwargs=vline_kwargs,
-            unit=x_unit,
-        )
-        hlines = vutils.attach_h_or_v_lines(
-            ax,
-            direction="h",
-            line_positions=hlines,
-            line_kwargs=hline_kwargs,
-            unit=y_unit,
-        )
-        fm.elements["vlines"] = vlines
-        fm.elements["hlines"] = hlines
+        for which, line_positions, line_kwargs, unit in (
+            ("v", vlines, vline_kwargs, x_unit),
+            ("h", hlines, hline_kwargs, y_unit),
+        ):
+            fm.elements[f"{which}lines"] = vutils.attach_h_or_v_lines(
+                ax,
+                which=which,
+                line_positions=line_positions,
+                line_kwargs=line_kwargs,
+                unit=unit,
+            )
 
         x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
             ax,
@@ -522,15 +513,16 @@ def xy_stackplot(
 
         ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
-        vutils.set_title(
+        fm.elements["title"] = vutils.set_title(
             ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
         )
-        vutils.set_axis_label(
-            ax, which="x", label=x_label, unit=x_unit, label_kwargs=x_label_kwargs
-        )
-        vutils.set_axis_label(
-            ax, which="y", label=y_label, unit=y_unit, label_kwargs=y_label_kwargs
-        )
+        for which, unit, label, label_kwargs in (
+            ("x", x_unit, x_label, x_label_kwargs),
+            ("y", y_unit, y_label, y_label_kwargs),
+        ):
+            fm.elements[f"{which}_axis_label"] = vutils.set_axis_label(
+                ax, which=which, label=label, unit=unit, label_kwargs=label_kwargs
+            )
 
         if len(line_labels) > 0 or "handles" in legend_kwargs:
             if not legend_on_right:
@@ -551,26 +543,23 @@ def xy_stackplot(
         # draw that figure so that the ticks exist, so that we can add more ticks
         fig.canvas.draw()
 
-        for which, unit, limits in [
+        for which, unit, limits in (
             ("x", x_unit, (x_lower_limit, x_upper_limit)),
             ("y", y_unit, (y_lower_limit, y_upper_limit)),
-        ]:
+        ):
             vutils.maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
 
-        vutils.add_extra_ticks(
-            ax,
-            which="x",
-            extra_ticks=x_extra_ticks,
-            labels=x_extra_tick_labels,
-            unit=x_unit,
-        )
-        vutils.add_extra_ticks(
-            ax,
-            which="y",
-            extra_ticks=y_extra_ticks,
-            labels=y_extra_tick_labels,
-            unit=y_unit,
-        )
+        for which, unit, extra_ticks, extra_tick_labels in (
+            ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
+            ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
+        ):
+            vutils.add_extra_ticks(
+                ax,
+                which=which,
+                extra_ticks=extra_ticks,
+                extra_tick_labels=extra_tick_labels,
+                unit=unit,
+            )
 
         ax.grid(True, which="major", **grid_kwargs)
         ax.minorticks_on()
@@ -672,20 +661,17 @@ def xxyy_plot(
             )
         fm.elements["lines"] = lines
 
-        vutils.attach_h_or_v_lines(
-            ax,
-            direction="v",
-            line_positions=vlines,
-            line_kwargs=vline_kwargs,
-            unit=x_unit,
-        )
-        vutils.attach_h_or_v_lines(
-            ax,
-            direction="h",
-            line_positions=hlines,
-            line_kwargs=hline_kwargs,
-            unit=y_unit,
-        )
+        for which, line_positions, line_kwargs, unit in (
+            ("v", vlines, vline_kwargs, x_unit),
+            ("h", hlines, hline_kwargs, y_unit),
+        ):
+            fm.elements[f"{which}lines"] = vutils.attach_h_or_v_lines(
+                ax,
+                which=which,
+                line_positions=line_positions,
+                line_kwargs=line_kwargs,
+                unit=unit,
+            )
 
         x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
             ax,
@@ -712,15 +698,17 @@ def xxyy_plot(
 
         ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
-        vutils.set_title(
+        fm.elements["title"] = vutils.set_title(
             ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
         )
-        vutils.set_axis_label(
-            ax, which="x", label=x_label, unit=x_unit, label_kwargs=x_label_kwargs
-        )
-        vutils.set_axis_label(
-            ax, which="y", label=y_label, unit=y_unit, label_kwargs=y_label_kwargs
-        )
+        for which, unit, label, label_kwargs in (
+            ("x", x_unit, x_label, x_label_kwargs),
+            ("y", y_unit, y_label, y_label_kwargs),
+        ):
+            fm.elements[f"{which}_axis_label"] = vutils.set_axis_label(
+                ax, which=which, label=label, unit=unit, label_kwargs=label_kwargs
+            )
+
         if len(line_labels) > 0 or "handles" in legend_kwargs:
             if not legend_on_right:
                 legend = ax.legend(
@@ -743,21 +731,27 @@ def xxyy_plot(
         # draw that figure so that the ticks exist, so that we can add more ticks
         fig.canvas.draw()
 
-        for which, unit, limits in [
-            ("x", x_unit, (x_lower_limit, x_upper_limit)),
-            ("y", y_unit, (y_lower_limit, y_upper_limit)),
-        ]:
-            vutils.maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
+        for which, unit, lower_limit, upper_limit in (
+            ("x", x_unit, x_lower_limit, x_upper_limit),
+            ("y", y_unit, y_lower_limit, y_upper_limit),
+        ):
+            vutils.maybe_set_pi_ticks_and_labels(
+                ax,
+                which=which,
+                unit=unit,
+                lower_limit=lower_limit,
+                upper_limit=upper_limit,
+            )
 
-        for which, unit, extra_ticks, extra_tick_labels in [
+        for which, unit, extra_ticks, extra_tick_labels in (
             ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
             ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
-        ]:
+        ):
             vutils.add_extra_ticks(
                 ax,
                 which=which,
                 extra_ticks=extra_ticks,
-                labels=extra_tick_labels,
+                extra_tick_labels=extra_tick_labels,
                 unit=unit,
             )
 
@@ -946,32 +940,30 @@ def xyz_plot(
             kw = kw or {}
             plt.plot(x / x_unit_value, y / y_unit_value, **kw)
 
-        vutils.attach_h_or_v_lines(
-            ax,
-            direction="v",
-            line_positions=vlines,
-            line_kwargs=vline_kwargs,
-            unit=x_unit,
-        )
-        vutils.attach_h_or_v_lines(
-            ax,
-            direction="h",
-            line_positions=hlines,
-            line_kwargs=hline_kwargs,
-            unit=y_unit,
-        )
+        for which, line_positions, line_kwargs, unit in (
+            ("v", vlines, vline_kwargs, x_unit),
+            ("h", hlines, hline_kwargs, y_unit),
+        ):
+            fm.elements[f"{which}lines"] = vutils.attach_h_or_v_lines(
+                ax,
+                which=which,
+                line_positions=line_positions,
+                line_kwargs=line_kwargs,
+                unit=unit,
+            )
 
         ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
-        vutils.set_title(
+        fm.elements["title"] = vutils.set_title(
             ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
         )
-        vutils.set_axis_label(
-            ax, which="x", label=x_label, unit=x_unit, label_kwargs=x_label_kwargs
-        )
-        vutils.set_axis_label(
-            ax, which="y", label=y_label, unit=y_unit, label_kwargs=y_label_kwargs
-        )
+        for which, unit, label, label_kwargs in (
+            ("x", x_unit, x_label, x_label_kwargs),
+            ("y", y_unit, y_label, y_label_kwargs),
+        ):
+            fm.elements[f"{which}_axis_label"] = vutils.set_axis_label(
+                ax, which=which, label=label, unit=unit, label_kwargs=label_kwargs
+            )
 
         if show_colorbar and colormap.name != "richardson":
             cbar = plt.colorbar(mappable=colormesh, ax=ax, pad=0.1)
@@ -981,21 +973,21 @@ def xyz_plot(
         # draw that figure so that the ticks exist, so that we can add more ticks
         fig.canvas.draw()
 
-        for which, unit, limits in [
+        for which, unit, limits in (
             ("x", x_unit, (x_lower_limit, x_upper_limit)),
             ("y", y_unit, (y_lower_limit, y_upper_limit)),
-        ]:
+        ):
             vutils.maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
 
-        for which, unit, extra_ticks, extra_tick_labels in [
+        for which, unit, extra_ticks, extra_tick_labels in (
             ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
             ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
-        ]:
+        ):
             vutils.add_extra_ticks(
                 ax,
                 which=which,
                 extra_ticks=extra_ticks,
-                labels=extra_tick_labels,
+                extra_tick_labels=extra_tick_labels,
                 unit=unit,
             )
 
