@@ -1,13 +1,13 @@
+from typing import Callable
 import logging
 
 import numpy as np
 import numpy.random as rand
 import scipy.special as special
 import scipy.integrate as integ
-from typing import Callable, Generator, Iterable
 
 from . import exceptions
-from .units import *
+from . import units as u
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -15,7 +15,7 @@ logger.setLevel(logging.DEBUG)
 
 def rand_phase(shape_tuple):
     """Return random phases (0 to 2pi) in the specified shape."""
-    return rand.random_sample(shape_tuple) * twopi
+    return rand.random_sample(shape_tuple) * u.twopi
 
 
 class SphericalHarmonic:

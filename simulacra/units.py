@@ -6,22 +6,21 @@ UNIT_NAME_TO_VALUE = {None: 1, "": 1}
 UNIT_NAME_TO_LATEX = {None: "", "": ""}
 
 Unit = NewType("Unit", Union[float, int, str])
-TeXString = NewType("TeXString", str)
 
 
-def get_unit_value_and_latex_from_unit(unit: Optional[Unit]) -> Tuple[float, TeXString]:
+def get_unit_value(unit: Optional[Unit]) -> float:
+    """Return the numerical value of the unit."""
+    return UNIT_NAME_TO_VALUE.get(unit, 1)
+
+
+def get_unit_values(*units: Optional[Unit]) -> float:
+    """Return the numerical values of the units."""
+    return tuple(get_unit_value(unit) for unit in units)
+
+
+def get_unit_value_and_latex_from_unit(unit: Optional[Unit]) -> Tuple[float, str]:
     """Return the numerical value of the unit and its LaTeX representation from a unit name."""
-    if unit is None:
-        unit = 1
-
-    if type(unit) == str:
-        unit_value = UNIT_NAME_TO_VALUE[unit]
-        unit_latex = UNIT_NAME_TO_LATEX[unit]
-    else:
-        unit_value = unit
-        unit_latex = ""
-
-    return unit_value, unit_latex
+    return UNIT_NAME_TO_VALUE.get(unit, 1), UNIT_NAME_TO_LATEX.get(unit, "")
 
 
 def uround(value, unit: Optional[Unit] = None, digits: int = 3):
@@ -37,7 +36,9 @@ twopi = 2 * _np.pi
 e = _np.e
 
 UNIT_NAME_TO_VALUE.update({"alpha": alpha, "pi": pi, "twopi": twopi, "e": e})
-UNIT_NAME_TO_LATEX.update({"alpha": r"\alpha", "pi": "\pi", "twopi": r"2\pi", "e": "e"})
+UNIT_NAME_TO_LATEX.update(
+    {"alpha": r"\alpha", "pi": r"\pi", "twopi": r"2\pi", "e": "e"}
+)
 
 # base units
 m = 1

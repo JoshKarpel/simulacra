@@ -17,11 +17,6 @@ def strip_illegal_characters(string: str) -> str:
     return "".join([char for char in string if char not in ILLEGAL_FILENAME_CHARACTERS])
 
 
-def get_now_str() -> str:
-    """Return a formatted string with the current year-month-day_hour-minute-second."""
-    return datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S")
-
-
 def bytes_to_str(num_bytes: int) -> str:
     """Return a number of bytes as a human-readable string."""
     for unit in ("bytes", "KB", "MB", "GB"):

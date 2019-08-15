@@ -16,6 +16,8 @@ from . import utils
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+SIM_FILE_EXTENSION = "sim"
+
 
 class Beet:
     """
@@ -92,12 +94,7 @@ class Beet:
 
         return new_beet
 
-    def save(
-        self,
-        target_dir: Optional[Path] = None,
-        file_extension: str = "beet",
-        compressed: bool = True,
-    ) -> str:
+    def save(self, target_dir: Optional[Path] = None, compressed: bool = True) -> Path:
         """
         Atomically pickle the :class:`Beet` to a file.
 
@@ -105,20 +102,18 @@ class Beet:
         ----------
         target_dir : :class:`str`
             The directory to save the Beet to.
-        file_extension : :class:`str`
-            The file extension to name the Beet with (for keeping track of things, no actual effect).
         compressed : :class:`bool`
             Whether to compress the Beet using gzip.
 
         Returns
         -------
-        str
+        path :
             The path to the saved :class:`Beet`.
         """
         if target_dir is None:
             target_dir = Path.cwd()
 
-        path = Path(target_dir).absolute() / f"{self.file_name}.{file_extension}"
+        path = Path(target_dir).absolute() / f"{self.file_name}.{SIM_FILE_EXTENSION}"
         working_path = path.with_name(f"{path.name}.working")
 
         utils.ensure_parents_exist(working_path)
@@ -210,10 +205,7 @@ class Simulation(Beet, abc.ABC):
         spec
             The :class:`Specification` for the Simulation.
         """
-        super().__init__(
-            spec.name, file_name=spec.file_name
-        )  # inherit name and file_name from spec
-
+        super().__init__(spec.name, file_name=spec.file_name)
         self.spec = spec
 
         # diagnostic data
@@ -237,8 +229,7 @@ class Simulation(Beet, abc.ABC):
         """
         Set the status of the :class:`Simulation`.
 
-        Defined statuses are ``STATUS_INI`` (initialized), ``STATUS_RUN`` (running), ``STATUS_FIN`` (finished), ``STATUS_PAU`` (paused), and ``STATUS_ERR`` (error).
-        These statuses can have side effects on the simulation's time diagnostics.
+        Setting the statuses can have side effects on the simulation's time diagnostics.
 
         Parameters
         ----------
@@ -247,6 +238,9 @@ class Simulation(Beet, abc.ABC):
         """
         if not isinstance(status, Status):
             raise TypeError(f"{status} is not a member of Status")
+
+        if status is self.status:
+            return
 
         old_status = self.status
         now = datetime.datetime.utcnow()
@@ -269,11 +263,9 @@ class Simulation(Beet, abc.ABC):
 
         self._status = status
 
-        logger.debug(f"{self} status set to {self.status} from {old_status}")
+        logger.debug(f"{self} status changed to {self.status} from {old_status}")
 
-    def save(
-        self, target_dir: Optional[str] = None, file_extension: str = "sim", **kwargs
-    ) -> str:
+    def save(self, target_dir: Optional[Path] = None, **kwargs) -> Path:
         """
         Atomically pickle the :class:`Simulation` to a file.
 
@@ -281,17 +273,13 @@ class Simulation(Beet, abc.ABC):
         ----------
         target_dir
             The directory to save the :class:`Simulation` to.
-        file_extension
-            The file extension to name the :class:`Simulation` with (for keeping track of things, no actual effect).
 
         Returns
         -------
-        :class:`str`
+        path :
             The path to the saved Simulation.
         """
-        return super().save(
-            target_dir=target_dir, file_extension=file_extension, **kwargs
-        )
+        return Path(super().save(target_dir=target_dir, **kwargs))
 
     @abc.abstractmethod
     def run(self):
@@ -360,9 +348,7 @@ class Specification(Beet, abc.ABC):
             self._extra_attr_keys.append(k)
             logger.debug("{} stored additional attribute {} = {}".format(self, k, v))
 
-    def save(
-        self, target_dir: Optional[str] = None, file_extension: str = "spec", **kwargs
-    ) -> str:
+    def save(self, target_dir: Optional[str] = None, **kwargs) -> str:
         """
         Pickle the :class:`Specification` to a file.
         Keyword arguments are as :method:`Beet.save`.
@@ -372,9 +358,7 @@ class Specification(Beet, abc.ABC):
         path
             The path to the saved :class:`Specification`.
         """
-        return super().save(
-            target_dir=target_dir, file_extension=file_extension, **kwargs
-        )
+        return super().save(target_dir=target_dir, **kwargs)
 
     def to_sim(self):
         """Return a :class:`Simulation` of the type associated with the :class:`Specification` type, generated from this instance."""
@@ -395,3 +379,41 @@ class Specification(Beet, abc.ABC):
 
     def copy(self):
         return deepcopy(self)
+
+
+def find_or_init_sim_from_spec(
+    spec: Specification, search_dir: Optional[Path] = None
+) -> Simulation:
+    """
+    Try to load a :class:`simulacra.Simulation` by looking for a pickled :class:`simulacra.core.Simulation` named ``{search_dir}/{spec.file_name}.sim``.
+    If that fails, create a new Simulation from `spec`.
+
+    Parameters
+    ----------
+    spec
+        The filename of this specification is what will be searched for.
+    search_dir
+        The directory to look for the simulation in.
+    Returns
+    -------
+    sim
+        The simulation, either loaded or initialized.
+    """
+    search_dir = Path(search_dir or Path.cwd())
+    path = search_dir / f"{spec.file_name}.{SIM_FILE_EXTENSION}"
+    try:
+        sim = Simulation.load(path=path)
+    except FileNotFoundError:
+        sim = spec.to_sim()
+
+    return sim
+
+
+def run_from_cache(spec, cache_dir: Optional[Path] = None, **kwargs):
+    sim = find_or_init_sim_from_spec(spec, search_dir=cache_dir)
+
+    if sim.status != Status.FINISHED:
+        sim.run(**kwargs)
+        sim.save(target_dir=cache_dir)
+
+    return sim

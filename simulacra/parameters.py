@@ -1,20 +1,13 @@
 import itertools
 import logging
-import pickle
-import sys
 from copy import deepcopy
 import textwrap
-from pathlib import Path
-from typing import Any, Iterable, Optional, Type, Union, List, Collection, Dict
-
-from tqdm import tqdm
-
-from .. import sims
+from typing import Any, Optional, Type, Union, List, Collection, Dict
 
 # these imports need to be here so that ask_for_eval works
 import numpy as np
 import scipy as sp
-from .. import units as u
+from simulacra import units as u
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -185,8 +178,10 @@ def ask_for_eval(question: str, default: str = "None") -> Any:
     """
     Ask for input from the user, with a default value, which will be evaluated as a Python command.
 
-    Numpy and Scipy's top-level interfaces (imported as ``np`` and ``sp``) and Simulacra's own unit module (imported as ``u``) are both available.
-    For example, ``'np.linspace(0, twopi, 100)'`` will produce the expected result of 100 numbers evenly spaced between zero and twopi.
+    Numpy and Scipy's top-level interfaces (imported as ``np`` and ``sp``) and
+    Simulacra's own unit module (imported as ``u``) are both available.
+    For example, ``'np.linspace(0, twopi, 100)'`` will produce the expected
+    result of 100 numbers evenly spaced between zero and twopi.
 
     NB: this function is not safe!
     The user can execute arbitrary Python code!
@@ -218,90 +213,3 @@ def ask_for_eval(question: str, default: str = "None") -> Any:
     except Exception as e:
         print(e)
         return ask_for_eval(question, default=default)
-
-
-def abort_job_creation():
-    """Abort job creation by exiting the script."""
-    print("Aborting job creation...")
-    logger.critical("Aborted job creation")
-    sys.exit(0)
-
-
-def create_job_subdirs(job_dir: str, subdirs=("inputs", "outputs", "logs")):
-    """Create directories for the inputs, outputs, logs, and movies."""
-    print("Creating job directory and subdirectories...")
-
-    job_dir = Path(job_dir)
-    job_dir.mkdir(parents=True, exist_ok=True)
-    for subdir in subdirs:
-        (job_dir / subdir).mkdir(parents=True, exist_ok=True)
-
-
-def save_specifications(
-    specifications: Iterable[sims.Specification], job_dir: Union[Path, str]
-):
-    """Save a list of Specifications."""
-    print("Saving Specifications...")
-
-    for spec in tqdm(specifications, ascii=True):
-        spec.save(target_dir=Path(job_dir) / "inputs")
-
-    logger.debug("Saved Specifications")
-
-
-def write_specifications_info_to_file(
-    specifications: Collection[sims.Specification], job_dir: Union[Path, str]
-):
-    """Write information from the list of the Specifications to a file."""
-    print("Writing Specification info to file...")
-
-    path = Path(job_dir) / "specifications.txt"
-    text = "\n".join(str(spec.info()) for spec in specifications)
-    with path.open(mode="w", encoding="utf-8") as file:
-        file.write(text)
-
-    logger.debug("Wrote Specification information to file")
-
-    return path
-
-
-def write_parameters_info_to_file(parameters: Iterable[Parameter], job_dir: str):
-    """Write information from the list of Parameters to a file."""
-    print("Writing parameters to file...")
-
-    path = Path(job_dir) / "parameters.txt"
-    text = "\n".join(repr(param) for param in parameters)
-    with path.open(mode="w", encoding="utf-8") as file:
-        file.write(text)
-
-    logger.debug("Wrote parameter information to file")
-
-
-def specification_check(specifications: Collection[sims.Specification], check: int = 3):
-    """Ask the user whether some number of specifications look correct."""
-    print("-" * 20)
-    for s in specifications[0:check]:
-        print(f"\n{s.info()}\n")
-        print("-" * 20)
-
-    print(f"Generated {len(specifications)} Specifications")
-
-    check = ask_for_bool(
-        f"Do the first {check} Specifications look correct?", default="No"
-    )
-    if not check:
-        abort_job_creation()
-
-
-def write_job_info_to_file(job_info, job_dir: Union[Path, str]):
-    """Write job information to a file."""
-    path = Path(job_dir) / "info.pkl"
-    with path.open(mode="wb") as file:
-        pickle.dump(job_info, file, protocol=-1)
-
-
-def load_job_info_from_file(job_dir: Union[Path, str]):
-    """Load job information from a file."""
-    path = Path(job_dir) / "info.pkl"
-    with path.open(mode="rb") as file:
-        return pickle.load(file)

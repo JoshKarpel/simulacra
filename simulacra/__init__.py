@@ -10,5 +10,6 @@ import os
 os.environ["FOR_DISABLE_CONSOLE_CTRL_HANDLER"] = "1"
 
 from .sims import *
+from .parameters import *
 from .info import Info
-from . import math, utils, vis, cluster, units, summables, exceptions
+from . import math, utils, vis, units, summables, exceptions

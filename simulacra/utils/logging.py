@@ -1,9 +1,10 @@
 import os
 import sys
 import logging
-from typing import Optional, Union, NamedTuple, Callable, Iterable
+import datetime
+from typing import Optional
 
-from . import formatting, filesystem
+from . import filesystem
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -67,7 +68,7 @@ class LogManager:
         self.file_level = file_level
 
         if file_name is None:
-            file_name = f"log__{formatting.get_now_str()}"
+            file_name = f"log__{datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S')}"
         self.file_name = file_name
         if not self.file_name.endswith(".log"):
             self.file_name += ".log"

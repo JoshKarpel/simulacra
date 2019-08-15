@@ -476,8 +476,7 @@ def xy_plot(
         line_labels = tuple(line_labels)
         line_kwargs = tuple(line_kwargs)
 
-        x_unit_value, _ = u.get_unit_value_and_latex_from_unit(x_unit)
-        y_unit_value, _ = u.get_unit_value_and_latex_from_unit(y_unit)
+        x_unit_value, y_unit_value = u.get_unit_values(x_unit, y_unit)
 
         lines = []
         for y, label, kwargs in itertools.zip_longest(y_data, line_labels, line_kwargs):
@@ -758,8 +757,7 @@ def xy_stackplot(
         line_labels = tuple(line_labels)
         line_kwargs = tuple(line_kwargs)
 
-        x_unit_value, _ = u.get_unit_value_and_latex_from_unit(x_unit)
-        y_unit_value, _ = u.get_unit_value_and_latex_from_unit(y_unit)
+        x_unit_value, y_unit_value = u.get_unit_values(x_unit, y_unit)
 
         x = x_data / x_unit_value
         ys = [
@@ -1147,9 +1145,9 @@ def xyz_plot(
 
         plt.set_cmap(colormap)
 
-        x_unit_value, x_unit_name = u.get_unit_value_and_latex_from_unit(x_unit)
-        y_unit_value, y_unit_name = u.get_unit_value_and_latex_from_unit(y_unit)
-        z_unit_value, z_unit_name = u.get_unit_value_and_latex_from_unit(z_unit)
+        x_unit_value, y_unit_value, z_unit_value = u.get_unit_values(
+            x_unit, y_unit, z_unit
+        )
         z_unit_label = _get_unit_str_for_axis_label(z_unit)
 
         x_lower_limit, x_upper_limit = _set_axis_limits_and_scale(

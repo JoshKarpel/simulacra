@@ -11,54 +11,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def try_loop(
-    *functions_to_run: Collection[Callable[[Any], None]],
-    wait_after_success: datetime.timedelta = datetime.timedelta(hours=1),
-    wait_after_failure: datetime.timedelta = datetime.timedelta(minutes=1),
-    begin_text: str = "Beginning loop",
-    complete_text: str = "Completed loop",
-):
-    """
-    Run the given functions in a loop.
-
-    Parameters
-    ----------
-    functions_to_run
-        Call these functions in order during each loop
-    wait_after_success
-        How long to wait after a loop completes before trying again if the loop succeeds
-    wait_after_failure
-        How long to wait after a loop fails (i.e., raises an exception) before trying again
-    begin_text
-        A string to print at the beginning of the loop
-    complete_text
-        A string to print at the end of the loop
-    """
-    while True:
-        logger.info(begin_text)
-
-        with timing.BlockTimer() as timer:
-            failed = False
-            for f in functions_to_run:
-                try:
-                    f()
-                except Exception as e:
-                    logger.exception(
-                        f"Exception encountered while executing loop function: {f}"
-                    )
-                    failed = True
-
-        logger.info(f"{complete_text}. Elapsed time: {timer.wall_time_elapsed}")
-
-        if failed:
-            s, wait = "failed", wait_after_failure
-        else:
-            s, wait = "succeeded", wait_after_success
-
-        logger.info(f"Loop cycle {s}, next cycle in {wait.total_seconds()} seconds")
-        time.sleep(wait.total_seconds())
-
-
 def grouper(iterable: Iterable, n: int, fill_value=None) -> Iterable:
     """
 
