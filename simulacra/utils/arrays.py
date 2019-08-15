@@ -7,7 +7,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-KeyValueArrays = collections.namedtuple('KeyValueArrays', ('key_array', 'value_array'))
+KeyValueArrays = collections.namedtuple("KeyValueArrays", ("key_array", "value_array"))
 
 
 def dict_to_arrays(dct: dict, key: Optional[Callable] = None) -> KeyValueArrays:
@@ -29,14 +29,14 @@ def dict_to_arrays(dct: dict, key: Optional[Callable] = None) -> KeyValueArrays:
     key_list = []
     val_list = []
 
-    for key, val in sorted(dct.items(), key = key):
+    for key, val in sorted(dct.items(), key=key):
         key_list.append(key)
         val_list.append(val)
 
     return KeyValueArrays(np.array(key_list), np.array(val_list))
 
 
-NearestEntry = collections.namedtuple('NearestEntry', ('index', 'value', 'target'))
+NearestEntry = collections.namedtuple("NearestEntry", ("index", "value", "target"))
 
 
 def find_nearest_entry(array: np.ndarray, target: Union[float, int]) -> NearestEntry:

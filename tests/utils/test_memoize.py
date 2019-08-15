@@ -3,7 +3,7 @@ import pytest
 import simulacra as si
 
 
-@pytest.fixture(scope = 'function')
+@pytest.fixture(scope="function")
 def memoized_mock(mocker):
     func = mocker.MagicMock()
 
@@ -46,7 +46,7 @@ def test_memoized_func_is_called_multiple_times_for_different_args(memoized_mock
 
 
 def test_cached_property(mocker):
-    func = mocker.MagicMock(return_value = 'foo')
+    func = mocker.MagicMock(return_value="foo")
 
     class Foo:
         @si.utils.cached_property
@@ -54,8 +54,8 @@ def test_cached_property(mocker):
             return func()
 
     f = Foo()
-    assert f.prop == 'foo'
-    assert 'prop' in f.__dict__
+    assert f.prop == "foo"
+    assert "prop" in f.__dict__
 
     f.prop
     f.prop
@@ -66,7 +66,7 @@ def test_cached_property(mocker):
 
     del f.prop  # delete to reset caching
 
-    assert 'prop' not in f.__dict__
-    assert f.prop == 'foo'  # call again
+    assert "prop" not in f.__dict__
+    assert f.prop == "foo"  # call again
     assert func.call_count == 2
-    assert 'prop' in f.__dict__
+    assert "prop" in f.__dict__

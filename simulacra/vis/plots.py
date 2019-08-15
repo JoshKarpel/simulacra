@@ -18,57 +18,36 @@ from . import colors
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-GRID_KWARGS = dict(
-    linestyle = '-',
-    color = 'black',
-    linewidth = .5,
-    alpha = 0.4
-)
+GRID_KWARGS = dict(linestyle="-", color="black", linewidth=0.5, alpha=0.4)
 
 MINOR_GRID_KWARGS = GRID_KWARGS.copy()
-MINOR_GRID_KWARGS['alpha'] -= .2
+MINOR_GRID_KWARGS["alpha"] -= 0.2
 
-COLORMESH_GRID_KWARGS = dict(
-    linestyle = '-',
-    linewidth = .5,
-    alpha = 0.4,
-)
+COLORMESH_GRID_KWARGS = dict(linestyle="-", linewidth=0.5, alpha=0.4)
 
-LEGEND_KWARGS = dict(
-    loc = 'best',
-)
+LEGEND_KWARGS = dict(loc="best")
 
-HVLINE_KWARGS = dict(
-    linestyle = '-',
-    color = 'black',
-)
+HVLINE_KWARGS = dict(linestyle="-", color="black")
 
-T_TEXT_KWARGS = dict(
-    fontsize = 12,
-)
+T_TEXT_KWARGS = dict(fontsize=12)
 
-CONTOUR_KWARGS = dict(
+CONTOUR_KWARGS = dict()
 
-)
-
-CONTOUR_LABEL_KWARGS = dict(
-    inline = 1,
-    fontsize = 8,
-)
+CONTOUR_LABEL_KWARGS = dict(inline=1, fontsize=8)
 
 TITLE_OFFSET = 1.15
 
 FFMPEG_PROCESS_KWARGS = dict(
-    stdin = subprocess.PIPE,
-    stdout = subprocess.DEVNULL,
-    stderr = subprocess.DEVNULL,
-    bufsize = -1,
+    stdin=subprocess.PIPE,
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
+    bufsize=-1,
 )
 
 
 class ColormapShader(utils.StrEnum):
-    FLAT = 'flat'
-    GOURAUD = 'gouraud'
+    FLAT = "flat"
+    GOURAUD = "gouraud"
 
 
 def points_to_inches(points: Union[float, int]) -> Union[float, int]:
@@ -91,7 +70,7 @@ PPT_WIDESCREEN_ASPECT_RATIO = 16 / 9
 def _get_fig_dims(
     fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
     aspect_ratio: Union[float, int] = GOLDEN_RATIO,
-    fig_height = None,
+    fig_height=None,
     fig_scale: Union[float, int] = 1,
 ):
     """
@@ -151,13 +130,13 @@ def get_figure(
         A matplotlib figure.
     """
     fig = plt.figure(
-        figsize = _get_fig_dims(
-            fig_width = fig_width,
-            fig_height = fig_height,
-            aspect_ratio = aspect_ratio,
-            fig_scale = fig_scale,
+        figsize=_get_fig_dims(
+            fig_width=fig_width,
+            fig_height=fig_height,
+            aspect_ratio=aspect_ratio,
+            fig_scale=fig_scale,
         ),
-        dpi = fig_dpi_scale * 100,
+        dpi=fig_dpi_scale * 100,
     )
 
     return fig
@@ -166,7 +145,7 @@ def get_figure(
 def save_current_figure(
     name: str,
     target_dir: Optional[str] = None,
-    img_format: str = 'pdf',
+    img_format: str = "pdf",
     transparent: bool = True,
     tight_layout: bool = True,
 ) -> str:
@@ -197,16 +176,18 @@ def save_current_figure(
     """
     if target_dir is None:
         target_dir = os.getcwd()
-    path = os.path.join(target_dir, utils.strip_illegal_characters(f'{name}.{img_format}'))
+    path = os.path.join(
+        target_dir, utils.strip_illegal_characters(f"{name}.{img_format}")
+    )
 
     utils.ensure_parents_exist(path)
 
     if tight_layout:
-        plt.savefig(path, bbox_inches = 'tight', transparent = transparent)
+        plt.savefig(path, bbox_inches="tight", transparent=transparent)
     else:
-        plt.savefig(path, transparent = transparent)
+        plt.savefig(path, transparent=transparent)
 
-    logger.debug('Saved matplotlib figure {} to {}'.format(name, path))
+    logger.debug("Saved matplotlib figure {} to {}".format(name, path))
 
     return path
 
@@ -231,7 +212,7 @@ class FigureManager:
         fig_scale: float = 1,
         fig_dpi_scale: float = 6,
         target_dir: Optional[str] = None,
-        img_format: str = 'pdf',
+        img_format: str = "pdf",
         tight_layout: bool = True,
         transparent: bool = True,
         close_before_enter: bool = True,
@@ -300,11 +281,11 @@ class FigureManager:
 
     def save(self):
         path = save_current_figure(
-            name = self.name,
-            target_dir = self.target_dir,
-            img_format = self.img_format,
-            tight_layout = self.tight_layout,
-            transparent = self.transparent,
+            name=self.name,
+            target_dir=self.target_dir,
+            img_format=self.img_format,
+            tight_layout=self.tight_layout,
+            transparent=self.transparent,
         )
 
         self.path = path
@@ -314,11 +295,11 @@ class FigureManager:
             plt.close()
 
         self.fig = get_figure(
-            fig_width = self.fig_width,
-            aspect_ratio = self.aspect_ratio,
-            fig_height = self.fig_height,
-            fig_scale = self.fig_scale,
-            fig_dpi_scale = self.fig_dpi_scale,
+            fig_width=self.fig_width,
+            aspect_ratio=self.aspect_ratio,
+            fig_height=self.fig_height,
+            fig_scale=self.fig_scale,
+            fig_dpi_scale=self.fig_dpi_scale,
         )
 
         return self
@@ -359,22 +340,28 @@ def get_pi_ticks_and_labels(
     low = int(np.floor(lower_limit / u.pi))
     high = int(np.ceil(upper_limit / u.pi))
 
-    ticks = list(fractions.Fraction(n, denom) for n in range(low * denom, (high * denom) + 1))
+    ticks = list(
+        fractions.Fraction(n, denom) for n in range(low * denom, (high * denom) + 1)
+    )
     labels = []
     for tick in ticks:
         if tick.numerator == 0:
-            labels.append(r'$0$')
+            labels.append(r"$0$")
         elif tick.numerator == tick.denominator == 1:
-            labels.append(r'$\pi$')
+            labels.append(r"$\pi$")
         elif tick.numerator == -1 and tick.denominator == 1:
-            labels.append(r'$-\pi$')
+            labels.append(r"$-\pi$")
         elif tick.denominator == 1:
-            labels.append(fr'$ {tick.numerator} \pi $')
+            labels.append(fr"$ {tick.numerator} \pi $")
         else:
             if tick.numerator > 0:
-                labels.append(fr'$ \frac{{ {tick.numerator} }}{{ {tick.denominator} }} \pi $')
+                labels.append(
+                    fr"$ \frac{{ {tick.numerator} }}{{ {tick.denominator} }} \pi $"
+                )
             else:
-                labels.append(fr'$ -\frac{{ {abs(tick.numerator)} }}{{ {tick.denominator} }} \pi $')
+                labels.append(
+                    fr"$ -\frac{{ {abs(tick.numerator)} }}{{ {tick.denominator} }} \pi $"
+                )
 
     decimation = max(len(ticks) // 8, 1)
     ticks, labels = ticks[::decimation], labels[::decimation]
@@ -386,7 +373,7 @@ def set_axis_ticks_and_labels(
     axis: plt.Axes,
     ticks: Iterable[Union[float, int]],
     labels: Iterable[str],
-    direction: str = 'x',
+    direction: str = "x",
 ):
     """
     Set the ticks and labels for `axis` along `direction`.
@@ -402,8 +389,8 @@ def set_axis_ticks_and_labels(
     direction : {``'x'``, ``'y'``, ``'z'``}
         Which axis to act on.
     """
-    getattr(axis, f'set_{direction}ticks')(ticks)
-    getattr(axis, f'set_{direction}ticklabels')(labels)
+    getattr(axis, f"set_{direction}ticks")(ticks)
+    getattr(axis, f"set_{direction}ticklabels")(labels)
 
 
 def calculate_axis_limits(
@@ -460,8 +447,8 @@ def set_axis_limits_and_scale(
     pad: float = 0,
     log_pad: float = 1,
     unit: Optional[u.Unit] = None,
-    direction: str = 'x',
-    sym_log_linear_threshold = None,
+    direction: str = "x",
+    sym_log_linear_threshold=None,
 ) -> (float, float):
     """
 
@@ -484,32 +471,42 @@ def set_axis_limits_and_scale(
     """
     unit_value, _ = u.get_unit_value_and_latex_from_unit(unit)
 
-    lower_limit, upper_limit = calculate_axis_limits(*data, lower_limit = lower_limit, upper_limit = upper_limit, log = log, pad = pad, log_pad = log_pad)
+    lower_limit, upper_limit = calculate_axis_limits(
+        *data,
+        lower_limit=lower_limit,
+        upper_limit=upper_limit,
+        log=log,
+        pad=pad,
+        log_pad=log_pad,
+    )
 
     if log:
-        if lower_limit >0:
-            getattr(axis, f'set_{direction}scale')('log')
+        if lower_limit > 0:
+            getattr(axis, f"set_{direction}scale")("log")
         else:
-            getattr(axis, f'set_{direction}scale')('symlog', **{f'linthresh{direction}': sym_log_linear_threshold})
+            getattr(axis, f"set_{direction}scale")(
+                "symlog", **{f"linthresh{direction}": sym_log_linear_threshold}
+            )
 
-
-    return getattr(axis, f'set_{direction}lim')(lower_limit / unit_value, upper_limit / unit_value)
+    return getattr(axis, f"set_{direction}lim")(
+        lower_limit / unit_value, upper_limit / unit_value
+    )
 
 
 def set_title_and_axis_labels(
     axis,
-    title: str = '',
-    x_label: str = '',
-    x_unit_label: str = '',
-    y_label: str = '',
-    y_unit_label: str = '',
-    title_offset = 1.1,
-    font_size_title = 16,
-    font_size_axis_labels = 14,
-    title_kwargs = None,
-    axis_label_kwargs = None,
-    x_label_kwargs = None,
-    y_label_kwargs = None,
+    title: str = "",
+    x_label: str = "",
+    x_unit_label: str = "",
+    y_label: str = "",
+    y_unit_label: str = "",
+    title_offset=1.1,
+    font_size_title=16,
+    font_size_axis_labels=14,
+    title_kwargs=None,
+    axis_label_kwargs=None,
+    x_label_kwargs=None,
+    y_label_kwargs=None,
 ):
     title_kwargs = title_kwargs or {}
     axis_label_kwargs = axis_label_kwargs or {}
@@ -517,12 +514,22 @@ def set_title_and_axis_labels(
     y_label_kwargs = y_label_kwargs or {}
 
     if title is not None:
-        title = axis.set_title(title, fontsize = font_size_title, **title_kwargs)
+        title = axis.set_title(title, fontsize=font_size_title, **title_kwargs)
         title.set_y(title_offset)
     if x_label is not None:
-        x_label = axis.set_xlabel(x_label + x_unit_label, fontsize = font_size_axis_labels, **axis_label_kwargs, **x_label_kwargs)
+        x_label = axis.set_xlabel(
+            x_label + x_unit_label,
+            fontsize=font_size_axis_labels,
+            **axis_label_kwargs,
+            **x_label_kwargs,
+        )
     if y_label is not None:
-        y_label = axis.set_ylabel(y_label + y_unit_label, fontsize = font_size_axis_labels, **axis_label_kwargs, **y_label_kwargs)
+        y_label = axis.set_ylabel(
+            y_label + y_unit_label,
+            fontsize=font_size_axis_labels,
+            **axis_label_kwargs,
+            **y_label_kwargs,
+        )
 
     return title, x_label, y_label
 
@@ -542,20 +549,16 @@ def get_unit_str_for_axis_label(unit: u.Unit):
     """
     _, unit_tex = u.get_unit_value_and_latex_from_unit(unit)
 
-    if unit_tex != '':
-        unit_label = fr' (${unit_tex}$)'
+    if unit_tex != "":
+        unit_label = fr" (${unit_tex}$)"
     else:
-        unit_label = ''
+        unit_label = ""
 
     return unit_label
 
 
 def attach_h_or_v_lines(
-    axis: plt.Axes,
-    line_positions = (),
-    line_kwargs = (),
-    unit = None,
-    direction = 'h',
+    axis: plt.Axes, line_positions=(), line_kwargs=(), unit=None, direction="h"
 ):
     """
 
@@ -577,7 +580,7 @@ def attach_h_or_v_lines(
         if kw is None:
             kw = {}
         kw = {**HVLINE_KWARGS, **kw}
-        lines.append(getattr(axis, f'ax{direction}line')(position / unit_value, **kw))
+        lines.append(getattr(axis, f"ax{direction}line")(position / unit_value, **kw))
 
     return lines
 
@@ -598,7 +601,7 @@ def xy_plot(
     y_upper_limit: Optional[float] = None,
     y_pad: float = 0,
     y_log_pad: float = 1,
-    sym_log_linear_threshold = 1e-3,
+    sym_log_linear_threshold=1e-3,
     vlines: Iterable[float] = (),
     vline_kwargs: Iterable[dict] = (),
     hlines: Iterable[float] = (),
@@ -725,12 +728,14 @@ def xy_plot(
         fig = fm.fig
         ax = plt.subplot(111)
         if equal_aspect:
-            ax.set_aspect('equal')
+            ax.set_aspect("equal")
 
-        fm.elements['axis'] = ax
+        fm.elements["axis"] = ax
 
         grid_kwargs = collections.ChainMap(grid_kwargs or {}, GRID_KWARGS)
-        minor_grid_kwargs = collections.ChainMap(minor_grid_kwargs or {}, MINOR_GRID_KWARGS)
+        minor_grid_kwargs = collections.ChainMap(
+            minor_grid_kwargs or {}, MINOR_GRID_KWARGS
+        )
         legend_kwargs = collections.ChainMap(legend_kwargs or {}, LEGEND_KWARGS)
 
         # ensure data is in numpy arrays
@@ -748,95 +753,139 @@ def xy_plot(
         lines = []
         for y, label, kwargs in itertools.zip_longest(y_data, line_labels, line_kwargs):
             kwargs = kwargs or {}
-            label = label or ''
-            lines.append(plt.plot(x_data / x_unit_value, y / y_unit_value, label = label, **kwargs)[0])
-        fm.elements['lines'] = lines
+            label = label or ""
+            lines.append(
+                plt.plot(
+                    x_data / x_unit_value, y / y_unit_value, label=label, **kwargs
+                )[0]
+            )
+        fm.elements["lines"] = lines
 
-        vlines = attach_h_or_v_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
-        fm.elements['vlines'] = vlines
-        hlines = attach_h_or_v_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
-        fm.elements['hlines'] = hlines
+        vlines = attach_h_or_v_lines(
+            ax, vlines, vline_kwargs, unit=x_unit, direction="v"
+        )
+        fm.elements["vlines"] = vlines
+        hlines = attach_h_or_v_lines(
+            ax, hlines, hline_kwargs, unit=y_unit, direction="h"
+        )
+        fm.elements["hlines"] = hlines
 
         x_lower_limit, x_upper_limit = set_axis_limits_and_scale(
-            ax, x_data,
-            lower_limit = x_lower_limit,
-            upper_limit = x_upper_limit,
-            log = x_log_axis,
-            unit = x_unit,
-            direction = 'x',
-            sym_log_linear_threshold = sym_log_linear_threshold,
+            ax,
+            x_data,
+            lower_limit=x_lower_limit,
+            upper_limit=x_upper_limit,
+            log=x_log_axis,
+            unit=x_unit,
+            direction="x",
+            sym_log_linear_threshold=sym_log_linear_threshold,
         )
         y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
-            ax, *y_data,
-            lower_limit = y_lower_limit,
-            upper_limit = y_upper_limit,
-            log = y_log_axis,
-            pad = y_pad,
-            log_pad = y_log_pad,
-            unit = y_unit,
-            direction = 'y',
-            sym_log_linear_threshold = sym_log_linear_threshold,
+            ax,
+            *y_data,
+            lower_limit=y_lower_limit,
+            upper_limit=y_upper_limit,
+            log=y_log_axis,
+            pad=y_pad,
+            log_pad=y_log_pad,
+            unit=y_unit,
+            direction="y",
+            sym_log_linear_threshold=sym_log_linear_threshold,
         )
 
-        ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
+        ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
         if title is not None:
-            title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
+            title = ax.set_title(r"{}".format(title), fontsize=font_size_title)
             title.set_y(title_offset)  # move title up a little
         if x_label is not None:
-            x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
+            x_label = ax.set_xlabel(
+                r"{}".format(x_label) + x_unit_label, fontsize=font_size_axis_labels
+            )
         if y_label is not None:
-            y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
-        if len(line_labels) > 0 or 'handles' in legend_kwargs:
+            y_label = ax.set_ylabel(
+                r"{}".format(y_label) + y_unit_label, fontsize=font_size_axis_labels
+            )
+        if len(line_labels) > 0 or "handles" in legend_kwargs:
             if not legend_on_right:
-                legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
+                legend = ax.legend(fontsize=font_size_legend, **legend_kwargs)
             if legend_on_right:
-                legend_kwargs = collections.ChainMap(dict(loc = 'upper left', bbox_to_anchor = (1.2, 1), borderaxespad = 0, fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17)),legend_kwargs)
+                legend_kwargs = collections.ChainMap(
+                    dict(
+                        loc="upper left",
+                        bbox_to_anchor=(1.2, 1),
+                        borderaxespad=0,
+                        fontsize=font_size_legend,
+                        ncol=1 + (len(line_labels) // 17),
+                    ),
+                    legend_kwargs,
+                )
                 legend = ax.legend(**legend_kwargs)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
-        for unit, direction in zip((x_unit, y_unit), ('x', 'y')):
-            if unit == 'rad':
-                if direction == 'x':
-                    ticks, labels = get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
-                if direction == 'y':
-                    ticks, labels = get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
+        for unit, direction in zip((x_unit, y_unit), ("x", "y")):
+            if unit == "rad":
+                if direction == "x":
+                    ticks, labels = get_pi_ticks_and_labels(
+                        x_lower_limit, x_upper_limit
+                    )
+                if direction == "y":
+                    ticks, labels = get_pi_ticks_and_labels(
+                        y_lower_limit, y_upper_limit
+                    )
 
-                set_axis_ticks_and_labels(ax, ticks, labels, direction = direction)
+                set_axis_ticks_and_labels(ax, ticks, labels, direction=direction)
 
         if x_extra_ticks is not None and x_extra_tick_labels is not None:
-            ax.set_xticks(list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_unit_value))  # append the extra tick labels, scaled appropriately
+            ax.set_xticks(
+                list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_unit_value)
+            )  # append the extra tick labels, scaled appropriately
             x_tick_labels = list(ax.get_xticklabels())
-            x_tick_labels[-len(x_extra_ticks):] = x_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            x_tick_labels[
+                -len(x_extra_ticks) :
+            ] = (
+                x_extra_tick_labels
+            )  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_xticklabels(x_tick_labels)
 
         if y_extra_ticks is not None and y_extra_tick_labels is not None:
-            ax.set_yticks(list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_unit_value))  # append the extra tick labels, scaled appropriately
+            ax.set_yticks(
+                list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_unit_value)
+            )  # append the extra tick labels, scaled appropriately
             y_tick_labels = list(ax.get_yticklabels())
-            y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            y_tick_labels[
+                -len(y_extra_ticks) :
+            ] = (
+                y_extra_tick_labels
+            )  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_yticklabels(y_tick_labels)
 
-        ax.grid(True, which = 'major', **grid_kwargs)
+        ax.grid(True, which="major", **grid_kwargs)
         ax.minorticks_on()
         if x_log_axis:
-            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+            ax.grid(True, which="minor", axis="x", **minor_grid_kwargs)
         if y_log_axis:
-            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
+            ax.grid(True, which="minor", axis="y", **minor_grid_kwargs)
 
         # set limits again to guarantee we don't see ticks outside the limits
         ax.set_xlim(x_lower_limit, x_upper_limit)
         ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(top = ticks_on_top, labeltop = ticks_on_top, right = ticks_on_right, labelright = ticks_on_right)
+        ax.tick_params(
+            top=ticks_on_top,
+            labeltop=ticks_on_top,
+            right=ticks_on_right,
+            labelright=ticks_on_right,
+        )
 
     if save_csv:
         path = fm.path
-        csv_path = os.path.splitext(path)[0] + '.csv'
-        np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
+        csv_path = os.path.splitext(path)[0] + ".csv"
+        np.savetxt(csv_path, (x_data, *y_data), delimiter=",")
 
-        logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
+        logger.debug("Saved figure data from {} to {}".format(name, csv_path))
 
     return fm
 
@@ -983,10 +1032,12 @@ def xy_stackplot(
         fig = fm.fig
         ax = plt.subplot(111)
         if equal_aspect:
-            ax.set_aspect('equal')
+            ax.set_aspect("equal")
 
         grid_kwargs = collections.ChainMap(grid_kwargs or {}, GRID_KWARGS)
-        minor_grid_kwargs = collections.ChainMap(minor_grid_kwargs or {}, MINOR_GRID_KWARGS)
+        minor_grid_kwargs = collections.ChainMap(
+            minor_grid_kwargs or {}, MINOR_GRID_KWARGS
+        )
         legend_kwargs = collections.ChainMap(legend_kwargs or {}, LEGEND_KWARGS)
 
         # ensure data is in numpy arrays
@@ -1002,96 +1053,132 @@ def xy_stackplot(
         y_unit_label = get_unit_str_for_axis_label(y_unit)
 
         x = x_data / x_unit_value
-        ys = [y / y_unit_value for y, label in itertools.zip_longest(y_data, line_labels)]
-        line_labels = [label or '' for y, label in itertools.zip_longest(y_data, line_labels)]
+        ys = [
+            y / y_unit_value for y, label in itertools.zip_longest(y_data, line_labels)
+        ]
+        line_labels = [
+            label or "" for y, label in itertools.zip_longest(y_data, line_labels)
+        ]
 
-        ax.stackplot(
-            x,
-            *ys,
-            labels = line_labels,
+        ax.stackplot(x, *ys, labels=line_labels)
+
+        vlines = attach_h_or_v_lines(
+            ax, vlines, vline_kwargs, unit=x_unit, direction="v"
         )
-
-        vlines = attach_h_or_v_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
-        fm.elements['vlines'] = vlines
-        hlines = attach_h_or_v_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
-        fm.elements['hlines'] = hlines
+        fm.elements["vlines"] = vlines
+        hlines = attach_h_or_v_lines(
+            ax, hlines, hline_kwargs, unit=y_unit, direction="h"
+        )
+        fm.elements["hlines"] = hlines
 
         x_lower_limit, x_upper_limit = set_axis_limits_and_scale(
-            ax, x_data,
-            lower_limit = x_lower_limit,
-            upper_limit = x_upper_limit,
-            log = x_log_axis,
-            unit = x_unit,
-            direction = 'x',
-            sym_log_linear_threshold = sym_log_linear_threshold,
+            ax,
+            x_data,
+            lower_limit=x_lower_limit,
+            upper_limit=x_upper_limit,
+            log=x_log_axis,
+            unit=x_unit,
+            direction="x",
+            sym_log_linear_threshold=sym_log_linear_threshold,
         )
         y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
-            ax, *y_data,
-            lower_limit = y_lower_limit,
-            upper_limit = y_upper_limit,
-            log = y_log_axis,
-            pad = y_pad,
-            log_pad = y_log_pad,
-            unit = y_unit,
-            direction = 'y',
-            sym_log_linear_threshold = sym_log_linear_threshold,
+            ax,
+            *y_data,
+            lower_limit=y_lower_limit,
+            upper_limit=y_upper_limit,
+            log=y_log_axis,
+            pad=y_pad,
+            log_pad=y_log_pad,
+            unit=y_unit,
+            direction="y",
+            sym_log_linear_threshold=sym_log_linear_threshold,
         )
 
-        ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
+        ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
         if title is not None:
-            title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
+            title = ax.set_title(r"{}".format(title), fontsize=font_size_title)
             title.set_y(title_offset)  # move title up a little
         if x_label is not None:
-            x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
+            x_label = ax.set_xlabel(
+                r"{}".format(x_label) + x_unit_label, fontsize=font_size_axis_labels
+            )
         if y_label is not None:
-            y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
-        if len(line_labels) > 0 or 'handles' in legend_kwargs:
+            y_label = ax.set_ylabel(
+                r"{}".format(y_label) + y_unit_label, fontsize=font_size_axis_labels
+            )
+        if len(line_labels) > 0 or "handles" in legend_kwargs:
             if not legend_on_right:
-                legend = ax.legend(fontsize = font_size_legend, **legend_kwargs)
+                legend = ax.legend(fontsize=font_size_legend, **legend_kwargs)
             if legend_on_right:
-                legend_kwargs = collections.ChainMap(legend_kwargs, dict(loc = 'upper left', bbox_to_anchor = (1.15, 1), borderaxespad = 0, fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17)))
+                legend_kwargs = collections.ChainMap(
+                    legend_kwargs,
+                    dict(
+                        loc="upper left",
+                        bbox_to_anchor=(1.15, 1),
+                        borderaxespad=0,
+                        fontsize=font_size_legend,
+                        ncol=1 + (len(line_labels) // 17),
+                    ),
+                )
                 legend = ax.legend(**legend_kwargs)
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
-        for unit, direction in zip((x_unit, y_unit), ('x', 'y')):
-            if unit == 'rad':
+        for unit, direction in zip((x_unit, y_unit), ("x", "y")):
+            if unit == "rad":
                 ticks, labels = get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
-                set_axis_ticks_and_labels(ax, ticks, labels, direction = direction)
+                set_axis_ticks_and_labels(ax, ticks, labels, direction=direction)
 
         if x_extra_ticks is not None and x_extra_tick_labels is not None:
-            ax.set_xticks(list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_unit_value))  # append the extra tick labels, scaled appropriately
+            ax.set_xticks(
+                list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_unit_value)
+            )  # append the extra tick labels, scaled appropriately
             x_tick_labels = list(ax.get_xticklabels())
-            x_tick_labels[-len(x_extra_ticks):] = x_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            x_tick_labels[
+                -len(x_extra_ticks) :
+            ] = (
+                x_extra_tick_labels
+            )  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_xticklabels(x_tick_labels)
 
         if y_extra_ticks is not None and y_extra_tick_labels is not None:
-            ax.set_yticks(list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_unit_value))  # append the extra tick labels, scaled appropriately
+            ax.set_yticks(
+                list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_unit_value)
+            )  # append the extra tick labels, scaled appropriately
             y_tick_labels = list(ax.get_yticklabels())
-            y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            y_tick_labels[
+                -len(y_extra_ticks) :
+            ] = (
+                y_extra_tick_labels
+            )  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_yticklabels(y_tick_labels)
 
-        ax.grid(True, which = 'major', **grid_kwargs)
+        ax.grid(True, which="major", **grid_kwargs)
         ax.minorticks_on()
         if x_log_axis:
-            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+            ax.grid(True, which="minor", axis="x", **minor_grid_kwargs)
         if y_log_axis:
-            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
+            ax.grid(True, which="minor", axis="y", **minor_grid_kwargs)
 
         # set limits again to guarantee we don't see ticks outside the limits
         ax.set_xlim(x_lower_limit, x_upper_limit)
         ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(top = ticks_on_top, labeltop = ticks_on_top, right = ticks_on_right, labelright = ticks_on_right)
+        ax.tick_params(
+            top=ticks_on_top,
+            labeltop=ticks_on_top,
+            right=ticks_on_right,
+            labelright=ticks_on_right,
+        )
 
     if save_csv:
         path = fm.path
-        csv_path = os.path.splitext(path)[0] + '.csv'
-        np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
+        csv_path = os.path.splitext(path)[0] + ".csv"
+        np.savetxt(csv_path, (x_data, *y_data), delimiter=",")
 
-        logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
+        logger.debug("Saved figure data from {} to {}".format(name, csv_path))
 
     return fm
 
@@ -1100,42 +1187,42 @@ def xxyy_plot(
     name,
     x_data,
     y_data,
-    line_labels = (),
-    line_kwargs = (),
-    x_unit = None,
-    y_unit = None,
-    x_log_axis = False,
-    y_log_axis = False,
-    x_lower_limit = None,
-    x_upper_limit = None,
-    y_lower_limit = None,
-    y_upper_limit = None,
-    y_pad = 0,
-    y_log_pad = 1,
-    vlines = (),
-    vline_kwargs = (),
-    hlines = (),
-    hline_kwargs = (),
-    x_extra_ticks = None,
-    y_extra_ticks = None,
-    x_extra_tick_labels = None,
-    y_extra_tick_labels = None,
-    title = None,
-    title_offset = TITLE_OFFSET,
-    x_label = None,
-    y_label = None,
-    font_size_title = 15,
-    font_size_axis_labels = 15,
-    font_size_tick_labels = 10,
-    font_size_legend = 12,
-    ticks_on_top = True,
-    ticks_on_right = True,
-    legend_on_right = False,
-    grid_kwargs = None,
-    minor_grid_kwargs = None,
-    legend_kwargs = None,
-    save_csv = False,
-    figure_manager = None,
+    line_labels=(),
+    line_kwargs=(),
+    x_unit=None,
+    y_unit=None,
+    x_log_axis=False,
+    y_log_axis=False,
+    x_lower_limit=None,
+    x_upper_limit=None,
+    y_lower_limit=None,
+    y_upper_limit=None,
+    y_pad=0,
+    y_log_pad=1,
+    vlines=(),
+    vline_kwargs=(),
+    hlines=(),
+    hline_kwargs=(),
+    x_extra_ticks=None,
+    y_extra_ticks=None,
+    x_extra_tick_labels=None,
+    y_extra_tick_labels=None,
+    title=None,
+    title_offset=TITLE_OFFSET,
+    x_label=None,
+    y_label=None,
+    font_size_title=15,
+    font_size_axis_labels=15,
+    font_size_tick_labels=10,
+    font_size_legend=12,
+    ticks_on_top=True,
+    ticks_on_right=True,
+    legend_on_right=False,
+    grid_kwargs=None,
+    minor_grid_kwargs=None,
+    legend_kwargs=None,
+    save_csv=False,
+    figure_manager=None,
     **kwargs,
 ) -> FigureManager:
     if figure_manager is None:
@@ -1144,10 +1231,12 @@ def xxyy_plot(
         fig = fm.fig
         ax = plt.subplot(111)
 
-        fm.elements['axis'] = ax
+        fm.elements["axis"] = ax
 
         grid_kwargs = collections.ChainMap(grid_kwargs or {}, GRID_KWARGS)
-        minor_grid_kwargs = collections.ChainMap(minor_grid_kwargs or {}, MINOR_GRID_KWARGS)
+        minor_grid_kwargs = collections.ChainMap(
+            minor_grid_kwargs or {}, MINOR_GRID_KWARGS
+        )
         legend_kwargs = collections.ChainMap(legend_kwargs or {}, LEGEND_KWARGS)
 
         # ensure data is in numpy arrays
@@ -1163,92 +1252,131 @@ def xxyy_plot(
         y_unit_label = get_unit_str_for_axis_label(y_unit)
 
         lines = []
-        for x, y, lab, kw in itertools.zip_longest(x_data, y_data, line_labels, line_kwargs):
+        for x, y, lab, kw in itertools.zip_longest(
+            x_data, y_data, line_labels, line_kwargs
+        ):
             kw = kw or {}
-            lab = lab or ''
-            lines.append(plt.plot(x / x_unit_value, y / y_unit_value, label = lab, **kw)[0])
-        fm.elements['lines'] = lines
+            lab = lab or ""
+            lines.append(
+                plt.plot(x / x_unit_value, y / y_unit_value, label=lab, **kw)[0]
+            )
+        fm.elements["lines"] = lines
 
-        attach_h_or_v_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
-        attach_h_or_v_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
+        attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, direction="v")
+        attach_h_or_v_lines(ax, hlines, hline_kwargs, unit=y_unit, direction="h")
 
         x_lower_limit, x_upper_limit = set_axis_limits_and_scale(
-            ax, *x_data,
-            lower_limit = x_lower_limit,
-            upper_limit = x_upper_limit,
-            log = x_log_axis,
-            pad = 0,
-            log_pad = 1,
-            unit = x_unit,
-            direction = 'x'
+            ax,
+            *x_data,
+            lower_limit=x_lower_limit,
+            upper_limit=x_upper_limit,
+            log=x_log_axis,
+            pad=0,
+            log_pad=1,
+            unit=x_unit,
+            direction="x",
         )
         y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
-            ax, *y_data,
-            lower_limit = y_lower_limit,
-            upper_limit = y_upper_limit,
-            log = y_log_axis,
-            pad = y_pad,
-            log_pad = y_log_pad,
-            unit = y_unit,
-            direction = 'y'
+            ax,
+            *y_data,
+            lower_limit=y_lower_limit,
+            upper_limit=y_upper_limit,
+            log=y_log_axis,
+            pad=y_pad,
+            log_pad=y_log_pad,
+            unit=y_unit,
+            direction="y",
         )
 
-        ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
+        ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
         # make title, axis labels, and legend
         if title is not None:
-            title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
+            title = ax.set_title(r"{}".format(title), fontsize=font_size_title)
             title.set_y(title_offset)  # move title up a little
         if x_label is not None:
-            x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
+            x_label = ax.set_xlabel(
+                r"{}".format(x_label) + x_unit_label, fontsize=font_size_axis_labels
+            )
         if y_label is not None:
-            y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
-        if len(line_labels) > 0 or 'handles' in legend_kwargs:
+            y_label = ax.set_ylabel(
+                r"{}".format(y_label) + y_unit_label, fontsize=font_size_axis_labels
+            )
+        if len(line_labels) > 0 or "handles" in legend_kwargs:
             if not legend_on_right:
-                legend = ax.legend(**{**legend_kwargs, **dict(fontsize = font_size_legend)})
+                legend = ax.legend(
+                    **{**legend_kwargs, **dict(fontsize=font_size_legend)}
+                )
             if legend_on_right:
-                legend_kwargs['loc'] = 'upper left'
-                legend = ax.legend(**{**legend_kwargs, **dict(bbox_to_anchor = (1.15, 1), borderaxespad = 0., fontsize = font_size_legend, ncol = 1 + (len(line_labels) // 17))})
+                legend_kwargs["loc"] = "upper left"
+                legend = ax.legend(
+                    **{
+                        **legend_kwargs,
+                        **dict(
+                            bbox_to_anchor=(1.15, 1),
+                            borderaxespad=0.0,
+                            fontsize=font_size_legend,
+                            ncol=1 + (len(line_labels) // 17),
+                        ),
+                    }
+                )
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
-        for unit, direction in zip((x_unit, y_unit), ('x', 'y')):
-            if unit == 'rad':
+        for unit, direction in zip((x_unit, y_unit), ("x", "y")):
+            if unit == "rad":
                 ticks, labels = get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
-                set_axis_ticks_and_labels(ax, ticks, labels, direction = direction)
+                set_axis_ticks_and_labels(ax, ticks, labels, direction=direction)
 
         if x_extra_ticks is not None and x_extra_tick_labels is not None:
-            ax.set_xticks(list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_unit_value))  # append the extra tick labels, scaled appropriately
+            ax.set_xticks(
+                list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_unit_value)
+            )  # append the extra tick labels, scaled appropriately
             x_tick_labels = list(ax.get_xticklabels())
-            x_tick_labels[-len(x_extra_ticks):] = x_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            x_tick_labels[
+                -len(x_extra_ticks) :
+            ] = (
+                x_extra_tick_labels
+            )  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_xticklabels(x_tick_labels)
 
         if y_extra_ticks is not None and y_extra_tick_labels is not None:
-            ax.set_yticks(list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_unit_value))  # append the extra tick labels, scaled appropriately
+            ax.set_yticks(
+                list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_unit_value)
+            )  # append the extra tick labels, scaled appropriately
             y_tick_labels = list(ax.get_yticklabels())
-            y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            y_tick_labels[
+                -len(y_extra_ticks) :
+            ] = (
+                y_extra_tick_labels
+            )  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_yticklabels(y_tick_labels)
 
-        ax.grid(True, which = 'major', **grid_kwargs)
+        ax.grid(True, which="major", **grid_kwargs)
         if x_log_axis:
-            ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+            ax.grid(True, which="minor", axis="x", **minor_grid_kwargs)
         if y_log_axis:
-            ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
+            ax.grid(True, which="minor", axis="y", **minor_grid_kwargs)
 
         # set limits again to guarantee we don't see ticks oustide the limits
         ax.set_xlim(x_lower_limit, x_upper_limit)
         ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(top = ticks_on_top, labeltop = ticks_on_top, right = ticks_on_right, labelright = ticks_on_right)
+        ax.tick_params(
+            top=ticks_on_top,
+            labeltop=ticks_on_top,
+            right=ticks_on_right,
+            labelright=ticks_on_right,
+        )
 
     path = fm.path
 
     if save_csv:
-        csv_path = os.path.splitext(path)[0] + '.csv'
-        np.savetxt(csv_path, (x_data, *y_data), delimiter = ',')
+        csv_path = os.path.splitext(path)[0] + ".csv"
+        np.savetxt(csv_path, (x_data, *y_data), delimiter=",")
 
-        logger.debug('Saved figure data from {} to {}'.format(name, csv_path))
+        logger.debug("Saved figure data from {} to {}".format(name, csv_path))
 
     return fm
 
@@ -1258,52 +1386,54 @@ def xyz_plot(
     x_mesh,
     y_mesh,
     z_mesh,
-    x_unit = None,
-    y_unit = None,
-    z_unit = None,
-    x_log_axis = False,
-    y_log_axis = False,
-    z_log_axis = False,
-    x_lower_limit = None,
-    x_upper_limit = None,
-    y_lower_limit = None,
-    y_upper_limit = None,
-    z_lower_limit = None,
-    z_upper_limit = None,
-    z_pad = 0,
-    z_log_pad = 1,
-    x_extra_ticks = None,
-    y_extra_ticks = None, x_extra_tick_labels = None, y_extra_tick_labels = None,
-    title = None,
-    x_label = None,
-    y_label = None,
-    z_label = None,
-    font_size_title = 15,
-    font_size_axis_labels = 15,
-    font_size_tick_labels = 10,
-    ticks_on_top = True,
-    ticks_on_right = True,
-    grids = True,
-    grid_kwargs = None,
-    minor_grids = True,
-    minor_grid_kwargs = None,
-    vlines = (),
-    vline_kwargs = (),
-    hlines = (),
-    hline_kwargs = (),
-    contours = (),
-    contour_kwargs = None,
-    show_contour_labels = True,
-    contour_label_kwargs = None,
-    lines = (),
-    line_kwargs = (),
-    save_csv = False,
-    colormap = plt.get_cmap('viridis'),
-    shading = 'flat',
-    show_colorbar = True,
-    richardson_equator_magnitude = 1,
-    sym_log_norm_epsilon = 1e-3,
-    figure_manager = None,
+    x_unit=None,
+    y_unit=None,
+    z_unit=None,
+    x_log_axis=False,
+    y_log_axis=False,
+    z_log_axis=False,
+    x_lower_limit=None,
+    x_upper_limit=None,
+    y_lower_limit=None,
+    y_upper_limit=None,
+    z_lower_limit=None,
+    z_upper_limit=None,
+    z_pad=0,
+    z_log_pad=1,
+    x_extra_ticks=None,
+    y_extra_ticks=None,
+    x_extra_tick_labels=None,
+    y_extra_tick_labels=None,
+    title=None,
+    x_label=None,
+    y_label=None,
+    z_label=None,
+    font_size_title=15,
+    font_size_axis_labels=15,
+    font_size_tick_labels=10,
+    ticks_on_top=True,
+    ticks_on_right=True,
+    grids=True,
+    grid_kwargs=None,
+    minor_grids=True,
+    minor_grid_kwargs=None,
+    vlines=(),
+    vline_kwargs=(),
+    hlines=(),
+    hline_kwargs=(),
+    contours=(),
+    contour_kwargs=None,
+    show_contour_labels=True,
+    contour_label_kwargs=None,
+    lines=(),
+    line_kwargs=(),
+    save_csv=False,
+    colormap=plt.get_cmap("viridis"),
+    shading="flat",
+    show_colorbar=True,
+    richardson_equator_magnitude=1,
+    sym_log_norm_epsilon=1e-3,
+    figure_manager=None,
     **kwargs,
 ) -> FigureManager:
     if figure_manager is None:
@@ -1313,10 +1443,14 @@ def xyz_plot(
         ax = plt.subplot(111)
 
         grid_kwargs = collections.ChainMap(grid_kwargs or {}, GRID_KWARGS)
-        minor_grid_kwargs = collections.ChainMap(minor_grid_kwargs or {}, MINOR_GRID_KWARGS)
+        minor_grid_kwargs = collections.ChainMap(
+            minor_grid_kwargs or {}, MINOR_GRID_KWARGS
+        )
 
         contour_kwargs = collections.ChainMap(contour_kwargs or {}, CONTOUR_KWARGS)
-        contour_label_kwargs = collections.ChainMap(contour_label_kwargs or {}, CONTOUR_LABEL_KWARGS)
+        contour_label_kwargs = collections.ChainMap(
+            contour_label_kwargs or {}, CONTOUR_LABEL_KWARGS
+        )
 
         # grid_color = colors.CMAP_TO_OPPOSITE.get(colormap, 'black')
         # grid_kwargs['color'] = grid_color
@@ -1334,66 +1468,64 @@ def xyz_plot(
         z_unit_label = get_unit_str_for_axis_label(z_unit)
 
         x_lower_limit, x_upper_limit = set_axis_limits_and_scale(
-            ax, x_mesh,
-            direction = 'x',
-            lower_limit = x_lower_limit,
-            upper_limit = x_upper_limit,
-            log = x_log_axis,
-            pad = 0,
-            log_pad = 1,
-            unit = x_unit,
+            ax,
+            x_mesh,
+            direction="x",
+            lower_limit=x_lower_limit,
+            upper_limit=x_upper_limit,
+            log=x_log_axis,
+            pad=0,
+            log_pad=1,
+            unit=x_unit,
         )
         y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
-            ax, y_mesh,
-            direction = 'y',
-            lower_limit = y_lower_limit,
-            upper_limit = y_upper_limit,
-            log = y_log_axis,
-            pad = 0,
-            log_pad = 1,
-            unit = y_unit,
+            ax,
+            y_mesh,
+            direction="y",
+            lower_limit=y_lower_limit,
+            upper_limit=y_upper_limit,
+            log=y_log_axis,
+            pad=0,
+            log_pad=1,
+            unit=y_unit,
         )
 
         if isinstance(colormap, colors.RichardsonColormap):
             norm = colors.RichardsonNormalization(
-                equator_magnitude = richardson_equator_magnitude
+                equator_magnitude=richardson_equator_magnitude
             )
         else:
             z_lower_limit, z_upper_limit = calculate_axis_limits(
                 z_mesh,
-                lower_limit = z_lower_limit,
-                upper_limit = z_upper_limit,
-                log = z_log_axis,
-                pad = z_pad,
-                log_pad = z_log_pad,
+                lower_limit=z_lower_limit,
+                upper_limit=z_upper_limit,
+                log=z_log_axis,
+                pad=z_pad,
+                log_pad=z_log_pad,
             )
 
             norm_kwargs = dict(
-                vmin = z_lower_limit / z_unit_value,
-                vmax = z_upper_limit / z_unit_value,
+                vmin=z_lower_limit / z_unit_value, vmax=z_upper_limit / z_unit_value
             )
 
             if z_log_axis:
                 if z_lower_limit > 0:
-                    norm = matplotlib.colors.LogNorm(
-                        **norm_kwargs,
-                    )
+                    norm = matplotlib.colors.LogNorm(**norm_kwargs)
                 else:
                     norm = matplotlib.colors.SymLogNorm(
-                        ((np.abs(z_lower_limit) + np.abs(z_upper_limit)) / 2) * sym_log_norm_epsilon,
+                        ((np.abs(z_lower_limit) + np.abs(z_upper_limit)) / 2)
+                        * sym_log_norm_epsilon,
                         **norm_kwargs,
                     )
             else:
-                norm = matplotlib.colors.Normalize(
-                    **norm_kwargs,
-                )
+                norm = matplotlib.colors.Normalize(**norm_kwargs)
 
         colormesh = ax.pcolormesh(
             x_mesh / x_unit_value,
             y_mesh / y_unit_value,
             z_mesh / z_unit_value,
-            shading = shading,
-            norm = norm
+            shading=shading,
+            norm=norm,
         )
 
         if len(contours) > 0:
@@ -1401,76 +1533,98 @@ def xyz_plot(
                 x_mesh / x_unit_value,
                 y_mesh / y_unit_value,
                 z_mesh / z_unit_value,
-                levels = np.array(contours) / z_unit_value,
+                levels=np.array(contours) / z_unit_value,
                 **contour_kwargs,
             )
-            fm.elements['contours'] = contours
+            fm.elements["contours"] = contours
 
             if show_contour_labels:
                 contour_labels = ax.clabel(contours, **contour_label_kwargs)
-                fm.elements['contour_labels'] = contour_labels
-
+                fm.elements["contour_labels"] = contour_labels
 
         for (x, y), kw in itertools.zip_longest(lines, line_kwargs):
             kw = kw or {}
             plt.plot(x / x_unit_value, y / y_unit_value, **kw)
 
-        attach_h_or_v_lines(ax, vlines, vline_kwargs, unit = x_unit, direction = 'v')
-        attach_h_or_v_lines(ax, hlines, hline_kwargs, unit = y_unit, direction = 'h')
+        attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, direction="v")
+        attach_h_or_v_lines(ax, hlines, hline_kwargs, unit=y_unit, direction="h")
 
-        ax.tick_params(axis = 'both', which = 'major', labelsize = font_size_tick_labels)
+        ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
 
         # make title, axis labels, and legend
         if title is not None:
-            title = ax.set_title(r'{}'.format(title), fontsize = font_size_title)
+            title = ax.set_title(r"{}".format(title), fontsize=font_size_title)
             title.set_y(TITLE_OFFSET)  # move title up a little
         if x_label is not None:
-            x_label = ax.set_xlabel(r'{}'.format(x_label) + x_unit_label, fontsize = font_size_axis_labels)
+            x_label = ax.set_xlabel(
+                r"{}".format(x_label) + x_unit_label, fontsize=font_size_axis_labels
+            )
         if y_label is not None:
-            y_label = ax.set_ylabel(r'{}'.format(y_label) + y_unit_label, fontsize = font_size_axis_labels)
+            y_label = ax.set_ylabel(
+                r"{}".format(y_label) + y_unit_label, fontsize=font_size_axis_labels
+            )
 
-        if show_colorbar and colormap.name != 'richardson':
-            cbar = plt.colorbar(mappable = colormesh, ax = ax, pad = 0.1)
+        if show_colorbar and colormap.name != "richardson":
+            cbar = plt.colorbar(mappable=colormesh, ax=ax, pad=0.1)
             if z_label is not None:
-                z_label = cbar.set_label(r'{}'.format(z_label) + z_unit_label, fontsize = font_size_axis_labels)
+                z_label = cbar.set_label(
+                    r"{}".format(z_label) + z_unit_label, fontsize=font_size_axis_labels
+                )
 
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
-        if x_unit == 'rad':
+        if x_unit == "rad":
             ticks, labels = get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
             ax.set_xticks(ticks)
             ax.set_xticklabels(labels)
-        if y_unit == 'rad':
+        if y_unit == "rad":
             ticks, labels = get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
             ax.set_yticks(ticks)
             ax.set_yticklabels(labels)
 
         if x_extra_ticks is not None and x_extra_tick_labels is not None:
-            ax.set_xticks(list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_unit))  # append the extra tick labels, scaled appropriately
+            ax.set_xticks(
+                list(ax.get_xticks()) + list(np.array(x_extra_ticks) / x_unit)
+            )  # append the extra tick labels, scaled appropriately
             x_tick_labels = list(ax.get_xticklabels())
-            x_tick_labels[-len(x_extra_ticks):] = x_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            x_tick_labels[
+                -len(x_extra_ticks) :
+            ] = (
+                x_extra_tick_labels
+            )  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_xticklabels(x_tick_labels)
 
         if y_extra_ticks is not None and y_extra_tick_labels is not None:
-            ax.set_yticks(list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_unit_value))  # append the extra tick labels, scaled appropriately
+            ax.set_yticks(
+                list(ax.get_yticks()) + list(np.array(y_extra_ticks) / y_unit_value)
+            )  # append the extra tick labels, scaled appropriately
             y_tick_labels = list(ax.get_yticklabels())
-            y_tick_labels[-len(y_extra_ticks):] = y_extra_tick_labels  # replace the last set of tick labels (the ones we just added) with the custom tick labels
+            y_tick_labels[
+                -len(y_extra_ticks) :
+            ] = (
+                y_extra_tick_labels
+            )  # replace the last set of tick labels (the ones we just added) with the custom tick labels
             ax.set_yticklabels(y_tick_labels)
 
         if grids:
-            ax.grid(grids, which = 'major', **grid_kwargs)
+            ax.grid(grids, which="major", **grid_kwargs)
         if minor_grids:
             if x_log_axis:
-                ax.grid(True, which = 'minor', axis = 'x', **minor_grid_kwargs)
+                ax.grid(True, which="minor", axis="x", **minor_grid_kwargs)
             if y_log_axis:
-                ax.grid(True, which = 'minor', axis = 'y', **minor_grid_kwargs)
+                ax.grid(True, which="minor", axis="y", **minor_grid_kwargs)
 
         # set limits again to guarantee we don't see ticks oustide the limits
         ax.set_xlim(x_lower_limit, x_upper_limit)
         ax.set_ylim(y_lower_limit, y_upper_limit)
 
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(top = ticks_on_top, labeltop = ticks_on_top, right = ticks_on_right, labelright = ticks_on_right)
+        ax.tick_params(
+            top=ticks_on_top,
+            labeltop=ticks_on_top,
+            right=ticks_on_right,
+            labelright=ticks_on_right,
+        )
 
     path = fm.path
 

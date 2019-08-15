@@ -11,32 +11,32 @@ def fib(n):
 
 
 @memoize()
-def foo(a = 5):
+def foo(a=5):
     time.sleep(1)
     return a + 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test = 25
 
     with BlockTimer() as t_bare:
         print([(n, fib(n)) for n in range(test)])
 
-    print('no memo:', t_bare)
+    print("no memo:", t_bare)
 
     fib = memoize()(fib)
     with BlockTimer() as t_memo:
         print([(n, fib(n)) for n in range(test)])
 
-    print('memo:', t_memo)
+    print("memo:", t_memo)
 
     with BlockTimer() as t_foo_bare:
-        print([(n, foo(a = n)) for n in range(5)])
+        print([(n, foo(a=n)) for n in range(5)])
 
-    print('foo', t_foo_bare)
+    print("foo", t_foo_bare)
 
     with BlockTimer() as t_foo_memo:
-        print([(n, foo(a = n)) for n in range(5)])
+        print([(n, foo(a=n)) for n in range(5)])
 
-    print('foo', t_foo_memo)
+    print("foo", t_foo_memo)
     print(foo.memo)

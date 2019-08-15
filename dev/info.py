@@ -5,11 +5,11 @@ import simulacra as si
 import simulacra.info
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
-OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
+OUT_DIR = os.path.join(os.getcwd(), "out", FILE_NAME)
 
 
 class Foo(si.Beet):
-    def __init__(self, name, a = 5):
+    def __init__(self, name, a=5):
         self.a = a
 
         super().__init__(name)
@@ -17,8 +17,8 @@ class Foo(si.Beet):
     def info(self) -> si.Info:
         info = super().info()
 
-        foo_info = simulacra.info.Info(header = 'foo info')
-        foo_info._children['a'] = self.a
+        foo_info = simulacra.info.Info(header="foo info")
+        foo_info._children["a"] = self.a
         # sup_info.fields['FOO INFO'] = foo_info
 
         info.add_info(foo_info)
@@ -35,7 +35,7 @@ class BarSim(si.Simulation):
     def info(self) -> si.Info:
         info = super().info()
 
-        info.add_field('car', self.car)
+        info.add_field("car", self.car)
 
         return info
 
@@ -44,13 +44,13 @@ class BarSim(si.Simulation):
 
 
 class Bat:
-    def __init__(self, species = 'brown'):
+    def __init__(self, species="brown"):
         self.species = species
 
     def info(self) -> si.Info:
-        info = simulacra.info.Info(header = 'Bat')
-        info.add_field('species', self.species)
-        info.add_field('favorite pancake', 'blueberry')
+        info = simulacra.info.Info(header="Bat")
+        info.add_field("species", self.species)
+        info.add_field("favorite pancake", "blueberry")
 
         return info
 
@@ -58,7 +58,7 @@ class Bat:
 class BarSpec(si.Specification):
     simulation_type = BarSim
 
-    def __init__(self, name, foo = 5, bar = 3, bat = Bat(), **kwargs):
+    def __init__(self, name, foo=5, bar=3, bat=Bat(), **kwargs):
         self.foo = foo
         self.bar = bar
         self.bat = bat
@@ -68,30 +68,30 @@ class BarSpec(si.Specification):
     def info(self) -> si.Info:
         info = super().info()
 
-        info.add_field('foo', self.foo)
-        info.add_field('car', self.bar)
+        info.add_field("foo", self.foo)
+        info.add_field("car", self.bar)
 
         info.add_info(self.bat.info())
-        info.add_field('wassup', 'nuthin')
+        info.add_field("wassup", "nuthin")
 
-        info.add_field('yo', 'dawg')
+        info.add_field("yo", "dawg")
 
         return info
 
 
-if __name__ == '__main__':
-    foo = Foo('foo', a = 6)
+if __name__ == "__main__":
+    foo = Foo("foo", a=6)
 
     print(foo.info())
     print()
 
-    spec = BarSpec('test', file_name = 'foo')
+    spec = BarSpec("test", file_name="foo")
     sim = spec.to_sim()
 
     print(spec.info())
 
     print()
-    print('-' * 80)
+    print("-" * 80)
     print()
 
     print(sim.info())

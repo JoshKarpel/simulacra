@@ -19,19 +19,20 @@ class SubprocessManager:
         self.subprocess = None
 
     def __enter__(self):
-        self.subprocess = subprocess.Popen(self.cmd_string,
-                                           **self.subprocess_kwargs)
+        self.subprocess = subprocess.Popen(self.cmd_string, **self.subprocess_kwargs)
 
-        logger.debug(f'Opened subprocess {self.name}')
+        logger.debug(f"Opened subprocess {self.name}")
 
         return self.subprocess
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
             self.subprocess.communicate()
-            logger.debug(f'Closed subprocess {self.name}')
+            logger.debug(f"Closed subprocess {self.name}")
         except AttributeError:
-            logger.warning(f'Exception while trying to close subprocess {self.name}, possibly not closed')
+            logger.warning(
+                f"Exception while trying to close subprocess {self.name}, possibly not closed"
+            )
 
 
 def get_processes_by_name(process_name: str) -> Iterable[psutil.Process]:
@@ -55,7 +56,7 @@ def suspend_processes(processes: Iterable[psutil.Process]):
     """
     for p in processes:
         p.suspend()
-        logger.debug('Suspended {}'.format(p))
+        logger.debug("Suspended {}".format(p))
 
 
 def resume_processes(processes: Iterable[psutil.Process]):
@@ -68,7 +69,7 @@ def resume_processes(processes: Iterable[psutil.Process]):
     """
     for p in processes:
         p.resume()
-        logger.debug('Resumed {}'.format(p))
+        logger.debug("Resumed {}".format(p))
 
 
 def suspend_processes_by_name(process_name: str):
@@ -106,7 +107,7 @@ class SuspendProcesses:
         resume_processes(self.processes)
 
 
-def run_in_process(func, args = (), kwargs = None):
+def run_in_process(func, args=(), kwargs=None):
     """
     Run a function in a separate process.
 
@@ -117,13 +118,15 @@ def run_in_process(func, args = (), kwargs = None):
     if kwargs is None:
         kwargs = {}
 
-    with multiprocessing.Pool(processes = 1) as pool:
+    with multiprocessing.Pool(processes=1) as pool:
         output = pool.apply(func, args, kwargs)
 
     return output
 
 
-def multi_map(func: Callable, targets: Iterable, processes: Optional[int] = None, **kwargs):
+def multi_map(
+    func: Callable, targets: Iterable, processes: Optional[int] = None, **kwargs
+):
     """
     Map a function over a list of inputs using multiprocessing.
 
@@ -148,7 +151,7 @@ def multi_map(func: Callable, targets: Iterable, processes: Optional[int] = None
     if processes is None:
         processes = max(int(multiprocessing.cpu_count() / 2) - 1, 1)
 
-    with multiprocessing.Pool(processes = processes) as pool:
+    with multiprocessing.Pool(processes=processes) as pool:
         output = pool.map(func, targets, **kwargs)
 
     return tuple(output)

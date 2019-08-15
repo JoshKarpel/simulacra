@@ -15,7 +15,7 @@ class Foo:
         raise NotImplementedError
 
 
-@pytest.fixture(scope = 'function')
+@pytest.fixture(scope="function")
 def watched_mock(mocker):
     foo = Foo()
 
@@ -72,11 +72,13 @@ def test_watched_mock_resets_if_watched_value_changes(watched_mock):
     watched_mock.memoized(5)
     watched_mock.memoized(5)
 
-    assert watched_mock.inner.call_count == 6 + 2  # 6 from first three pairs, two from last two pairs
+    assert (
+        watched_mock.inner.call_count == 6 + 2
+    )  # 6 from first three pairs, two from last two pairs
 
 
 def test_watched_memoize(mocker):
-    func = mocker.MagicMock(return_value = 'foo')
+    func = mocker.MagicMock(return_value="foo")
 
     class Foo:
         def __init__(self):

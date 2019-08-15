@@ -17,7 +17,7 @@ class cached_property:
     """
 
     def __init__(self, func):
-        self.__doc__ = getattr(func, '__doc__')
+        self.__doc__ = getattr(func, "__doc__")
         self.func = func
 
     def __get__(self, obj, cls):
@@ -32,7 +32,10 @@ def hash_args_kwargs(*args, **kwargs):
     try:
         key = hash(args + tuple(kwargs.items()))
     except TypeError:  # unhashable type, see if we've got numpy arrays
-        key = hash(tuple(tuple(a) if type(a) == np.ndarray else a for a in args) + tuple(kwargs.items()))
+        key = hash(
+            tuple(tuple(a) if type(a) == np.ndarray else a for a in args)
+            + tuple(kwargs.items())
+        )
 
     return key
 
@@ -66,7 +69,7 @@ def watched_memoize(watcher):
     """
 
     class Watcher:
-        __slots__ = ('func', 'memo', 'watched_value', '__doc__')
+        __slots__ = ("func", "memo", "watched_value", "__doc__")
 
         def __init__(self, func):
             self.func = func

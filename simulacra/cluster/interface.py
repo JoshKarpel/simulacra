@@ -14,7 +14,7 @@ from .. import utils
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-CmdOutput = collections.namedtuple('CmdOutput', ['stdin', 'stdout', 'stderr'])
+CmdOutput = collections.namedtuple("CmdOutput", ["stdin", "stdout", "stderr"])
 
 
 class ClusterInterface:
@@ -28,7 +28,7 @@ class ClusterInterface:
         hostname: str,
         username: str,
         key_path: str,
-        local_mirror_root: str = 'mirror',
+        local_mirror_root: str = "mirror",
     ):
         """
         Parameters
@@ -65,57 +65,69 @@ class ClusterInterface:
 
     def connect(self):
         """Open the connection to the remote host."""
-        self.ssh.connect(self.remote_host, username = self.username, key_filename = self.key_path)
+        self.ssh.connect(
+            self.remote_host, username=self.username, key_filename=self.key_path
+        )
         self.ftp = self.ssh.open_sftp()
 
-        logger.info(f'Opened connection to {self.username}@{self.remote_host}')
+        logger.info(f"Opened connection to {self.username}@{self.remote_host}")
 
     def close(self):
         """Close the connection to the remote host."""
         self.ftp.close()
         self.ssh.close()
 
-        logger.info(f'Closed connection to {self.username}@{self.remote_host}')
+        logger.info(f"Closed connection to {self.username}@{self.remote_host}")
 
     def __str__(self):
-        return f'Interface to {self.remote_host} as {self.username}'
+        return f"Interface to {self.remote_host} as {self.username}"
 
     def __repr__(self):
-        return f'{self.__class__.__name__}(hostname = {self.remote_host}, username = {self.username})'
+        return f"{self.__class__.__name__}(hostname = {self.remote_host}, username = {self.username})"
 
     @property
     def local_home_dir(self):
-        local_home = os.path.join(self.local_mirror_root, *self.remote_home_dir.split('/'))
+        local_home = os.path.join(
+            self.local_mirror_root, *self.remote_home_dir.split("/")
+        )
 
         return local_home
 
     def cmd(self, *cmds: Iterable[str]):
         """Run a list of commands sequentially on the remote host. Each command list begins in a totally fresh environment."""
-        cmd_list = ['. ~/.profile', '. ~/.bash_profile'] + list(cmds)  # run the remote bash profile to pick up settings
-        cmd = ';'.join(cmd_list)
+        cmd_list = [". ~/.profile", ". ~/.bash_profile"] + list(
+            cmds
+        )  # run the remote bash profile to pick up settings
+        cmd = ";".join(cmd_list)
         stdin, stdout, stderr = self.ssh.exec_command(cmd)
 
         return CmdOutput(stdin, stdout, stderr)
 
     @utils.cached_property
     def remote_home_dir(self):
-        cmd_output = self.cmd('pwd')  # print name of home dir to stdout
+        cmd_output = self.cmd("pwd")  # print name of home dir to stdout
 
-        home_path = str(cmd_output.stdout.readline()).strip('\n')  # extract path of home dir from stdout
+        home_path = str(cmd_output.stdout.readline()).strip(
+            "\n"
+        )  # extract path of home dir from stdout
 
-        logger.debug('Got home directory for {}@{}: {}'.format(self.username, self.remote_host, home_path))
+        logger.debug(
+            "Got home directory for {}@{}: {}".format(
+                self.username, self.remote_host, home_path
+            )
+        )
 
         return home_path
 
     def remote_path_to_local_path(self, remote_path, local_root):
         """Return the local path corresponding to a remote path."""
-        return os.path.join(local_root, *remote_path.split('/'))
+        return os.path.join(local_root, *remote_path.split("/"))
 
     def get_file(
         self,
         remote_path: str,
         local_path: str,
-        remote_stat = None,
+        remote_stat=None,
         preserve_timestamps: bool = True,
     ):
         """
@@ -141,13 +153,9 @@ class ClusterInterface:
                 remote_stat = self.ftp.lstat(remote_path)
             os.utime(local_path, (remote_stat.st_atime, remote_stat.st_mtime))
 
-        logger.debug(f'{local_path}   <--   {remote_path}')
+        logger.debug(f"{local_path}   <--   {remote_path}")
 
-    def is_file_synced(
-        self,
-        remote_stat,
-        local_path: str,
-    ):
+    def is_file_synced(self, remote_stat, local_path: str):
         """
         Determine whether a local file is the same as a remote file by checking the file size and modification times.
 
@@ -165,7 +173,10 @@ class ClusterInterface:
         """
         if os.path.exists(local_path):
             local_stat = os.stat(local_path)
-            if local_stat.st_size == remote_stat.st_size and local_stat.st_mtime == remote_stat.st_mtime:
+            if (
+                local_stat.st_size == remote_stat.st_size
+                and local_stat.st_mtime == remote_stat.st_mtime
+            ):
                 return True
 
         return False
@@ -203,17 +214,29 @@ class ClusterInterface:
         """
         local_path = self.remote_path_to_local_path(remote_path, local_root)
         if force_download or not self.is_file_synced(remote_stat, local_path):
-            self.get_file(remote_path, local_path, remote_stat = remote_stat, preserve_timestamps = True)
+            self.get_file(
+                remote_path,
+                local_path,
+                remote_stat=remote_stat,
+                preserve_timestamps=True,
+            )
             if integrity_check:
-                output = self.cmd(f'md5sum {remote_path}')
-                md5_remote = output.stdout.readline().split(' ')[0].strip()
-                with open(local_path, mode = 'rb') as f:
+                output = self.cmd(f"md5sum {remote_path}")
+                md5_remote = output.stdout.readline().split(" ")[0].strip()
+                with open(local_path, mode="rb") as f:
                     md5_local = hashlib.md5()
                     md5_local.update(f.read())
                     md5_local = md5_local.hexdigest().strip()
                 if md5_local != md5_remote:
-                    logger.debug(f'MD5 hash on {self.remote_host} for file {remote_path} did not match local file at {local_path}, retrying')
-                    self.mirror_file(remote_path, remote_stat, local_root = local_root, force_download = True)
+                    logger.debug(
+                        f"MD5 hash on {self.remote_host} for file {remote_path} did not match local file at {local_path}, retrying"
+                    )
+                    self.mirror_file(
+                        remote_path,
+                        remote_stat,
+                        local_root=local_root,
+                        force_download=True,
+                    )
 
         return local_path
 
@@ -257,7 +280,9 @@ class ClusterInterface:
             func_on_files = lambda *args: None
 
         blacklist_dir_names = tuple(blacklist_dir_names)
-        whitelist_file_ext = tuple(ext if ext.startswith('.') else f'.{ext}' for ext in whitelist_file_ext)
+        whitelist_file_ext = tuple(
+            ext if ext.startswith(".") else f".{ext}" for ext in whitelist_file_ext
+        )
 
         path_count = 0
         longest_full_remote_path_len = 0
@@ -268,27 +293,40 @@ class ClusterInterface:
                 for remote_stat in remote_stats:
                     full_remote_path = posixpath.join(remote_path, remote_stat.filename)
 
-                    logger.debug(f'Checking remote path {full_remote_path}')
+                    logger.debug(f"Checking remote path {full_remote_path}")
 
                     # print a string that keeps track of the walked paths
                     nonlocal path_count, longest_full_remote_path_len
                     path_count += 1
-                    longest_full_remote_path_len = max(longest_full_remote_path_len, len(full_remote_path))
+                    longest_full_remote_path_len = max(
+                        longest_full_remote_path_len, len(full_remote_path)
+                    )
 
-                    status_str = f'\rPaths Found: {path_count}'.ljust(25) + f'|  Current Path: {full_remote_path}'.ljust(longest_full_remote_path_len + 20)
-                    print(status_str, end = '')
+                    status_str = f"\rPaths Found: {path_count}".ljust(
+                        25
+                    ) + f"|  Current Path: {full_remote_path}".ljust(
+                        longest_full_remote_path_len + 20
+                    )
+                    print(status_str, end="")
 
-                    if not exclude_hidden or remote_stat.filename[0] != '.':
-                        if stat.S_ISDIR(remote_stat.st_mode) and remote_stat.filename not in blacklist_dir_names:
+                    if not exclude_hidden or remote_stat.filename[0] != ".":
+                        if (
+                            stat.S_ISDIR(remote_stat.st_mode)
+                            and remote_stat.filename not in blacklist_dir_names
+                        ):
                             func_on_dirs(full_remote_path, remote_stat)
 
-                            logger.debug(f'Walking remote dir {full_remote_path}')
+                            logger.debug(f"Walking remote dir {full_remote_path}")
                             walk(full_remote_path)
 
-                        elif stat.S_ISREG(remote_stat.st_mode) and full_remote_path.endswith(whitelist_file_ext):
+                        elif stat.S_ISREG(
+                            remote_stat.st_mode
+                        ) and full_remote_path.endswith(whitelist_file_ext):
                             func_on_files(full_remote_path, remote_stat)
             except UnicodeDecodeError as e:
-                logger.exception(f'Encountered unicode decode error while getting directory attributes for {remote_path}. This can happen if there is a unicode filename in the directory.')
+                logger.exception(
+                    f"Encountered unicode decode error while getting directory attributes for {remote_path}. This can happen if there is a unicode filename in the directory."
+                )
 
         walk(remote_path)
         print()
@@ -298,9 +336,14 @@ class ClusterInterface:
     def mirror_dir(
         self,
         remote_dir: str = None,
-        local_root: str = 'mirror',
-        blacklist_dir_names: Iterable[str] = ('python', 'build_python', 'backend', 'logs'),
-        whitelist_file_ext: Iterable[str] = ('.txt', '.json', '.spec', '.sim', '.pkl'),
+        local_root: str = "mirror",
+        blacklist_dir_names: Iterable[str] = (
+            "python",
+            "build_python",
+            "backend",
+            "logs",
+        ),
+        whitelist_file_ext: Iterable[str] = (".txt", ".json", ".spec", ".sim", ".pkl"),
     ):
         """
         Mirror a directory recursively.
@@ -320,15 +363,17 @@ class ClusterInterface:
         """
         remote_dir = remote_dir or self.remote_home_dir
 
-        logger.info(f'Mirroring remote dir {remote_dir}')
+        logger.info(f"Mirroring remote dir {remote_dir}")
 
         with utils.BlockTimer() as timer:
             self.walk_remote_path(
                 self.remote_home_dir,
-                func_on_files = functools.partial(self.mirror_file, local_root = local_root),
-                func_on_dirs = lambda d, _: utils.ensure_parents_exist(d),
-                blacklist_dir_names = tuple(blacklist_dir_names),
-                whitelist_file_ext = tuple(whitelist_file_ext),
+                func_on_files=functools.partial(
+                    self.mirror_file, local_root=local_root
+                ),
+                func_on_dirs=lambda d, _: utils.ensure_parents_exist(d),
+                blacklist_dir_names=tuple(blacklist_dir_names),
+                whitelist_file_ext=tuple(whitelist_file_ext),
             )
 
-        logger.info(f'Mirroring complete. {timer}')
+        logger.info(f"Mirroring complete. {timer}")

@@ -9,25 +9,26 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # these characters should be stripped from file names before use
-ILLEGAL_FILENAME_CHARACTERS = {'<', '>', ':', '"', '/', '\\', '|', '?', '*'}
+ILLEGAL_FILENAME_CHARACTERS = {"<", ">", ":", '"', "/", "\\", "|", "?", "*"}
+
 
 def strip_illegal_characters(string: str) -> str:
     """Strip characters that cannot be included in file names from a string."""
-    return ''.join([char for char in string if char not in ILLEGAL_FILENAME_CHARACTERS])
+    return "".join([char for char in string if char not in ILLEGAL_FILENAME_CHARACTERS])
 
 
 def get_now_str() -> str:
     """Return a formatted string with the current year-month-day_hour-minute-second."""
-    return datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S')
+    return datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S")
 
 
 def bytes_to_str(num_bytes: int) -> str:
     """Return a number of bytes as a human-readable string."""
-    for unit in ('bytes', 'KB', 'MB', 'GB'):
+    for unit in ("bytes", "KB", "MB", "GB"):
         if num_bytes < 1024:
-            return f'{num_bytes:.1f} {unit}'
+            return f"{num_bytes:.1f} {unit}"
         num_bytes /= 1024
-    return f'{num_bytes:.1f} TB'
+    return f"{num_bytes:.1f} TB"
 
 
 def get_file_size_as_string(path: Union[Path, str]) -> str:
@@ -38,7 +39,7 @@ def get_file_size_as_string(path: Union[Path, str]) -> str:
 def table(
     headers: Iterable[str],
     rows: Iterable[Iterable[Any]],
-    fill: str = '',
+    fill: str = "",
     header_fmt: Callable[[str], str] = None,
     row_fmt: Callable[[str], str] = None,
     alignment: Dict[str, str] = None,
@@ -95,16 +96,19 @@ def table(
     for row in processed_rows:
         lengths = [max(curr, len(entry)) for curr, entry in zip(lengths, row)]
 
-    header = header_fmt('  '.join(getattr(h, a)(l) for h, l, a in zip(headers, lengths, align_methods)).rstrip())
+    header = header_fmt(
+        "  ".join(
+            getattr(h, a)(l) for h, l, a in zip(headers, lengths, align_methods)
+        ).rstrip()
+    )
 
     lines = (
-        row_fmt('  '.join(getattr(f, a)(l) for f, l, a in zip(row, lengths, align_methods)))
+        row_fmt(
+            "  ".join(getattr(f, a)(l) for f, l, a in zip(row, lengths, align_methods))
+        )
         for row in processed_rows
     )
 
-    output = '\n'.join((
-        header,
-        *lines,
-    ))
+    output = "\n".join((header, *lines))
 
     return output

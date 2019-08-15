@@ -9,7 +9,7 @@ import simulacra.units as u
 import matplotlib.pyplot as plt
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
-OUT_DIR = os.path.join(os.getcwd(), 'out',FILE_NAME)
+OUT_DIR = os.path.join(os.getcwd(), "out", FILE_NAME)
 
 
 def w(z, w_0, z_0):
@@ -35,28 +35,34 @@ def field(x, z, w_0, wavelength):
     return amplitude * phase
 
 
-if __name__ == '__main__':
-    with si.utils.LogManager('simulacra', stdout_logs = True, stdout_level = logging.DEBUG, file_dir = OUT_DIR, file_logs = False) as logger:
+if __name__ == "__main__":
+    with si.utils.LogManager(
+        "simulacra",
+        stdout_logs=True,
+        stdout_level=logging.DEBUG,
+        file_dir=OUT_DIR,
+        file_logs=False,
+    ) as logger:
         x_lim = 10 * u.um
         z_lim = 50 * u.um
         pnts = 500
         x = np.linspace(-x_lim, x_lim, pnts)
         z = np.linspace(-z_lim, z_lim, pnts)
 
-        x_mesh, z_mesh = np.meshgrid(x, z, indexing = 'ij')
+        x_mesh, z_mesh = np.meshgrid(x, z, indexing="ij")
 
-        field_mesh = field(x_mesh, z_mesh, w_0 = 1 * u.um, wavelength = 500 * u.nm)
+        field_mesh = field(x_mesh, z_mesh, w_0=1 * u.um, wavelength=500 * u.nm)
 
         si.vis.xyz_plot(
-            f'gaussian_beam',
+            f"gaussian_beam",
             z_mesh,
             x_mesh,
             field_mesh,
-            x_unit = 'um',
-            y_unit = 'um',
-            colormap = plt.get_cmap('richardson'),
-            shading = si.vis.ColormapShader.FLAT,
-            richardson_equator_magnitude = .1,
-            img_format = 'png',
-            target_dir = OUT_DIR,
+            x_unit="um",
+            y_unit="um",
+            colormap=plt.get_cmap("richardson"),
+            shading=si.vis.ColormapShader.FLAT,
+            richardson_equator_magnitude=0.1,
+            img_format="png",
+            target_dir=OUT_DIR,
         )

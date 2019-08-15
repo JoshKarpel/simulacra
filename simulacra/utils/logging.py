@@ -8,7 +8,9 @@ from . import formatting, filesystem
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-LOG_FORMATTER = logging.Formatter('%(asctime)s [%(levelname)s] ~ %(message)s', datefmt = '%y-%m-%d %H:%M:%S')
+LOG_FORMATTER = logging.Formatter(
+    "%(asctime)s [%(levelname)s] ~ %(message)s", datefmt="%y-%m-%d %H:%M:%S"
+)
 
 
 class LogManager:
@@ -22,16 +24,16 @@ class LogManager:
     def __init__(
         self,
         *logger_names,
-        manual_logger_name: str = 'simulacra',
+        manual_logger_name: str = "simulacra",
         stdout_logs: bool = True,
-        stdout_level = logging.DEBUG,
+        stdout_level=logging.DEBUG,
         file_logs: bool = False,
-        file_level = logging.DEBUG,
+        file_level=logging.DEBUG,
         file_name: Optional[str] = None,
         file_dir: Optional[str] = None,
-        file_mode: str = 'a',
-        log_formatter = LOG_FORMATTER,
-        disable_level = logging.NOTSET,
+        file_mode: str = "a",
+        log_formatter=LOG_FORMATTER,
+        disable_level=logging.NOTSET,
     ):
         """
         Parameters
@@ -52,7 +54,10 @@ class LogManager:
         disable_level
         """
         self.logger_names = list(logger_names)
-        if manual_logger_name is not None and manual_logger_name not in self.logger_names:
+        if (
+            manual_logger_name is not None
+            and manual_logger_name not in self.logger_names
+        ):
             self.logger_names = [manual_logger_name] + self.logger_names
 
         self.stdout_logs = stdout_logs
@@ -62,10 +67,10 @@ class LogManager:
         self.file_level = file_level
 
         if file_name is None:
-            file_name = f'log__{formatting.get_now_str()}'
+            file_name = f"log__{formatting.get_now_str()}"
         self.file_name = file_name
-        if not self.file_name.endswith('.log'):
-            self.file_name += '.log'
+        if not self.file_name.endswith(".log"):
+            self.file_name += ".log"
 
         if file_dir is None:
             file_dir = os.getcwd()
@@ -97,16 +102,22 @@ class LogManager:
         if self.file_logs:
             log_file_path = os.path.join(self.file_dir, self.file_name)
 
-            filesystem.ensure_parents_exist(log_file_path)  # the log message emitted here will not be included in the logger being created by this context manager
+            filesystem.ensure_parents_exist(
+                log_file_path
+            )  # the log message emitted here will not be included in the logger being created by this context manager
 
-            file_handler = logging.FileHandler(log_file_path, mode = self.file_mode, encoding = 'utf-8')
+            file_handler = logging.FileHandler(
+                log_file_path, mode=self.file_mode, encoding="utf-8"
+            )
             file_handler.setLevel(self.file_level)
             file_handler.setFormatter(self.log_formatter)
 
             new_handlers.append(file_handler)
 
         self.old_levels = {name: logger.level for name, logger in self.loggers.items()}
-        self.old_handlers = {name: logger.handlers for name, logger in self.loggers.items()}
+        self.old_handlers = {
+            name: logger.handlers for name, logger in self.loggers.items()
+        }
 
         for logger in self.loggers.values():
             logger.setLevel(logging.DEBUG)

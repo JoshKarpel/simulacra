@@ -13,10 +13,10 @@ logger.setLevel(logging.DEBUG)
 
 def try_loop(
     *functions_to_run: Collection[Callable[[Any], None]],
-    wait_after_success: datetime.timedelta = datetime.timedelta(hours = 1),
-    wait_after_failure: datetime.timedelta = datetime.timedelta(minutes = 1),
-    begin_text: str = 'Beginning loop',
-    complete_text: str = 'Completed loop',
+    wait_after_success: datetime.timedelta = datetime.timedelta(hours=1),
+    wait_after_failure: datetime.timedelta = datetime.timedelta(minutes=1),
+    begin_text: str = "Beginning loop",
+    complete_text: str = "Completed loop",
 ):
     """
     Run the given functions in a loop.
@@ -43,21 +43,23 @@ def try_loop(
                 try:
                     f()
                 except Exception as e:
-                    logger.exception(f'Exception encountered while executing loop function: {f}')
+                    logger.exception(
+                        f"Exception encountered while executing loop function: {f}"
+                    )
                     failed = True
 
-        logger.info(f'{complete_text}. Elapsed time: {timer.wall_time_elapsed}')
+        logger.info(f"{complete_text}. Elapsed time: {timer.wall_time_elapsed}")
 
         if failed:
-            s, wait = 'failed', wait_after_failure
+            s, wait = "failed", wait_after_failure
         else:
-            s, wait = 'succeeded', wait_after_success
+            s, wait = "succeeded", wait_after_success
 
-        logger.info(f'Loop cycle {s}, next cycle in {wait.total_seconds()} seconds')
+        logger.info(f"Loop cycle {s}, next cycle in {wait.total_seconds()} seconds")
         time.sleep(wait.total_seconds())
 
 
-def grouper(iterable: Iterable, n: int, fill_value = None) -> Iterable:
+def grouper(iterable: Iterable, n: int, fill_value=None) -> Iterable:
     """
 
     Parameters
@@ -75,14 +77,14 @@ def grouper(iterable: Iterable, n: int, fill_value = None) -> Iterable:
         An iterator over length ``n`` groups of the input iterable
     """
     args = [iter(iterable)] * n
-    return itertools.zip_longest(*args, fillvalue = fill_value)
+    return itertools.zip_longest(*args, fillvalue=fill_value)
 
 
 class StrEnum(str, enum.Enum):
     """An :class:`enum.Enum` whose members are also strings."""
 
     def __repr__(self):
-        return f'{self.__class__.__name__}.{self.value.upper()}'
+        return f"{self.__class__.__name__}.{self.value.upper()}"
 
     def __str__(self):
         return self.value

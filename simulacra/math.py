@@ -21,7 +21,7 @@ def rand_phase(shape_tuple):
 class SphericalHarmonic:
     """A class that represents a spherical harmonic."""
 
-    __slots__ = ('_l', '_m')
+    __slots__ = ("_l", "_m")
 
     def __init__(self, l: int = 0, m: int = 0):
         """
@@ -36,7 +36,9 @@ class SphericalHarmonic:
         """
         self._l = l
         if not abs(m) <= l:
-            raise exceptions.IllegalSphericalHarmonic(f'invalid spherical harmonic: |m| = {abs(m)} must be less than l = {l}')
+            raise exceptions.IllegalSphericalHarmonic(
+                f"invalid spherical harmonic: |m| = {abs(m)} must be less than l = {l}"
+            )
         self._m = m
 
     @property
@@ -48,15 +50,15 @@ class SphericalHarmonic:
         return self._m
 
     def __str__(self):
-        return f'Y_({self.l},{self.m})'
+        return f"Y_({self.l},{self.m})"
 
     def __repr__(self):
-        return f'{self.__class__.__name__}(l={self.l}, m={self.m})'
+        return f"{self.__class__.__name__}(l={self.l}, m={self.m})"
 
     @property
     def latex(self) -> str:
         """Returns a LaTeX-formatted string for the SphericalHarmonic."""
-        return fr'Y_{{{self.m}}}^{{{self.l}}}'
+        return fr"Y_{{{self.m}}}^{{{self.l}}}"
 
     @property
     def _lm(self):
@@ -80,7 +82,7 @@ class SphericalHarmonic:
     def __gt__(self, other):
         return self._lm > other._lm
 
-    def __call__(self, theta, phi = 0):
+    def __call__(self, theta, phi=0):
         """
         Evaluate the spherical harmonic at a point, or vectorized over an array of points.
 
@@ -99,7 +101,9 @@ class SphericalHarmonic:
         return special.sph_harm(self.m, self.l, phi, theta)
 
 
-def complex_quad(integrand: Callable, a: float, b: float, **kwargs) -> (complex, float, float):
+def complex_quad(
+    integrand: Callable, a: float, b: float, **kwargs
+) -> (complex, float, float):
     def real_func(*args, **kwargs):
         return np.real(integrand(*args, **kwargs))
 
@@ -109,10 +113,16 @@ def complex_quad(integrand: Callable, a: float, b: float, **kwargs) -> (complex,
     real_integral = integ.quad(real_func, a, b, **kwargs)
     imag_integral = integ.quad(imag_func, a, b, **kwargs)
 
-    return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
+    return (
+        real_integral[0] + (1j * imag_integral[0]),
+        real_integral[1:],
+        imag_integral[1:],
+    )
 
 
-def complex_quadrature(integrand: Callable, a: float, b: float, **kwargs) -> (complex, float, float):
+def complex_quadrature(
+    integrand: Callable, a: float, b: float, **kwargs
+) -> (complex, float, float):
     def real_func(*args, **kwargs):
         return np.real(integrand(*args, **kwargs))
 
@@ -122,10 +132,16 @@ def complex_quadrature(integrand: Callable, a: float, b: float, **kwargs) -> (co
     real_integral = integ.quadrature(real_func, a, b, **kwargs)
     imag_integral = integ.quadrature(imag_func, a, b, **kwargs)
 
-    return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
+    return (
+        real_integral[0] + (1j * imag_integral[0]),
+        real_integral[1:],
+        imag_integral[1:],
+    )
 
 
-def complex_dblquad(integrand: Callable, a: float, b: float, gfun: Callable, hfun: Callable, **kwargs) -> (complex, float, float):
+def complex_dblquad(
+    integrand: Callable, a: float, b: float, gfun: Callable, hfun: Callable, **kwargs
+) -> (complex, float, float):
     def real_func(y, x):
         return np.real(integrand(y, x))
 
@@ -135,7 +151,11 @@ def complex_dblquad(integrand: Callable, a: float, b: float, gfun: Callable, hfu
     real_integral = integ.dblquad(real_func, a, b, gfun, hfun, **kwargs)
     imag_integral = integ.dblquad(imag_func, a, b, gfun, hfun, **kwargs)
 
-    return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
+    return (
+        real_integral[0] + (1j * imag_integral[0]),
+        real_integral[1:],
+        imag_integral[1:],
+    )
 
 
 def complex_nquad(integrand, ranges, **kwargs) -> (complex, float, float):
@@ -148,4 +168,8 @@ def complex_nquad(integrand, ranges, **kwargs) -> (complex, float, float):
     real_integral = integ.nquad(real_func, ranges, **kwargs)
     imag_integral = integ.nquad(imag_func, ranges, **kwargs)
 
-    return real_integral[0] + (1j * imag_integral[0]), real_integral[1:], imag_integral[1:]
+    return (
+        real_integral[0] + (1j * imag_integral[0]),
+        real_integral[1:],
+        imag_integral[1:],
+    )

@@ -5,14 +5,14 @@ import shutil
 import simulacra as si
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
-TEST_DIR = os.path.join(THIS_DIR, 'temp-unit-testing')
+TEST_DIR = os.path.join(THIS_DIR, "temp-unit-testing")
 
 
 class TestBeet(unittest.TestCase):
     def setUp(self):
-        self.obj = si.Beet('foo')
-        self.obj_name = 'foo'
-        self.target_name = 'foo.beet'
+        self.obj = si.Beet("foo")
+        self.obj_name = "foo"
+        self.target_name = "foo.beet"
         si.utils.ensure_parents_exist(TEST_DIR)
 
     def tearDown(self):
@@ -23,41 +23,55 @@ class TestBeet(unittest.TestCase):
         self.assertEqual(self.obj.file_name, self.obj_name)
 
     def test_save_load(self):
-        path = self.obj.save(target_dir = TEST_DIR)
-        self.assertEqual(path, os.path.join(TEST_DIR, self.target_name))  # test if path was constructed correctly
-        self.assertTrue(os.path.exists(path))  # path should actually exist on the system
+        path = self.obj.save(target_dir=TEST_DIR)
+        self.assertEqual(
+            path, os.path.join(TEST_DIR, self.target_name)
+        )  # test if path was constructed correctly
+        self.assertTrue(
+            os.path.exists(path)
+        )  # path should actually exist on the system
         loaded = si.Beet.load(path)
-        self.assertEqual(loaded, self.obj)  # beets should be equal, but NOT the same object
+        self.assertEqual(
+            loaded, self.obj
+        )  # beets should be equal, but NOT the same object
         self.assertEqual(loaded.uuid, self.obj.uuid)  # beets should have the same uid
-        self.assertEqual(hash(loaded), hash(self.obj))  # beets should have the same hash
+        self.assertEqual(
+            hash(loaded), hash(self.obj)
+        )  # beets should have the same hash
         self.assertIsNot(loaded, self.obj)  # beets should NOT be the same object
 
 
 class TestSpecification(TestBeet):
     def setUp(self):
-        self.obj = si.Specification('bar')
-        self.obj_name = 'bar'
-        self.target_name = 'bar.spec'
+        self.obj = si.Specification("bar")
+        self.obj_name = "bar"
+        self.target_name = "bar.spec"
         si.utils.ensure_parents_exist(TEST_DIR)
 
 
 class TestSimulation(TestBeet):
     def setUp(self):
-        self.obj = si.Simulation(si.Specification('baz'))
-        self.obj_name = 'baz'
-        self.target_name = 'baz.sim'
+        self.obj = si.Simulation(si.Specification("baz"))
+        self.obj_name = "baz"
+        self.target_name = "baz.sim"
         si.utils.ensure_parents_exist(TEST_DIR)
 
     def testStatus(self):
-        passes = (si.Status.INITIALIZED, si.Status.RUNNING, si.Status.RUNNING, si.Status.FINISHED, si.Status.PAUSED)
-        fails = ('foo', 'foobar', 5, 10, None)
+        passes = (
+            si.Status.INITIALIZED,
+            si.Status.RUNNING,
+            si.Status.RUNNING,
+            si.Status.FINISHED,
+            si.Status.PAUSED,
+        )
+        fails = ("foo", "foobar", 5, 10, None)
 
         for status in passes:
-            with self.subTest(x = status):
+            with self.subTest(x=status):
                 self.obj.status = status
 
         for status in fails:
-            with self.subTest(x = status):
+            with self.subTest(x=status):
                 with self.assertRaises(TypeError):
                     self.obj.status = status
 
@@ -99,7 +113,7 @@ class TestSummingSubclassing(unittest.TestCase):
                 self.summation_class = FruitBasket
 
         class FruitBasket(si.Sum, Fruit):
-            container_name = 'basket'
+            container_name = "basket"
 
         class Apple(Fruit):
             pass

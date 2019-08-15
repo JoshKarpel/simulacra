@@ -4,7 +4,7 @@ import core
 
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
-OUT_DIR = os.path.join(os.getcwd(), 'out', FILE_NAME)
+OUT_DIR = os.path.join(os.getcwd(), "out", FILE_NAME)
 
 
 class Fruit(core.Summand):
@@ -14,7 +14,7 @@ class Fruit(core.Summand):
 
 
 class FruitBasket(core.Sum, Fruit):
-    container_name = 'basket'
+    container_name = "basket"
 
 
 class Apple(Fruit):
@@ -25,7 +25,7 @@ class Banana(Fruit):
     pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     a = Apple()
     b = Banana()
 
@@ -35,10 +35,10 @@ if __name__ == '__main__':
     print(c.basket)
     print(vars(c))
 
-    print(c, 'is instance of FruitBasket?', isinstance(c, FruitBasket))
-    print(c, 'is instance of Fruit?', isinstance(c, Fruit))
-    print(c, 'is instance of Summand?', isinstance(c, core.Summand))
-    print(c, 'is instance of Sum?', isinstance(c, core.Sum))
-    print(c, 'is instance of Apple?', isinstance(c, Apple))
-    print(c, 'is instance of Banana?', isinstance(c, Banana))
-    print(c, 'is instance of int?', isinstance(c, int))
+    print(c, "is instance of FruitBasket?", isinstance(c, FruitBasket))
+    print(c, "is instance of Fruit?", isinstance(c, Fruit))
+    print(c, "is instance of Summand?", isinstance(c, core.Summand))
+    print(c, "is instance of Sum?", isinstance(c, core.Sum))
+    print(c, "is instance of Apple?", isinstance(c, Apple))
+    print(c, "is instance of Banana?", isinstance(c, Banana))
+    print(c, "is instance of int?", isinstance(c, int))

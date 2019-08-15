@@ -15,7 +15,7 @@ def ensure_parents_exist(path: Union[Path, str]):
     path
         A path to a file or directory.
     """
-    Path(path).parent.mkdir(parents = True, exist_ok = True)
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
 
 
 def get_file_size(path: Union[Path, str]) -> int:

@@ -44,17 +44,23 @@ class Beet:
         if file_name is None:
             file_name = self.name
 
-        file_name_stripped = utils.strip_illegal_characters(str(file_name).replace(' ', '_'))
+        file_name_stripped = utils.strip_illegal_characters(
+            str(file_name).replace(" ", "_")
+        )
         if file_name_stripped != file_name:
-            logger.warning('Using file name {} instead of {} for {}'.format(file_name_stripped, file_name, self.name))
+            logger.warning(
+                "Using file name {} instead of {} for {}".format(
+                    file_name_stripped, file_name, self.name
+                )
+            )
         self.file_name = file_name_stripped
 
         self.initialized_at = datetime.datetime.utcnow()
         self.uuid = uuid.uuid4()
 
-        logger.info('Initialized {}'.format(repr(self)))
+        logger.info("Initialized {}".format(repr(self)))
 
-    def __eq__(self, other: 'Beet'):
+    def __eq__(self, other: "Beet"):
         """Two Beets are equal if they have the same UUID."""
         return isinstance(other, self.__class__) and self.uuid == other.uuid
 
@@ -62,7 +68,7 @@ class Beet:
         """The hash of the Beet is the hash of its UUID."""
         return hash(self.uuid)
 
-    def clone(self, **kwargs) -> 'Beet':
+    def clone(self, **kwargs) -> "Beet":
         """
         Return a deepcopy of the :class:`Beet`.
 
@@ -89,7 +95,7 @@ class Beet:
     def save(
         self,
         target_dir: Optional[Path] = None,
-        file_extension: str = 'beet',
+        file_extension: str = "beet",
         compressed: bool = True,
     ) -> str:
         """
@@ -112,23 +118,23 @@ class Beet:
         if target_dir is None:
             target_dir = Path.cwd()
 
-        path = (Path(target_dir).absolute() / f'{self.file_name}.{file_extension}')
-        working_path = path.with_name(f'{path.name}.working')
+        path = Path(target_dir).absolute() / f"{self.file_name}.{file_extension}"
+        working_path = path.with_name(f"{path.name}.working")
 
         utils.ensure_parents_exist(working_path)
 
         op = gzip.open if compressed else open
-        with op(working_path, mode = 'wb') as file:
-            pickle.dump(self, file, protocol = -1)
+        with op(working_path, mode="wb") as file:
+            pickle.dump(self, file, protocol=-1)
 
         os.replace(working_path, path)
 
-        logger.debug(f'Saved {self} to {path}')
+        logger.debug(f"Saved {self} to {path}")
 
         return path
 
     @classmethod
-    def load(cls, path: str) -> 'Beet':
+    def load(cls, path: str) -> "Beet":
         """
         Load a Beet from `file_path`.
 
@@ -144,13 +150,13 @@ class Beet:
         """
         path = Path(path)
         try:
-            with gzip.open(path, mode = 'rb') as file:
+            with gzip.open(path, mode="rb") as file:
                 beet = pickle.load(file)
         except OSError:  # file is not gzipped
-            with path.open(mode = 'rb') as file:
+            with path.open(mode="rb") as file:
                 beet = pickle.load(file)
 
-        logger.debug(f'Loaded {beet} from {path}')
+        logger.debug(f"Loaded {beet} from {path}")
 
         return beet
 
@@ -159,24 +165,26 @@ class Beet:
 
     def __str__(self):
         if self.name != self.file_name:
-            return f'{self.__class__.__name__}({self.name}, file_name = {self.file_name})'
+            return (
+                f"{self.__class__.__name__}({self.name}, file_name = {self.file_name})"
+            )
         else:
-            return f'{self.__class__.__name__}({self.name})'
+            return f"{self.__class__.__name__}({self.name})"
 
     def info(self) -> Info:
-        info = Info(header = str(self))
-        info.add_field('UUID', self.uuid)
+        info = Info(header=str(self))
+        info.add_field("UUID", self.uuid)
 
         return info
 
 
 class Status(utils.StrEnum):
-    UNINITIALIZED = 'uninitialized'
-    INITIALIZED = 'initialized'
-    RUNNING = 'running'
-    FINISHED = 'finished'
-    PAUSED = 'paused'
-    ERROR = 'error'
+    UNINITIALIZED = "uninitialized"
+    INITIALIZED = "initialized"
+    RUNNING = "running"
+    FINISHED = "finished"
+    PAUSED = "paused"
+    ERROR = "error"
 
 
 class Simulation(Beet, abc.ABC):
@@ -202,7 +210,9 @@ class Simulation(Beet, abc.ABC):
         spec
             The :class:`Specification` for the Simulation.
         """
-        super().__init__(spec.name, file_name = spec.file_name)  # inherit name and file_name from spec
+        super().__init__(
+            spec.name, file_name=spec.file_name
+        )  # inherit name and file_name from spec
 
         self.spec = spec
 
@@ -236,7 +246,7 @@ class Simulation(Beet, abc.ABC):
             The new status for the :class:`Simulation`.
         """
         if not isinstance(status, Status):
-            raise TypeError(f'{status} is not a member of Status')
+            raise TypeError(f"{status} is not a member of Status")
 
         old_status = self.status
         now = datetime.datetime.utcnow()
@@ -259,13 +269,10 @@ class Simulation(Beet, abc.ABC):
 
         self._status = status
 
-        logger.debug(f'{self} status set to {self.status} from {old_status}')
+        logger.debug(f"{self} status set to {self.status} from {old_status}")
 
     def save(
-        self,
-        target_dir: Optional[str] = None,
-        file_extension: str = 'sim',
-        **kwargs,
+        self, target_dir: Optional[str] = None, file_extension: str = "sim", **kwargs
     ) -> str:
         """
         Atomically pickle the :class:`Simulation` to a file.
@@ -282,7 +289,9 @@ class Simulation(Beet, abc.ABC):
         :class:`str`
             The path to the saved Simulation.
         """
-        return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
+        return super().save(
+            target_dir=target_dir, file_extension=file_extension, **kwargs
+        )
 
     @abc.abstractmethod
     def run(self):
@@ -290,20 +299,20 @@ class Simulation(Beet, abc.ABC):
         raise NotImplementedError
 
     def __str__(self):
-        return super().__str__() + f' {{{self.status}}}'
+        return super().__str__() + f" {{{self.status}}}"
 
     def info(self) -> Info:
         """Return a string describing the parameters of the Simulation and its associated Specification."""
         info = super().info()
 
-        info.add_field('UUID', self.uuid)
+        info.add_field("UUID", self.uuid)
 
-        info_diag = Info(header = f'Status: {self.status}')
-        info_diag.add_field('Initialization Time', self.init_time)
-        info_diag.add_field('Latest Run Time', self.latest_run_time)
-        info_diag.add_field('End Time', self.end_time)
-        info_diag.add_field('Running Time', self.running_time)
-        info_diag.add_field('Elapsed Time', self.elapsed_time)
+        info_diag = Info(header=f"Status: {self.status}")
+        info_diag.add_field("Initialization Time", self.init_time)
+        info_diag.add_field("Latest Run Time", self.latest_run_time)
+        info_diag.add_field("End Time", self.end_time)
+        info_diag.add_field("Running Time", self.running_time)
+        info_diag.add_field("Elapsed Time", self.elapsed_time)
 
         info.add_infos(info_diag, self.spec.info())
 
@@ -342,20 +351,17 @@ class Specification(Beet, abc.ABC):
         kwargs
             Any number of keyword arguments, which will be stored as attributes.
         """
-        super().__init__(name, file_name = file_name)
+        super().__init__(name, file_name=file_name)
 
         self._extra_attr_keys = list()
 
         for k, v in ((k, v) for k, v in kwargs.items() if k not in self.__dict__):
             setattr(self, k, v)
             self._extra_attr_keys.append(k)
-            logger.debug('{} stored additional attribute {} = {}'.format(self, k, v))
+            logger.debug("{} stored additional attribute {} = {}".format(self, k, v))
 
     def save(
-        self,
-        target_dir: Optional[str] = None,
-        file_extension: str = 'spec',
-        **kwargs,
+        self, target_dir: Optional[str] = None, file_extension: str = "spec", **kwargs
     ) -> str:
         """
         Pickle the :class:`Specification` to a file.
@@ -374,7 +380,9 @@ class Specification(Beet, abc.ABC):
         path
             The path to the saved :class:`Specification`.
         """
-        return super().save(target_dir = target_dir, file_extension = file_extension, **kwargs)
+        return super().save(
+            target_dir=target_dir, file_extension=file_extension, **kwargs
+        )
 
     def to_sim(self):
         """Return a :class:`Simulation` of the type associated with the :class:`Specification` type, generated from this instance."""
@@ -384,7 +392,7 @@ class Specification(Beet, abc.ABC):
         info = super().info()
 
         if len(self._extra_attr_keys) > 0:
-            info_extra = Info(header = f'Extra Attributes')
+            info_extra = Info(header=f"Extra Attributes")
 
             for k in self._extra_attr_keys:
                 info_extra.add_field(k, getattr(self, k))

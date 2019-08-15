@@ -4,8 +4,8 @@ import simulacra as si
 
 
 def test_ensure_parents_exist(tmpdir):
-    dirname = 'foo'
-    filename = 'bar.py'
+    dirname = "foo"
+    filename = "bar.py"
     dirpath = os.path.join(tmpdir, dirname)
     create_path = os.path.join(dirpath, filename)
 

@@ -7,7 +7,7 @@ logger.addHandler(logging.NullHandler())
 import os
 
 # see https://github.com/ContinuumIO/anaconda-issues/issues/905
-os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'
+os.environ["FOR_DISABLE_CONSOLE_CTRL_HANDLER"] = "1"
 
 from .sims import *
 from .info import Info

@@ -27,24 +27,28 @@ class Info:
 
         for field, value in self._children.items():
             if isinstance(value, Info):
-                info_strings = str(value).split('\n')
-                field_strings.append('├─ ' + info_strings[0])
-                field_strings.extend('│  ' + info_string for info_string in info_strings[1:])
+                info_strings = str(value).split("\n")
+                field_strings.append("├─ " + info_strings[0])
+                field_strings.extend(
+                    "│  " + info_string for info_string in info_strings[1:]
+                )
             else:
-                field_strings.append(f'├─ {field}: {value}')
+                field_strings.append(f"├─ {field}: {value}")
 
         # this loop goes over the field strings in reverse, cleaning up the tail of the structure indicators
         for index, field_string in reversed(list(enumerate(field_strings))):
-            if field_string[0] == '├':  # this is the last branch on this level, replace it with endcap and break
-                field_strings[index] = field_string.replace('├', '└')
+            if (
+                field_string[0] == "├"
+            ):  # this is the last branch on this level, replace it with endcap and break
+                field_strings[index] = field_string.replace("├", "└")
                 break
             else:  # not yet at last branch, continue cleanup
-                field_strings[index] = field_string.replace('│', ' ', 1)
+                field_strings[index] = field_string.replace("│", " ", 1)
 
-        return '\n'.join(field_strings)
+        return "\n".join(field_strings)
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self.header})'
+        return f"{self.__class__.__name__}({self.header})"
 
     def add_field(self, name: str, value: Any):
         """
@@ -73,7 +77,7 @@ class Info:
         """
         self._children.update(dict(name_value_pairs))
 
-    def add_info(self, info: 'Info'):
+    def add_info(self, info: "Info"):
         """
         Add a sub-Info to the :class:`Info`, which will be displayed at a deeper indentation level.
 
@@ -84,7 +88,7 @@ class Info:
         """
         self._children[id(info)] = info
 
-    def add_infos(self, *infos: 'Info'):
+    def add_infos(self, *infos: "Info"):
         """
         Add a list of Infos to this Info as sub-Infos.
 

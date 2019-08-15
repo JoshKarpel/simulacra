@@ -21,14 +21,14 @@ class Summand:
         """When unpacked, yield self, to ensure compatability with Sum's __add__ method."""
         yield self
 
-    def __add__(self, other: Union['Summand', 'Sum']):
+    def __add__(self, other: Union["Summand", "Sum"]):
         return self.summation_class(*self, *other)
 
     def __call__(self, *args, **kwargs):
         raise NotImplementedError
 
     def info(self) -> Info:
-        return Info(header = self.__class__.__name__)
+        return Info(header=self.__class__.__name__)
 
 
 class Sum(Summand):
@@ -38,7 +38,7 @@ class Sum(Summand):
     Calls to __call__ are passed to the contained Summands and then added together and returned.
     """
 
-    container_name = 'summands'
+    container_name = "summands"
 
     def __init__(self, *summands, **kwargs):
         setattr(self, self.container_name, summands)
@@ -49,10 +49,12 @@ class Sum(Summand):
         return getattr(self, self.container_name)
 
     def __str__(self):
-        return '({})'.format(' + '.join([str(s) for s in self._container]))
+        return "({})".format(" + ".join([str(s) for s in self._container]))
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, ', '.join([repr(p) for p in self._container]))
+        return "{}({})".format(
+            self.__class__.__name__, ", ".join([repr(p) for p in self._container])
+        )
 
     def __iter__(self):
         yield from self._container
@@ -60,7 +62,7 @@ class Sum(Summand):
     def __getitem__(self, item):
         return self._container[item]
 
-    def __add__(self, other: Union[Summand, 'Sum']):
+    def __add__(self, other: Union[Summand, "Sum"]):
         """Return a new Sum, constructed from all of the contents of self and other."""
         return self.__class__(*self, *other)
 

@@ -2,7 +2,7 @@ import simulacra as si
 
 
 def not_watched_func(x):
-    print('not_watched_func ran')
+    print("not_watched_func ran")
     return x + 1
 
 
@@ -12,16 +12,16 @@ class Foo:
 
     @si.utils.watched_memoize(lambda s: s.w)
     def watched_method(self, x):
-        print('watched_method ran')
+        print("watched_method ran")
         return x + 1
 
     @si.utils.watched_memoize(lambda s: s.w)
     def watched_method_no_args(self):
-        print('watched_method_no_args ran')
-        return 'foo'
+        print("watched_method_no_args ran")
+        return "foo"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(not_watched_func(1))
     print(not_watched_func(2))
     print(not_watched_func(3))
