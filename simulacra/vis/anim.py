@@ -1,4 +1,4 @@
-from pathlib import Path
+import subprocess
 from typing import Callable
 
 from tqdm import tqdm
@@ -86,18 +86,18 @@ def xyt_plot(
         y_func_kwargs = _y_func_kwargs
 
         x_unit_value, x_unit_tex = u.get_unit_value_and_latex_from_unit(x_unit)
-        x_unit_label = get_unit_str_for_axis_label(x_unit)
+        x_unit_label = _get_unit_str_for_axis_label(x_unit)
 
         y_unit_value, y_unit_tex = u.get_unit_value_and_latex_from_unit(y_unit)
-        y_unit_label = get_unit_str_for_axis_label(y_unit)
+        y_unit_label = _get_unit_str_for_axis_label(y_unit)
 
         t_unit_value, t_unit_tex = u.get_unit_value_and_latex_from_unit(t_unit)
         t_unit_label = t_unit_tex
 
-        attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, direction="v")
-        attach_h_or_v_lines(ax, hlines, hline_kwargs, unit=y_unit, direction="h")
+        _attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, direction="v")
+        _attach_h_or_v_lines(ax, hlines, hline_kwargs, unit=y_unit, direction="h")
 
-        x_lower_limit, x_upper_limit = set_axis_limits_and_scale(
+        x_lower_limit, x_upper_limit = _set_axis_limits_and_scale(
             ax,
             x_data,
             lower_limit=x_lower_limit,
@@ -108,7 +108,7 @@ def xyt_plot(
             unit=x_unit,
             direction="x",
         )
-        y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
+        y_lower_limit, y_upper_limit = _set_axis_limits_and_scale(
             ax,
             *(
                 y_func(x_data, t, **y_kwargs)
@@ -145,11 +145,11 @@ def xyt_plot(
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
         if x_unit == "rad":
-            ticks, labels = get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
+            ticks, labels = _get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
             ax.set_xticks(ticks)
             ax.set_xticklabels(labels)
         if y_unit == "rad":
-            ticks, labels = get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
+            ticks, labels = _get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
             ax.set_yticks(ticks)
             ax.set_yticklabels(labels)
 
@@ -387,21 +387,21 @@ def xyzt_plot(
         plt.set_cmap(colormap)
 
         x_unit_value, x_unit_tex = u.get_unit_value_and_latex_from_unit(x_unit)
-        x_unit_label = get_unit_str_for_axis_label(x_unit)
+        x_unit_label = _get_unit_str_for_axis_label(x_unit)
 
         y_unit_value, y_unit_tex = u.get_unit_value_and_latex_from_unit(y_unit)
-        y_unit_label = get_unit_str_for_axis_label(y_unit)
+        y_unit_label = _get_unit_str_for_axis_label(y_unit)
 
         z_unit_value, z_unit_name = u.get_unit_value_and_latex_from_unit(z_unit)
-        z_unit_label = get_unit_str_for_axis_label(z_unit)
+        z_unit_label = _get_unit_str_for_axis_label(z_unit)
 
         t_unit_value, t_unit_tex = u.get_unit_value_and_latex_from_unit(t_unit)
         t_unit_label = t_unit_tex
 
-        attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, direction="v")
-        attach_h_or_v_lines(ax, hlines, hline_kwargs, unit=y_unit, direction="h")
+        _attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, direction="v")
+        _attach_h_or_v_lines(ax, hlines, hline_kwargs, unit=y_unit, direction="h")
 
-        x_lower_limit, x_upper_limit = set_axis_limits_and_scale(
+        x_lower_limit, x_upper_limit = _set_axis_limits_and_scale(
             ax,
             x_mesh,
             lower_limit=x_lower_limit,
@@ -410,7 +410,7 @@ def xyzt_plot(
             unit=x_unit,
             direction="x",
         )
-        y_lower_limit, y_upper_limit = set_axis_limits_and_scale(
+        y_lower_limit, y_upper_limit = _set_axis_limits_and_scale(
             ax,
             y_mesh,
             lower_limit=y_lower_limit,
@@ -421,7 +421,7 @@ def xyzt_plot(
         )
 
         if not isinstance(colormap, colors.RichardsonColormap):
-            z_lower_limit, z_upper_limit = calculate_axis_limits(
+            z_lower_limit, z_upper_limit = _calculate_axis_limits(
                 *(z_func(x_mesh, y_mesh, t, **z_func_kwargs) for t in t_data),
                 lower_limit=z_lower_limit,
                 upper_limit=z_upper_limit,
@@ -465,11 +465,11 @@ def xyzt_plot(
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
         if x_unit == "rad":
-            ticks, labels = get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
+            ticks, labels = _get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
             ax.set_xticks(ticks)
             ax.set_xticklabels(labels)
         if y_unit == "rad":
-            ticks, labels = get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
+            ticks, labels = _get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
             ax.set_yticks(ticks)
             ax.set_yticklabels(labels)
 
@@ -904,3 +904,11 @@ class Animator:
             info.add_info(axis_manager.info())
 
         return info
+
+
+FFMPEG_PROCESS_KWARGS = dict(
+    stdin=subprocess.PIPE,
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
+    bufsize=-1,
+)

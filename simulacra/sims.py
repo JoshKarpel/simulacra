@@ -365,15 +365,7 @@ class Specification(Beet, abc.ABC):
     ) -> str:
         """
         Pickle the :class:`Specification` to a file.
-
-        Parameters
-        ----------
-        target_dir
-            The directory to save the :class:`Specification` to.
-        file_extension
-            The file extension to name the Specification with (for keeping track of things, no actual effect).
-        compressed
-            Whether to compress the Beet using gzip.
+        Keyword arguments are as :method:`Beet.save`.
 
         Returns
         -------

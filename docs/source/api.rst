@@ -175,53 +175,10 @@ Simulacra's utility module provides a wide range of functions for working with a
 .. autoclass:: SuspendProcesses
 
 
-Cluster
--------
-
-.. currentmodule:: simulacra.cluster
-
-Interfacing with a Cluster
-++++++++++++++++++++++++++
-
-Simulacra provides an object-oriented data processing interface that can talk to a cluster, load simulations, and perform analysis on them.
-
-
-.. autoclass:: ClusterInterface
-
-   .. automethod:: cmd
-
-   .. automethod:: remote_path_to_local_path
-
-   .. automethod:: get_file
-
-   .. automethod:: is_file_synced
-
-   .. automethod:: mirror_file
-
-   .. automethod:: walk_remote_path
-
-   .. automethod:: mirror_dir
-
-.. autoclass:: SimulationResult
-
-.. autoclass:: JobProcessor
-
-   .. automethod:: save
-
-   .. automethod:: load
-
-   .. automethod:: load_sims
-
-   .. automethod:: summarize
-
-   .. automethod:: select_by_kwargs
-
-   .. automethod:: select_by_lambda
-
-   .. automethod:: parameter_set
-
 Creating Specifications and Jobs Programmatically
-+++++++++++++++++++++++++++++++++++++++++++++++++
+-------------------------------------------------
+
+.. currentmodule:: si.cluster.job_creation
 
 .. autoclass:: Parameter
 
