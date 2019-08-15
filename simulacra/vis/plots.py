@@ -34,8 +34,6 @@ LEGEND_KWARGS = dict(loc="best")
 
 HVLINE_KWARGS = dict(linestyle="-", color="black")
 
-T_TEXT_KWARGS = dict(fontsize=12)
-
 CONTOUR_KWARGS = dict()
 
 CONTOUR_LABEL_KWARGS = dict(inline=1, fontsize=8)
@@ -566,20 +564,17 @@ def xy_plot(
         ]:
             _maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
 
-        _add_extra_ticks(
-            ax,
-            which="x",
-            extra_ticks=x_extra_ticks,
-            labels=x_extra_tick_labels,
-            unit=x_unit,
-        )
-        _add_extra_ticks(
-            ax,
-            which="y",
-            extra_ticks=y_extra_ticks,
-            labels=y_extra_tick_labels,
-            unit=y_unit,
-        )
+        for which, unit, extra_ticks, extra_tick_labels in [
+            ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
+            ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
+        ]:
+            _add_extra_ticks(
+                ax,
+                which=which,
+                extra_ticks=extra_ticks,
+                labels=extra_tick_labels,
+                unit=unit,
+            )
 
         ax.grid(True, which="major", **grid_kwargs)
         ax.minorticks_on()
@@ -1033,20 +1028,17 @@ def xxyy_plot(
         ]:
             _maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
 
-        _add_extra_ticks(
-            ax,
-            which="x",
-            extra_ticks=x_extra_ticks,
-            labels=x_extra_tick_labels,
-            unit=x_unit,
-        )
-        _add_extra_ticks(
-            ax,
-            which="y",
-            extra_ticks=y_extra_ticks,
-            labels=y_extra_tick_labels,
-            unit=y_unit,
-        )
+        for which, unit, extra_ticks, extra_tick_labels in [
+            ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
+            ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
+        ]:
+            _add_extra_ticks(
+                ax,
+                which=which,
+                extra_ticks=extra_ticks,
+                labels=extra_tick_labels,
+                unit=unit,
+            )
 
         ax.grid(True, which="major", **grid_kwargs)
         if x_log_axis:
@@ -1270,20 +1262,17 @@ def xyz_plot(
         ]:
             _maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
 
-        _add_extra_ticks(
-            ax,
-            which="x",
-            extra_ticks=x_extra_ticks,
-            labels=x_extra_tick_labels,
-            unit=x_unit,
-        )
-        _add_extra_ticks(
-            ax,
-            which="y",
-            extra_ticks=y_extra_ticks,
-            labels=y_extra_tick_labels,
-            unit=y_unit,
-        )
+        for which, unit, extra_ticks, extra_tick_labels in [
+            ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
+            ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
+        ]:
+            _add_extra_ticks(
+                ax,
+                which=which,
+                extra_ticks=extra_ticks,
+                labels=extra_tick_labels,
+                unit=unit,
+            )
 
         if grids:
             ax.grid(grids, which="major", **grid_kwargs)
