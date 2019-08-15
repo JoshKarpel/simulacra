@@ -5,21 +5,22 @@ import numpy as np
 import simulacra as si
 
 
-def test_dict_to_arrays():
-    d = {1: 2, 3: 4, 5: -10}
-    k, v = si.utils.dict_to_arrays(d)
-
-    target_k, target_v = np.array([1, 3, 5]), np.array([2, 4, -10])
-
-    assert np.all(k == target_k)
-    assert np.all(v == target_v)
+@pytest.fixture(scope="function")
+def arr():
+    return np.array([0, 2, 4, 6])
 
 
-def test_dict_to_arrays_with_key():
-    d = {1: 2, 3: 4, 5: -10}
-    k, v = si.utils.dict_to_arrays(d, key=lambda x: -x[0])
+def test_find_nearest_with_target_in_array(arr):
+    index, value, target = si.utils.find_nearest_entry(arr, 4)
 
-    target_k, target_v = np.array([5, 3, 1]), np.array([-10, 4, 2])
+    assert index == 2
+    assert value == 4
+    assert target == 4
 
-    assert np.all(k == target_k)
-    assert np.all(v == target_v)
+
+def test_find_nearest_with_target_not_in_array(arr):
+    index, value, target = si.utils.find_nearest_entry(arr, 3.9)
+
+    assert index == 2
+    assert value == 4
+    assert target == 3.9
