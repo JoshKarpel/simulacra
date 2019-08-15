@@ -1,11 +1,10 @@
-import datetime
+from typing import Iterable
+
 import itertools
-import time
 import logging
 import enum
-from typing import Callable, Iterable, Collection, Any
+import subprocess
 
-from . import timing
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -40,3 +39,29 @@ class StrEnum(str, enum.Enum):
 
     def __str__(self):
         return self.value
+
+
+class SubprocessManager:
+    def __init__(self, cmd_string, **subprocess_kwargs):
+        self.cmd_string = cmd_string
+        self.subprocess_kwargs = subprocess_kwargs
+
+        self.name = self.cmd_string[0]
+
+        self.subprocess = None
+
+    def __enter__(self):
+        self.subprocess = subprocess.Popen(self.cmd_string, **self.subprocess_kwargs)
+
+        logger.debug(f"Opened subprocess {self.name}")
+
+        return self.subprocess
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            self.subprocess.communicate()
+            logger.debug(f"Closed subprocess {self.name}")
+        except AttributeError:
+            logger.warning(
+                f"Exception while trying to close subprocess {self.name}, possibly not closed"
+            )

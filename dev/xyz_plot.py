@@ -4,6 +4,7 @@ import os
 import numpy as np
 
 import simulacra as si
+import simulacra.vis.vutils
 from simulacra.units import *
 
 import matplotlib.pyplot as plt
@@ -44,7 +45,7 @@ if __name__ == "__main__":
                 z_mesh,
                 colormap=plt.get_cmap(cmap_name),
                 contours=[0.5],
-                shading=si.vis.ColormapShader.FLAT,
+                shading=simulacra.vis.vutils.ColormapShader.FLAT,
                 target_dir=OUT_DIR,
             )
 

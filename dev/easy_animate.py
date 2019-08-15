@@ -5,6 +5,7 @@ import sys
 import numpy as np
 
 import simulacra as si
+import simulacra.vis.figman
 
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), "out", FILE_NAME)
@@ -18,7 +19,7 @@ if __name__ == "__main__":
 
         times = np.linspace(0, 10, 1000)
 
-        with si.vis.FigureManager(
+        with simulacra.vis.figman.FigureManager(
             "easy", fig_dpi_scale=3, target_dir=OUT_DIR
         ) as figman:
             fig = figman.fig

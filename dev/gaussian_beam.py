@@ -8,6 +8,8 @@ import simulacra.units as u
 
 import matplotlib.pyplot as plt
 
+import simulacra.vis.vutils
+
 FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
 OUT_DIR = os.path.join(os.getcwd(), "out", FILE_NAME)
 
@@ -61,7 +63,7 @@ if __name__ == "__main__":
             x_unit="um",
             y_unit="um",
             colormap=plt.get_cmap("richardson"),
-            shading=si.vis.ColormapShader.FLAT,
+            shading=simulacra.vis.vutils.ColormapShader.FLAT,
             richardson_equator_magnitude=0.1,
             img_format="png",
             target_dir=OUT_DIR,

@@ -17,7 +17,7 @@ from ..info import Info
 from .. import utils
 from .. import units as u
 
-from . import plots, colors
+from . import colors, vutils, figman
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -61,7 +61,7 @@ def xyt_plot(
     font_size_axis_labels=15,
     font_size_tick_labels=10,
     font_size_legend=12,
-    title_offset=plots.TITLE_OFFSET,
+    title_offset=vutils.DEFAULT_TITLE_OFFSET,
     ticks_on_top=True,
     ticks_on_right=True,
     legend_on_right=False,
@@ -74,20 +74,23 @@ def xyt_plot(
     progress_bar=True,
     **kwargs,
 ):
-    # set up figure and axis
     if figure_manager is None:
-        figure_manager = plots.FigureManager(
+        figure_manager = figman.FigureManager(
             name, save=False, fig_dpi_scale=fig_dpi_scale, **kwargs
         )
     with figure_manager as fm:
         fig = fm.fig
         ax = fig.add_axes([0.15, 0.15, 0.75, 0.7])
 
-        grid_kwargs = collections.ChainMap(grid_kwargs or {}, plots.GRID_KWARGS)
-        minor_grid_kwargs = collections.ChainMap(
-            minor_grid_kwargs or {}, plots.MINOR_GRID_KWARGS
+        grid_kwargs = collections.ChainMap(
+            grid_kwargs or {}, vutils.DEFAULT_GRID_KWARGS
         )
-        legend_kwargs = collections.ChainMap(legend_kwargs or {}, plots.LEGEND_KWARGS)
+        minor_grid_kwargs = collections.ChainMap(
+            minor_grid_kwargs or {}, vutils.DEFAULT_MINOR_GRID_KWARGS
+        )
+        legend_kwargs = collections.ChainMap(
+            legend_kwargs or {}, vutils.DEFAULT_LEGEND_KWARGS
+        )
 
         # ensure data is in numpy arrays
         x_data = np.array(x_data)
@@ -104,18 +107,18 @@ def xyt_plot(
         y_func_kwargs = _y_func_kwargs
 
         x_unit_value, x_unit_tex = u.get_unit_value_and_latex_from_unit(x_unit)
-        x_unit_label = plots._get_unit_str_for_axis_label(x_unit)
+        x_unit_label = vutils.get_unit_str_for_axis_label(x_unit)
 
         y_unit_value, y_unit_tex = u.get_unit_value_and_latex_from_unit(y_unit)
-        y_unit_label = plots._get_unit_str_for_axis_label(y_unit)
+        y_unit_label = vutils.get_unit_str_for_axis_label(y_unit)
 
         t_unit_value, t_unit_tex = u.get_unit_value_and_latex_from_unit(t_unit)
         t_unit_label = t_unit_tex
 
-        plots._attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, direction="v")
-        plots._attach_h_or_v_lines(ax, hlines, hline_kwargs, unit=y_unit, direction="h")
+        vutils.attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, direction="v")
+        vutils.attach_h_or_v_lines(ax, hlines, hline_kwargs, unit=y_unit, direction="h")
 
-        x_lower_limit, x_upper_limit = plots._set_axis_limits_and_scale(
+        x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
             ax,
             x_data,
             lower_limit=x_lower_limit,
@@ -126,7 +129,7 @@ def xyt_plot(
             unit=x_unit,
             direction="x",
         )
-        y_lower_limit, y_upper_limit = plots._set_axis_limits_and_scale(
+        y_lower_limit, y_upper_limit = vutils.set_axis_limits_and_scale(
             ax,
             *(
                 y_func(x_data, t, **y_kwargs)
@@ -163,11 +166,11 @@ def xyt_plot(
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
         if x_unit == "rad":
-            ticks, labels = plots._get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
+            ticks, labels = vutils.get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
             ax.set_xticks(ticks)
             ax.set_xticklabels(labels)
         if y_unit == "rad":
-            ticks, labels = plots._get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
+            ticks, labels = vutils.get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
             ax.set_yticks(ticks)
             ax.set_yticklabels(labels)
 
@@ -381,14 +384,16 @@ def xyzt_plot(
 ):
     # set up figure and axis
     if figure_manager is None:
-        figure_manager = plots.FigureManager(name, save=False, **kwargs)
+        figure_manager = figman.FigureManager(name, save=False, **kwargs)
     with figure_manager as fm:
         fig = fm.fig
         ax = fig.add_axes([0.15, 0.15, 0.75, 0.7])
 
-        grid_kwargs = collections.ChainMap(grid_kwargs or {}, plots.GRID_KWARGS)
+        grid_kwargs = collections.ChainMap(
+            grid_kwargs or {}, vutils.DEFAULT_GRID_KWARGS
+        )
         minor_grid_kwargs = collections.ChainMap(
-            minor_grid_kwargs or {}, plots.MINOR_GRID_KWARGS
+            minor_grid_kwargs or {}, vutils.DEFAULT_MINOR_GRID_KWARGS
         )
 
         # TODO: implement contours for xyzt plot
@@ -405,25 +410,25 @@ def xyzt_plot(
         plt.set_cmap(colormap)
 
         x_unit_value, x_unit_tex = u.get_unit_value_and_latex_from_unit(x_unit)
-        x_unit_label = plots._get_unit_str_for_axis_label(x_unit)
+        x_unit_label = vutils.get_unit_str_for_axis_label(x_unit)
 
         y_unit_value, y_unit_tex = u.get_unit_value_and_latex_from_unit(y_unit)
-        y_unit_label = plots._get_unit_str_for_axis_label(y_unit)
+        y_unit_label = vutils.get_unit_str_for_axis_label(y_unit)
 
         z_unit_value, z_unit_name = u.get_unit_value_and_latex_from_unit(z_unit)
-        z_unit_label = plots._get_unit_str_for_axis_label(z_unit)
+        z_unit_label = vutils.get_unit_str_for_axis_label(z_unit)
 
         t_unit_value, t_unit_tex = u.get_unit_value_and_latex_from_unit(t_unit)
         t_unit_label = t_unit_tex
 
-        plots._attach_h_or_v_lines(
+        vutils.attach_h_or_v_lines(
             ax,
             direction="v",
             line_positions=vlines,
             line_kwargs=vline_kwargs,
             unit=x_unit,
         )
-        plots._attach_h_or_v_lines(
+        vutils.attach_h_or_v_lines(
             ax,
             direction="h",
             line_positions=hlines,
@@ -431,7 +436,7 @@ def xyzt_plot(
             unit=y_unit,
         )
 
-        x_lower_limit, x_upper_limit = plots._set_axis_limits_and_scale(
+        x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
             ax,
             x_mesh,
             lower_limit=x_lower_limit,
@@ -440,7 +445,7 @@ def xyzt_plot(
             unit=x_unit,
             direction="x",
         )
-        y_lower_limit, y_upper_limit = plots._set_axis_limits_and_scale(
+        y_lower_limit, y_upper_limit = vutils.set_axis_limits_and_scale(
             ax,
             y_mesh,
             lower_limit=y_lower_limit,
@@ -451,7 +456,7 @@ def xyzt_plot(
         )
 
         if not isinstance(colormap, colors.RichardsonColormap):
-            z_lower_limit, z_upper_limit = plots._calculate_axis_limits(
+            z_lower_limit, z_upper_limit = vutils.calculate_axis_limits(
                 *(z_func(x_mesh, y_mesh, t, **z_func_kwargs) for t in t_data),
                 lower_limit=z_lower_limit,
                 upper_limit=z_upper_limit,
@@ -482,7 +487,7 @@ def xyzt_plot(
         # make title, axis labels, and legend
         if title is not None:
             title = ax.set_title(r"{}".format(title), fontsize=font_size_title)
-            title.set_y(plots.TITLE_OFFSET)  # move title up a little
+            title.set_y(vutils.DEFAULT_TITLE_OFFSET)  # move title up a little
         if x_label is not None:
             x_label = ax.set_xlabel(
                 r"{}".format(x_label) + x_unit_label, fontsize=font_size_axis_labels
@@ -495,11 +500,11 @@ def xyzt_plot(
         fig.canvas.draw()  # draw that figure so that the ticks exist, so that we can add more ticks
 
         if x_unit == "rad":
-            ticks, labels = plots._get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
+            ticks, labels = vutils.get_pi_ticks_and_labels(x_lower_limit, x_upper_limit)
             ax.set_xticks(ticks)
             ax.set_xticklabels(labels)
         if y_unit == "rad":
-            ticks, labels = plots._get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
+            ticks, labels = vutils.get_pi_ticks_and_labels(y_lower_limit, y_upper_limit)
             ax.set_yticks(ticks)
             ax.set_yticklabels(labels)
 
@@ -603,7 +608,7 @@ def xyzt_plot(
 
                 z = z_func(x_mesh, y_mesh, t, **z_func_kwargs)
 
-                if shading == plots.ColormapShader.FLAT:
+                if shading == vutils.ColormapShader.FLAT:
                     z = z[:-1, :-1]
 
                 colormesh.set_array(z.ravel())
@@ -640,7 +645,7 @@ def xyzt_plot(
 
 
 def animate(
-    figure_manager: plots.FigureManager,
+    figure_manager: figman.FigureManager,
     update_function: Callable,
     update_function_arguments,
     artists=None,
