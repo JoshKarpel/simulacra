@@ -1,3 +1,6 @@
+import logging
+from typing import Optional, Type
+
 import datetime
 import gzip
 import pickle
@@ -5,11 +8,8 @@ import uuid
 from copy import deepcopy
 from pathlib import Path
 import abc
-from typing import Optional, Union, Type
 
-import logging
-import os
-from simulacra.info import Info
+from .info import Info
 
 from . import utils
 
@@ -23,58 +23,41 @@ class Beet:
     """
     A class that provides an easy interface for pickling and unpickling instances.
 
-    Beets can be compared and hashed based on their :class:`Beet.uuid` value.
-
-    Attributes
-    ----------
-    uuid
-        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Beet`.
+    Beets can be compared and hashed based on their :attribute:`Beet.uuid` value.
     """
 
-    def __init__(self, name: str, file_name: Optional[str] = None):
+    def __init__(self, name: str):
         """
         Parameters
         ----------
         name
-            The internal name of the :class:`Beet`.
-        file_name
-            The desired external name of the :class:`Beet`.
-            Automatically derived from ``name`` if ``None``.
-            Either way, illegal characters are stripped and spaces are replaced with underscores.
+            The name of the :class:`Beet`.
         """
         self.name = str(name)
-        if file_name is None:
-            file_name = self.name
+        self._uuid = uuid.uuid4()
 
-        file_name_stripped = utils.strip_illegal_characters(
-            str(file_name).replace(" ", "_")
-        )
-        if file_name_stripped != file_name:
-            logger.warning(
-                "Using file name {} instead of {} for {}".format(
-                    file_name_stripped, file_name, self.name
-                )
-            )
-        self.file_name = file_name_stripped
-
-        self.initialized_at = datetime.datetime.utcnow()
-        self.uuid = uuid.uuid4()
-
-        logger.info("Initialized {}".format(repr(self)))
+    @property
+    def uuid(self) -> uuid.UUID:
+        """
+        A `UUID <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_
+        for the :class:`Beet`.
+        """
+        return self._uuid
 
     def __eq__(self, other: "Beet"):
         """Two Beets are equal if they have the same UUID."""
-        return isinstance(other, self.__class__) and self.uuid == other.uuid
+        return isinstance(other, self.__class__) and self._uuid == other._uuid
 
     def __hash__(self):
         """The hash of the Beet is the hash of its UUID."""
-        return hash(self.uuid)
+        return hash(self._uuid)
 
     def clone(self, **kwargs) -> "Beet":
         """
         Return a deepcopy of the :class:`Beet`.
 
-        If any kwargs are passed, they will be interpreted as key-value pairs and ``clone`` will try to :func:`setattr` them on the new Beet.
+        If any kwargs are passed, they will be interpreted as key-value pairs
+        and ``clone`` will try to :func:`setattr` them on the new Beet.
 
         The new :class:`Beet` will have a different UUID.
 
@@ -90,46 +73,41 @@ class Beet:
         """
         new_beet = deepcopy(self)
         new_beet.__dict__.update(kwargs)
-        new_beet.uuid = uuid.uuid4()
+        new_beet._uuid = uuid.uuid4()
 
         return new_beet
 
-    def save(self, target_dir: Optional[Path] = None, compressed: bool = True) -> Path:
+    def save(self, target_dir: Optional[Path] = None) -> Path:
         """
-        Atomically pickle the :class:`Beet` to a file.
+        Atomically save the :class:`Beet` to a file.
 
         Parameters
         ----------
-        target_dir : :class:`str`
+        target_dir
             The directory to save the Beet to.
-        compressed : :class:`bool`
-            Whether to compress the Beet using gzip.
 
         Returns
         -------
         path :
             The path to the saved :class:`Beet`.
         """
-        if target_dir is None:
-            target_dir = Path.cwd()
-
-        path = Path(target_dir).absolute() / f"{self.file_name}.{SIM_FILE_EXTENSION}"
-        working_path = path.with_name(f"{path.name}.working")
+        target_dir = Path(target_dir or Path.cwd())
+        final_path = target_dir.absolute() / f"{self.name}.{SIM_FILE_EXTENSION}"
+        working_path = final_path.with_name(f"{final_path.name}.working")
 
         utils.ensure_parents_exist(working_path)
 
-        op = gzip.open if compressed else open
-        with op(working_path, mode="wb") as file:
+        with gzip.open(working_path, mode="wb") as file:
             pickle.dump(self, file, protocol=-1)
 
-        os.replace(working_path, path)
+        working_path.rename(final_path)
 
-        logger.debug(f"Saved {self} to {path}")
+        logger.debug(f"Saved {self} to {final_path}")
 
-        return path
+        return final_path
 
     @classmethod
-    def load(cls, path: str) -> "Beet":
+    def load(cls, path: Path) -> "Beet":
         """
         Load a Beet from `file_path`.
 
@@ -140,35 +118,22 @@ class Beet:
 
         Returns
         -------
-        :class:`Beet`
+        beet :
             The loaded Beet.
         """
-        path = Path(path)
-        try:
-            with gzip.open(path, mode="rb") as file:
-                beet = pickle.load(file)
-        except OSError:  # file is not gzipped
-            with path.open(mode="rb") as file:
-                beet = pickle.load(file)
+        with gzip.open(path, mode="rb") as file:
+            beet = pickle.load(file)
 
         logger.debug(f"Loaded {beet} from {path}")
 
         return beet
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(name = '{self.name}', file_name = '{self.file_name}', uuid = {self.uuid})"
-
-    def __str__(self):
-        if self.name != self.file_name:
-            return (
-                f"{self.__class__.__name__}({self.name}, file_name = {self.file_name})"
-            )
-        else:
-            return f"{self.__class__.__name__}({self.name})"
+        return f"{self.__class__.__name__}(name = '{self.name}', uuid = {self._uuid})"
 
     def info(self) -> Info:
         info = Info(header=str(self))
-        info.add_field("UUID", self.uuid)
+        info.add_field("UUID", self._uuid)
 
         return info
 
@@ -189,13 +154,6 @@ class Simulation(Beet, abc.ABC):
     It should be subclassed and customized for each variety of simulation.
 
     Simulations should generally be instantiated using Specification.to_sim() to avoid possible mismatches.
-
-    Attributes
-    ----------
-    uuid
-        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Simulation`.
-    status : Status
-        The status of the Simulation.
     """
 
     def __init__(self, spec):
@@ -205,27 +163,27 @@ class Simulation(Beet, abc.ABC):
         spec
             The :class:`Specification` for the Simulation.
         """
-        super().__init__(spec.name, file_name=spec.file_name)
+        super().__init__(spec.name)
         self.spec = spec
 
-        # diagnostic data
-        self.runs = 0
-        self.init_time = None
-        self.start_time = None
-        self.end_time = None
-        self.elapsed_time = None
-        self.latest_run_time = None
-        self.running_time = datetime.timedelta()
+        self.runs: int = 0
+        self.init_time: Optional[datetime.datetime] = None
+        self.start_time: Optional[datetime.datetime] = None
+        self.end_time: Optional[datetime.datetime] = None
+        self.elapsed_time: Optional[datetime.timedelta] = None
+        self.latest_run_time: Optional[datetime.datetime] = None
+        self.running_time: datetime.timedelta = datetime.timedelta()
 
         self._status = Status.UNINITIALIZED
         self.status = Status.INITIALIZED
 
     @property
     def status(self) -> Status:
+        """The current state of the simulation."""
         return self._status
 
     @status.setter
-    def status(self, status: Status):
+    def status(self, new_status: Status):
         """
         Set the status of the :class:`Simulation`.
 
@@ -233,67 +191,50 @@ class Simulation(Beet, abc.ABC):
 
         Parameters
         ----------
-        status
+        new_status
             The new status for the :class:`Simulation`.
         """
-        if not isinstance(status, Status):
-            raise TypeError(f"{status} is not a member of Status")
+        if not isinstance(new_status, Status):
+            raise TypeError(f"{new_status} is not a member of Status")
 
-        if status is self.status:
+        if new_status is self.status:
             return
 
         old_status = self.status
         now = datetime.datetime.utcnow()
 
-        if status == Status.INITIALIZED:
+        if new_status == Status.INITIALIZED:
             self.init_time = now
-        elif status == Status.RUNNING:
+        elif new_status == Status.RUNNING:
             if self.start_time is None:
                 self.start_time = now
             self.latest_run_time = now
             self.runs += 1
-        elif status == Status.PAUSED:
+        elif new_status == Status.PAUSED:
             if self.latest_run_time is not None:
                 self.running_time += now - self.latest_run_time
-        elif status == Status.FINISHED:
+        elif new_status == Status.FINISHED:
             if self.latest_run_time is not None:
                 self.running_time += now - self.latest_run_time
             self.end_time = now
             self.elapsed_time = self.end_time - self.init_time
 
-        self._status = status
+        self._status = new_status
 
         logger.debug(f"{self} status changed to {self.status} from {old_status}")
 
-    def save(self, target_dir: Optional[Path] = None, **kwargs) -> Path:
-        """
-        Atomically pickle the :class:`Simulation` to a file.
-
-        Parameters
-        ----------
-        target_dir
-            The directory to save the :class:`Simulation` to.
-
-        Returns
-        -------
-        path :
-            The path to the saved Simulation.
-        """
-        return Path(super().save(target_dir=target_dir, **kwargs))
-
     @abc.abstractmethod
-    def run(self):
+    def run(self, **kwargs):
         """Hook method for running the Simulation, whatever that may entail."""
         raise NotImplementedError
 
-    def __str__(self):
+    def __repr__(self):
         return super().__str__() + f" {{{self.status}}}"
 
     def info(self) -> Info:
-        """Return a string describing the parameters of the Simulation and its associated Specification."""
         info = super().info()
 
-        info.add_field("UUID", self.uuid)
+        info.add_field("UUID", self._uuid)
 
         info_diag = Info(header=f"Status: {self.status}")
         info_diag.add_field("Initialization Time", self.init_time)
@@ -311,35 +252,34 @@ class Specification(Beet, abc.ABC):
     """
     A class that contains the information necessary to run a simulation.
 
-    It should be subclassed for each type of simulation and all additional information necessary to run that kind of simulation should be added via keyword arguments.
+    It should be subclassed for each type of simulation and all additional
+    information necessary to run that kind of simulation should be added via
+    keyword arguments.
 
     Any number of additional keyword arguments can be passed to the constructor.
-    They will be stored as attributes if they don't conflict with any attributes already set.
+    They will be stored as attributes if they don't conflict with any attributes
+    already set.
 
     Attributes
     ----------
     simulation_type
-        A class attribute which determines what kind of :class:`Simulation` will be generated via :func:`Specification.to_sim`.
-    uuid
-        A `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ for the :class:`Specification`.
+        A class attribute which determines what kind of :class:`Simulation` will
+        be generated via :func:`Specification.to_sim`.
+        Should be overridden in concrete subclasses.
     """
 
     simulation_type: Type[Simulation] = Simulation
 
-    def __init__(self, name: str, file_name: Optional[str] = None, **kwargs):
+    def __init__(self, name: str, **kwargs):
         """
         Parameters
         ----------
-        name : :class:`str`
+        name
             The internal name of the Specification.
-        file_name : :class:`str`
-            The desired external name of the Specification.
-            Automatically derived from `name` if ``None`` is passed.
-            Illegal characters are stripped before use, and spaces are replaced with underscores.
         kwargs
             Any number of keyword arguments, which will be stored as attributes.
         """
-        super().__init__(name, file_name=file_name)
+        super().__init__(name)
 
         self._extra_attr_keys = list()
 
@@ -347,18 +287,6 @@ class Specification(Beet, abc.ABC):
             setattr(self, k, v)
             self._extra_attr_keys.append(k)
             logger.debug("{} stored additional attribute {} = {}".format(self, k, v))
-
-    def save(self, target_dir: Optional[str] = None, **kwargs) -> str:
-        """
-        Pickle the :class:`Specification` to a file.
-        Keyword arguments are as :method:`Beet.save`.
-
-        Returns
-        -------
-        path
-            The path to the saved :class:`Specification`.
-        """
-        return super().save(target_dir=target_dir, **kwargs)
 
     def to_sim(self):
         """Return a :class:`Simulation` of the type associated with the :class:`Specification` type, generated from this instance."""
@@ -377,15 +305,14 @@ class Specification(Beet, abc.ABC):
 
         return info
 
-    def copy(self):
-        return deepcopy(self)
-
 
 def find_or_init_sim_from_spec(
     spec: Specification, search_dir: Optional[Path] = None
 ) -> Simulation:
     """
-    Try to load a :class:`simulacra.Simulation` by looking for a pickled :class:`simulacra.core.Simulation` named ``{search_dir}/{spec.file_name}.sim``.
+    Try to load a :class:`simulacra.Simulation` by looking for a pickled
+    :class:`simulacra.core.Simulation` named
+    ``{search_dir}/{spec.file_name}.sim``.
     If that fails, create a new Simulation from `spec`.
 
     Parameters
@@ -396,11 +323,11 @@ def find_or_init_sim_from_spec(
         The directory to look for the simulation in.
     Returns
     -------
-    sim
+    sim :
         The simulation, either loaded or initialized.
     """
     search_dir = Path(search_dir or Path.cwd())
-    path = search_dir / f"{spec.file_name}.{SIM_FILE_EXTENSION}"
+    path = search_dir / f"{spec.name}.{SIM_FILE_EXTENSION}"
     try:
         sim = Simulation.load(path=path)
     except FileNotFoundError:
@@ -409,7 +336,28 @@ def find_or_init_sim_from_spec(
     return sim
 
 
-def run_from_cache(spec, cache_dir: Optional[Path] = None, **kwargs):
+def run_from_cache(spec, cache_dir: Optional[Path] = None, **kwargs) -> Simulation:
+    """
+    Runs simulations from a cache, which is a directory where simulations are
+    stored. If a simulation with the same name as the ``spec`` is in the cache,
+    it will be loaded, run if it is not finished, and returned. If not, a new
+    simulation will be created using the ``spec`` and run.
+
+    Parameters
+    ----------
+    spec
+        The specification to use as a template for the simulation.
+    cache_dir
+        The path to the cache directory.
+    kwargs
+        Additional keyword arguments are passed to the simulation's
+        :method:`Simulation.run` method.
+
+    Returns
+    -------
+    sim :
+        The completed simulation.
+    """
     sim = find_or_init_sim_from_spec(spec, search_dir=cache_dir)
 
     if sim.status != Status.FINISHED:
