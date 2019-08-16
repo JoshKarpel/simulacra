@@ -1,5 +1,5 @@
-from typing import Callable
 import logging
+from typing import Callable, Tuple
 
 import numpy as np
 import numpy.random as rand
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def rand_phase(shape_tuple):
+def rand_phase(shape_tuple: Tuple[int]) -> np.array:
     """Return random phases (0 to 2pi) in the specified shape."""
     return rand.random_sample(shape_tuple) * u.twopi
 
@@ -32,13 +32,19 @@ class SphericalHarmonic:
         l
             Orbital angular momentum "quantum number". Must be >= 0.
         m
-            Azimuthal angular momentum "quantum number". Must have ``abs(m) <= l``.
+            Azimuthal angular momentum "quantum number". Must have
+            ``abs(m) <= l``.
         """
-        self._l = l
+        if not l >= 0:
+            raise exceptions.IllegalSphericalHarmonic(
+                f"invalid spherical harmonic: l = {l} must be greater than or equal to 0"
+            )
         if not abs(m) <= l:
             raise exceptions.IllegalSphericalHarmonic(
                 f"invalid spherical harmonic: |m| = {abs(m)} must be less than l = {l}"
             )
+
+        self._l = l
         self._m = m
 
     @property
@@ -49,11 +55,11 @@ class SphericalHarmonic:
     def m(self) -> int:
         return self._m
 
-    def __str__(self):
-        return f"Y_({self.l},{self.m})"
-
     def __repr__(self):
         return f"{self.__class__.__name__}(l={self.l}, m={self.m})"
+
+    def __str__(self):
+        return f"Y_({self.l},{self.m})"
 
     @property
     def latex(self) -> str:
@@ -61,26 +67,27 @@ class SphericalHarmonic:
         return fr"Y_{{{self.m}}}^{{{self.l}}}"
 
     @property
-    def _lm(self):
+    def lm(self):
+        """The tuple (l, m) for this spherical harmonic."""
         return self.l, self.m
 
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self._lm == other._lm
-
     def __hash__(self):
-        return hash(self._lm)
+        return hash((self.__class__, self.lm))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.lm == other.lm
 
     def __le__(self, other):
-        return self._lm <= other._lm
+        return self.lm <= other.lm
 
     def __ge__(self, other):
-        return self._lm >= other._lm
+        return self.lm >= other.lm
 
     def __lt__(self, other):
-        return self._lm < other._lm
+        return self.lm < other.lm
 
     def __gt__(self, other):
-        return self._lm > other._lm
+        return self.lm > other.lm
 
     def __call__(self, theta, phi=0):
         """
@@ -88,14 +95,14 @@ class SphericalHarmonic:
 
         Parameters
         ----------
-        theta : :class:`float`
+        theta
             The polar coordinate.
-        phi : :class:`float`
+        phi
             The azimuthal coordinate.
 
         Returns
         -------
-        :class:`float`
+        val :
             The value of the spherical harmonic evaluated at (`theta`, `phi`).
         """
         return special.sph_harm(self.m, self.l, phi, theta)

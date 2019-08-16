@@ -2,7 +2,7 @@ import itertools
 import logging
 from copy import deepcopy
 import textwrap
-from typing import Any, Optional, Type, Union, List, Collection, Dict
+from typing import Any, Optional, Type, Union, List, Collection, Dict, Tuple
 
 # these imports need to be here so that ask_for_eval works
 import numpy as np
@@ -21,11 +21,13 @@ class Parameter:
         Parameters
         ----------
         name
-            The name of the Parameter, which should match a keyword argument of the target :class:`Specification`.
+            The name of the Parameter, which should match a keyword argument of
+            the target :class:`Specification`.
         value
             The value of the Parameter, or an iterable of values.
         expandable
-            If True, :func:`expand_parameters` will expand along an iterable `value`.
+            If ``True``, :func:`expand_parameters` will expand along an iterable
+             `value`.
         """
         self.name = name
         self.value = value
@@ -46,10 +48,13 @@ class Parameter:
 
 def expand_parameters(parameters: Collection[Parameter]) -> List[Dict[str, Any]]:
     """
-    Expand an iterable of :class:`Parameter` to a list of dictionaries containing all of the combinations of parameter values.
+    Expand an iterable of :class:`Parameter` to a list of dictionaries
+    containing all of the combinations of parameter values.
     Each of these dictionaries can then be unpacked into a :class:`Specification`.
 
-    If a :class:`Parameter` has ``expandable = True``, it will be expanded across the values in the outermost iterable in that :class:`Parameter`'s ``value``.
+    If a :class:`Parameter` has ``expandable = True``, it will be expanded
+    across the values in the outermost iterable in that :class:`Parameter`'s
+    ``value``.
 
     Parameters
     ----------
@@ -58,27 +63,21 @@ def expand_parameters(parameters: Collection[Parameter]) -> List[Dict[str, Any]]
 
     Returns
     -------
-    parameter_combinations
+    expanded_parameters :
         An list of dictionaries containing all of the combinations of parameters.
     """
-    dicts = [{}]
+    expanded = [{}]
 
     for par in parameters:
-        # make sure the value is an iterable that isn't a string and has a length
-        if (
-            par.expandable
-            and hasattr(par.value, "__iter__")
-            and not isinstance(par.value, str)
-            and hasattr(par.value, "__len__")
-        ):
-            dicts = [deepcopy(d) for d in dicts for _ in range(len(par.value))]
-            for d, v in zip(dicts, itertools.cycle(par.value)):
+        if par.expandable:
+            expanded = [deepcopy(d) for d in expanded for _ in range(len(par.value))]
+            for d, v in zip(expanded, itertools.cycle(par.value)):
                 d[par.name] = v
         else:
-            for d in dicts:
+            for d in expanded:
                 d[par.name] = par.value
 
-    return dicts
+    return expanded
 
 
 def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> Any:
@@ -98,39 +97,41 @@ def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> An
     -------
 
     """
-    input_str = input(question + " [Default: {}] > ".format(default))
+    while True:
+        input_str = input(question + " [Default: {}] > ".format(default))
 
-    trimmed = input_str.replace(" ", "")
-    if trimmed == "":
-        return default
+        trimmed = input_str.replace(" ", "")
+        if trimmed == "":
+            return default
 
-    try:
-        out = cast_to(trimmed)
-    except Exception as e:
-        print(e)
-        return ask_for_input(question, default=default, cast_to=cast_to)
-
-    logger.debug('Got input from stdin for question "{}": {}'.format(question, out))
-
-    return out
+        try:
+            return cast_to(trimmed)
+        except Exception as e:
+            print(e)
 
 
 def ask_for_choices(
-    question: str, choices: Dict[str, Any], default: Optional[str] = None
+    question: str,
+    choices: Union[Tuple[str], Dict[str, Any]],
+    default: Optional[str] = None,
 ):
     if default is None:
         default = list(choices.keys())[0]
-    while True:
-        try:
-            answer = ask_for_input(
-                question + f' [{" | ".join(choices)}]', default=default
-            )
-            choice = choices[answer]
-            break
-        except KeyError:
-            print(f"{answer} is not a valid choice")
 
-    return choice
+    while True:
+        answer = ask_for_input(question + f' [{" | ".join(choices)}]', default=default)
+        if answer not in choices:
+            print(f"{answer} is not a valid choice, try again")
+            continue
+
+        try:
+            return choices[answer]
+        except KeyError:
+            return answer
+
+
+TRUE_ANSWERS = ("true", "t", "yes", "y", "1", "on", True)
+FALSE_ANSWERS = ("false", "f", "no", "n", "0", "off", False)
 
 
 def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
@@ -142,36 +143,29 @@ def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
 
     Parameters
     ----------
-    question : :class:`str`
+    question
         A string to display on the command prompt for the user.
-    default : :class:`str`
+    default
         The default answer to the question.
 
     Returns
     -------
-    answer
+    answer :
         The input, interpreted as a boolean.
     """
-    try:
+    while True:
         input_str = input(question + " [Default: {}] > ".format(default))
 
         trimmed = input_str.replace(" ", "").lower()
         if trimmed == "":
             trimmed = default
 
-        logger.debug(
-            'Got input from stdin for question "{}": {}'.format(question, input_str)
-        )
-
-        if trimmed in ("true", "t", "yes", "y", "1", "on", True):
+        if trimmed in TRUE_ANSWERS:
             return True
-        elif trimmed in ("false", "f", "no", "n", "0", "off", False):
+        elif trimmed in FALSE_ANSWERS:
             return False
         else:
-            raise ValueError('Invalid answer to question "{}"'.format(question))
-    except Exception as e:
-        print(e)
-        return ask_for_bool(question, default=default)
+            print(f"Answer could not be interpreted as a boolean, try again")
 
 
 def ask_for_eval(question: str, default: str = "None") -> Any:
@@ -198,18 +192,14 @@ def ask_for_eval(question: str, default: str = "None") -> Any:
     answer
 
     """
-    input_str = input(question + " [Default: {}] (eval) > ".format(default))
+    while True:
+        input_str = input(question + " [Default: {}] (eval) > ".format(default))
 
-    trimmed = input_str.replace(" ", "")
-    if trimmed == "":
-        input_str = str(default)
+        trimmed = input_str.replace(" ", "")
+        if trimmed == "":
+            input_str = str(default)
 
-    logger.debug(
-        'Got input from stdin for question "{}": {}'.format(question, input_str)
-    )
-
-    try:
-        return eval(input_str)
-    except Exception as e:
-        print(e)
-        return ask_for_eval(question, default=default)
+        try:
+            return eval(input_str)
+        except Exception as e:
+            print(e)
