@@ -54,3 +54,27 @@ def test_ask_for_eval_with_units(mocker):
     mocker.patch("simulacra.parameters.input", return_value="10 * u.THz")
 
     assert si.ask_for_eval("?") == 10 * si.units.THz
+
+
+def test_ask_for_choices_with_tuple(mocker):
+    mocker.patch("simulacra.parameters.input", return_value="b")
+
+    assert si.ask_for_choices("?", choices=("a", "b", "c")) == "b"
+
+
+def test_ask_for_choices_with_dict(mocker):
+    mocker.patch("simulacra.parameters.input", return_value="b")
+
+    assert si.ask_for_choices("?", choices={"a": 0, "b": 1, "c": 2}) == 1
+
+
+def test_ask_for_choices_with_tuple_default(mocker):
+    mocker.patch("simulacra.parameters.input", return_value="")
+
+    assert si.ask_for_choices("?", choices=("a", "b", "c")) == "a"
+
+
+def test_ask_for_choices_with_dict_default(mocker):
+    mocker.patch("simulacra.parameters.input", return_value="")
+
+    assert si.ask_for_choices("?", choices={"a": 0, "b": 1, "c": 2}) == 0

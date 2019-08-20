@@ -112,11 +112,11 @@ def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> An
 
 def ask_for_choices(
     question: str,
-    choices: Union[Tuple[str], Dict[str, Any]],
+    choices: Union[Tuple[str, ...], Dict[str, Any]],
     default: Optional[str] = None,
 ):
     if default is None:
-        default = list(choices.keys())[0]
+        default = list(choices)[0]
 
     while True:
         answer = ask_for_input(question + f' [{" | ".join(choices)}]', default=default)
@@ -126,12 +126,14 @@ def ask_for_choices(
 
         try:
             return choices[answer]
-        except KeyError:
+        except TypeError:
             return answer
+        except Exception as e:
+            print(e)
 
 
-TRUE_ANSWERS = ("true", "t", "yes", "y", "1", "on", True)
-FALSE_ANSWERS = ("false", "f", "no", "n", "0", "off", False)
+TRUE_ANSWERS = {"true", "t", "yes", "y", "1", "on", True}
+FALSE_ANSWERS = {"false", "f", "no", "n", "0", "off", False}
 
 
 def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
