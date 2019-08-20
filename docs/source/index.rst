@@ -9,7 +9,10 @@ It is focused on producing portable simulations that can be easily run on remote
 
 
 :doc:`tutorial`
-   A brief tutorial in using Simulacra.
+   Tutorials on Simulacra's basic features.
+
+:doc:`philosophy`
+   Why are :class:`Specification` and :class:`Simulation` distinct?
 
 :doc:`api`
    Complete-ish API documentation.
@@ -17,8 +20,8 @@ It is focused on producing portable simulations that can be easily run on remote
 :doc:`faq`
    These questions are asked, sometimes frequently.
 
-:doc:`changelog`
-   Change logs going back to the initial release.
+:doc:`version-history`
+   New features, bug fixes, and known issues by version.
 
 Indices
 =======
@@ -31,7 +34,8 @@ Indices
    :maxdepth: 2
 
    self
-   tutorial
+   tutorials
+   philosophy
    api
    faq
    changelog

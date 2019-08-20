@@ -1,18 +1,13 @@
-Tutorial
-========
+Basic Visualization
+===================
 
-.. currentmodule:: simulacra
+.. currentmodule:: simulacra.vis
 
-Visualization Tools
--------------------
+Simulacra provides a high-level interface for quickly producing line and heatmap
+plots. They are generally not going to be of production-level quality, but they
+provide powerful shortcuts for exploratory work.
 
-The simplest and least-integrated way to use Simulacra is to use its visualization tools.
-The tools come in two parts:
-
-- A high-level interface for quickly producing line and heatmap plots with many features, either static or animated.
-- A low-level interface for generating correctly-sized figures, setting axis options, etc.
-
-Let's work with the high-level interface first and make a simple line plot.
+Let's start by making a simple line plot.
 
 ::
 
