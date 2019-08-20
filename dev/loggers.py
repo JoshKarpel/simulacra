@@ -15,14 +15,14 @@ logger.setLevel(logging.DEBUG)
 
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setLevel(logging.DEBUG)
-stdout_handler.setFormatter(si.utils.LOG_FORMATTER)
+stdout_handler.setFormatter(si.utils.DEFAULT_LOG_FORMATTER)
 logger.addHandler(stdout_handler)
 
 file_handler = logging.FileHandler(
     os.path.join(OUT_DIR, "{}.log".format(FILE_NAME)), mode="w"
 )
 file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(si.utils.LOG_FORMATTER)
+file_handler.setFormatter(si.utils.DEFAULT_LOG_FORMATTER)
 logger.addHandler(file_handler)
 
 if __name__ == "__main__":

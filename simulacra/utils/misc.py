@@ -1,34 +1,12 @@
-from typing import Iterable
-
-import itertools
 import logging
+from typing import List
+
 import enum
 import subprocess
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-def grouper(iterable: Iterable, n: int, fill_value=None) -> Iterable:
-    """
-
-    Parameters
-    ----------
-    iterable
-        An iterable to chunk
-    n
-        The size of the chunks
-    fill_value
-        A value to fill with when iterable has run out of values, but the last chunk isn't full
-
-    Returns
-    -------
-    Iterable
-        An iterator over length ``n`` groups of the input iterable
-    """
-    args = [iter(iterable)] * n
-    return itertools.zip_longest(*args, fillvalue=fill_value)
 
 
 class StrEnum(str, enum.Enum):
@@ -42,16 +20,26 @@ class StrEnum(str, enum.Enum):
 
 
 class SubprocessManager:
-    def __init__(self, cmd_string, **subprocess_kwargs):
-        self.cmd_string = cmd_string
+    """A context manager that runs a process for the duration of its block."""
+
+    def __init__(self, cmd: List[str], **subprocess_kwargs):
+        """
+        Parameters
+        ----------
+        cmd
+            A list containing the executable and arguments, as strings.
+        subprocess_kwargs
+            Additional keyword arguments are passed to :func:`subprocess.Popen`.
+        """
+        self.cmd = cmd
         self.subprocess_kwargs = subprocess_kwargs
 
-        self.name = self.cmd_string[0]
+        self.name = self.cmd[0]
 
         self.subprocess = None
 
     def __enter__(self):
-        self.subprocess = subprocess.Popen(self.cmd_string, **self.subprocess_kwargs)
+        self.subprocess = subprocess.Popen(self.cmd, **self.subprocess_kwargs)
 
         logger.debug(f"Opened subprocess {self.name}")
 
@@ -61,7 +49,7 @@ class SubprocessManager:
         try:
             self.subprocess.communicate()
             logger.debug(f"Closed subprocess {self.name}")
-        except AttributeError:
+        except Exception:
             logger.warning(
                 f"Exception while trying to close subprocess {self.name}, possibly not closed"
             )

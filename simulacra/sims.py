@@ -21,9 +21,10 @@ SIM_FILE_EXTENSION = "sim"
 
 class Beet:
     """
-    A class that provides an easy interface for pickling and unpickling instances.
+    A class that provides an easy interface for pickling and unpickling
+    instances.
 
-    Beets can be compared and hashed based on their :attribute:`Beet.uuid` value.
+    Beets can be compared and hashed based on their :attr:`Beet.uuid` value.
     """
 
     def __init__(self, name: str):
@@ -38,10 +39,7 @@ class Beet:
 
     @property
     def uuid(self) -> uuid.UUID:
-        """
-        A `UUID <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_
-        for the :class:`Beet`.
-        """
+        """A unique identifier for the :class:`Beet`."""
         return self._uuid
 
     def __eq__(self, other: "Beet"):
@@ -130,6 +128,7 @@ class Beet:
         return f"{self.__class__.__name__}(name = '{self.name}', uuid = {self._uuid})"
 
     def info(self) -> Info:
+        """Return the :class:`Info` for the :class:`Beet`."""
         info = Info(header=str(self))
         info.add_field("UUID", self._uuid)
 
@@ -137,6 +136,10 @@ class Beet:
 
 
 class Status(utils.StrEnum):
+    """
+    An enumeration of the possible states of a :class:`Simulation`.
+    """
+
     UNINITIALIZED = "uninitialized"
     INITIALIZED = "initialized"
     RUNNING = "running"
@@ -151,7 +154,8 @@ class Simulation(Beet, abc.ABC):
 
     It should be subclassed and customized for each variety of simulation.
 
-    Simulations should generally be instantiated using Specification.to_sim() to avoid possible mismatches.
+    Simulations should generally be instantiated using
+    :meth:`Specification.to_sim` to avoid possible mismatches.
     """
 
     def __init__(self, spec):
@@ -185,7 +189,8 @@ class Simulation(Beet, abc.ABC):
         """
         Set the status of the :class:`Simulation`.
 
-        Setting the statuses can have side effects on the simulation's time diagnostics.
+        Setting the statuses can have side effects on the simulation's time
+        diagnostics.
 
         Parameters
         ----------
@@ -230,6 +235,7 @@ class Simulation(Beet, abc.ABC):
         return f"{super().__repr__()} {{{self.status}}}"
 
     def info(self) -> Info:
+        """Return the :class:`Info` for the :class:`Simulation`."""
         info = super().info()
 
         info.add_field("UUID", self._uuid)
@@ -262,7 +268,7 @@ class Specification(Beet, abc.ABC):
     ----------
     simulation_type
         A class attribute which determines what kind of :class:`Simulation` will
-        be generated via :func:`Specification.to_sim`.
+        be generated via :meth:`Specification.to_sim`.
         Should be overridden in concrete subclasses.
     """
 
@@ -286,11 +292,15 @@ class Specification(Beet, abc.ABC):
             self._extra_attr_keys.add(k)
             logger.debug("{} stored additional attribute {} = {}".format(self, k, v))
 
-    def to_sim(self):
-        """Return a :class:`Simulation` of the type associated with the :class:`Specification` type, generated from this instance."""
+    def to_sim(self) -> simulation_type:
+        """
+        Return a :class:`Simulation` of the concrete subtype associated with
+        the :class:`Specification` type, generated from this instance.
+        """
         return self.simulation_type(self)
 
     def info(self) -> Info:
+        """Return the :class:`Info` for the :class:`Specification`."""
         info = super().info()
 
         if len(self._extra_attr_keys) > 0:
@@ -304,7 +314,7 @@ class Specification(Beet, abc.ABC):
         return info
 
 
-def find_or_init_sim_from_spec(
+def find_sim_or_init(
     spec: Specification, search_dir: Optional[Path] = None
 ) -> Simulation:
     """
@@ -349,14 +359,14 @@ def run_from_cache(spec, cache_dir: Optional[Path] = None, **kwargs) -> Simulati
         The path to the cache directory.
     kwargs
         Additional keyword arguments are passed to the simulation's
-        :method:`Simulation.run` method.
+        :meth:`Simulation.run` method.
 
     Returns
     -------
     sim :
         The completed simulation.
     """
-    sim = find_or_init_sim_from_spec(spec, search_dir=cache_dir)
+    sim = find_sim_or_init(spec, search_dir=cache_dir)
 
     if sim.status != Status.FINISHED:
         sim.run(**kwargs)

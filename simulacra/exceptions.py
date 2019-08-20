@@ -4,13 +4,7 @@ class SimulacraException(Exception):
     pass
 
 
-class UnfinishedSimulation(SimulacraException):
-    pass
-
-
-class MissingSimulation(SimulacraException):
-    pass
-
-
 class IllegalSphericalHarmonic(SimulacraException):
+    """The angular momentum numbers that were asked for are not valid."""
+
     pass

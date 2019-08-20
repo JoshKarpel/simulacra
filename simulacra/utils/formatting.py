@@ -8,14 +8,6 @@ from . import filesystem
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# these characters should be stripped from file names before use
-ILLEGAL_FILENAME_CHARACTERS = {"<", ">", ":", '"', "/", "\\", "|", "?", "*"}
-
-
-def strip_illegal_characters(string: str) -> str:
-    """Strip characters that cannot be included in file names from a string."""
-    return "".join([char for char in string if char not in ILLEGAL_FILENAME_CHARACTERS])
-
 
 def bytes_to_str(num_bytes: int) -> str:
     """Return a number of bytes as a human-readable string."""
@@ -24,11 +16,6 @@ def bytes_to_str(num_bytes: int) -> str:
             return f"{num_bytes:.1f} {unit}"
         num_bytes /= 1024
     return f"{num_bytes:.1f} TB"
-
-
-def get_file_size_as_string(path: Union[Path, str]) -> str:
-    """Return the size of the file at file_path as a human-readable string."""
-    return bytes_to_str(filesystem.get_file_size(Path(path)))
 
 
 def table(
@@ -62,7 +49,7 @@ def table(
         A function to be called on each row string.
         The return value is what will go in the output.
     alignment
-        If ``True``, the first column will be left-aligned instead of centered.
+        A map of headers to string method names to use to align each column.
 
     Returns
     -------

@@ -1,8 +1,19 @@
-import itertools
 import logging
+from typing import (
+    Any,
+    Optional,
+    Union,
+    List,
+    Collection,
+    Dict,
+    Tuple,
+    Callable,
+    Iterable,
+)
+
+import itertools
 from copy import deepcopy
 import textwrap
-from typing import Any, Optional, Type, Union, List, Collection, Dict, Tuple
 
 # these imports need to be here so that ask_for_eval works
 import numpy as np
@@ -14,20 +25,25 @@ logger.setLevel(logging.DEBUG)
 
 
 class Parameter:
-    """A class that represents a parameter of a :class:`Specification`."""
+    """A class that represents a parameter of a :class:`simulacra.Specification`."""
 
-    def __init__(self, name: str, value: Any = None, expandable: bool = False):
+    def __init__(
+        self,
+        name: str,
+        value: Union[Any, Iterable[Any]] = None,
+        expandable: bool = False,
+    ):
         """
         Parameters
         ----------
         name
             The name of the Parameter, which should match a keyword argument of
-            the target :class:`Specification`.
+            the target :class:`simulacra.Specification`.
         value
             The value of the Parameter, or an iterable of values.
         expandable
             If ``True``, :func:`expand_parameters` will expand along an iterable
-             `value`.
+            `value`.
         """
         self.name = name
         self.value = value
@@ -63,7 +79,7 @@ def expand_parameters(parameters: Collection[Parameter]) -> List[Dict[str, Any]]
 
     Returns
     -------
-    expanded_parameters :
+    expanded_parameters
         An list of dictionaries containing all of the combinations of parameters.
     """
     expanded = [{}]
@@ -80,22 +96,27 @@ def expand_parameters(parameters: Collection[Parameter]) -> List[Dict[str, Any]]
     return expanded
 
 
-def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> Any:
+def ask_for_input(
+    question: str, default: Any = None, callback: Callable[[Any], Any] = str
+) -> Any:
     """
-    Ask for input from the user, with a default value, which will be cast to a specified type.
+    Ask for input from the user at the command line.
 
     Parameters
     ----------
     question
-        A string to display on the command prompt for the user.
+        A string to display as a prompt for the user.
     default
         The default answer to the question.
-    cast_to
-        A type to cast the user's input to.
+    callback
+        The return value of this callback is what is returned from this
+        function. Useful for simple conversions, like receiving an integer
+        instead of a raw string.
 
     Returns
     -------
-
+    answer
+        The input, passed through ``callback``.
     """
     while True:
         input_str = input(question + " [Default: {}] > ".format(default))
@@ -105,16 +126,37 @@ def ask_for_input(question: str, default: Any = None, cast_to: Type = str) -> An
             return default
 
         try:
-            return cast_to(trimmed)
+            return callback(trimmed)
         except Exception as e:
             print(e)
 
 
 def ask_for_choices(
     question: str,
-    choices: Union[Tuple[str, ...], Dict[str, Any]],
+    choices: Union[List[str], Tuple[str, ...], Dict[str, Any]],
     default: Optional[str] = None,
 ):
+    """
+    Ask for input from the user, restricted to a given set of options.
+
+    Parameters
+    ----------
+    question
+        A string to display as a prompt prompt for the user.
+    choices
+        The choices to present to the user. If it is a tuple or list of strings,
+        these will be the choices and whichever one is chosen will be returned.
+        If it is a dictionary, the user will be asked to choose from the keys,
+        and the matching value will be returned.
+    default
+        The default answer to the question. If this is ``None``, the default
+        will be the first element of the choices.
+
+    Returns
+    -------
+    answer
+        The input, interpreted as a boolean.
+    """
     if default is None:
         default = list(choices)[0]
 
@@ -136,23 +178,25 @@ TRUE_ANSWERS = {"true", "t", "yes", "y", "1", "on", True}
 FALSE_ANSWERS = {"false", "f", "no", "n", "0", "off", False}
 
 
-def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
+def ask_for_bool(question: str, default: Union[str, bool, int] = False) -> bool:
     """
-    Ask for input from the user, with a default value, which will be interpreted as a boolean.
+    Ask for input from the user, which will be interpreted
+    as a boolean. The interpretation is case-insensitive.
 
-    Synonyms for True: 'true', 't', 'yes', 'y', '1', 'on'
-    Synonyms for False: 'false', 'f', 'no', 'n', '0', 'off'
+    Synonyms for ``True``: ``true``, ``t``, ``yes``, ``y``, ``1``, ``on``
+
+    Synonyms for ``False``: ``false``, ``f``, ``no``, ``n``, ``0``, ``off``
 
     Parameters
     ----------
     question
-        A string to display on the command prompt for the user.
+        A string to display as a prompt prompt for the user.
     default
-        The default answer to the question.
+        The default answer to the question, which is ``False``.
 
     Returns
     -------
-    answer :
+    answer
         The input, interpreted as a boolean.
     """
     while True:
@@ -172,27 +216,30 @@ def ask_for_bool(question: str, default: Union[str, bool] = False) -> bool:
 
 def ask_for_eval(question: str, default: str = "None") -> Any:
     """
-    Ask for input from the user, with a default value, which will be evaluated as a Python command.
+    Ask for input from the user, which will be evaluated as a Python command.
 
     Numpy and Scipy's top-level interfaces (imported as ``np`` and ``sp``) and
-    Simulacra's own unit module (imported as ``u``) are both available.
-    For example, ``'np.linspace(0, twopi, 100)'`` will produce the expected
-    result of 100 numbers evenly spaced between zero and twopi.
+    Simulacra's own unit module (imported as ``u``) are all available.
+    For example, entering ``np.linspace(0, 1, 100)`` will produce the
+    expected result of an array of 100 numbers evenly spaced between 0 and 1.
 
-    NB: this function is not safe!
-    The user can execute arbitrary Python code!
+    .. warning ::
+
+        This function is not safe!
+        The user can execute arbitrary Python code!
+        You should only expose this function to known, trusted users.
 
     Parameters
     ----------
     question
-        A string to display on the command prompt for the user.
+        A string to display as a prompt prompt for the user.
     default
         The default answer to the question.
 
     Returns
     -------
     answer
-
+        The result of evaluating the user's input.
     """
     while True:
         input_str = input(question + " [Default: {}] (eval) > ".format(default))

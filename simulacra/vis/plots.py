@@ -66,7 +66,7 @@ def xy_plot(
 
     This function is suitable for displaying any number of curves as long as
     they all share the same ``x_data``. If you need to display multiple curves
-    with independent ``x_data``, see :function:`xxyy_plot``.
+    with independent ``x_data``, see :func:`xxyy_plot``.
 
     Parameters
     ----------
@@ -778,9 +778,9 @@ def xxyy_plot(
 
 def xyz_plot(
     name: str,
-    x_mesh: np.array,
-    y_mesh: np.array,
-    z_mesh: np.array,
+    x_mesh: np.ndarray,
+    y_mesh: np.ndarray,
+    z_mesh: np.ndarray,
     x_unit: Optional[u.Unit] = None,
     y_unit: Optional[u.Unit] = None,
     z_unit: Optional[u.Unit] = None,

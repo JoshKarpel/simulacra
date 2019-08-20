@@ -16,35 +16,35 @@ It provides a common interface for saving, loading, and cloning operations, as w
 .. currentmodule:: simulacra.sims
 
 .. autoclass:: simulacra.Beet
-
-    .. automethod:: clone
+    :members:
 
 .. autoclass:: simulacra.Specification
-
-    .. automethod:: to_sim
-
-    .. automethod:: save
-
-    .. automethod:: load
-
-    .. automethod:: info
+    :members:
 
 .. autoclass:: simulacra.Simulation
-
-    .. automethod:: run
-
-    .. automethod:: save
-
-    .. automethod:: load
+    :members:
 
 .. autoclass:: Status
+    :members:
+
+Running Simulations
++++++++++++++++++++
+
+.. autofunction:: find_sim_or_init
+.. autofunction:: run_from_cache
+
 
 Info
 ----
 
-Simulacra provides a system for hierarchically displaying information from nested objects.
-To participate, an object should define an ``info()`` method that takes no arguments and returns an :class:`Info` instance which it gets from calling ``super().info()``.
-Inside this method more fields and :class:`Info` objects can be added to the top-level :class:`Info`, which could represent information from attributes and nested objects, respectively.
+Simulacra provides a system for hierarchically displaying information from
+nested objects.
+To participate, an object should define an ``info()`` method that takes no
+arguments and returns an :class:`Info` instance which it gets from calling
+``super().info()``, or creates a new :class:`Info` if it is a root object.
+Inside this method more fields and :class:`Info` objects can be added to the
+top-level :class:`Info`, which could represent information from attributes and
+nested objects, respectively.
 
 .. currentmodule:: simulacra.info
 
@@ -57,6 +57,78 @@ Inside this method more fields and :class:`Info` objects can be added to the top
    .. automethod:: add_info
 
    .. automethod:: add_infos
+
+
+Math
+----
+
+.. currentmodule:: simulacra.math
+
+Simulacra's math library provides a few miscellaneous objects and functions with no particular focus.
+
+.. autofunction:: rand_phases
+.. autofunction:: rand_phases_like
+
+.. autoclass:: SphericalHarmonic
+
+.. autofunction:: complex_quad
+.. autofunction:: complex_quadrature
+.. autofunction:: complex_dblquad
+.. autofunction:: complex_nquad
+
+
+Units
+-----
+
+.. currentmodule:: simulacra.units
+
+.. autofunction:: get_unit_value
+.. autofunction:: get_unit_values
+.. autofunction:: get_unit_value_and_latex
+
+
+Creating Specifications and Jobs Programmatically
+-------------------------------------------------
+
+.. currentmodule:: simulacra.parameters
+
+.. autoclass:: Parameter
+
+.. autofunction:: expand_parameters
+
+.. autofunction:: ask_for_input
+.. autofunction:: ask_for_bool
+.. autofunction:: ask_for_choices
+.. autofunction:: ask_for_eval
+
+Utilities
+---------
+
+Simulacra's utility module provides a wide range of functions that don't quite
+fit anywhere else.
+
+.. currentmodule:: simulacra.utils
+
+.. autofunction:: find_nearest_entry
+
+.. autofunction:: ensure_parents_exist
+
+.. autofunction:: get_file_size
+.. autofunction:: bytes_to_str
+
+.. autoclass:: LogManager
+.. autoclass:: BlockTimer
+.. autoclass:: SubprocessManager
+
+.. autoclass:: StrEnum
+
+Memoization
++++++++++++
+
+.. autofunction:: memoize
+.. autofunction:: cached_property
+.. autofunction:: watched_memoize
+
 
 Visualization
 -------------
@@ -86,6 +158,7 @@ The low-level plotting interface is designed to individually wrap common visuali
 
 .. autofunction:: simulacra.vis.save_current_figure
 
+
 Animation Tools
 +++++++++++++++
 
@@ -94,6 +167,7 @@ Animation Tools
 .. autofunction:: xyzt_plot
 
 .. autofunction:: animate
+
 
 Simulation Animators
 ++++++++++++++++++++
@@ -105,88 +179,10 @@ Simulation Animators
 .. autoclass:: Animator
 
 
-Math
-----
-
-Simulacra's math library provides a few miscellaneous objects and functions with no particular focus.
-
-.. currentmodule:: simulacra.math
-
-.. autoclass:: SphericalHarmonic
-
-.. autofunction:: complex_quad
-
-.. autofunction:: complex_dblquad
-
-.. autofunction:: complex_nquad
-
-Summables
----------
-
-:class:`Summand` and :class:`Sum` implement a composite pattern, where summands are summed to form sums, which delegate calls to the summands inside them.
-For example, a :class:`Summand` could be the electric field of a single particle, and the electric field of a group of particles could be a sum of those electric fields.
-
-.. currentmodule:: simulacra.summables
-
-.. autoclass:: Summand
-
-.. autoclass:: Sum
-
-Units
------
-
-.. currentmodule:: simulacra.units
-
-.. autofunction:: uround
-
-.. autofunction:: get_unit_value_and_latex_from_unit
-
-Utilities
----------
-
-Simulacra's utility module provides a wide range of functions for working with arrays, simulations, log messages, attributes, and processes that doesn't quite fit anywhere else.
-
-.. currentmodule:: simulacra.utils
-
-.. autofunction:: memoize
-
-.. autofunction:: multi_map
-
-.. autofunction:: get_now_str
-
-.. autofunction:: ensure_parents_exist
-
-.. autofunction:: find_nearest_entry
-
-.. autofunction:: find_or_init_sim_from_spec
-
-.. autoclass:: LogManager
-
-.. autoclass:: BlockTimer
-
-.. autofunction:: get_file_size
-
-.. autofunction:: get_file_size_as_string
-
-.. autofunction:: try_loop
-
-.. autoclass:: SubprocessManager
-
-.. autoclass:: SuspendProcesses
-
-
-Creating Specifications and Jobs Programmatically
--------------------------------------------------
-
-.. currentmodule:: si.cluster.job_creation
-
-.. autoclass:: Parameter
-
-.. autofunction:: expand_parameters
-
 Exceptions
 ----------
 
-.. currentmodule:: simulacra.exceptions
+.. currentmodule:: simulacra
 
-.. autoexception:: SimulacraException
+.. automodule:: simulacra.exceptions
+   :members:

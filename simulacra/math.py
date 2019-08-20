@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Union
 
 import numpy as np
 import numpy.random as rand
@@ -13,9 +13,14 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def rand_phase(shape_tuple: Tuple[int]) -> np.array:
+def rand_phases(shape_tuple: Tuple[int]) -> np.ndarray:
     """Return random phases (0 to 2pi) in the specified shape."""
     return rand.random_sample(shape_tuple) * u.twopi
+
+
+def rand_phases_like(example: np.ndarray) -> np.ndarray:
+    """Return random phases (0 to 2pi) in the same shape as the ``example``."""
+    return rand.random_sample(example.shape) * u.twopi
 
 
 class SphericalHarmonic:
@@ -25,8 +30,6 @@ class SphericalHarmonic:
 
     def __init__(self, l: int = 0, m: int = 0):
         """
-        Initialize a SphericalHarmonic from its angular momentum numbers.
-
         Parameters
         ----------
         l
@@ -89,9 +92,12 @@ class SphericalHarmonic:
     def __gt__(self, other):
         return self.lm > other.lm
 
-    def __call__(self, theta, phi=0):
+    def __call__(
+        self, theta: Union[int, float, np.array], phi: Union[int, float, np.array] = 0
+    ):
         """
-        Evaluate the spherical harmonic at a point, or vectorized over an array of points.
+        Evaluate the spherical harmonic at a point, or vectorized over an array
+        of points.
 
         Parameters
         ----------
@@ -102,15 +108,38 @@ class SphericalHarmonic:
 
         Returns
         -------
-        val :
-            The value of the spherical harmonic evaluated at (`theta`, `phi`).
+        val
+            The value of the spherical harmonic evaluated at (``theta``, ``phi``).
         """
         return special.sph_harm(self.m, self.l, phi, theta)
 
 
 def complex_quad(
     integrand: Callable, a: float, b: float, **kwargs
-) -> (complex, float, float):
+) -> Tuple[complex, tuple, tuple]:
+    """
+    As :func:`scipy.integrate.quad`, but works with complex integrands.
+
+    Parameters
+    ----------
+    integrand
+        The function to integrate.
+    a
+        The lower limit of integration.
+    b
+        The upper limit of integration.
+    kwargs
+        Additional keyword arguments are passed to
+        :func:`scipy.integrate.quad`.
+
+    Returns
+    -------
+    (result, real_extras, imag_extras)
+        A tuple containing the result, as well as the other things returned
+        by :func:`scipy.integrate.quad` for the real and imaginary parts
+        separately.
+    """
+
     def real_func(*args, **kwargs):
         return np.real(integrand(*args, **kwargs))
 
@@ -129,7 +158,30 @@ def complex_quad(
 
 def complex_quadrature(
     integrand: Callable, a: float, b: float, **kwargs
-) -> (complex, float, float):
+) -> Tuple[complex, tuple, tuple]:
+    """
+    As :func:`scipy.integrate.quadrature`, but works with complex integrands.
+
+    Parameters
+    ----------
+    integrand
+        The function to integrate.
+    a
+        The lower limit of integration.
+    b
+        The upper limit of integration.
+    kwargs
+        Additional keyword arguments are passed to
+        :func:`scipy.integrate.quadrature`.
+
+    Returns
+    -------
+    (result, real_extras, imag_extras)
+        A tuple containing the result, as well as the other things returned
+        by :func:`scipy.integrate.quadrature` for the real and imaginary parts
+        separately.
+    """
+
     def real_func(*args, **kwargs):
         return np.real(integrand(*args, **kwargs))
 
@@ -148,7 +200,30 @@ def complex_quadrature(
 
 def complex_dblquad(
     integrand: Callable, a: float, b: float, gfun: Callable, hfun: Callable, **kwargs
-) -> (complex, float, float):
+) -> Tuple[complex, tuple, tuple]:
+    """
+    As :func:`scipy.integrate.dblquad`, but works with complex integrands.
+
+    Parameters
+    ----------
+    integrand
+        The function to integrate.
+    a
+        The lower limit of integration.
+    b
+        The upper limit of integration.
+    kwargs
+        Additional keyword arguments are passed to
+        :func:`scipy.integrate.dblquad`.
+
+    Returns
+    -------
+    (result, real_extras, imag_extras)
+        A tuple containing the result, as well as the other things returned
+        by :func:`scipy.integrate.dblquad` for the real and imaginary parts
+        separately.
+    """
+
     def real_func(y, x):
         return np.real(integrand(y, x))
 
@@ -165,7 +240,30 @@ def complex_dblquad(
     )
 
 
-def complex_nquad(integrand, ranges, **kwargs) -> (complex, float, float):
+def complex_nquad(integrand, ranges, **kwargs) -> Tuple[complex, tuple, tuple]:
+    """
+    As :func:`scipy.integrate.nquad`, but works with complex integrands.
+
+    Parameters
+    ----------
+    integrand
+        The function to integrate.
+    a
+        The lower limit of integration.
+    b
+        The upper limit of integration.
+    kwargs
+        Additional keyword arguments are passed to
+        :func:`scipy.integrate.nquad`.
+
+    Returns
+    -------
+    (result, real_extras, imag_extras)
+        A tuple containing the result, as well as the other things returned
+        by :func:`scipy.integrate.nquad` for the real and imaginary parts
+        separately.
+    """
+
     def real_func(y, x):
         return np.real(integrand(y, x))
 

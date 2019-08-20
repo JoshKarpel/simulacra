@@ -16,14 +16,14 @@ def test_ask_for_input_str(mocker, answer):
 def test_ask_for_input_int(mocker, answer):
     mocker.patch("simulacra.parameters.input", return_value=answer)
 
-    assert si.ask_for_input("?", cast_to=int) == int(answer)
+    assert si.ask_for_input("?", callback=int) == int(answer)
 
 
 @pytest.mark.parametrize("answer", ["5", "1233", "102319", "5091.59324", "10.24102"])
 def test_ask_for_input_float(mocker, answer):
     mocker.patch("simulacra.parameters.input", return_value=answer)
 
-    assert si.ask_for_input("?", cast_to=float) == float(answer)
+    assert si.ask_for_input("?", callback=float) == float(answer)
 
 
 @pytest.mark.parametrize(
