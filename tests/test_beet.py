@@ -1,8 +1,8 @@
-import simulacra as si
+from simulacra.sims import Beet
 
 
 def test_clone_changed():
-    b = si.Beet("beet")
+    b = Beet("beet")
 
     b.foo = 0
     c = b.clone(foo=1)
@@ -11,7 +11,7 @@ def test_clone_changed():
 
 
 def test_clone_unchanged():
-    b = si.Beet("beet")
+    b = Beet("beet")
 
     b.foo = 0
     c = b.clone()
@@ -20,7 +20,7 @@ def test_clone_unchanged():
 
 
 def test_clone_changes_uuid():
-    b = si.Beet("beet")
+    b = Beet("beet")
 
     c = b.clone()
 
@@ -28,7 +28,7 @@ def test_clone_changes_uuid():
 
 
 def test_cloned_beet_not_equal():
-    b = si.Beet("beet")
+    b = Beet("beet")
 
     c = b.clone()
 
