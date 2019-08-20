@@ -104,13 +104,13 @@ def xyt_plot(
 
         y_func_kwargs = _y_func_kwargs
 
-        x_unit_value, x_unit_tex = u.get_unit_value_and_latex_from_unit(x_unit)
+        x_unit_value, x_unit_tex = u.get_unit_value_and_latex(x_unit)
         x_unit_label = vutils.get_unit_str_for_axis_label(x_unit)
 
-        y_unit_value, y_unit_tex = u.get_unit_value_and_latex_from_unit(y_unit)
+        y_unit_value, y_unit_tex = u.get_unit_value_and_latex(y_unit)
         y_unit_label = vutils.get_unit_str_for_axis_label(y_unit)
 
-        t_unit_value, t_unit_tex = u.get_unit_value_and_latex_from_unit(t_unit)
+        t_unit_value, t_unit_tex = u.get_unit_value_and_latex(t_unit)
         t_unit_label = t_unit_tex
 
         vutils.attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, which="v")
@@ -400,16 +400,16 @@ def xyzt_plot(
 
         plt.set_cmap(colormap)
 
-        x_unit_value, x_unit_tex = u.get_unit_value_and_latex_from_unit(x_unit)
+        x_unit_value, x_unit_tex = u.get_unit_value_and_latex(x_unit)
         x_unit_label = vutils.get_unit_str_for_axis_label(x_unit)
 
-        y_unit_value, y_unit_tex = u.get_unit_value_and_latex_from_unit(y_unit)
+        y_unit_value, y_unit_tex = u.get_unit_value_and_latex(y_unit)
         y_unit_label = vutils.get_unit_str_for_axis_label(y_unit)
 
-        z_unit_value, z_unit_name = u.get_unit_value_and_latex_from_unit(z_unit)
+        z_unit_value, z_unit_name = u.get_unit_value_and_latex(z_unit)
         z_unit_label = vutils.get_unit_str_for_axis_label(z_unit)
 
-        t_unit_value, t_unit_tex = u.get_unit_value_and_latex_from_unit(t_unit)
+        t_unit_value, t_unit_tex = u.get_unit_value_and_latex(t_unit)
         t_unit_label = t_unit_tex
 
         vutils.attach_h_or_v_lines(

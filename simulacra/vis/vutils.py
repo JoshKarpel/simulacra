@@ -201,7 +201,7 @@ def set_axis_limits_and_scale(
     lower_limit, upper_limit : tuple of floats
         The lower and upper limits, in the specified units.
     """
-    unit_value, _ = u.get_unit_value_and_latex_from_unit(unit)
+    unit_value, _ = u.get_unit_value_and_latex(unit)
 
     lower_limit, upper_limit = calculate_axis_limits(
         *data,
@@ -268,7 +268,7 @@ def get_unit_str_for_axis_label(unit: u.Unit):
     :class:`str`
         The unit label.
     """
-    _, unit_tex = u.get_unit_value_and_latex_from_unit(unit)
+    _, unit_tex = u.get_unit_value_and_latex(unit)
 
     if unit_tex != "":
         unit_label = fr" (${unit_tex}$)"
@@ -305,7 +305,7 @@ def attach_h_or_v_lines(
     lines :
         A list containing the lines that were drawn.
     """
-    unit_value, _ = u.get_unit_value_and_latex_from_unit(unit)
+    unit_value, _ = u.get_unit_value_and_latex(unit)
 
     lines = []
 

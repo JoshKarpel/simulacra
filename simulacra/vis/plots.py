@@ -647,8 +647,8 @@ def xxyy_plot(
         line_labels = tuple(line_labels)
         line_kwargs = tuple(line_kwargs)
 
-        x_unit_value, x_unit_tex = u.get_unit_value_and_latex_from_unit(x_unit)
-        y_unit_value, y_unit_tex = u.get_unit_value_and_latex_from_unit(y_unit)
+        x_unit_value, x_unit_tex = u.get_unit_value_and_latex(x_unit)
+        y_unit_value, y_unit_tex = u.get_unit_value_and_latex(y_unit)
 
         lines = []
         for x, y, lab, kw in itertools.zip_longest(

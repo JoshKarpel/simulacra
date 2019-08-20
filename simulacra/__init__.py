@@ -6,7 +6,7 @@ logger.addHandler(logging.NullHandler())
 
 from .version import __version__, version, version_info
 
-from .sims import Specification, Simulation
+from .sims import Specification, Simulation, Status
 from .parameters import (
     Parameter,
     expand_parameters,

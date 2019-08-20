@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Type
+from typing import Optional, Type, Set
 
 import datetime
 import gzip
@@ -45,12 +45,10 @@ class Beet:
         return self._uuid
 
     def __eq__(self, other: "Beet"):
-        """Two Beets are equal if they have the same UUID."""
         return isinstance(other, self.__class__) and self._uuid == other._uuid
 
     def __hash__(self):
-        """The hash of the Beet is the hash of its UUID."""
-        return hash(self._uuid)
+        return hash((self.__class__, self._uuid))
 
     def clone(self, **kwargs) -> "Beet":
         """
@@ -229,7 +227,7 @@ class Simulation(Beet, abc.ABC):
         raise NotImplementedError
 
     def __repr__(self):
-        return super().__str__() + f" {{{self.status}}}"
+        return f"{super().__repr__()} {{{self.status}}}"
 
     def info(self) -> Info:
         info = super().info()
@@ -281,11 +279,11 @@ class Specification(Beet, abc.ABC):
         """
         super().__init__(name)
 
-        self._extra_attr_keys = list()
+        self._extra_attr_keys: Set[str] = set()
 
         for k, v in ((k, v) for k, v in kwargs.items() if k not in self.__dict__):
             setattr(self, k, v)
-            self._extra_attr_keys.append(k)
+            self._extra_attr_keys.add(k)
             logger.debug("{} stored additional attribute {} = {}".format(self, k, v))
 
     def to_sim(self):

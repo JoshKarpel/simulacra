@@ -13,20 +13,14 @@ def get_unit_value(unit: Optional[Unit]) -> float:
     return UNIT_NAME_TO_VALUE.get(unit, 1)
 
 
-def get_unit_values(*units: Optional[Unit]) -> float:
+def get_unit_values(*units: Optional[Unit]) -> Tuple[float]:
     """Return the numerical values of the units."""
     return tuple(get_unit_value(unit) for unit in units)
 
 
-def get_unit_value_and_latex_from_unit(unit: Optional[Unit]) -> Tuple[float, str]:
+def get_unit_value_and_latex(unit: Optional[Unit]) -> Tuple[float, str]:
     """Return the numerical value of the unit and its LaTeX representation from a unit name."""
     return UNIT_NAME_TO_VALUE.get(unit, 1), UNIT_NAME_TO_LATEX.get(unit, "")
-
-
-def uround(value, unit: Optional[Unit] = None, digits: int = 3):
-    """Round value to the number of digits, represented in the given units (by name or value)."""
-    unit_value, _ = get_unit_value_and_latex_from_unit(unit)
-    return _np.around(value / unit_value, digits)
 
 
 # dimensionless constants
