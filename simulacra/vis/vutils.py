@@ -26,6 +26,11 @@ DEFAULT_CONTOUR_LABEL_KWARGS = dict(inline=1, fontsize=8)
 DEFAULT_TITLE_OFFSET = 1.15
 
 
+class ColormapShader(utils.StrEnum):
+    FLAT = "flat"
+    GOURAUD = "gouraud"
+
+
 def get_pi_ticks_and_labels(
     lower_limit: Union[float, int] = 0,
     upper_limit: Union[float, int] = u.twopi,
@@ -77,7 +82,7 @@ def get_pi_ticks_and_labels(
 
 
 def maybe_set_pi_ticks_and_labels(
-    ax, which: str, unit: u.Unit, lower_limit, upper_limit
+    ax, which: str, unit: Optional[Union[str, float, int]], lower_limit, upper_limit
 ):
     """
     This function handles the special case where an axis's units are in radians,
@@ -179,7 +184,7 @@ def set_axis_limits_and_scale(
     log: bool = False,
     pad: float = 0,
     log_pad: float = 1,
-    unit: Optional[u.Unit] = None,
+    unit: Optional[Union[str, float, int]] = None,
     sym_log_linear_threshold: Optional[float] = None,
 ) -> (float, float):
     """
@@ -201,7 +206,7 @@ def set_axis_limits_and_scale(
     lower_limit, upper_limit : tuple of floats
         The lower and upper limits, in the specified units.
     """
-    unit_value, _ = u.get_unit_value_and_latex(unit)
+    unit_value = u.get_unit_value(unit)
 
     lower_limit, upper_limit = calculate_axis_limits(
         *data,
@@ -242,7 +247,7 @@ def set_axis_label(
     axis: plt.Axes,
     which: str,
     label: Optional[str] = None,
-    unit: Optional[u.Unit] = None,
+    unit: Optional[Union[str, float, int]] = None,
     label_kwargs: Optional[dict] = None,
 ) -> Optional[plt.Text]:
     label_kwargs = collections.ChainMap(label_kwargs or {}, DEFAULT_LABEL_KWARGS)
@@ -254,7 +259,7 @@ def set_axis_label(
         return ax_label
 
 
-def get_unit_str_for_axis_label(unit: u.Unit):
+def get_unit_str_for_axis_label(unit: Optional[Union[str, float, int]]):
     """
     Get a LaTeX-formatted unit label for `unit`.
 
@@ -268,14 +273,12 @@ def get_unit_str_for_axis_label(unit: u.Unit):
     :class:`str`
         The unit label.
     """
-    _, unit_tex = u.get_unit_value_and_latex(unit)
+    unit_tex = u.get_unit_latex(unit)
 
     if unit_tex != "":
-        unit_label = fr" (${unit_tex}$)"
+        return fr" (${unit_tex}$)"
     else:
-        unit_label = ""
-
-    return unit_label
+        return ""
 
 
 def attach_h_or_v_lines(
@@ -283,7 +286,7 @@ def attach_h_or_v_lines(
     which: str,
     line_positions: Optional[Iterable[float]] = None,
     line_kwargs: Optional[Iterable[Dict[str, Any]]] = None,
-    unit: Optional[u.Unit] = None,
+    unit: Optional[Union[str, float, int]] = None,
 ):
     """
 
@@ -305,7 +308,7 @@ def attach_h_or_v_lines(
     lines :
         A list containing the lines that were drawn.
     """
-    unit_value, _ = u.get_unit_value_and_latex(unit)
+    unit_value = u.get_unit_value(unit)
 
     lines = []
 
@@ -318,8 +321,14 @@ def attach_h_or_v_lines(
     return lines
 
 
-def add_extra_ticks(ax, which: str, extra_ticks, extra_tick_labels, unit: u.Unit):
-    unit_value = u.UNIT_NAME_TO_VALUE[unit]
+def add_extra_ticks(
+    ax,
+    which: str,
+    extra_ticks,
+    extra_tick_labels,
+    unit: Optional[Union[str, float, int]],
+):
+    unit_value = u._UNIT_NAME_TO_VALUE[unit]
 
     if extra_ticks is not None:
         # append the extra tick labels, scaled appropriately
@@ -332,8 +341,3 @@ def add_extra_ticks(ax, which: str, extra_ticks, extra_tick_labels, unit: u.Unit
             x_tick_labels = list(ax.get_xticklabels())
             x_tick_labels[-len(extra_ticks) :] = extra_tick_labels
             ax.set_xticklabels(x_tick_labels)
-
-
-class ColormapShader(utils.StrEnum):
-    FLAT = "flat"
-    GOURAUD = "gouraud"

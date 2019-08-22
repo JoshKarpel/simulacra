@@ -84,6 +84,8 @@ Units
 
 .. autofunction:: get_unit_value
 .. autofunction:: get_unit_values
+.. autofunction:: get_unit_latex
+.. autofunction:: get_unit_latexs
 .. autofunction:: get_unit_value_and_latex
 
 

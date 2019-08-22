@@ -8,7 +8,7 @@ Simulacra is a Python library for defining, running, and visualizing simulations
 It is focused on producing portable simulations that can be easily run on remote systems.
 
 
-:doc:`tutorial`
+:doc:`tutorials`
    Tutorials on Simulacra's basic features.
 
 :doc:`philosophy`
@@ -38,4 +38,4 @@ Indices
    philosophy
    api
    faq
-   changelog
+   version-history

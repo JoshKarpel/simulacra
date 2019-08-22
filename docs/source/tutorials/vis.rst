@@ -38,6 +38,3 @@ We can probably improve this a little.
 
 .. image:: figs/y_vs_x__v2.*
    :align: center
-
-Simulations
------------

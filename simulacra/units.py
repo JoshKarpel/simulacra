@@ -1,26 +1,63 @@
-from typing import Union, NewType, Optional, Tuple
+from typing import Union, Optional, Tuple
 
 import numpy as _np
 
-UNIT_NAME_TO_VALUE = {None: 1, "": 1}
-UNIT_NAME_TO_LATEX = {None: "", "": ""}
-
-Unit = NewType("Unit", Union[float, int, str])
+_UNIT_NAME_TO_VALUE = {None: 1, "": 1}
+_UNIT_NAME_TO_LATEX = {None: "", "": ""}
 
 
-def get_unit_value(unit: Optional[Unit]) -> float:
-    """Return the numerical value of the unit."""
-    return UNIT_NAME_TO_VALUE.get(unit, 1)
+def get_unit_value(unit: Optional[Union[str, float, int]]) -> Union[float, int]:
+    """
+    Return the numerical value of the unit.
+
+    If passed a string, get the corresponding unit value for that unit.
+    If passed a number (float or int), returns that number without modification.
+    """
+    if isinstance(unit, (float, int)):
+        return unit
+    return _UNIT_NAME_TO_VALUE[unit]
 
 
-def get_unit_values(*units: Optional[Unit]) -> Tuple[float]:
-    """Return the numerical values of the units."""
+def get_unit_latex(unit: Optional[Union[str, float, int]]) -> str:
+    """
+    Return the LaTeX string for the unit.
+
+
+    If passed a string, get the corresponding LaTeX string for that unit.
+    If passed a number (float or int), returns an empty string.
+    """
+    if isinstance(unit, (float, int)):
+        return ""
+    return _UNIT_NAME_TO_LATEX[unit]
+
+
+def get_unit_values(
+    *units: Optional[Union[str, float, int]]
+) -> Tuple[Union[float, int], ...]:
+    """
+    Return the numerical values of the units.
+    Follows the semantics of :func:`get_unit_value`.
+    """
     return tuple(get_unit_value(unit) for unit in units)
 
 
-def get_unit_value_and_latex(unit: Optional[Unit]) -> Tuple[float, str]:
-    """Return the numerical value of the unit and its LaTeX representation from a unit name."""
-    return UNIT_NAME_TO_VALUE.get(unit, 1), UNIT_NAME_TO_LATEX.get(unit, "")
+def get_unit_latexs(*units: Optional[Union[str, float, int]]) -> Tuple[str, ...]:
+    """
+    Return the LaTeX strings for the units.
+    Follows the semantics of :func:`get_unit_latex`.
+    """
+    return tuple(get_unit_latex(unit) for unit in units)
+
+
+def get_unit_value_and_latex(
+    unit: Optional[Union[str, float, int]]
+) -> Tuple[Union[float, int], str]:
+    """
+    Return the numerical value of the unit and its LaTeX representation from a
+    unit name.
+    Follows the semantics of :func:`get_unit_value` and :func:`get_unit_latex`.
+    """
+    return get_unit_value(unit), get_unit_latex(unit)
 
 
 # dimensionless constants
@@ -29,8 +66,8 @@ pi = _np.pi
 twopi = 2 * _np.pi
 e = _np.e
 
-UNIT_NAME_TO_VALUE.update({"alpha": alpha, "pi": pi, "twopi": twopi, "e": e})
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_VALUE.update({"alpha": alpha, "pi": pi, "twopi": twopi, "e": e})
+_UNIT_NAME_TO_LATEX.update(
     {"alpha": r"\alpha", "pi": r"\pi", "twopi": r"2\pi", "e": "e"}
 )
 
@@ -43,7 +80,7 @@ K = 1
 rad = 1
 deg = twopi / 360
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "m": m,
         "s": s,
@@ -56,7 +93,7 @@ UNIT_NAME_TO_VALUE.update(
         "degrees": deg,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "m": r"\mathrm{m}",
         "s": r"\mathrm{s}",
@@ -83,7 +120,7 @@ days = day = 24 * hour
 weeks = week = 7 * day
 years = year = 365 * day
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "ms": msec,
         "msec": msec,
@@ -109,7 +146,7 @@ UNIT_NAME_TO_VALUE.update(
         "years": year,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "ms": r"\mathrm{ms}",
         "msec": r"\mathrm{ms}",
@@ -153,7 +190,7 @@ angstrom = 1e-10 * m
 bohr_radius = 5.291_772_106_7e-11 * m
 inch = 2.54 * cm
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "cm": cm,
         "mm": mm,
@@ -172,7 +209,7 @@ UNIT_NAME_TO_VALUE.update(
         "per_nm": per_nm,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "cm": r"\mathrm{cm}",
         "centimeter": r"\mathrm{cm}",
@@ -220,7 +257,7 @@ neutron_mass = 1.674_927_471e-27 * kg
 electron_mass = 9.109_383_56e-31 * kg
 electron_mass_reduced = proton_mass * electron_mass / (proton_mass + electron_mass)
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "g": g,
         "mg": mg,
@@ -234,7 +271,7 @@ UNIT_NAME_TO_VALUE.update(
         "electron_mass_reduced": electron_mass_reduced,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "g": r"\mathrm{g}",
         "mg": r"\mathrm{mg}",
@@ -262,7 +299,7 @@ GHz = 1e9 * Hz
 THz = 1e12 * Hz
 PHz = 1e15 * Hz
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "Hz": Hz,
         "mHz": mHz,
@@ -277,7 +314,7 @@ UNIT_NAME_TO_VALUE.update(
         "PHz": PHz,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "Hz": r"\mathrm{Hz}",
         "mHz": r"\mathrm{mHz}",
@@ -307,7 +344,7 @@ per_day = 1 / day
 per_week = 1 / week
 per_year = 1 / year
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "per_s": per_sec,
         "per_sec": per_sec,
@@ -330,7 +367,7 @@ UNIT_NAME_TO_VALUE.update(
         "per_year": per_year,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "per_s": r"\mathrm{s^{-1}}",
         "per_sec": r"\mathrm{s^{-1}}",
@@ -371,7 +408,7 @@ PC = 1e15 * C
 proton_charge = 1.602_176_620_8e-19 * C
 electron_charge = -proton_charge
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "C": C,
         "mC": mC,
@@ -388,7 +425,7 @@ UNIT_NAME_TO_VALUE.update(
         "electron_charge": electron_charge,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "C": r"\mathrm{C}",
         "mC": r"\mathrm{mC}",
@@ -420,7 +457,7 @@ TJ = 1e12 * J
 PJ = 1e15 * J
 Jcm2 = J / (cm ** 2)
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "J": J,
         "mJ": mJ,
@@ -437,7 +474,7 @@ UNIT_NAME_TO_VALUE.update(
         "Jcm2": Jcm2,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "J": r"\mathrm{J}",
         "mJ": r"\mathrm{mJ}",
@@ -468,7 +505,7 @@ GV = 1e9 * V
 TV = 1e12 * V
 PV = 1e15 * V
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "V": V,
         "mV": mV,
@@ -483,7 +520,7 @@ UNIT_NAME_TO_VALUE.update(
         "PV": PV,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "V": r"\mathrm{V}",
         "mV": r"\mathrm{mV}",
@@ -502,8 +539,8 @@ UNIT_NAME_TO_LATEX.update(
 # electric field strength
 V_per_m = V / m
 
-UNIT_NAME_TO_VALUE.update({"V_per_m": V_per_m, "V/m": V_per_m})
-UNIT_NAME_TO_LATEX.update({"V_per_m": r"\mathrm{V/m}", "V/m": r"\mathrm{V/m}"})
+_UNIT_NAME_TO_VALUE.update({"V_per_m": V_per_m, "V/m": V_per_m})
+_UNIT_NAME_TO_LATEX.update({"V_per_m": r"\mathrm{V/m}", "V/m": r"\mathrm{V/m}"})
 
 # magnetic field strength
 T = V * s / (m ** 2)
@@ -518,7 +555,7 @@ GT = 1e9 * T
 TT = 1e12 * T
 PT = 1e15 * T
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "T": T,
         "mT": mT,
@@ -533,7 +570,7 @@ UNIT_NAME_TO_VALUE.update(
         "PT": PT,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "T": r"\mathrm{T}",
         "mT": r"\mathrm{mT}",
@@ -557,10 +594,10 @@ GeV = 1e9 * eV
 TeV = 1e12 * eV
 PeV = 1e15 * eV
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {"eV": eV, "keV": keV, "MeV": MeV, "GeV": GeV, "TeV": TeV, "PeV": PeV}
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "eV": r"\mathrm{eV}",
         "keV": r"\mathrm{keV}",
@@ -584,7 +621,7 @@ GN = 1e9 * N
 TN = 1e12 * N
 PN = 1e15 * N
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "N": N,
         "mN": mN,
@@ -599,7 +636,7 @@ UNIT_NAME_TO_VALUE.update(
         "PN": PN,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "N": r"\mathrm{N}",
         "mN": r"\mathrm{mN}",
@@ -618,8 +655,8 @@ UNIT_NAME_TO_LATEX.update(
 # spring constant
 N_per_m = N / m
 
-UNIT_NAME_TO_VALUE.update({"N_per_m": N_per_m, "N/m": N_per_m})
-UNIT_NAME_TO_LATEX.update({"N_per_m": r"\mathrm{N/m}", "N/m": r"\mathrm{N/m}"})
+_UNIT_NAME_TO_VALUE.update({"N_per_m": N_per_m, "N/m": N_per_m})
+_UNIT_NAME_TO_LATEX.update({"N_per_m": r"\mathrm{N/m}", "N/m": r"\mathrm{N/m}"})
 
 # power
 W = 1 * J / s
@@ -636,7 +673,7 @@ PW = 1e15 * W
 Wcm2 = W / (cm ** 2)
 TWcm2 = TW / (cm ** 2)
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "W": W,
         "mW": mW,
@@ -653,7 +690,7 @@ UNIT_NAME_TO_VALUE.update(
         "TWcm2": TWcm2,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "W": r"\mathrm{W}",
         "mW": r"\mathrm{mW}",
@@ -684,7 +721,7 @@ GA = 1e9 * A
 TA = 1e12 * A
 PA = 1e15 * A
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "A": A,
         "mA": mA,
@@ -699,7 +736,7 @@ UNIT_NAME_TO_VALUE.update(
         "PA": PA,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "A": r"\mathrm{A}",
         "mA": r"\mathrm{mA}",
@@ -719,8 +756,8 @@ UNIT_NAME_TO_LATEX.update(
 k_B = 1.380_648_52e-23 * J / K
 boltzmann_constant = k_B
 
-UNIT_NAME_TO_VALUE.update({"k_B": k_B, "boltzmann_constant": k_B})
-UNIT_NAME_TO_LATEX.update({"k_B": r"k_B", "boltzmann_constant": r"k_B"})
+_UNIT_NAME_TO_VALUE.update({"k_B": k_B, "boltzmann_constant": k_B})
+_UNIT_NAME_TO_LATEX.update({"k_B": r"k_B", "boltzmann_constant": r"k_B"})
 
 # speed of light and E&M
 c = speed_of_light = 299_792_458 * m / s
@@ -729,7 +766,7 @@ epsilon_0 = vacuum_permittivity = 1 / (mu_0 * (c ** 2))
 k_e = coulomb_constant = 1 / (4 * pi * epsilon_0)
 n_vacuum = 1
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "c": c,
         "speed_of_light": c,
@@ -742,7 +779,7 @@ UNIT_NAME_TO_VALUE.update(
         "n_vacuum": n_vacuum,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "c": r"c",
         "speed_of_light": r"c",
@@ -763,10 +800,10 @@ hbar = h / twopi
 rydberg = 13.605_693_009 * eV
 hartree = 2 * rydberg
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {"h": h, "hbar": hbar, "rydberg": rydberg, "hartree": hartree}
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "h": r"h",
         "hbar": r"\hbar",
@@ -796,7 +833,7 @@ atomic_force = hartree / bohr_radius
 atomic_temperature = hartree / k_B
 per_bohr_radius = 1 / bohr_radius
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "atomic_energy": atomic_energy,
         "atomic_electric_field": atomic_electric_field,
@@ -820,7 +857,7 @@ UNIT_NAME_TO_VALUE.update(
         "per_bohr_radius": per_bohr_radius,
     }
 )
-UNIT_NAME_TO_LATEX.update(
+_UNIT_NAME_TO_LATEX.update(
     {
         "atomic_electric_field": r"\mathrm{a.u.}",
         "atomic_magnetic_field": r"\mathrm{a.u.}",
@@ -848,7 +885,7 @@ UNIT_NAME_TO_LATEX.update(
 light_year = speed_of_light * year
 parsec = 3.085_678e18 * m
 
-UNIT_NAME_TO_VALUE.update(
+_UNIT_NAME_TO_VALUE.update(
     {
         "light_year": light_year,
         "light_years": light_year,
@@ -858,7 +895,6 @@ UNIT_NAME_TO_VALUE.update(
         "pc": parsec,
     }
 )
-
 
 # temperature
 zero_celsius = 273.15 * K

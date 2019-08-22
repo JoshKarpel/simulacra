@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Iterable, Collection
+from typing import Optional, Iterable, Collection, Union
 
 import itertools
 import collections
@@ -23,8 +23,8 @@ def xy_plot(
     *y_data: np.ndarray,
     line_labels: Iterable[str] = (),
     line_kwargs: Iterable[dict] = (),
-    x_unit: u.Unit = None,
-    y_unit: u.Unit = None,
+    x_unit: Optional[Union[str, float, int]] = None,
+    y_unit: Optional[Union[str, float, int]] = None,
     x_log_axis: bool = False,
     y_log_axis: bool = False,
     x_lower_limit: Optional[float] = None,
@@ -313,8 +313,8 @@ def xy_stackplot(
     *y_data: np.ndarray,
     line_labels: Iterable[str] = (),
     line_kwargs: Iterable[dict] = (),
-    x_unit: u.Unit = None,
-    y_unit: u.Unit = None,
+    x_unit: Optional[Union[str, float, int]] = None,
+    y_unit: Optional[Union[str, float, int]] = None,
     x_log_axis: bool = False,
     y_log_axis: bool = False,
     x_lower_limit: Optional[float] = None,
@@ -781,9 +781,9 @@ def xyz_plot(
     x_mesh: np.ndarray,
     y_mesh: np.ndarray,
     z_mesh: np.ndarray,
-    x_unit: Optional[u.Unit] = None,
-    y_unit: Optional[u.Unit] = None,
-    z_unit: Optional[u.Unit] = None,
+    x_unit: Optional[Union[str, float, int]] = None,
+    y_unit: Optional[Union[str, float, int]] = None,
+    z_unit: Optional[Union[str, float, int]] = None,
     x_log_axis: bool = False,
     y_log_axis: bool = False,
     z_log_axis: bool = False,
