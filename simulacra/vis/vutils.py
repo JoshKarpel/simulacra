@@ -82,7 +82,7 @@ def get_pi_ticks_and_labels(
 
 
 def maybe_set_pi_ticks_and_labels(
-    ax, which: str, unit: Optional[Union[str, float, int]], lower_limit, upper_limit
+    ax, which: str, unit: u.Unit, lower_limit, upper_limit
 ):
     """
     This function handles the special case where an axis's units are in radians,
@@ -184,7 +184,7 @@ def set_axis_limits_and_scale(
     log: bool = False,
     pad: float = 0,
     log_pad: float = 1,
-    unit: Optional[Union[str, float, int]] = None,
+    unit: u.Unit = None,
     sym_log_linear_threshold: Optional[float] = None,
 ) -> Tuple[float, float]:
     """
@@ -248,7 +248,7 @@ def set_axis_label(
     axis: plt.Axes,
     which: str,
     label: Optional[str] = None,
-    unit: Optional[Union[str, float, int]] = None,
+    unit: u.Unit = None,
     label_kwargs: Optional[dict] = None,
 ) -> Optional[plt.Text]:
     kwargs = collections.ChainMap(label_kwargs or {}, DEFAULT_LABEL_KWARGS)
@@ -259,7 +259,7 @@ def set_axis_label(
     return None
 
 
-def get_unit_str_for_axis_label(unit: Optional[Union[str, float, int]]):
+def get_unit_str_for_axis_label(unit: u.Unit):
     """
     Get a LaTeX-formatted unit label for `unit`.
 
@@ -286,7 +286,7 @@ def attach_h_or_v_lines(
     which: str,
     line_positions: Optional[Iterable[float]] = None,
     line_kwargs: Optional[Iterable[Dict[str, Any]]] = None,
-    unit: Optional[Union[str, float, int]] = None,
+    unit: u.Unit = None,
 ):
     """
 
@@ -327,13 +327,7 @@ def attach_h_or_v_lines(
     return lines
 
 
-def add_extra_ticks(
-    ax,
-    which: str,
-    extra_ticks,
-    extra_tick_labels,
-    unit: Optional[Union[str, float, int]],
-):
+def add_extra_ticks(ax, which: str, extra_ticks, extra_tick_labels, unit: u.Unit):
     unit_value = u.get_unit_value(unit)
 
     if extra_ticks is not None:

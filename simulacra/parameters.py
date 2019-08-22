@@ -1,14 +1,5 @@
 import logging
-from typing import (
-    Any,
-    Optional,
-    Union,
-    List,
-    Collection,
-    Dict,
-    Tuple,
-    Callable,
-)
+from typing import Any, Optional, Union, List, Collection, Dict, Tuple, Callable
 
 import itertools
 from copy import deepcopy

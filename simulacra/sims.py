@@ -127,7 +127,10 @@ class Beet:
         return beet
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(name = '{self.name}', uuid = {self._uuid})"
+        return f"{self.__class__.__name__}(name = {self.name}, uuid = {self._uuid})"
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self.name})"
 
     def info(self) -> Info:
         """Return the :class:`Info` for the :class:`Beet`."""

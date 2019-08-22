@@ -1,12 +1,14 @@
-from typing import Union, Optional, Tuple, Dict
+from typing import Union, Optional, Tuple, Dict, NewType
 
 import numpy as _np
+
+Unit = NewType("Unit", Optional[Union[str, float, int]])
 
 _UNIT_NAME_TO_VALUE: Dict[Optional[str], Union[float, int]] = {None: 1, "": 1}
 _UNIT_NAME_TO_LATEX: Dict[Optional[str], str] = {None: "", "": ""}
 
 
-def get_unit_value(unit: Optional[Union[str, float, int]]) -> Union[float, int]:
+def get_unit_value(unit: Unit) -> Union[float, int]:
     """
     Return the numerical value of the unit.
 
@@ -18,7 +20,7 @@ def get_unit_value(unit: Optional[Union[str, float, int]]) -> Union[float, int]:
     return _UNIT_NAME_TO_VALUE[unit]
 
 
-def get_unit_latex(unit: Optional[Union[str, float, int]]) -> str:
+def get_unit_latex(unit: Unit) -> str:
     """
     Return the LaTeX string for the unit.
 
@@ -31,9 +33,7 @@ def get_unit_latex(unit: Optional[Union[str, float, int]]) -> str:
     return _UNIT_NAME_TO_LATEX[unit]
 
 
-def get_unit_values(
-    *units: Optional[Union[str, float, int]]
-) -> Tuple[Union[float, int], ...]:
+def get_unit_values(*units: Unit) -> Tuple[Union[float, int], ...]:
     """
     Return the numerical values of the units.
     Follows the semantics of :func:`get_unit_value`.
@@ -41,7 +41,7 @@ def get_unit_values(
     return tuple(get_unit_value(unit) for unit in units)
 
 
-def get_unit_latexs(*units: Optional[Union[str, float, int]]) -> Tuple[str, ...]:
+def get_unit_latexs(*units: Unit) -> Tuple[str, ...]:
     """
     Return the LaTeX strings for the units.
     Follows the semantics of :func:`get_unit_latex`.
@@ -49,9 +49,7 @@ def get_unit_latexs(*units: Optional[Union[str, float, int]]) -> Tuple[str, ...]
     return tuple(get_unit_latex(unit) for unit in units)
 
 
-def get_unit_value_and_latex(
-    unit: Optional[Union[str, float, int]]
-) -> Tuple[Union[float, int], str]:
+def get_unit_value_and_latex(unit: Unit) -> Tuple[Union[float, int], str]:
     """
     Return the numerical value of the unit and its LaTeX representation from a
     unit name.
