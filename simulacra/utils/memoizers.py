@@ -1,6 +1,7 @@
-import functools
 import logging
-from typing import Callable, Any
+from typing import Callable, Any, Dict
+
+import functools
 
 import numpy as np
 
@@ -37,7 +38,7 @@ def memoize(func: Callable):
     :func:`functools.lru_cache` in what kinds of arguments can be cached,
     but incurs a larger runtime overhead as a penalty.
     """
-    memo = {}
+    memo: Dict[Any, Any] = {}
 
     @functools.wraps(func)
     def memoizer(*args, **kwargs):

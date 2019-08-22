@@ -1,9 +1,9 @@
-from typing import Union, Optional, Tuple
+from typing import Union, Optional, Tuple, Dict
 
 import numpy as _np
 
-_UNIT_NAME_TO_VALUE = {None: 1, "": 1}
-_UNIT_NAME_TO_LATEX = {None: "", "": ""}
+_UNIT_NAME_TO_VALUE: Dict[Optional[str], Union[float, int]] = {None: 1, "": 1}
+_UNIT_NAME_TO_LATEX: Dict[Optional[str], str] = {None: "", "": ""}
 
 
 def get_unit_value(unit: Optional[Union[str, float, int]]) -> Union[float, int]:
@@ -709,7 +709,6 @@ _UNIT_NAME_TO_LATEX.update(
 )
 
 # current
-A = 1 * C / s
 mA = 1e-3 * A
 uA = 1e-6 * A
 nA = 1e-9 * A
@@ -723,7 +722,6 @@ PA = 1e15 * A
 
 _UNIT_NAME_TO_VALUE.update(
     {
-        "A": A,
         "mA": mA,
         "uA": uA,
         "nA": nA,
@@ -738,7 +736,6 @@ _UNIT_NAME_TO_VALUE.update(
 )
 _UNIT_NAME_TO_LATEX.update(
     {
-        "A": r"\mathrm{A}",
         "mA": r"\mathrm{mA}",
         "uA": r"\mathrm{\mu A}",
         "nA": r"\mathrm{nA}",

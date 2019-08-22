@@ -183,7 +183,7 @@ def xy_plot(
 
         # ensure data is in numpy arrays
         x_data = np.array(x_data)
-        y_data = [np.array(y) for y in y_data]
+        y_data = tuple(np.array(y) for y in y_data)
         line_labels = tuple(line_labels)
         line_kwargs = tuple(line_kwargs)
 
@@ -363,8 +363,6 @@ def xy_stackplot(
         Any number of arrays of the same length as `x_data`, each of which will appear as a line on the plot.
     line_labels
         Labels for each of the `y_data` lines.
-    line_kwargs
-        Keyword arguments for each of the `y_data` lines (a list of dictionaries).
     x_unit
         The unit for the x-axis. Can be a number or the name of a unit as string.
     y_unit
@@ -461,9 +459,8 @@ def xy_stackplot(
 
         # ensure data is in numpy arrays
         x_data = np.array(x_data)
-        y_data = [np.array(y) for y in y_data]
+        y_data = tuple(np.array(y) for y in y_data)
         line_labels = tuple(line_labels)
-        line_kwargs = tuple(line_kwargs)
 
         x_unit_value, y_unit_value = u.get_unit_values(x_unit, y_unit)
 

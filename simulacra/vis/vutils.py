@@ -1,5 +1,5 @@
 import logging
-from typing import Union, Iterable, Optional, Dict, Any
+from typing import Union, Iterable, Optional, Dict, Any, Tuple
 
 import collections
 import fractions
@@ -20,8 +20,8 @@ DEFAULT_MINOR_GRID_KWARGS = dict(linestyle="-", color="black", linewidth=0.5, al
 DEFAULT_COLORMESH_GRID_KWARGS = dict(linestyle="-", linewidth=0.5, alpha=0.4)
 DEFAULT_LEGEND_KWARGS = dict(loc="best")
 DEFAULT_HVLINE_KWARGS = dict(linestyle="-", color="black")
-DEFAULT_CONTOUR_KWARGS = dict()
-DEFAULT_CONTOUR_LABEL_KWARGS = dict(inline=1, fontsize=8)
+DEFAULT_CONTOUR_KWARGS = dict(linewidth=1, color="white")
+DEFAULT_CONTOUR_LABEL_KWARGS = dict(inline=1, fontsize=8, color="white")
 
 DEFAULT_TITLE_OFFSET = 1.15
 
@@ -137,7 +137,7 @@ def calculate_axis_limits(
     log: bool = False,
     pad: Union[float, int] = 0,
     log_pad: Union[float, int] = 1,
-) -> (float, float):
+) -> Tuple[float, float]:
     """
     Calculate axis limits from datasets.
 
@@ -186,7 +186,7 @@ def set_axis_limits_and_scale(
     log_pad: float = 1,
     unit: Optional[Union[str, float, int]] = None,
     sym_log_linear_threshold: Optional[float] = None,
-) -> (float, float):
+) -> Tuple[float, float]:
     """
 
     Parameters
@@ -236,11 +236,12 @@ def set_title(
     title_offset: float = DEFAULT_TITLE_OFFSET,
     title_kwargs: Optional[dict] = None,
 ) -> Optional[plt.Text]:
-    title_kwargs = collections.ChainMap(title_kwargs or {}, DEFAULT_TITLE_KWARGS)
+    kwargs = collections.ChainMap(title_kwargs or {}, DEFAULT_TITLE_KWARGS)
     if title_text is not None:
-        title = axis.set_title(title_text, **title_kwargs)
+        title = axis.set_title(title_text, **kwargs)
         title.set_y(title_offset)
         return title
+    return None
 
 
 def set_axis_label(
@@ -250,13 +251,12 @@ def set_axis_label(
     unit: Optional[Union[str, float, int]] = None,
     label_kwargs: Optional[dict] = None,
 ) -> Optional[plt.Text]:
-    label_kwargs = collections.ChainMap(label_kwargs or {}, DEFAULT_LABEL_KWARGS)
+    kwargs = collections.ChainMap(label_kwargs or {}, DEFAULT_LABEL_KWARGS)
     unit_label = get_unit_str_for_axis_label(unit)
     if label is not None:
-        ax_label = getattr(axis, f"set_{which}label")(
-            label + unit_label, **label_kwargs
-        )
+        ax_label = getattr(axis, f"set_{which}label")(label + unit_label, **kwargs)
         return ax_label
+    return None
 
 
 def get_unit_str_for_axis_label(unit: Optional[Union[str, float, int]]):
@@ -312,11 +312,17 @@ def attach_h_or_v_lines(
 
     lines = []
 
-    for position, kw in itertools.zip_longest(line_positions, line_kwargs):
-        if kw is None:
-            kw = {}
-        kw = {**DEFAULT_HVLINE_KWARGS, **kw}
-        lines.append(getattr(axis, f"ax{which}line")(position / unit_value, **kw))
+    for position, kwargs in itertools.zip_longest(
+        line_positions or (), line_kwargs or (), fillvalue=None
+    ):
+        if line_positions is None:
+            logger.warning(
+                f"Got more {which}line keyword arguments than lines, ignoring extras"
+            )
+            continue
+        kwargs = collections.ChainMap(kwargs or {}, DEFAULT_HVLINE_KWARGS)
+        line = getattr(axis, f"ax{which}line")(position / unit_value, **kwargs)
+        lines.append(line)
 
     return lines
 
@@ -328,7 +334,7 @@ def add_extra_ticks(
     extra_tick_labels,
     unit: Optional[Union[str, float, int]],
 ):
-    unit_value = u._UNIT_NAME_TO_VALUE[unit]
+    unit_value = u.get_unit_value(unit)
 
     if extra_ticks is not None:
         # append the extra tick labels, scaled appropriately

@@ -1,15 +1,12 @@
-import datetime
-from pathlib import Path
 import logging
-from typing import Union, Callable, Iterable, Dict, Any, Mapping
+from typing import Callable, Iterable, Dict, Any, Mapping, Optional
 
-from . import filesystem
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def bytes_to_str(num_bytes: int) -> str:
+def bytes_to_str(num_bytes: float) -> str:
     """Return a number of bytes as a human-readable string."""
     for unit in ("bytes", "KB", "MB", "GB"):
         if num_bytes < 1024:
@@ -22,9 +19,9 @@ def table(
     headers: Iterable[str],
     rows: Iterable[Iterable[Any]],
     fill: str = "",
-    header_fmt: Callable[[str], str] = None,
-    row_fmt: Callable[[str], str] = None,
-    alignment: Dict[str, str] = None,
+    header_fmt: Optional[Callable[[str], str]] = None,
+    row_fmt: Optional[Callable[[str], str]] = None,
+    alignment: Optional[Dict[str, str]] = None,
 ) -> str:
     """
     Return a string containing a simple table created from headers and rows of entries.

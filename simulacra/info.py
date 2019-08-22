@@ -1,4 +1,4 @@
-from typing import Any, Tuple, Iterable
+from typing import Any, Tuple, Iterable, Dict, Union
 
 
 class Info:
@@ -20,7 +20,7 @@ class Info:
             The header for this :class:`Info`.
         """
         self.header = header
-        self._children = {}
+        self._children: Dict[Union[str, int], Union[str, Info]] = {}
 
     def __str__(self) -> str:
         field_strings = [self.header]

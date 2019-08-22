@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Type, Set
+from typing import Optional, Type, Set, Any
 
 import datetime
 import gzip
@@ -42,7 +42,9 @@ class Beet:
         """A unique identifier for the :class:`Beet`."""
         return self._uuid
 
-    def __eq__(self, other: "Beet"):
+    def __eq__(self, other: Any):
+        if not isinstance(other, Beet):
+            return NotImplemented
         return isinstance(other, self.__class__) and self._uuid == other._uuid
 
     def __hash__(self):
@@ -292,7 +294,7 @@ class Specification(Beet, abc.ABC):
             self._extra_attr_keys.add(k)
             logger.debug("{} stored additional attribute {} = {}".format(self, k, v))
 
-    def to_sim(self) -> simulation_type:
+    def to_sim(self) -> Simulation:
         """
         Return a :class:`Simulation` of the concrete subtype associated with
         the :class:`Specification` type, generated from this instance.

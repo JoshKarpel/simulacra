@@ -8,7 +8,6 @@ from typing import (
     Dict,
     Tuple,
     Callable,
-    Iterable,
 )
 
 import itertools
@@ -30,7 +29,7 @@ class Parameter:
     def __init__(
         self,
         name: str,
-        value: Union[Any, Iterable[Any]] = None,
+        value: Union[Any, Collection[Any]] = None,
         expandable: bool = False,
     ):
         """
@@ -82,7 +81,7 @@ def expand_parameters(parameters: Collection[Parameter]) -> List[Dict[str, Any]]
     expanded_parameters
         An list of dictionaries containing all of the combinations of parameters.
     """
-    expanded = [{}]
+    expanded: List[Dict[str, Any]] = [{}]
 
     for par in parameters:
         if par.expandable:
@@ -175,17 +174,17 @@ def ask_for_choices(
 
 
 TRUE_ANSWERS = {"true", "t", "yes", "y", "1", "on", True}
-FALSE_ANSWERS = {"false", "f", "no", "n", "0", "off", False}
+FALSE_ANSWERS = {"false", "f", "no", "n", "0", "off", False, ""}
 
 
-def ask_for_bool(question: str, default: Union[str, bool, int] = False) -> bool:
+def ask_for_bool(question: str, default: Union[str, bool, int] = "") -> bool:
     """
     Ask for input from the user, which will be interpreted
     as a boolean. The interpretation is case-insensitive.
 
     Synonyms for ``True``: ``true``, ``t``, ``yes``, ``y``, ``1``, ``on``
 
-    Synonyms for ``False``: ``false``, ``f``, ``no``, ``n``, ``0``, ``off``
+    Synonyms for ``False``: ``false``, ``f``, ``no``, ``n``, ``0``, ``off``, ```` (i.e., nothing)
 
     Parameters
     ----------
@@ -203,9 +202,6 @@ def ask_for_bool(question: str, default: Union[str, bool, int] = False) -> bool:
         input_str = input(question + " [Default: {}] > ".format(default))
 
         trimmed = input_str.replace(" ", "").lower()
-        if trimmed == "":
-            trimmed = default
-
         if trimmed in TRUE_ANSWERS:
             return True
         elif trimmed in FALSE_ANSWERS:

@@ -1,6 +1,7 @@
 import logging
-from typing import Union, Optional
+from typing import Union, Optional, Dict, Any
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -34,7 +35,7 @@ def get_figure(
     fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
     aspect_ratio: Union[float, int] = GOLDEN_RATIO,
     fig_height: Optional[Union[float, int]] = None,
-    fig_scale: Union[float, int, str] = 1,
+    fig_scale: Union[float, int] = 1,
     fig_dpi_scale: Union[float, int] = 1,
 ) -> plt.Figure:
     """
@@ -72,15 +73,16 @@ def get_figure(
 
 
 def _get_fig_dims(
-    fig_width: Union[float, int] = DEFAULT_LATEX_PAGE_WIDTH,
-    aspect_ratio: Union[float, int] = GOLDEN_RATIO,
-    fig_height=None,
-    fig_scale: Union[float, int] = 1,
+    fig_width: Union[float] = DEFAULT_LATEX_PAGE_WIDTH,
+    aspect_ratio: Union[float] = GOLDEN_RATIO,
+    fig_height: Optional[float] = None,
+    fig_scale: Union[float] = 1,
 ):
     """
-    Return the dimensions (width, height) for a figure based on the scale, width (in points), and aspect ratio.
+    Return the dimensions (width, height) for a figure based on the scale,
+    width (in points), and aspect ratio.
 
-    Primarily a helper function for get_figure.
+    Primarily a helper function for :func:`get_figure`.
 
     Parameters
     ----------
@@ -107,7 +109,7 @@ def _get_fig_dims(
 
 def save_current_figure(
     name: str,
-    target_dir: Optional[str] = None,
+    target_dir: Optional[os.PathLike] = None,
     img_format: str = "pdf",
     transparent: bool = True,
     tight_layout: bool = True,
@@ -133,9 +135,7 @@ def save_current_figure(
     path :
         The path the figure was saved to.
     """
-    if target_dir is None:
-        target_dir = Path.cwd()
-    path = Path(target_dir) / f"{name}.{img_format}"
+    path = Path(target_dir or Path.cwd()) / f"{name}.{img_format}"
     utils.ensure_parents_exist(path)
 
     if tight_layout:
@@ -172,7 +172,7 @@ class FigureManager:
         transparent: bool = True,
         close_before_enter: bool = True,
         close: bool = True,
-        target_dir: Optional[Path] = None,
+        target_dir: Optional[os.PathLike] = None,
         img_format: str = "pdf",
         save: bool = True,
         show: bool = False,
@@ -223,7 +223,7 @@ class FigureManager:
         self.tight_layout = tight_layout
         self.transparent = transparent
 
-        self.target_dir = Path(target_dir)
+        self.target_dir = Path(target_dir or Path.cwd())
         self.img_format = img_format
 
         self.close_before_enter = close_before_enter
@@ -231,9 +231,9 @@ class FigureManager:
         self._save = save
         self.show = show
 
-        self.path = None
+        self.path: Optional[Path] = None
 
-        self.elements = {}
+        self.elements: Dict[str, Any] = {}
 
     def save(self) -> Path:
         path = save_current_figure(

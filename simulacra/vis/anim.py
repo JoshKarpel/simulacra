@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Optional
+from typing import Callable, Optional, List
 
 import subprocess
 import os
@@ -640,7 +640,7 @@ def animate(
 
     fps = int(len(update_function_arguments) / length)
 
-    cmd = (
+    cmd = [
         "ffmpeg",
         "-y",
         "-r",
@@ -658,7 +658,7 @@ def animate(
         "-q:v",
         "1",  # maximum quality
         path,
-    )
+    ]
 
     with utils.SubprocessManager(cmd, **FFMPEG_PROCESS_KWARGS) as ffmpeg:
         if show_progress_bar:
@@ -756,14 +756,13 @@ class Animator(abc.ABC):
             target_dir = os.getcwd()
         self.target_dir = target_dir
 
-        postfix = utils.strip_illegal_characters(postfix)
         self.postfix = postfix
 
         self.length = int(length)
         self.fps = fps
         self.colormap = colormap
 
-        self.axis_managers = []
+        self.axis_managers: List[AxisManager] = []
         self.redraw = []
 
         self.sim = None
@@ -813,7 +812,7 @@ class Animator(abc.ABC):
         self.background = self.fig.canvas.copy_from_bbox(self.fig.bbox)
         canvas_width, canvas_height = self.fig.canvas.get_width_height()
 
-        self.cmd = (
+        self.cmd = [
             "ffmpeg",
             "-y",
             "-r",
@@ -831,7 +830,7 @@ class Animator(abc.ABC):
             "-q:v",
             "1",  # maximum quality
             self.file_path,
-        )
+        ]
 
         self.ffmpeg = subprocess.Popen(self.cmd, **FFMPEG_PROCESS_KWARGS)
 
