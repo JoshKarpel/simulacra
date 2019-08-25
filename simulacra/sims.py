@@ -8,6 +8,7 @@ import uuid
 from copy import deepcopy
 from pathlib import Path
 import abc
+import functools
 
 from .info import Info
 
@@ -184,6 +185,29 @@ class Simulation(Beet, abc.ABC):
         self._status = Status.UNINITIALIZED
         self.status = Status.INITIALIZED
 
+    @classmethod
+    def __init_subclass__(cls, **kwargs):
+        """
+        This method handles adding a decorator around subclass run methods
+        that implements the correct status behavior for them.
+        It is called automatically during subclass creation; no user code is
+        necessary.
+        """
+
+        def wrapper(func):
+            @functools.wraps(func)
+            def wrapped(self, *args, **kwargs):
+                self.status = Status.RUNNING
+                out = func(self, *args, **kwargs)
+                self.status = Status.FINISHED
+                return out
+
+            return wrapped
+
+        cls.run = wrapper(cls.run)
+
+        return cls
+
     @property
     def status(self) -> Status:
         """The current state of the simulation."""
@@ -336,7 +360,7 @@ def find_sim_or_init(
         The directory to look for the simulation in.
     Returns
     -------
-    sim :
+    sim
         The simulation, either loaded or initialized.
     """
     search_dir = Path(search_dir or Path.cwd())
@@ -349,7 +373,9 @@ def find_sim_or_init(
     return sim
 
 
-def run_from_cache(spec, cache_dir: Optional[Path] = None, **kwargs) -> Simulation:
+def run_from_cache(
+    spec: Specification, cache_dir: Optional[Path] = None, **kwargs
+) -> Simulation:
     """
     Runs simulations from a cache, which is a directory where simulations are
     stored. If a simulation with the same name as the ``spec`` is in the cache,
@@ -368,7 +394,7 @@ def run_from_cache(spec, cache_dir: Optional[Path] = None, **kwargs) -> Simulati
 
     Returns
     -------
-    sim :
+    sim
         The completed simulation.
     """
     sim = find_sim_or_init(spec, search_dir=cache_dir)

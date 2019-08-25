@@ -22,7 +22,7 @@ def version_info() -> Tuple[int, int, int, Optional[str], Optional[int]]:
 def _version_info(v: str) -> Tuple[int, int, int, str, int]:
     match = version_re.match(v)
     if match is None:
-        raise Exception("Could not determine version info!")
+        raise Exception(f"Could not determine version info from {v}")
 
     (major, minor, micro, prerelease, prerelease_num) = match.group(1, 2, 4, 5, 6)
 

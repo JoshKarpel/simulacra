@@ -4,28 +4,16 @@ import time
 
 import simulacra as si
 
+from .conftest import DummySpec, DummySim
+
 
 def test_base_simulation_cannot_be_instantiated_because_abstract():
     with pytest.raises(TypeError):
         si.Specification("dummy").to_sim()
 
 
-class DummySim(si.Simulation):
-    def run(self):
-        pass
-
-
-class DummySpec(si.Specification):
-    simulation_type = DummySim
-
-
 def test_can_instantiate_dummy_sim():
     DummySpec("dummy").to_sim()
-
-
-@pytest.fixture(scope="function")
-def sim():
-    return DummySpec("sim").to_sim()
 
 
 def test_fresh_status_is_initialized(sim):
@@ -85,3 +73,13 @@ def test_elapsed_time_set_after_finished(sim):
     sim.status = si.Status.FINISHED
 
     assert sim.elapsed_time is not None
+
+
+def test_run_docstring_is_preserved():
+    assert DummySim.run.__doc__ == "run method docstring"
+
+
+def test_running_sim_makes_status_be_finished_after_return(sim):
+    sim.run()
+
+    assert sim.status == si.Status.FINISHED
