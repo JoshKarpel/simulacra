@@ -31,8 +31,8 @@ DEFAULT_MINOR_GRID_KWARGS = dict(linestyle="-", color="black", linewidth=0.5, al
 DEFAULT_COLORMESH_GRID_KWARGS = dict(linestyle="-", linewidth=0.5, alpha=0.4)
 DEFAULT_LEGEND_KWARGS = dict(loc="best")
 DEFAULT_HVLINE_KWARGS = dict(linestyle="-", color="black")
-DEFAULT_CONTOUR_KWARGS = dict(linewidth=1, color="white")
-DEFAULT_CONTOUR_LABEL_KWARGS = dict(inline=1, fontsize=8, color="white")
+DEFAULT_CONTOUR_KWARGS = dict(linewidths=0.5, colors="white")
+DEFAULT_CONTOUR_LABEL_KWARGS = dict(inline=True, fontsize=8, colors="white")
 
 DEFAULT_TITLE_OFFSET = 1.15
 
@@ -459,13 +459,13 @@ def add_extra_ticks(
 
     if extra_ticks is not None:
         # append the extra tick labels, scaled appropriately
-        existing_ticks = list(getattr(ax, f"get_{which}ticks"))
+        existing_ticks = list(getattr(ax, f"get_{which}ticks")())
         new_ticks = list(np.array(extra_ticks) / unit_value)
         getattr(ax, f"set_{which}ticks")(existing_ticks + new_ticks)
 
         # replace the last set of tick labels (the ones we just added) with the custom tick labels
         if extra_tick_labels is not None:
-            tick_labels = list(ax.get_xticklabels())
+            tick_labels = list(getattr(ax, f"get_{which}ticklabels")())
             tick_labels[-len(extra_ticks) :] = extra_tick_labels
             getattr(ax, f"set_{which}ticklabels")(tick_labels)
 
