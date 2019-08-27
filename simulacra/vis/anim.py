@@ -116,7 +116,7 @@ def xyt_plot(
         vutils.attach_h_or_v_lines(ax, vlines, vline_kwargs, unit=x_unit, which="v")
         vutils.attach_h_or_v_lines(ax, hlines, hline_kwargs, unit=y_unit, which="h")
 
-        x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
+        x_lower_limit, x_upper_limit = vutils.set_axis_limits(
             ax,
             x_data,
             lower_limit=x_lower_limit,
@@ -125,9 +125,9 @@ def xyt_plot(
             pad=0,
             log_pad=1,
             unit=x_unit,
-            direction="x",
+            which="x",
         )
-        y_lower_limit, y_upper_limit = vutils.set_axis_limits_and_scale(
+        y_lower_limit, y_upper_limit = vutils.set_axis_limits(
             ax,
             *(
                 y_func(x_data, t, **y_kwargs)
@@ -140,7 +140,7 @@ def xyt_plot(
             pad=0.05,
             log_pad=10,
             unit=y_unit,
-            direction="y",
+            which="y",
         )
 
         ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
@@ -361,7 +361,9 @@ def xyzt_plot(
     font_size_tick_labels=10,
     ticks_on_top=True,
     ticks_on_right=True,
+    grids=True,
     grid_kwargs=None,
+    minor_grids=False,
     minor_grid_kwargs=None,
     length=30,
     colormap=plt.get_cmap("viridis"),
@@ -419,23 +421,23 @@ def xyzt_plot(
             ax, which="h", line_positions=hlines, line_kwargs=hline_kwargs, unit=y_unit
         )
 
-        x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
+        x_lower_limit, x_upper_limit = vutils.set_axis_limits(
             ax,
             x_mesh,
             lower_limit=x_lower_limit,
             upper_limit=x_upper_limit,
             log=x_log_axis,
             unit=x_unit,
-            direction="x",
+            which="x",
         )
-        y_lower_limit, y_upper_limit = vutils.set_axis_limits_and_scale(
+        y_lower_limit, y_upper_limit = vutils.set_axis_limits(
             ax,
             y_mesh,
             lower_limit=y_lower_limit,
             upper_limit=y_upper_limit,
             log=y_log_axis,
             unit=y_unit,
-            direction="y",
+            which="y",
         )
 
         if not isinstance(colormap, colors.RichardsonColormap):
@@ -522,11 +524,15 @@ def xyzt_plot(
         # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
         ax.tick_params(labeltop=ticks_on_top, labelright=ticks_on_right)
 
-        ax.grid(True, which="major", **grid_kwargs)
-        if x_log_axis:
-            ax.grid(True, which="minor", axis="x", **minor_grid_kwargs)
-        if y_log_axis:
-            ax.grid(True, which="minor", axis="y", **minor_grid_kwargs)
+        vutils.set_grids(
+            ax,
+            grids=grids,
+            grid_kwargs=grid_kwargs,
+            minor_grids=minor_grids,
+            minor_grid_kwargs=minor_grid_kwargs,
+            x_log_axis=x_log_axis,
+            y_log_axis=y_log_axis,
+        )
 
         colormesh = ax.pcolormesh(
             x_mesh / x_unit_value,

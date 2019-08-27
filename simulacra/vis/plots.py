@@ -50,12 +50,13 @@ def xy_plot(
     y_label: Optional[str] = None,
     y_label_kwargs: Optional[dict] = None,
     font_size_tick_labels: float = 10,
-    font_size_legend: float = 12,
     ticks_on_top: bool = True,
     ticks_on_right: bool = True,
     legend_on_right: bool = False,
     legend_kwargs: Optional[dict] = None,
+    grids: bool = True,
     grid_kwargs: Optional[dict] = None,
+    minor_grids: bool = False,
     minor_grid_kwargs: Optional[dict] = None,
     equal_aspect: bool = False,
     figure_manager: Optional[figman.FigureManager] = None,
@@ -71,38 +72,50 @@ def xy_plot(
     Parameters
     ----------
     name
-        The filename for the plot (not including path, which should be passed via they keyword argument ``target_dir``).
+        The filename for the plot
+        (not including path, which should be passed via they keyword argument
+        ``target_dir``).
     x_data
-        A single array that will be used as x-values for all the `y_data`.
+        A single array that will be used as x values for all the ``y_data``.
     y_data
-        Any number of arrays of the same length as `x_data`, each of which will appear as a line on the plot.
+        Any number of arrays, each of the same length as ``x_data``, each of
+        which will appear as a curve on the figure.
     line_labels
-        Labels for each of the `y_data` lines.
+        Labels for each of the ``y_data`` lines.
     line_kwargs
-        Keyword arguments for each of the `y_data` lines (a list of dictionaries).
+        Keyword arguments for each of the ``y_data`` lines
+        (a list of dictionaries).
     x_unit
-        The unit for the x-axis. Can be a number or the name of a unit as string.
+        The unit for the x-axis.
+        Can be a number or the name of a unit as string.
     y_unit
-        The unit for the y-axis. Can be a number or the name of a unit as string.
+        The unit for the y-axis.
+        Can be a number or the name of a unit as string.
     x_log_axis
         If ``True``, the x-axis will be log-scaled.
     y_log_axis
         If ``True``, the y-axis will be log-scaled.
     x_lower_limit
-        The lower limit for the x-axis. If ``None``, set automatically from the `x_data`.
+        The lower limit for the x-axis. If ``None``, set automatically from
+        the ``x_data``.
     x_upper_limit
-        The upper limit for the x-axis. If ``None``, set automatically from the `x_data`.
+        The upper limit for the x-axis. If ``None``, set automatically from
+        the ``x_data``.
     y_lower_limit
-        The lower limit for the y-axis. If ``None``, set automatically from the `y_data`.
+        The lower limit for the y-axis. If ``None``, set automatically from
+        the ``y_data``.
     y_upper_limit
-        The upper limit for the y-axis. If ``None``, set automatically from the `y_data`.
+        The upper limit for the y-axis. If ``None``, set automatically from
+        the ``y_data``.
     y_pad
-        The linear padding factor for the y-axis. See :func:`calculate_axis_limits`.
+        The linear padding factor for the y-axis.
+        See :func:`calculate_axis_limits`.
     y_log_pad
-        The logarithmic padding factor for the y-axis. See :func:`calculate_axis_limits`.
+        The logarithmic padding factor for the y-axis.
+        See :func:`calculate_axis_limits`.
     sym_log_linear_threshold
-        When the y-axis is in symmetric log-linear mode, this sets the threshold
-        for switching from log to linear scaling.
+        When the y-axis is in symmetric log-linear mode,
+        this is the threshold for switching from log to linear scaling.
     vlines
         A list of positions to draw vertical lines.
     vline_kwargs
@@ -123,31 +136,35 @@ def xy_plot(
         The text to display above the plot.
     title_offset
         How far to move the title vertically.
+    title_kwargs
+        Keyword arguments for the title.
     x_label
         The label to display below the x-axis.
+    x_label_kwargs
+        Keyword arguments for the x-axis label.
     y_label
         The label to display to the left of the y-axis.
-    font_size_title
-        The font size for the title.
-    font_size_axis_labels
-        The font size for the axis labels.
+    y_label_kwargs
+        Keyword arguments for the y-axis label.
     font_size_tick_labels
         The font size for the tick labels.
-    font_size_legend
-        The font size for the legend.
     ticks_on_top
-        If ``True``, axis ticks will be shown along the top side of the plot
-        (in addition to the bottom).
+        If ``True``, axis ticks will also be shown along the top side of the
+        plot (in addition to the bottom).
     ticks_on_right
-        If ``True``, axis ticks will be shown along the right side of the plot
-        (in addition to the left).
+        If ``True``, axis ticks will be also shown along the right side of the
+        plot (in addition to the left).
     legend_on_right
         If ``True``, the legend will be displayed hanging on the right side of
         the plot.
     legend_kwargs
         Keyword arguments for the legend.
+    grids
+        If ``True``, draw major gridlines.
     grid_kwargs
         Keyword arguments for the major gridlines.
+    grids
+        If ``True``, draw minor gridlines.
     minor_grid_kwargs
         Keyword arguments for the minor gridlines.
     equal_aspect
@@ -160,8 +177,8 @@ def xy_plot(
 
     Returns
     -------
-    :class:`FigureManager`
-        The :class:`FigureManager` that the xy-plot was constructed in.
+    figman
+        The :class:`FigureManager` that the figure was constructed in.
     """
     legend_kwargs = collections.ChainMap(
         legend_kwargs or {}, vutils.DEFAULT_LEGEND_KWARGS
@@ -212,17 +229,17 @@ def xy_plot(
                 unit=unit,
             )
 
-        x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
+        x_lower_limit, x_upper_limit = vutils.set_axis_limits(
             ax,
             x_data,
             lower_limit=x_lower_limit,
             upper_limit=x_upper_limit,
             log=x_log_axis,
             unit=x_unit,
-            direction="x",
+            which="x",
             sym_log_linear_threshold=sym_log_linear_threshold,
         )
-        y_lower_limit, y_upper_limit = vutils.set_axis_limits_and_scale(
+        y_lower_limit, y_upper_limit = vutils.set_axis_limits(
             ax,
             *y_data,
             lower_limit=y_lower_limit,
@@ -231,77 +248,46 @@ def xy_plot(
             pad=y_pad,
             log_pad=y_log_pad,
             unit=y_unit,
-            direction="y",
+            which="y",
             sym_log_linear_threshold=sym_log_linear_threshold,
         )
 
-        ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
-
-        fm.elements["title"] = vutils.set_title(
-            ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
+        vutils.make_legend(
+            ax,
+            figure_manager=fm,
+            line_labels=line_labels,
+            legend_kwargs=legend_kwargs,
+            legend_on_right=legend_on_right,
         )
-        for which, unit, label, label_kwargs in (
-            ("x", x_unit, x_label, x_label_kwargs),
-            ("y", y_unit, y_label, y_label_kwargs),
-        ):
-            fm.elements[f"{which}_axis_label"] = vutils.set_axis_label(
-                ax, which=which, label=label, unit=unit, label_kwargs=label_kwargs
-            )
-
-        if len(line_labels) > 0 or "handles" in legend_kwargs:
-            if not legend_on_right:
-                legend = ax.legend(fontsize=font_size_legend, **legend_kwargs)
-            if legend_on_right:
-                legend_kwargs = collections.ChainMap(
-                    dict(
-                        loc="upper left",
-                        bbox_to_anchor=(1.2, 1),
-                        borderaxespad=0,
-                        fontsize=font_size_legend,
-                        ncol=1 + (len(line_labels) // 17),
-                    ),
-                    legend_kwargs,
-                )
-                legend = ax.legend(**legend_kwargs)
-
-        # draw that figure so that the ticks exist, so that we can add more ticks
-        fig.canvas.draw()
-
-        for which, unit, limits in (
-            ("x", x_unit, (x_lower_limit, x_upper_limit)),
-            ("y", y_unit, (y_lower_limit, y_upper_limit)),
-        ):
-            vutils.maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
-
-        for which, unit, extra_ticks, extra_tick_labels in (
-            ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
-            ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
-        ):
-            vutils.add_extra_ticks(
-                ax,
-                which=which,
-                extra_ticks=extra_ticks,
-                extra_tick_labels=extra_tick_labels,
-                unit=unit,
-            )
-
-        ax.grid(True, which="major", **grid_kwargs)
-        ax.minorticks_on()
-        if x_log_axis:
-            ax.grid(True, which="minor", axis="x", **minor_grid_kwargs)
-        if y_log_axis:
-            ax.grid(True, which="minor", axis="y", **minor_grid_kwargs)
-
-        # set limits again to guarantee we don't see ticks outside the limits
-        ax.set_xlim(x_lower_limit, x_upper_limit)
-        ax.set_ylim(y_lower_limit, y_upper_limit)
-
-        # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(
-            top=ticks_on_top,
-            labeltop=ticks_on_top,
-            right=ticks_on_right,
-            labelright=ticks_on_right,
+        _handle_xy_ish_figure_options(
+            ax,
+            fm,
+            title,
+            title_kwargs,
+            title_offset,
+            x_unit,
+            x_log_axis,
+            x_lower_limit,
+            x_upper_limit,
+            y_unit,
+            y_log_axis,
+            y_lower_limit,
+            y_upper_limit,
+            x_label,
+            x_label_kwargs,
+            y_label,
+            y_label_kwargs,
+            y_extra_ticks,
+            y_extra_tick_labels,
+            x_extra_ticks,
+            x_extra_tick_labels,
+            ticks_on_right,
+            ticks_on_top,
+            font_size_tick_labels,
+            grids,
+            grid_kwargs,
+            minor_grids,
+            minor_grid_kwargs,
         )
 
     return fm
@@ -344,7 +330,9 @@ def xy_stackplot(
     ticks_on_right: bool = True,
     legend_on_right: bool = False,
     legend_kwargs: Optional[dict] = None,
+    grids: bool = True,
     grid_kwargs: Optional[dict] = None,
+    minor_grids: bool = False,
     minor_grid_kwargs: Optional[dict] = None,
     equal_aspect: bool = False,
     figure_manager: Optional[figman.FigureManager] = None,
@@ -358,11 +346,11 @@ def xy_stackplot(
     name
         The filename for the plot (not including path, which should be passed via they keyword argument ``target_dir``).
     x_data
-        A single array that will be used as x-values for all the `y_data`.
+        A single array that will be used as x-values for all the ``y_data``.
     y_data
-        Any number of arrays of the same length as `x_data`, each of which will appear as a line on the plot.
+        Any number of arrays of the same length as ``x_data``, each of which will appear as a line on the plot.
     line_labels
-        Labels for each of the `y_data` lines.
+        Labels for each of the ``y_data`` lines.
     x_unit
         The unit for the x-axis. Can be a number or the name of a unit as string.
     y_unit
@@ -372,13 +360,13 @@ def xy_stackplot(
     y_log_axis
         If ``True``, the y-axis will be log-scaled.
     x_lower_limit
-        The lower limit for the x-axis. If ``None``, set automatically from the `x_data`.
+        The lower limit for the x-axis. If ``None``, set automatically from the ``x_data``.
     x_upper_limit
-        The upper limit for the x-axis. If ``None``, set automatically from the `x_data`.
+        The upper limit for the x-axis. If ``None``, set automatically from the ``x_data``.
     y_lower_limit
-        The lower limit for the y-axis. If ``None``, set automatically from the `y_data`.
+        The lower limit for the y-axis. If ``None``, set automatically from the ``y_data``.
     y_upper_limit
-        The upper limit for the y-axis. If ``None``, set automatically from the `y_data`.
+        The upper limit for the y-axis. If ``None``, set automatically from the ``y_data``.
     y_pad
         The linear padding factor for the y-axis. See :func:`calculate_axis_limits`.
     y_log_pad
@@ -487,19 +475,19 @@ def xy_stackplot(
                 unit=unit,
             )
 
-        x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
+        x_lower_limit, x_upper_limit = vutils.set_axis_limits(
             ax,
             x_data,
-            direction="x",
+            which="x",
             lower_limit=x_lower_limit,
             upper_limit=x_upper_limit,
             log=x_log_axis,
             unit=x_unit,
         )
-        y_lower_limit, y_upper_limit = vutils.set_axis_limits_and_scale(
+        y_lower_limit, y_upper_limit = vutils.set_axis_limits(
             ax,
             *y_data,
-            direction="y",
+            which="y",
             lower_limit=y_lower_limit,
             upper_limit=y_upper_limit,
             log=y_log_axis,
@@ -508,73 +496,42 @@ def xy_stackplot(
             unit=y_unit,
         )
 
-        ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
-
-        fm.elements["title"] = vutils.set_title(
-            ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
+        vutils.make_legend(
+            ax,
+            figure_manager=fm,
+            line_labels=line_labels,
+            legend_kwargs=legend_kwargs,
+            legend_on_right=legend_on_right,
         )
-        for which, unit, label, label_kwargs in (
-            ("x", x_unit, x_label, x_label_kwargs),
-            ("y", y_unit, y_label, y_label_kwargs),
-        ):
-            fm.elements[f"{which}_axis_label"] = vutils.set_axis_label(
-                ax, which=which, label=label, unit=unit, label_kwargs=label_kwargs
-            )
-
-        if len(line_labels) > 0 or "handles" in legend_kwargs:
-            if not legend_on_right:
-                legend = ax.legend(fontsize=font_size_legend, **legend_kwargs)
-            if legend_on_right:
-                legend_kwargs = collections.ChainMap(
-                    legend_kwargs,
-                    dict(
-                        loc="upper left",
-                        bbox_to_anchor=(1.15, 1),
-                        borderaxespad=0,
-                        fontsize=font_size_legend,
-                        ncol=1 + (len(line_labels) // 17),
-                    ),
-                )
-                legend = ax.legend(**legend_kwargs)
-
-        # draw that figure so that the ticks exist, so that we can add more ticks
-        fig.canvas.draw()
-
-        for which, unit, limits in (
-            ("x", x_unit, (x_lower_limit, x_upper_limit)),
-            ("y", y_unit, (y_lower_limit, y_upper_limit)),
-        ):
-            vutils.maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
-
-        for which, unit, extra_ticks, extra_tick_labels in (
-            ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
-            ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
-        ):
-            vutils.add_extra_ticks(
-                ax,
-                which=which,
-                extra_ticks=extra_ticks,
-                extra_tick_labels=extra_tick_labels,
-                unit=unit,
-            )
-
-        ax.grid(True, which="major", **grid_kwargs)
-        ax.minorticks_on()
-        if x_log_axis:
-            ax.grid(True, which="minor", axis="x", **minor_grid_kwargs)
-        if y_log_axis:
-            ax.grid(True, which="minor", axis="y", **minor_grid_kwargs)
-
-        # set limits again to guarantee we don't see ticks outside the limits
-        ax.set_xlim(x_lower_limit, x_upper_limit)
-        ax.set_ylim(y_lower_limit, y_upper_limit)
-
-        # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(
-            top=ticks_on_top,
-            labeltop=ticks_on_top,
-            right=ticks_on_right,
-            labelright=ticks_on_right,
+        _handle_xy_ish_figure_options(
+            ax,
+            fm,
+            title,
+            title_kwargs,
+            title_offset,
+            x_unit,
+            x_log_axis,
+            x_lower_limit,
+            x_upper_limit,
+            y_unit,
+            y_log_axis,
+            y_lower_limit,
+            y_upper_limit,
+            x_label,
+            x_label_kwargs,
+            y_label,
+            y_label_kwargs,
+            y_extra_ticks,
+            y_extra_tick_labels,
+            x_extra_ticks,
+            x_extra_tick_labels,
+            ticks_on_right,
+            ticks_on_top,
+            font_size_tick_labels,
+            grids,
+            grid_kwargs,
+            minor_grids,
+            minor_grid_kwargs,
         )
 
     return fm
@@ -612,11 +569,12 @@ def xxyy_plot(
     y_label=None,
     y_label_kwargs: Optional[dict] = None,
     font_size_tick_labels=10,
-    font_size_legend=12,
     ticks_on_top=True,
     ticks_on_right=True,
     legend_on_right=False,
-    grid_kwargs=None,
+    grids: bool = True,
+    grid_kwargs: Optional[dict] = None,
+    minor_grids: bool = False,
     minor_grid_kwargs=None,
     legend_kwargs=None,
     figure_manager=None,
@@ -670,7 +628,7 @@ def xxyy_plot(
                 unit=unit,
             )
 
-        x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
+        x_lower_limit, x_upper_limit = vutils.set_axis_limits(
             ax,
             *x_data,
             lower_limit=x_lower_limit,
@@ -679,9 +637,9 @@ def xxyy_plot(
             pad=0,
             log_pad=1,
             unit=x_unit,
-            direction="x",
+            which="x",
         )
-        y_lower_limit, y_upper_limit = vutils.set_axis_limits_and_scale(
+        y_lower_limit, y_upper_limit = vutils.set_axis_limits(
             ax,
             *y_data,
             lower_limit=y_lower_limit,
@@ -690,84 +648,45 @@ def xxyy_plot(
             pad=y_pad,
             log_pad=y_log_pad,
             unit=y_unit,
-            direction="y",
+            which="y",
         )
 
-        ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
-
-        fm.elements["title"] = vutils.set_title(
-            ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
+        vutils.make_legend(
+            ax,
+            figure_manager=fm,
+            line_labels=line_labels,
+            legend_kwargs=legend_kwargs,
+            legend_on_right=legend_on_right,
         )
-        for which, unit, label, label_kwargs in (
-            ("x", x_unit, x_label, x_label_kwargs),
-            ("y", y_unit, y_label, y_label_kwargs),
-        ):
-            fm.elements[f"{which}_axis_label"] = vutils.set_axis_label(
-                ax, which=which, label=label, unit=unit, label_kwargs=label_kwargs
-            )
-
-        if len(line_labels) > 0 or "handles" in legend_kwargs:
-            if not legend_on_right:
-                legend = ax.legend(
-                    **{**legend_kwargs, **dict(fontsize=font_size_legend)}
-                )
-            if legend_on_right:
-                legend_kwargs["loc"] = "upper left"
-                legend = ax.legend(
-                    **{
-                        **legend_kwargs,
-                        **dict(
-                            bbox_to_anchor=(1.15, 1),
-                            borderaxespad=0.0,
-                            fontsize=font_size_legend,
-                            ncol=1 + (len(line_labels) // 17),
-                        ),
-                    }
-                )
-
-        # draw that figure so that the ticks exist, so that we can add more ticks
-        fig.canvas.draw()
-
-        for which, unit, lower_limit, upper_limit in (
-            ("x", x_unit, x_lower_limit, x_upper_limit),
-            ("y", y_unit, y_lower_limit, y_upper_limit),
-        ):
-            vutils.maybe_set_pi_ticks_and_labels(
-                ax,
-                which=which,
-                unit=unit,
-                lower_limit=lower_limit,
-                upper_limit=upper_limit,
-            )
-
-        for which, unit, extra_ticks, extra_tick_labels in (
-            ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
-            ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
-        ):
-            vutils.add_extra_ticks(
-                ax,
-                which=which,
-                extra_ticks=extra_ticks,
-                extra_tick_labels=extra_tick_labels,
-                unit=unit,
-            )
-
-        ax.grid(True, which="major", **grid_kwargs)
-        if x_log_axis:
-            ax.grid(True, which="minor", axis="x", **minor_grid_kwargs)
-        if y_log_axis:
-            ax.grid(True, which="minor", axis="y", **minor_grid_kwargs)
-
-        # set limits again to guarantee we don't see ticks oustide the limits
-        ax.set_xlim(x_lower_limit, x_upper_limit)
-        ax.set_ylim(y_lower_limit, y_upper_limit)
-
-        # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(
-            top=ticks_on_top,
-            labeltop=ticks_on_top,
-            right=ticks_on_right,
-            labelright=ticks_on_right,
+        _handle_xy_ish_figure_options(
+            ax,
+            fm,
+            title,
+            title_kwargs,
+            title_offset,
+            x_unit,
+            x_log_axis,
+            x_lower_limit,
+            x_upper_limit,
+            y_unit,
+            y_log_axis,
+            y_lower_limit,
+            y_upper_limit,
+            x_label,
+            x_label_kwargs,
+            y_label,
+            y_label_kwargs,
+            y_extra_ticks,
+            y_extra_tick_labels,
+            x_extra_ticks,
+            x_extra_tick_labels,
+            ticks_on_right,
+            ticks_on_top,
+            font_size_tick_labels,
+            grids,
+            grid_kwargs,
+            minor_grids,
+            minor_grid_kwargs,
         )
 
     return fm
@@ -822,16 +741,22 @@ def xyz_plot(
     lines=(),
     line_kwargs=(),
     colormap=plt.get_cmap("viridis"),
-    shading="flat",
-    show_colorbar=True,
+    shading=vutils.ColormapShader.FLAT,
+    show_colorbar: bool = True,
     richardson_equator_magnitude=1,
     sym_log_norm_epsilon=1e-3,
     figure_manager=None,
     **kwargs,
 ) -> figman.FigureManager:
-    grid_kwargs = collections.ChainMap(grid_kwargs or {}, vutils.DEFAULT_GRID_KWARGS)
+    grid_kwargs = collections.ChainMap(
+        grid_kwargs or {},
+        {"color": colors.CMAP_TO_OPPOSITE.get(colormap, "black")},
+        vutils.DEFAULT_GRID_KWARGS,
+    )
     minor_grid_kwargs = collections.ChainMap(
-        minor_grid_kwargs or {}, vutils.DEFAULT_MINOR_GRID_KWARGS
+        minor_grid_kwargs or {},
+        {"color": colors.CMAP_TO_OPPOSITE.get(colormap, "black")},
+        vutils.DEFAULT_MINOR_GRID_KWARGS,
     )
 
     contour_kwargs = collections.ChainMap(
@@ -847,10 +772,6 @@ def xyz_plot(
         fig = fm.fig
         ax = fig.add_subplot(111)
 
-        # grid_color = colors.CMAP_TO_OPPOSITE.get(colormap, 'black')
-        # grid_kwargs['color'] = grid_color
-        # minor_grid_kwargs['color'] = grid_color
-
         plt.set_cmap(colormap)
 
         x_unit_value, y_unit_value, z_unit_value = u.get_unit_values(
@@ -858,10 +779,10 @@ def xyz_plot(
         )
         z_unit_label = vutils.get_unit_str_for_axis_label(z_unit)
 
-        x_lower_limit, x_upper_limit = vutils.set_axis_limits_and_scale(
+        x_lower_limit, x_upper_limit = vutils.set_axis_limits(
             ax,
             x_mesh,
-            direction="x",
+            which="x",
             lower_limit=x_lower_limit,
             upper_limit=x_upper_limit,
             log=x_log_axis,
@@ -869,10 +790,10 @@ def xyz_plot(
             log_pad=1,
             unit=x_unit,
         )
-        y_lower_limit, y_upper_limit = vutils.set_axis_limits_and_scale(
+        y_lower_limit, y_upper_limit = vutils.set_axis_limits(
             ax,
             y_mesh,
-            direction="y",
+            which="y",
             lower_limit=y_lower_limit,
             upper_limit=y_upper_limit,
             log=y_log_axis,
@@ -949,63 +870,128 @@ def xyz_plot(
                 unit=unit,
             )
 
-        ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
-
-        fm.elements["title"] = vutils.set_title(
-            ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
-        )
-        for which, unit, label, label_kwargs in (
-            ("x", x_unit, x_label, x_label_kwargs),
-            ("y", y_unit, y_label, y_label_kwargs),
-        ):
-            fm.elements[f"{which}_axis_label"] = vutils.set_axis_label(
-                ax, which=which, label=label, unit=unit, label_kwargs=label_kwargs
-            )
-
         if show_colorbar and colormap.name != "richardson":
             cbar = plt.colorbar(mappable=colormesh, ax=ax, pad=0.1)
             if z_label is not None:
                 z_label = cbar.set_label(r"{}".format(z_label) + z_unit_label)
 
-        # draw that figure so that the ticks exist, so that we can add more ticks
-        fig.canvas.draw()
-
-        for which, unit, limits in (
-            ("x", x_unit, (x_lower_limit, x_upper_limit)),
-            ("y", y_unit, (y_lower_limit, y_upper_limit)),
-        ):
-            vutils.maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
-
-        for which, unit, extra_ticks, extra_tick_labels in (
-            ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
-            ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
-        ):
-            vutils.add_extra_ticks(
-                ax,
-                which=which,
-                extra_ticks=extra_ticks,
-                extra_tick_labels=extra_tick_labels,
-                unit=unit,
-            )
-
-        if grids:
-            ax.grid(grids, which="major", **grid_kwargs)
-        if minor_grids:
-            if x_log_axis:
-                ax.grid(True, which="minor", axis="x", **minor_grid_kwargs)
-            if y_log_axis:
-                ax.grid(True, which="minor", axis="y", **minor_grid_kwargs)
-
-        # set limits again to guarantee we don't see ticks oustide the limits
-        ax.set_xlim(x_lower_limit, x_upper_limit)
-        ax.set_ylim(y_lower_limit, y_upper_limit)
-
-        # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
-        ax.tick_params(
-            top=ticks_on_top,
-            labeltop=ticks_on_top,
-            right=ticks_on_right,
-            labelright=ticks_on_right,
+        _handle_xy_ish_figure_options(
+            ax,
+            fm,
+            title,
+            title_kwargs,
+            title_offset,
+            x_unit,
+            x_log_axis,
+            x_lower_limit,
+            x_upper_limit,
+            y_unit,
+            y_log_axis,
+            y_lower_limit,
+            y_upper_limit,
+            x_label,
+            x_label_kwargs,
+            y_label,
+            y_label_kwargs,
+            y_extra_ticks,
+            y_extra_tick_labels,
+            x_extra_ticks,
+            x_extra_tick_labels,
+            ticks_on_right,
+            ticks_on_top,
+            font_size_tick_labels,
+            grids,
+            grid_kwargs,
+            minor_grids,
+            minor_grid_kwargs,
         )
 
     return fm
+
+
+def _handle_xy_ish_figure_options(
+    ax,
+    figure_manager,
+    title,
+    title_kwargs,
+    title_offset,
+    x_unit,
+    x_log_axis,
+    x_lower_limit,
+    x_upper_limit,
+    y_unit,
+    y_log_axis,
+    y_lower_limit,
+    y_upper_limit,
+    x_label,
+    x_label_kwargs,
+    y_label,
+    y_label_kwargs,
+    y_extra_ticks,
+    y_extra_tick_labels,
+    x_extra_ticks,
+    x_extra_tick_labels,
+    ticks_on_right,
+    ticks_on_top,
+    font_size_tick_labels,
+    grids,
+    grid_kwargs,
+    minor_grids,
+    minor_grid_kwargs,
+):
+    ax.tick_params(axis="both", which="major", labelsize=font_size_tick_labels)
+
+    figure_manager.elements["title"] = vutils.set_title(
+        ax, title_text=title, title_offset=title_offset, title_kwargs=title_kwargs
+    )
+
+    for which, unit, label, label_kwargs in (
+        ("x", x_unit, x_label, x_label_kwargs),
+        ("y", y_unit, y_label, y_label_kwargs),
+    ):
+        figure_manager.elements[f"{which}_axis_label"] = vutils.set_axis_label(
+            ax, which=which, label_text=label, unit=unit, label_kwargs=label_kwargs
+        )
+
+    # draw the figure so that the ticks exist, so that we can add more ticks
+    figure_manager.fig.canvas.draw()
+
+    for which, unit, limits in (
+        ("x", x_unit, (x_lower_limit, x_upper_limit)),
+        ("y", y_unit, (y_lower_limit, y_upper_limit)),
+    ):
+        vutils.maybe_set_pi_ticks_and_labels(ax, which, unit, *limits)
+
+    for which, unit, extra_ticks, extra_tick_labels in (
+        ("x", x_unit, x_extra_ticks, x_extra_tick_labels),
+        ("y", y_unit, y_extra_ticks, y_extra_tick_labels),
+    ):
+        vutils.add_extra_ticks(
+            ax,
+            which=which,
+            extra_ticks=extra_ticks,
+            extra_tick_labels=extra_tick_labels,
+            unit=unit,
+        )
+
+    vutils.set_grids(
+        ax,
+        grids=grids,
+        grid_kwargs=grid_kwargs,
+        minor_grids=minor_grids,
+        minor_grid_kwargs=minor_grid_kwargs,
+        x_log_axis=x_log_axis,
+        y_log_axis=y_log_axis,
+    )
+
+    # set limits again to guarantee we don't see ticks outside the limits
+    ax.set_xlim(x_lower_limit, x_upper_limit)
+    ax.set_ylim(y_lower_limit, y_upper_limit)
+
+    # set these AFTER adding extra tick labels so that we don't have to slice into the middle of the label lists above
+    ax.tick_params(
+        top=ticks_on_top,
+        labeltop=ticks_on_top,
+        right=ticks_on_right,
+        labelright=ticks_on_right,
+    )

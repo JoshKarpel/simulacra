@@ -231,6 +231,7 @@ class FigureManager:
         self._save = save
         self.show = show
 
+        self.fig: Optional[plt.Figure] = None
         self.path: Optional[Path] = None
 
         self.elements: Dict[str, Any] = {}
