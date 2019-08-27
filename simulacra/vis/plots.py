@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Iterable, Collection, Union
+from typing import Optional, Iterable, Collection, Mapping, Any
 
 import itertools
 import collections
@@ -21,8 +21,8 @@ def xy_plot(
     name: str,
     x_data: np.ndarray,
     *y_data: np.ndarray,
-    line_labels: Iterable[str] = (),
-    line_kwargs: Iterable[dict] = (),
+    line_labels: Optional[Collection[str]] = None,
+    line_kwargs: Optional[Collection[Mapping[str, Any]]] = None,
     x_unit: u.Unit = None,
     y_unit: u.Unit = None,
     x_log_axis: bool = False,
@@ -163,7 +163,7 @@ def xy_plot(
         If ``True``, draw major gridlines.
     grid_kwargs
         Keyword arguments for the major gridlines.
-    grids
+    minor_grids
         If ``True``, draw minor gridlines.
     minor_grid_kwargs
         Keyword arguments for the minor gridlines.
@@ -180,6 +180,9 @@ def xy_plot(
     figman
         The :class:`FigureManager` that the figure was constructed in.
     """
+    line_labels = line_labels or ()
+    line_kwargs = line_kwargs or ()
+
     legend_kwargs = collections.ChainMap(
         legend_kwargs or {}, vutils.DEFAULT_LEGEND_KWARGS
     )
@@ -293,11 +296,168 @@ def xy_plot(
     return fm
 
 
+def xxyy_plot(
+    name,
+    x_data,
+    y_data,
+    line_labels: Optional[Collection[str]] = None,
+    line_kwargs=(),
+    x_unit=None,
+    y_unit=None,
+    x_log_axis=False,
+    y_log_axis=False,
+    x_lower_limit=None,
+    x_upper_limit=None,
+    y_lower_limit=None,
+    y_upper_limit=None,
+    y_pad=0,
+    y_log_pad=1,
+    vlines=(),
+    vline_kwargs=(),
+    hlines=(),
+    hline_kwargs=(),
+    x_extra_ticks=None,
+    y_extra_ticks=None,
+    x_extra_tick_labels=None,
+    y_extra_tick_labels=None,
+    title=None,
+    title_offset=vutils.DEFAULT_TITLE_OFFSET,
+    title_kwargs: Optional[dict] = None,
+    x_label=None,
+    x_label_kwargs: Optional[dict] = None,
+    y_label=None,
+    y_label_kwargs: Optional[dict] = None,
+    font_size_tick_labels=10,
+    ticks_on_top=True,
+    ticks_on_right=True,
+    legend_on_right=False,
+    grids: bool = True,
+    grid_kwargs: Optional[dict] = None,
+    minor_grids: bool = False,
+    minor_grid_kwargs=None,
+    legend_kwargs=None,
+    figure_manager=None,
+    **kwargs,
+) -> figman.FigureManager:
+    line_labels = line_labels or ()
+
+    legend_kwargs = collections.ChainMap(
+        legend_kwargs or {}, vutils.DEFAULT_LEGEND_KWARGS
+    )
+    grid_kwargs = collections.ChainMap(grid_kwargs or {}, vutils.DEFAULT_GRID_KWARGS)
+    minor_grid_kwargs = collections.ChainMap(
+        minor_grid_kwargs or {}, vutils.DEFAULT_MINOR_GRID_KWARGS
+    )
+
+    if figure_manager is None:
+        figure_manager = figman.FigureManager(name, **kwargs)
+    with figure_manager as fm:
+        fig = fm.fig
+        ax = fig.add_subplot(111)
+
+        fm.elements["axis"] = ax
+
+        # ensure data is in numpy arrays
+        x_data = [np.array(x) for x in x_data]
+        y_data = [np.array(y) for y in y_data]
+        line_labels = tuple(line_labels)
+        line_kwargs = tuple(line_kwargs)
+
+        x_unit_value, x_unit_tex = u.get_unit_value_and_latex(x_unit)
+        y_unit_value, y_unit_tex = u.get_unit_value_and_latex(y_unit)
+
+        lines = []
+        for x, y, lab, kw in itertools.zip_longest(
+            x_data, y_data, line_labels, line_kwargs
+        ):
+            kw = kw or {}
+            lab = lab or ""
+            lines.append(
+                plt.plot(x / x_unit_value, y / y_unit_value, label=lab, **kw)[0]
+            )
+        fm.elements["lines"] = lines
+
+        for which, line_positions, line_kwargs, unit in (
+            ("v", vlines, vline_kwargs, x_unit),
+            ("h", hlines, hline_kwargs, y_unit),
+        ):
+            fm.elements[f"{which}lines"] = vutils.attach_h_or_v_lines(
+                ax,
+                which=which,
+                line_positions=line_positions,
+                line_kwargs=line_kwargs,
+                unit=unit,
+            )
+
+        x_lower_limit, x_upper_limit = vutils.set_axis_limits(
+            ax,
+            *x_data,
+            lower_limit=x_lower_limit,
+            upper_limit=x_upper_limit,
+            log=x_log_axis,
+            pad=0,
+            log_pad=1,
+            unit=x_unit,
+            which="x",
+        )
+        y_lower_limit, y_upper_limit = vutils.set_axis_limits(
+            ax,
+            *y_data,
+            lower_limit=y_lower_limit,
+            upper_limit=y_upper_limit,
+            log=y_log_axis,
+            pad=y_pad,
+            log_pad=y_log_pad,
+            unit=y_unit,
+            which="y",
+        )
+
+        vutils.make_legend(
+            ax,
+            figure_manager=fm,
+            line_labels=line_labels,
+            legend_kwargs=legend_kwargs,
+            legend_on_right=legend_on_right,
+        )
+        _handle_xy_ish_figure_options(
+            ax,
+            fm,
+            title,
+            title_kwargs,
+            title_offset,
+            x_unit,
+            x_log_axis,
+            x_lower_limit,
+            x_upper_limit,
+            y_unit,
+            y_log_axis,
+            y_lower_limit,
+            y_upper_limit,
+            x_label,
+            x_label_kwargs,
+            y_label,
+            y_label_kwargs,
+            y_extra_ticks,
+            y_extra_tick_labels,
+            x_extra_ticks,
+            x_extra_tick_labels,
+            ticks_on_right,
+            ticks_on_top,
+            font_size_tick_labels,
+            grids,
+            grid_kwargs,
+            minor_grids,
+            minor_grid_kwargs,
+        )
+
+    return fm
+
+
 def xy_stackplot(
     name: str,
     x_data: np.ndarray,
     *y_data: np.ndarray,
-    line_labels: Iterable[str] = (),
+    line_labels: Optional[Collection[str]] = None,
     line_kwargs: Iterable[dict] = (),
     x_unit: u.Unit = None,
     y_unit: u.Unit = None,
@@ -427,6 +587,8 @@ def xy_stackplot(
     :class:`FigureManager`
         The :class:`FigureManager` that the xy-plot was constructed in.
     """
+    line_labels = line_labels or ()
+
     legend_kwargs = collections.ChainMap(
         legend_kwargs or {}, vutils.DEFAULT_LEGEND_KWARGS
     )
@@ -494,161 +656,6 @@ def xy_stackplot(
             pad=y_pad,
             log_pad=y_log_pad,
             unit=y_unit,
-        )
-
-        vutils.make_legend(
-            ax,
-            figure_manager=fm,
-            line_labels=line_labels,
-            legend_kwargs=legend_kwargs,
-            legend_on_right=legend_on_right,
-        )
-        _handle_xy_ish_figure_options(
-            ax,
-            fm,
-            title,
-            title_kwargs,
-            title_offset,
-            x_unit,
-            x_log_axis,
-            x_lower_limit,
-            x_upper_limit,
-            y_unit,
-            y_log_axis,
-            y_lower_limit,
-            y_upper_limit,
-            x_label,
-            x_label_kwargs,
-            y_label,
-            y_label_kwargs,
-            y_extra_ticks,
-            y_extra_tick_labels,
-            x_extra_ticks,
-            x_extra_tick_labels,
-            ticks_on_right,
-            ticks_on_top,
-            font_size_tick_labels,
-            grids,
-            grid_kwargs,
-            minor_grids,
-            minor_grid_kwargs,
-        )
-
-    return fm
-
-
-def xxyy_plot(
-    name,
-    x_data,
-    y_data,
-    line_labels=(),
-    line_kwargs=(),
-    x_unit=None,
-    y_unit=None,
-    x_log_axis=False,
-    y_log_axis=False,
-    x_lower_limit=None,
-    x_upper_limit=None,
-    y_lower_limit=None,
-    y_upper_limit=None,
-    y_pad=0,
-    y_log_pad=1,
-    vlines=(),
-    vline_kwargs=(),
-    hlines=(),
-    hline_kwargs=(),
-    x_extra_ticks=None,
-    y_extra_ticks=None,
-    x_extra_tick_labels=None,
-    y_extra_tick_labels=None,
-    title=None,
-    title_offset=vutils.DEFAULT_TITLE_OFFSET,
-    title_kwargs: Optional[dict] = None,
-    x_label=None,
-    x_label_kwargs: Optional[dict] = None,
-    y_label=None,
-    y_label_kwargs: Optional[dict] = None,
-    font_size_tick_labels=10,
-    ticks_on_top=True,
-    ticks_on_right=True,
-    legend_on_right=False,
-    grids: bool = True,
-    grid_kwargs: Optional[dict] = None,
-    minor_grids: bool = False,
-    minor_grid_kwargs=None,
-    legend_kwargs=None,
-    figure_manager=None,
-    **kwargs,
-) -> figman.FigureManager:
-    legend_kwargs = collections.ChainMap(
-        legend_kwargs or {}, vutils.DEFAULT_LEGEND_KWARGS
-    )
-    grid_kwargs = collections.ChainMap(grid_kwargs or {}, vutils.DEFAULT_GRID_KWARGS)
-    minor_grid_kwargs = collections.ChainMap(
-        minor_grid_kwargs or {}, vutils.DEFAULT_MINOR_GRID_KWARGS
-    )
-
-    if figure_manager is None:
-        figure_manager = figman.FigureManager(name, **kwargs)
-    with figure_manager as fm:
-        fig = fm.fig
-        ax = fig.add_subplot(111)
-
-        fm.elements["axis"] = ax
-
-        # ensure data is in numpy arrays
-        x_data = [np.array(x) for x in x_data]
-        y_data = [np.array(y) for y in y_data]
-        line_labels = tuple(line_labels)
-        line_kwargs = tuple(line_kwargs)
-
-        x_unit_value, x_unit_tex = u.get_unit_value_and_latex(x_unit)
-        y_unit_value, y_unit_tex = u.get_unit_value_and_latex(y_unit)
-
-        lines = []
-        for x, y, lab, kw in itertools.zip_longest(
-            x_data, y_data, line_labels, line_kwargs
-        ):
-            kw = kw or {}
-            lab = lab or ""
-            lines.append(
-                plt.plot(x / x_unit_value, y / y_unit_value, label=lab, **kw)[0]
-            )
-        fm.elements["lines"] = lines
-
-        for which, line_positions, line_kwargs, unit in (
-            ("v", vlines, vline_kwargs, x_unit),
-            ("h", hlines, hline_kwargs, y_unit),
-        ):
-            fm.elements[f"{which}lines"] = vutils.attach_h_or_v_lines(
-                ax,
-                which=which,
-                line_positions=line_positions,
-                line_kwargs=line_kwargs,
-                unit=unit,
-            )
-
-        x_lower_limit, x_upper_limit = vutils.set_axis_limits(
-            ax,
-            *x_data,
-            lower_limit=x_lower_limit,
-            upper_limit=x_upper_limit,
-            log=x_log_axis,
-            pad=0,
-            log_pad=1,
-            unit=x_unit,
-            which="x",
-        )
-        y_lower_limit, y_upper_limit = vutils.set_axis_limits(
-            ax,
-            *y_data,
-            lower_limit=y_lower_limit,
-            upper_limit=y_upper_limit,
-            log=y_log_axis,
-            pad=y_pad,
-            log_pad=y_log_pad,
-            unit=y_unit,
-            which="y",
         )
 
         vutils.make_legend(
