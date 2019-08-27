@@ -12,11 +12,7 @@ OUT_DIR = os.path.join(os.getcwd(), "out", FILE_NAME)
 
 if __name__ == "__main__":
     with si.utils.LogManager(
-        "simulacra",
-        stdout_logs=True,
-        stdout_level=logging.DEBUG,
-        file_dir=OUT_DIR,
-        file_logs=False,
+        "simulacra", stdout_logs=True, stdout_level=logging.DEBUG
     ) as logger:
         cmap_names = (
             "viridis",
