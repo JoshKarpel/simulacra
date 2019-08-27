@@ -173,7 +173,7 @@ class FigureManager:
         close_before_enter: bool = True,
         close: bool = True,
         target_dir: Optional[os.PathLike] = None,
-        img_format: str = "pdf",
+        img_format: str = "png",
         save: bool = True,
         show: bool = False,
     ):
