@@ -758,9 +758,7 @@ class Animator(abc.ABC):
         colormap
             The colormap to use for the animation.
         """
-        if target_dir is None:
-            target_dir = os.getcwd()
-        self.target_dir = target_dir
+        self.target_dir = Path(target_dir or Path.cwd())
 
         self.postfix = postfix
 
@@ -789,8 +787,8 @@ class Animator(abc.ABC):
         self.sim = sim
         self.spec = sim.spec
 
-        self.file_name = f"{self.sim.file_name}{self.postfix}.mp4"
-        self.file_path = os.path.join(self.target_dir, self.file_name)
+        self.file_name = f"{self.sim.name}{self.postfix}.mp4"
+        self.file_path = self.target_dir / self.file_name
         utils.ensure_parents_exist(self.file_path)
         try:
             os.remove(
@@ -835,7 +833,7 @@ class Animator(abc.ABC):
             "mpeg4",  # output encoding
             "-q:v",
             "1",  # maximum quality
-            self.file_path,
+            str(self.file_path),
         ]
 
         self.ffmpeg = subprocess.Popen(self.cmd, **FFMPEG_PROCESS_KWARGS)
@@ -848,8 +846,16 @@ class Animator(abc.ABC):
 
         Should always be called via a try...finally clause (namely, in the finally) in Simulation.run_simulation.
         """
-        self.ffmpeg.communicate()
-        plt.close(self.fig)
+        try:
+            self.ffmpeg.communicate()
+        except AttributeError:
+            pass
+
+        try:
+            plt.close(self.fig)
+        except AttributeError:
+            pass
+
         logger.info("Cleaned up {}".format(self))
 
     def _initialize_figure(self):
