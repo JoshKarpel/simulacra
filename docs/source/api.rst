@@ -140,11 +140,13 @@ Visualization
 High-Level Plotting Functions
 +++++++++++++++++++++++++++++
 
-Simulacra's high-level plotting functions are intended for quickly generating plots with a wide variety of basic graphical options.
+Simulacra's high-level plotting functions are intended for quickly generating
+plots with a wide variety of basic graphical options.
 
 .. autofunction:: xy_plot
-
 .. autofunction:: xxyy_plot
+
+.. autofunction:: xy_stackplot
 
 .. autofunction:: xyz_plot
 
@@ -152,7 +154,9 @@ Simulacra's high-level plotting functions are intended for quickly generating pl
 Low-Level Plotting Utilities
 ++++++++++++++++++++++++++++
 
-The low-level plotting interface is designed to individually wrap common visualization tasks such as creating and saving ``matplotlib`` figures and setting axis options.
+The low-level plotting interface is designed to individually wrap common
+visualization tasks such as creating and saving ``matplotlib`` figures
+and setting axis options.
 
 .. autoclass:: simulacra.vis.FigureManager
 
@@ -161,8 +165,8 @@ The low-level plotting interface is designed to individually wrap common visuali
 .. autofunction:: simulacra.vis.save_current_figure
 
 
-Animation Tools
-+++++++++++++++
+Animation Functions
++++++++++++++++++++
 
 .. autofunction:: xyt_plot
 
@@ -174,7 +178,8 @@ Animation Tools
 Simulation Animators
 ++++++++++++++++++++
 
-:class:`Animator` and :class:`AxisManager` provide a method for a :class:`Simulation` to produce an animation while it's running.
+:class:`Animator` and :class:`AxisManager` provide a method for a
+:class:`Simulation` to produce an animation while it's running.
 
 .. autoclass:: AxisManager
 

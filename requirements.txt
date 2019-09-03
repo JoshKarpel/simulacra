@@ -1,8 +1,4 @@
-cython
-matplotlib
-mpmath
 numpy
-paramiko
-psutil
 scipy
+matplotlib
 tqdm

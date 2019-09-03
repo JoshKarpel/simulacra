@@ -1,13 +1,14 @@
 import logging
-import os
+
+from pathlib import Path
 
 import numpy as np
 
 import simulacra as si
 import simulacra.units as u
 
-FILE_NAME = os.path.splitext(os.path.basename(__file__))[0]
-OUT_DIR = os.path.join(os.getcwd(), "out", FILE_NAME)
+FILE_NAME = Path(__file__).stem
+OUT_DIR = Path(__file__).parent / "out" / FILE_NAME
 
 if __name__ == "__main__":
     with si.utils.LogManager(
@@ -19,13 +20,11 @@ if __name__ == "__main__":
     ) as logger:
         x = np.linspace(0, 10, 1000)
         y = [np.sin(x), np.cos(x), np.arctan(x)]
-
-        plt_kwargs = dict(
-            line_kwargs=(
-                {"linestyle": "-"},
-                {"linestyle": ":", "color": "teal"},
-                None,
-            ),  # note that we don't need to explicitly add None for the third line
+        figman = si.vis.xy_plot(
+            "test",
+            x,
+            *y,
+            line_kwargs=({"linestyle": "-"}, {"linestyle": ":", "color": "teal"}, None),
             line_labels=(r"$\sin(x)$", r"$\cos(x)$", r"$\arctan(x)$"),
             x_unit=1,
             y_unit="mm",
@@ -40,28 +39,5 @@ if __name__ == "__main__":
             title="foo",
             x_label="bar",
             y_label="$baz$",
-            save_csv=True,
-            img_format="png",
             target_dir=OUT_DIR,
         )
-
-        extra_kwargs = [
-            dict(name_postfix=""),
-            # dict(name_postfix = 'scale=1', fig_scale = 1),
-            # dict(name_postfix = 'scale=1_tight', fig_scale = 1),
-            # dict(name_postfix = 'scale=1_dpi=2', fig_scale = 1, fig_dpi_scale = 2),
-            # dict(name_postfix = 'scale=2', fig_scale = 2),
-            # dict(name_postfix = 'scale=2_dpi=2', fig_scale = 2, fig_dpi_scale = 2),
-            # dict(name_postfix = 'scale=1_dpi=6', fig_scale = 1, fig_dpi_scale = 6),
-            # dict(name_postfix = 'logX', x_log_axis = True),
-            # dict(name_postfix = 'logY', y_log_axis = True),
-            # dict(name_postfix = 'logXY', x_log_axis = True, y_log_axis = True),
-            # dict(name_postfix = 'square', equal_aspect = True, fig_dpi_scale = 6,),
-        ]
-
-        for extras in extra_kwargs:
-            figman = si.vis.xy_plot(
-                "test" + extras.pop("name_postfix"), x, *y, **plt_kwargs, **extras
-            )
-
-            print(figman)

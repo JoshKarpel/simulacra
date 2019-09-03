@@ -24,12 +24,14 @@ import sphinx_rtd_theme
 
 sys.path.insert(0, os.path.abspath("../../src"))
 
-autodoc_mock_imports = [
-    "_tkinter"
-]  # solves https://stackoverflow.com/questions/45484077/sphinx-autodoc-on-readthedocs-importerror-no-module-named-tkinter
+# solves https://stackoverflow.com/questions/45484077/sphinx-autodoc-on-readthedocs-importerror-no-module-named-tkinter
 import matplotlib
 
 matplotlib.use("agg")
+
+from .figs import figs
+
+figs.create()
 
 # -- General configuration ------------------------------------------------
 
