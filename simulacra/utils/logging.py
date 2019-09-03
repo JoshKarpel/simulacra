@@ -29,7 +29,7 @@ class LogManager:
     def __init__(
         self,
         *logger_names,
-        manual_logger_name: Optional[None],
+        manual_logger_name: Optional[str] = None,
         log_formatter: logging.Formatter = DEFAULT_LOG_FORMATTER,
         stdout_logs: bool = True,
         stdout_level: int = logging.DEBUG,
