@@ -14,17 +14,17 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def _points_to_inches(points: Union[float, int]) -> Union[float, int]:
+def points_to_inches(points: Union[float, int]) -> Union[float, int]:
     """Convert the input from points to inches (~72 points per inch)."""
     return points / 72.27
 
 
-def _inches_to_points(inches: Union[float, int]) -> Union[float, int]:
+def inches_to_points(inches: Union[float, int]) -> Union[float, int]:
     """Convert the input from inches to points (~72 points per inch)."""
     return inches * 72.27
 
 
-DEFAULT_LATEX_PAGE_WIDTH = _points_to_inches(350.0)
+DEFAULT_LATEX_PAGE_WIDTH = points_to_inches(350.0)
 GOLDEN_RATIO = (1 + np.sqrt(5)) / 2
 PPT_WIDESCREEN_WIDTH = 13.333
 PPT_WIDESCREEN_HEIGHT = 7.5
