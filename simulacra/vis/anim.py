@@ -820,7 +820,7 @@ class Animator(abc.ABC):
             "ffmpeg",
             "-y",
             "-r",
-            "{}".format(self.fps),  # choose fps
+            str(self.fps),  # choose fps
             "-s",
             "%dx%d" % (canvas_width, canvas_height),  # size of image string
             "-pix_fmt",

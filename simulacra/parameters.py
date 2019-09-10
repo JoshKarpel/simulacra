@@ -193,6 +193,9 @@ def ask_for_bool(question: str, default: Union[str, bool, int] = "") -> bool:
         input_str = input(question + " [Default: {}] > ".format(default))
 
         trimmed = input_str.replace(" ", "").lower()
+        if trimmed == "":
+            trimmed = default
+
         if trimmed in TRUE_ANSWERS:
             return True
         elif trimmed in FALSE_ANSWERS:
