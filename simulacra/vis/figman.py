@@ -104,7 +104,7 @@ def _get_fig_dims(
     if fig_height is None:
         fig_height = fig_width / aspect_ratio  # height in inches
 
-    return fig_width, fig_height
+    return round(fig_width, 2), round(fig_height, 2)
 
 
 def save_current_figure(
