@@ -99,7 +99,7 @@ class Beet:
         with gzip.open(working_path, mode="wb") as file:
             pickle.dump(self, file, protocol=-1)
 
-        working_path.rename(final_path)
+        working_path.replace(final_path)
 
         logger.debug(f"Saved {self} to {final_path}")
 
