@@ -410,17 +410,18 @@ def attach_h_or_v_lines(
 
     lines = []
 
-    for position, kwargs in itertools.zip_longest(
-        line_positions or (), line_kwargs or (), fillvalue=None
-    ):
-        if line_positions is None:
-            logger.warning(
-                f"Got more {which}line keyword arguments than lines, ignoring extras"
-            )
-            continue
-        kwargs = collections.ChainMap(kwargs or {}, DEFAULT_HVLINE_KWARGS)
-        line = getattr(ax, f"ax{which}line")(position / unit_value, **kwargs)
-        lines.append(line)
+    if line_positions is not None:
+        for position, kwargs in itertools.zip_longest(
+            line_positions, line_kwargs or (), fillvalue=None
+        ):
+            if position is None:
+                logger.warning(
+                    f"Got more {which}line keyword arguments than lines, ignoring extras"
+                )
+                continue
+            kwargs = collections.ChainMap(kwargs or {}, DEFAULT_HVLINE_KWARGS)
+            line = getattr(ax, f"ax{which}line")(position / unit_value, **kwargs)
+            lines.append(line)
 
     return lines
 
