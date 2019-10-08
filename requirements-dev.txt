@@ -4,5 +4,4 @@ pytest-mock
 pytest-xdist
 pytest-cov
 coverage
-hypothesis
-codecov
+hypothesis==4.38.0
