@@ -368,7 +368,7 @@ def find_sim_or_init(
         The simulation, either loaded or initialized.
     """
     search_dir = Path(search_dir or Path.cwd())
-    path = search_dir / f"{spec.name}.{SIM_FILE_EXTENSION}"
+    path = search_dir / f"{spec.name}.{Simulation.file_extension}"
     try:
         sim = Simulation.load(path=path)
     except FileNotFoundError:
