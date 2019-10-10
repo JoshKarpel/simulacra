@@ -17,8 +17,6 @@ from . import utils
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-SIM_FILE_EXTENSION = "sim"
-
 
 class Beet:
     """
@@ -27,6 +25,8 @@ class Beet:
 
     Beets can be compared and hashed based on their :attr:`Beet.uuid` value.
     """
+
+    file_extension = "beet"
 
     def __init__(self, name: str):
         """
@@ -91,7 +91,7 @@ class Beet:
             The path to the saved :class:`Beet`.
         """
         target_dir = Path(target_dir or Path.cwd())
-        final_path = target_dir.absolute() / f"{self.name}.{SIM_FILE_EXTENSION}"
+        final_path = target_dir.absolute() / f"{self.name}.{self.file_extension}"
         working_path = final_path.with_name(f"{final_path.name}.working")
 
         utils.ensure_parents_exist(working_path)
@@ -163,6 +163,8 @@ class Simulation(Beet, abc.ABC):
     Simulations should generally be instantiated using
     :meth:`Specification.to_sim` to avoid possible mismatches.
     """
+
+    file_extension = "sim"
 
     def __init__(self, spec):
         """
@@ -300,6 +302,8 @@ class Specification(Beet, abc.ABC):
         be generated via :meth:`Specification.to_sim`.
         Should be overridden in concrete subclasses.
     """
+
+    file_extension = ".spec"
 
     simulation_type: Type[Simulation] = Simulation
 
