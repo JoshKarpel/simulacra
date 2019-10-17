@@ -164,8 +164,8 @@ def ask_for_choices(
             print(e)
 
 
-TRUE_ANSWERS = {"true", "t", "yes", "y", "1", "on", True}
-FALSE_ANSWERS = {"false", "f", "no", "n", "0", "off", False, ""}
+TRUE_ANSWERS = {"true", "t", "yes", "y", "1", "on", True, 1}
+FALSE_ANSWERS = {"false", "f", "no", "n", "0", "off", False, "", 0}
 
 
 def ask_for_bool(question: str, default: Union[str, bool, int] = "") -> bool:
@@ -194,7 +194,10 @@ def ask_for_bool(question: str, default: Union[str, bool, int] = "") -> bool:
 
         trimmed = input_str.replace(" ", "").lower()
         if trimmed == "":
-            trimmed = default.replace(" ", "").lower()
+            if isinstance(default, str):
+                trimmed = default.replace(" ", "").lower()
+            else:
+                trimmed = default
 
         if trimmed in TRUE_ANSWERS:
             return True
