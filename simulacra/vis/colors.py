@@ -23,7 +23,7 @@ CMAP_TO_OPPOSITE = {}
 
 
 def register_opposite_color(cmap_name, opposite_color):
-    CMAP_TO_OPPOSITE["richardson"] = opposite_color
+    CMAP_TO_OPPOSITE[cmap_name] = opposite_color
     CMAP_TO_OPPOSITE[plt.get_cmap(cmap_name)] = opposite_color
 
 
